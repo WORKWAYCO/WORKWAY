@@ -1,0 +1,35 @@
+{
+  "name": "workway",
+  "version": "1.0.0",
+  "description": "Build and monetize TypeScript workflows on the edge",
+  "private": false,
+  "license": "Apache-2.0",
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "turbo run build",
+    "test": "turbo run test",
+    "lint": "turbo run lint",
+    "dev": "turbo run dev",
+    "clean": "turbo run clean"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/workway/workway.git"
+  },
+  "keywords": [
+    "workway",
+    "workflows",
+    "automation",
+    "typescript",
+    "cloudflare",
+    "edge",
+    "marketplace"
+  ],
+  "devDependencies": {
+    "turbo": "latest",
+    "typescript": "^5.0.0"
+  }
+}

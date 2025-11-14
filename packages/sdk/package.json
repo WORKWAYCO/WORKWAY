@@ -1,0 +1,65 @@
+{
+  "name": "@workway/sdk",
+  "version": "1.0.0",
+  "description": "WORKWAY SDK for building workflow integrations",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "workway",
+    "workflow",
+    "automation",
+    "integration",
+    "sdk",
+    "cloudflare",
+    "workers"
+  ],
+  "author": "WORKWAY",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/workway/workway.git",
+    "directory": "packages/sdk"
+  },
+  "bugs": {
+    "url": "https://github.com/workway/workway/issues"
+  },
+  "homepage": "https://github.com/workway/workway#readme",
+  "dependencies": {
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.2",
+    "vitest": "^1.0.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

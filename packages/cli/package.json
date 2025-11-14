@@ -1,0 +1,67 @@
+{
+  "name": "@workway/cli",
+  "version": "0.2.0",
+  "description": "WORKWAY CLI - Build, test, and publish workflows and integrations",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "workway": "bin/workway.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest",
+    "lint": "eslint src --ext .ts",
+    "prepublishOnly": "npm run build"
+  },
+  "keywords": [
+    "workway",
+    "cli",
+    "workflow",
+    "automation",
+    "marketplace"
+  ],
+  "author": "WORKWAY Team",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "commander": "^11.1.0",
+    "inquirer": "^9.2.12",
+    "chalk": "^5.3.0",
+    "ora": "^7.0.1",
+    "axios": "^1.6.2",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "open": "^9.1.0",
+    "fs-extra": "^11.2.0",
+    "zod": "^3.22.4",
+    "chokidar": "^3.5.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "@types/inquirer": "^9.0.7",
+    "@types/express": "^4.17.21",
+    "@types/fs-extra": "^11.0.4",
+    "typescript": "^5.3.3",
+    "vitest": "^1.0.4",
+    "eslint": "^8.56.0",
+    "@typescript-eslint/eslint-plugin": "^6.15.0",
+    "@typescript-eslint/parser": "^6.15.0"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "templates"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/workway/workway.git",
+    "directory": "packages/cli"
+  },
+  "bugs": {
+    "url": "https://github.com/workway/workway/issues"
+  },
+  "homepage": "https://docs.workway.dev/cli"
+}
