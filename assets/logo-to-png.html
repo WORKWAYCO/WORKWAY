@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WORKWAY Logo PNG Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0F0F0F;
+            color: white;
+            padding: 40px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+        }
+        h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        .subtitle {
+            color: #888;
+            margin-bottom: 20px;
+        }
+        .logo-container {
+            background: white;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+        canvas {
+            display: block;
+            border-radius: 12px;
+        }
+        .controls {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+        button {
+            background: #161616;
+            color: white;
+            border: 2px solid #333;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+        }
+        button:hover {
+            background: #222;
+            border-color: #555;
+            transform: translateY(-2px);
+        }
+        .size-info {
+            color: #888;
+            font-size: 12px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div>
+        <h1>🔧 WORKWAY Logo PNG Generator</h1>
+        <p class="subtitle">Generate PNG versions for GitHub and other platforms</p>
+    </div>
+
+    <div class="logo-container">
+        <canvas id="logoCanvas" width="512" height="512"></canvas>
+    </div>
+
+    <div class="controls">
+        <button onclick="generateLogo('github')">
+            Download GitHub Profile (512×512)
+        </button>
+        <button onclick="generateLogo('square')">
+            Download Square (512×512)
+        </button>
+        <button onclick="generateLogo('high')">
+            Download High-Res (1024×1024)
+        </button>
+        <button onclick="generateLogo('icon')">
+            Download Icon (256×256)
+        </button>
+    </div>
+
+    <div class="size-info">
+        <p>GitHub recommends 500×500 minimum for organization profiles</p>
+        <p>All versions use #161616 background with white workflow icon</p>
+    </div>
+
+    <script>
+        // Draw the logo on canvas
+        function drawLogo(size = 512, rounded = false) {
+            const canvas = document.getElementById('logoCanvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+
+            // Clear canvas
+            ctx.clearRect(0, 0, size, size);
+
+            // Draw background
+            if (rounded) {
+                // Draw circle for GitHub
+                ctx.beginPath();
+                ctx.arc(size / 2, size / 2, size / 2, 0, Math.PI * 2);
+                ctx.fillStyle = '#161616';
+                ctx.fill();
+            } else {
+                // Draw rounded square
+                const radius = size * 0.15; // 15% radius
+                ctx.beginPath();
+                ctx.moveTo(radius, 0);
+                ctx.lineTo(size - radius, 0);
+                ctx.quadraticCurveTo(size, 0, size, radius);
+                ctx.lineTo(size, size - radius);
+                ctx.quadraticCurveTo(size, size, size - radius, size);
+                ctx.lineTo(radius, size);
+                ctx.quadraticCurveTo(0, size, 0, size - radius);
+                ctx.lineTo(0, radius);
+                ctx.quadraticCurveTo(0, 0, radius, 0);
+                ctx.fillStyle = '#161616';
+                ctx.fill();
+            }
+
+            // Scale and position for the icon
+            const iconScale = size / 24;
+            const offset = size * 0.25; // Center the icon
+
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 2 * iconScale;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // Draw first rectangle
+            const x1 = 3 * iconScale + offset;
+            const y1 = 3 * iconScale + offset;
+            const rectSize = 8 * iconScale;
+            const cornerRadius = 2 * iconScale;
+
+            // First node
+            drawRoundedRect(ctx, x1, y1, rectSize, rectSize, cornerRadius);
+            ctx.stroke();
+
+            // Draw connection path
+            ctx.beginPath();
+            ctx.moveTo(7 * iconScale + offset, 11 * iconScale + offset);
+            ctx.lineTo(7 * iconScale + offset, 15 * iconScale + offset);
+            ctx.quadraticCurveTo(
+                7 * iconScale + offset,
+                17 * iconScale + offset,
+                9 * iconScale + offset,
+                17 * iconScale + offset
+            );
+            ctx.lineTo(13 * iconScale + offset, 17 * iconScale + offset);
+            ctx.stroke();
+
+            // Second node
+            const x2 = 13 * iconScale + offset;
+            const y2 = 13 * iconScale + offset;
+            drawRoundedRect(ctx, x2, y2, rectSize, rectSize, cornerRadius);
+            ctx.stroke();
+        }
+
+        // Helper function to draw rounded rectangle
+        function drawRoundedRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        // Generate and download logo
+        function generateLogo(type) {
+            let size = 512;
+            let rounded = false;
+            let filename = 'workway-logo.png';
+
+            switch(type) {
+                case 'github':
+                    size = 512;
+                    rounded = true;
+                    filename = 'workway-logo-github.png';
+                    break;
+                case 'square':
+                    size = 512;
+                    rounded = false;
+                    filename = 'workway-logo-square.png';
+                    break;
+                case 'high':
+                    size = 1024;
+                    rounded = false;
+                    filename = 'workway-logo-1024.png';
+                    break;
+                case 'icon':
+                    size = 256;
+                    rounded = false;
+                    filename = 'workway-logo-256.png';
+                    break;
+            }
+
+            drawLogo(size, rounded);
+
+            // Download the canvas as PNG
+            const canvas = document.getElementById('logoCanvas');
+            canvas.toBlob(function(blob) {
+                const link = document.createElement('a');
+                link.download = filename;
+                link.href = URL.createObjectURL(blob);
+                link.click();
+                URL.revokeObjectURL(link.href);
+            }, 'image/png');
+        }
+
+        // Initial draw
+        drawLogo(512, true);
+    </script>
+</body>
+</html>
