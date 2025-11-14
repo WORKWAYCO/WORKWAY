@@ -1,7 +1,7 @@
 # WORKWAY
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![CI](https://github.com/workway/workway/actions/workflows/ci.yml/badge.svg)](https://github.com/workway/workway/actions/workflows/ci.yml)
+[![CI](https://github.com/workwayco/workway/actions/workflows/ci.yml/badge.svg)](https://github.com/workwayco/workway/actions/workflows/ci.yml)
 
 Build and monetize TypeScript workflows on the edge. The first marketplace for TypeScript workflow automation.
 
@@ -9,7 +9,7 @@ Build and monetize TypeScript workflows on the edge. The first marketplace for T
 
 ```bash
 # Install the CLI globally
-npm install -g @workway/cli
+npm install -g @workwayco/cli
 
 # Create a new workflow project
 workway init my-workflow
@@ -35,9 +35,9 @@ workway deploy
 
 This monorepo contains:
 
-- [`@workway/sdk`](packages/sdk) - Core SDK for building workflows
-- [`@workway/cli`](packages/cli) - Command-line interface
-- [`@workway/types`](packages/types) - Shared TypeScript types
+- [`@workwayco/sdk`](packages/sdk) - Core SDK for building workflows
+- [`@workwayco/cli`](packages/cli) - Command-line interface
+- [`@workwayco/types`](packages/types) - Shared TypeScript types
 
 ## 💰 Business Model
 

@@ -1,5 +1,5 @@
 {
-  "name": "@workway/sdk",
+  "name": "@workwayco/sdk",
   "version": "1.0.0",
   "description": "WORKWAY SDK for building workflow integrations",
   "main": "dist/index.js",
@@ -39,13 +39,13 @@
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/workway/workway.git",
+    "url": "https://github.com/workwayco/workway.git",
     "directory": "packages/sdk"
   },
   "bugs": {
-    "url": "https://github.com/workway/workway/issues"
+    "url": "https://github.com/workwayco/workway/issues"
   },
-  "homepage": "https://github.com/workway/workway#readme",
+  "homepage": "https://github.com/workwayco/workway#readme",
   "dependencies": {
     "zod": "^3.22.4"
   },

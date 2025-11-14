@@ -1,5 +1,5 @@
 {
-  "name": "@workway/cli",
+  "name": "@workwayco/cli",
   "version": "0.2.0",
   "description": "WORKWAY CLI - Build, test, and publish workflows and integrations",
   "type": "module",
@@ -57,11 +57,11 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/workway/workway.git",
+    "url": "https://github.com/workwayco/workway.git",
     "directory": "packages/cli"
   },
   "bugs": {
-    "url": "https://github.com/workway/workway/issues"
+    "url": "https://github.com/workwayco/workway/issues"
   },
   "homepage": "https://docs.workway.dev/cli"
 }
