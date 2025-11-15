@@ -404,7 +404,7 @@ export async function createErrorFromResponse(
 	try {
 		const contentType = response.headers.get('content-type');
 		if (contentType?.includes('application/json')) {
-			const errorData = await response.json();
+			const errorData = await response.json() as any;
 			providerMessage = errorData.error?.message || errorData.message || providerMessage;
 			providerCode = errorData.error?.code || errorData.code;
 		} else {

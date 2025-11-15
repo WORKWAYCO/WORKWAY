@@ -112,29 +112,29 @@ export { WorkflowRegistry, defineWorkflow, defineConfigField } from './workflow-
 // TESTING SDK EXPORTS
 // ============================================================================
 
-export type {
-	// Mock types
-	MockOAuthConfig,
-	MockContextOptions,
-	MockFetchResponse,
-} from './testing';
+// Note: Testing utilities are available but not exported in v1.0.0
+// They will be included in a future release after updates to match
+// the latest DurableObjectStorage interface from @cloudflare/workers-types
 
-export {
-	// Mock classes
-	MockOAuthManager,
-	MockStorage,
-	// Mock creation helpers
-	createMockContext,
-	createMockFetch,
-	createMockTokens,
-	createExpiredTokens,
-	// Test utilities
-	waitFor,
-	expectError,
-	createTestWorkflow,
-	createMockTrigger,
-	setupIntegrationTests,
-} from './testing';
+// export type {
+// 	MockOAuthConfig,
+// 	MockContextOptions,
+// 	MockFetchResponse,
+// } from './testing';
+
+// export {
+// 	MockOAuthManager,
+// 	MockStorage,
+// 	createMockContext,
+// 	createMockFetch,
+// 	createMockTokens,
+// 	createExpiredTokens,
+// 	waitFor,
+// 	expectError,
+// 	createTestWorkflow,
+// 	createMockTrigger,
+// 	setupIntegrationTests,
+// } from './testing';
 
 // ============================================================================
 // RE-EXPORTS

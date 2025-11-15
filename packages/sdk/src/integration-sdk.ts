@@ -33,15 +33,14 @@
  * ```
  */
 
-import { z, ZodSchema } from 'zod';
+import { ZodSchema } from 'zod';
 import type { DurableObjectStorage } from '@cloudflare/workers-types';
 import {
 	ActionResult,
 	ActionCapabilities,
 	StandardData,
-	createActionResult,
 } from './action-result';
-import { IntegrationError, ErrorCode, ErrorContext } from './integration-error';
+import { ErrorCode, ErrorContext } from './integration-error';
 
 // ============================================================================
 // CORE TYPES
