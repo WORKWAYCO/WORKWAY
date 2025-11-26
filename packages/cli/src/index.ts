@@ -1,7 +1,8 @@
 /**
  * WORKWAY CLI
  *
- * Main entry point for the CLI application
+ * Build, test, and publish workflows and integrations.
+ * Cloudflare-native. Less, but better.
  */
 
 import { Command } from 'commander';
@@ -10,10 +11,21 @@ import { logoutCommand } from './commands/auth/logout.js';
 import { whoamiCommand } from './commands/auth/whoami.js';
 import { workflowInitCommand } from './commands/workflow/init.js';
 import { workflowTestCommand } from './commands/workflow/test.js';
+import { workflowRunCommand } from './commands/workflow/run.js';
+import { workflowDevCommand } from './commands/workflow/dev.js';
+import { workflowBuildCommand } from './commands/workflow/build.js';
 import { workflowPublishCommand } from './commands/workflow/publish.js';
 import { oauthConnectCommand } from './commands/oauth/connect.js';
 import { oauthListCommand } from './commands/oauth/list.js';
 import { oauthDisconnectCommand } from './commands/oauth/disconnect.js';
+import { statusCommand } from './commands/status.js';
+import { logsCommand } from './commands/logs.js';
+import { developerRegisterCommand } from './commands/developer/register.js';
+import { developerProfileCommand } from './commands/developer/profile.js';
+import { developerEarningsCommand } from './commands/developer/earnings.js';
+import { aiModelsCommand } from './commands/ai/models.js';
+import { aiTestCommand } from './commands/ai/test.js';
+import { aiEstimateCommand } from './commands/ai/estimate.js';
 import { Logger } from './utils/logger.js';
 
 // Create CLI program
@@ -22,7 +34,7 @@ const program = new Command();
 program
 	.name('workway')
 	.description('WORKWAY CLI - Build, test, and publish workflows and integrations')
-	.version('0.2.0');
+	.version('0.3.0');
 
 // ============================================================================
 // AUTHENTICATION COMMANDS
@@ -65,7 +77,7 @@ program
 	});
 
 // ============================================================================
-// WORKFLOW COMMANDS (Placeholders for now)
+// WORKFLOW COMMANDS
 // ============================================================================
 
 const workflowCommand = program.command('workflow').description('Workflow development commands');
@@ -73,9 +85,10 @@ const workflowCommand = program.command('workflow').description('Workflow develo
 workflowCommand
 	.command('init [name]')
 	.description('Create a new workflow project')
-	.action(async (name: string) => {
+	.option('--ai', 'Create AI-powered workflow using Cloudflare Workers AI')
+	.action(async (name: string, options: { ai?: boolean }) => {
 		try {
-			await workflowInitCommand(name);
+			await workflowInitCommand(name, options);
 		} catch (error: any) {
 			Logger.error(error.message);
 			process.exit(1);
@@ -98,17 +111,50 @@ workflowCommand
 	});
 
 workflowCommand
+	.command('run')
+	.description('Execute workflow locally')
+	.option('--input <file>', 'Path to input data file')
+	.option('--env <env>', 'Environment (development/production)')
+	.option('--verbose', 'Show verbose output')
+	.option('--timeout <ms>', 'Execution timeout in milliseconds')
+	.action(async (options: any) => {
+		try {
+			await workflowRunCommand(options);
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
+	});
+
+workflowCommand
 	.command('dev')
 	.description('Start development server with hot reload')
-	.action(async () => {
-		Logger.warn('Workflow commands coming soon!');
+	.option('--port <port>', 'Port number')
+	.option('--mock', 'Use mock mode')
+	.option('--no-mock', 'Use live OAuth connections')
+	.action(async (options: any) => {
+		try {
+			await workflowDevCommand(options);
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
 	});
 
 workflowCommand
 	.command('build')
 	.description('Build workflow for production')
-	.action(async () => {
-		Logger.warn('Workflow commands coming soon!');
+	.option('--out-dir <dir>', 'Output directory')
+	.option('--minify', 'Minify output')
+	.option('--no-minify', 'Disable minification')
+	.option('--sourcemap', 'Generate sourcemaps')
+	.action(async (options: any) => {
+		try {
+			await workflowBuildCommand(options);
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
 	});
 
 workflowCommand
@@ -125,7 +171,61 @@ workflowCommand
 	});
 
 // ============================================================================
-// OAUTH COMMANDS (Placeholders for now)
+// AI COMMANDS - Cloudflare Workers AI
+// ============================================================================
+
+const aiCommand = program.command('ai').description('Cloudflare Workers AI tools');
+
+aiCommand
+	.command('models')
+	.description('List available AI models with costs')
+	.option('--type <type>', 'Filter by type (text, embeddings, image, audio, translation, classification)')
+	.option('--json', 'Output as JSON')
+	.action(async (options: any) => {
+		try {
+			await aiModelsCommand(options);
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
+	});
+
+aiCommand
+	.command('test [prompt]')
+	.description('Test AI model with a prompt')
+	.option('--model <model>', 'Model to use (e.g., LLAMA_3_8B)')
+	.option('--mock', 'Use mock response (no API call)')
+	.option('--json', 'Output as JSON')
+	.action(async (prompt: string, options: any) => {
+		try {
+			await aiTestCommand(prompt, options);
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
+	});
+
+aiCommand
+	.command('estimate')
+	.description('Estimate AI workflow costs')
+	.option('--executions <n>', 'Monthly executions', parseInt)
+	.option('--tokens <n>', 'Tokens per execution', parseInt)
+	.option('--model <model>', 'Model to estimate (e.g., LLAMA_3_8B)')
+	.action(async (options: any) => {
+		try {
+			await aiEstimateCommand({
+				executions: options.executions,
+				tokensPerExecution: options.tokens,
+				model: options.model,
+			});
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
+	});
+
+// ============================================================================
+// OAUTH COMMANDS
 // ============================================================================
 
 const oauthCommand = program.command('oauth').description('OAuth connection management');
@@ -167,7 +267,39 @@ oauthCommand
 	});
 
 // ============================================================================
-// DEVELOPER COMMANDS (Placeholders for now)
+// STATUS & LOGS COMMANDS
+// ============================================================================
+
+program
+	.command('status')
+	.description('Show developer dashboard and status')
+	.action(async () => {
+		try {
+			await statusCommand();
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
+	});
+
+program
+	.command('logs')
+	.description('View production workflow execution logs')
+	.option('--workflow <id>', 'Filter by workflow ID')
+	.option('--limit <n>', 'Number of logs to show', '20')
+	.option('--follow', 'Follow logs in real-time')
+	.option('--status <status>', 'Filter by status (completed/failed/running)')
+	.action(async (options: any) => {
+		try {
+			await logsCommand(options);
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
+	});
+
+// ============================================================================
+// DEVELOPER COMMANDS
 // ============================================================================
 
 const developerCommand = program.command('developer').description('Developer profile management');
@@ -176,21 +308,39 @@ developerCommand
 	.command('register')
 	.description('Register as a workflow developer')
 	.action(async () => {
-		Logger.warn('Developer commands coming soon!');
+		try {
+			await developerRegisterCommand();
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
 	});
 
 developerCommand
 	.command('profile')
 	.description('View/edit developer profile')
-	.action(async () => {
-		Logger.warn('Developer commands coming soon!');
+	.option('--edit', 'Edit profile interactively')
+	.action(async (options: any) => {
+		try {
+			await developerProfileCommand(options);
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
 	});
 
 developerCommand
 	.command('earnings')
 	.description('View earnings and payouts')
-	.action(async () => {
-		Logger.warn('Developer commands coming soon!');
+	.option('--setup', 'Set up Stripe Connect for payouts')
+	.option('--period <period>', 'Time period (week/month/year)')
+	.action(async (options: any) => {
+		try {
+			await developerEarningsCommand(options);
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
 	});
 
 // ============================================================================
