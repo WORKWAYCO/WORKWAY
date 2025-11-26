@@ -348,7 +348,131 @@ pricing: {
 
 ## SDK APIs
 
-### AI Module
+### Workers AI Module (Cloudflare-Native)
+
+For workflows running on Cloudflare Workers, use the native Workers AI integration — no API keys required.
+
+```typescript
+import { createAIClient, AIModels } from '@workway/sdk/workers-ai'
+
+export default defineWorkflow({
+  name: 'AI Email Processor',
+  type: 'ai-native',
+
+  async execute({ env }) {
+    // Create AI client from Cloudflare binding
+    const ai = createAIClient(env)
+
+    // Text generation
+    const result = await ai.generateText({
+      prompt: 'Summarize this email...',
+      model: AIModels.LLAMA_3_8B,  // $0.01/1M tokens
+      max_tokens: 512,
+      temperature: 0.7
+    })
+
+    return { summary: result.data }
+  }
+})
+```
+
+#### Available Models
+
+| Model | Alias | Cost/1M | Best For |
+|-------|-------|---------|----------|
+| Llama 2 7B | `AIModels.LLAMA_2_7B` | $0.005 | Fast, simple tasks |
+| Llama 3 8B | `AIModels.LLAMA_3_8B` | $0.01 | Balanced (default) |
+| Mistral 7B | `AIModels.MISTRAL_7B` | $0.02 | Complex reasoning |
+| BGE Small | `AIModels.BGE_SMALL` | $0.001 | Fast embeddings |
+| BGE Base | `AIModels.BGE_BASE` | $0.002 | Quality embeddings |
+| Stable Diffusion XL | `AIModels.STABLE_DIFFUSION_XL` | $0.02/img | Image generation |
+| Whisper | `AIModels.WHISPER` | $0.006/min | Speech-to-text |
+
+#### Workers AI Methods
+
+```typescript
+const ai = createAIClient(env)
+
+// Text generation
+const text = await ai.generateText({
+  prompt: string,
+  model?: string,        // Default: LLAMA_3_8B
+  temperature?: number,  // Default: 0.7
+  max_tokens?: number,   // Default: 1024
+  system?: string,       // System prompt
+  cache?: boolean        // Enable caching
+})
+
+// Embeddings (for semantic search)
+const embeddings = await ai.generateEmbeddings({
+  text: string | string[],
+  model?: string  // Default: BGE_BASE
+})
+
+// Image generation
+const image = await ai.generateImage({
+  prompt: string,
+  model?: string,         // Default: STABLE_DIFFUSION_XL
+  negative_prompt?: string,
+  width?: number,         // Default: 1024
+  height?: number         // Default: 1024
+})
+
+// Speech-to-text
+const transcript = await ai.transcribeAudio({
+  audio: ArrayBuffer,
+  model?: string,   // Default: WHISPER
+  language?: string
+})
+
+// Translation (100+ languages)
+const translated = await ai.translateText({
+  text: string,
+  source: string,  // e.g., 'en'
+  target: string   // e.g., 'es'
+})
+
+// Sentiment analysis
+const sentiment = await ai.analyzeSentiment({
+  text: string
+})
+// Returns: { sentiment: 'POSITIVE' | 'NEGATIVE', confidence: number }
+
+// Streaming responses
+for await (const chunk of ai.streamText({ prompt: '...' })) {
+  console.log(chunk)
+}
+
+// Chain multiple operations
+const results = await ai.chain([
+  { type: 'text', options: { prompt: 'Analyze...' } },
+  { type: 'sentiment', options: { usePrevious: true } },
+  { type: 'translate', options: { source: 'en', target: 'es', usePrevious: true } }
+])
+```
+
+#### Workers AI vs External Providers
+
+| Feature | Workers AI | OpenAI/Anthropic |
+|---------|-----------|------------------|
+| API Keys | None required | Required |
+| Cost | $0.01/1M tokens | $0.15-3/1M tokens |
+| Latency | Edge (fast) | Variable |
+| Data | Stays in Cloudflare | Leaves network |
+| Models | Open source (Llama, Mistral) | Proprietary |
+
+**When to use Workers AI:**
+- High-volume, cost-sensitive workflows
+- Privacy-sensitive data (no external API calls)
+- Simple-to-moderate AI tasks
+
+**When to use external providers:**
+- Complex reasoning requiring GPT-4/Claude
+- Specific model capabilities (vision, etc.)
+
+---
+
+### AI Module (Multi-Provider)
 
 ```typescript
 import { ai } from '@workway/sdk'

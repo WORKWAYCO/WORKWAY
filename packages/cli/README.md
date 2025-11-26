@@ -1,6 +1,6 @@
 # @workway/cli
 
-WORKWAY CLI - Build, test, and publish workflows and integrations
+WORKWAY CLI — Build, test, and publish workflows. Cloudflare-native. Less, but better.
 
 ## Installation
 
@@ -14,11 +14,11 @@ npm install -g @workway/cli
 # Authenticate
 workway login
 
-# Check authentication
-workway whoami
-
 # Create a workflow
 workway workflow init my-workflow
+
+# Or create an AI-powered workflow (no API keys required)
+workway workflow init --ai my-ai-workflow
 
 # Test locally
 cd my-workflow
@@ -32,52 +32,176 @@ workway workflow publish
 
 ### Authentication
 
-- `workway login` - Authenticate with WORKWAY platform
-- `workway logout` - Clear local authentication
-- `workway whoami` - Display current authenticated user
+| Command | Description |
+|---------|-------------|
+| `workway login` | Authenticate with WORKWAY platform |
+| `workway logout` | Clear local authentication |
+| `workway whoami` | Display current authenticated user |
 
-### Workflow Development (Coming Soon)
+### Workflow Development
 
-- `workway workflow init [name]` - Create a new workflow project
-- `workway workflow dev` - Start development server with hot reload
-- `workway workflow test` - Test workflow execution
-  - `--mock` - Use mocked integrations
-  - `--live` - Use live OAuth connections
-- `workway workflow build` - Build workflow for production
-- `workway workflow publish` - Publish workflow to marketplace
-  - `--draft` - Publish as draft
+| Command | Description |
+|---------|-------------|
+| `workway workflow init [name]` | Create a new workflow project |
+| `workway workflow init --ai [name]` | Create AI-powered workflow (Cloudflare Workers AI) |
+| `workway workflow dev` | Start development server with hot reload |
+| `workway workflow test` | Test workflow execution |
+| `workway workflow build` | Build workflow for production |
+| `workway workflow publish` | Publish workflow to marketplace |
 
-### OAuth Management (Coming Soon)
+**Test options:**
+```bash
+workway workflow test --mock      # Use mocked integrations
+workway workflow test --live      # Use live OAuth connections
+workway workflow test --data file.json  # Custom test data
+```
 
-- `workway oauth connect [provider]` - Connect an OAuth account
-- `workway oauth list` - List connected OAuth accounts
-- `workway oauth disconnect [provider]` - Disconnect an OAuth account
+**Build options:**
+```bash
+workway workflow build --minify        # Minify output
+workway workflow build --sourcemap     # Generate sourcemaps
+workway workflow build --out-dir dist  # Custom output directory
+```
 
-### Developer Profile (Coming Soon)
+### AI Commands (Cloudflare Workers AI)
 
-- `workway developer register` - Register as a workflow developer
-- `workway developer profile` - View/edit developer profile
-- `workway developer earnings` - View earnings and payouts
+| Command | Description |
+|---------|-------------|
+| `workway ai models` | List available AI models with costs |
+| `workway ai test [prompt]` | Test AI model with a prompt |
+| `workway ai estimate` | Estimate AI workflow costs |
+
+**List models:**
+```bash
+workway ai models                    # All models
+workway ai models --type text        # Text generation only
+workway ai models --type embeddings  # Embeddings only
+workway ai models --json             # JSON output
+```
+
+**Test AI:**
+```bash
+workway ai test "Summarize this text" --mock   # Mock response
+workway ai test --model LLAMA_3_8B             # Specific model
+```
+
+**Estimate costs:**
+```bash
+workway ai estimate                           # Interactive
+workway ai estimate --executions 1000 --tokens 500 --model LLAMA_3_8B
+```
+
+### OAuth Management
+
+| Command | Description |
+|---------|-------------|
+| `workway oauth connect [provider]` | Connect an OAuth account (gmail, slack, notion, zoom) |
+| `workway oauth list` | List connected OAuth accounts |
+| `workway oauth disconnect [provider]` | Disconnect an OAuth account |
+
+### Developer Profile
+
+| Command | Description |
+|---------|-------------|
+| `workway developer register` | Register as a workflow developer |
+| `workway developer profile` | View/edit developer profile |
+| `workway developer earnings` | View earnings and payouts |
+
+### Status & Logs
+
+| Command | Description |
+|---------|-------------|
+| `workway status` | Show developer dashboard and health |
+| `workway logs` | View production workflow execution logs |
+
+**Logs options:**
+```bash
+workway logs --workflow <id>     # Filter by workflow
+workway logs --limit 50          # Number of logs
+workway logs --follow            # Stream in real-time
+workway logs --status failed     # Filter by status
+```
+
+## AI Workflow Development
+
+Create AI-powered workflows using Cloudflare Workers AI — no external API keys required.
+
+### 1. Initialize AI Workflow
+
+```bash
+workway workflow init --ai "Email Summarizer"
+```
+
+This creates a project with:
+- `workflow.ts` — AI workflow template
+- `test-data.json` — Test inputs
+- `package.json` — Dependencies
+
+### 2. Explore Available Models
+
+```bash
+workway ai models
+```
+
+Output:
+```
+TEXT GENERATION
+────────────────────────────────────────────────────────
+Model              Alias           Cost/1M    Context
+────────────────────────────────────────────────────────
+Llama 2 7B         LLAMA_2_7B      $0.005     4096
+Llama 3 8B         LLAMA_3_8B      $0.010     8192
+Mistral 7B         MISTRAL_7B      $0.020     8192
+```
+
+### 3. Estimate Costs
+
+```bash
+workway ai estimate --executions 1000 --tokens 500
+```
+
+### 4. Test Your Workflow
+
+```bash
+workway workflow test --mock
+```
+
+### 5. Publish
+
+```bash
+workway workflow publish
+```
+
+## Cost Comparison
+
+| Provider | Model | Cost/1M tokens |
+|----------|-------|----------------|
+| **Workers AI** | Llama 3 8B | $0.01 |
+| OpenAI | GPT-4o-mini | $0.15-0.60 |
+| Anthropic | Claude Haiku | $0.25-1.25 |
+
+Workers AI runs on Cloudflare edge. No API keys. Zero egress.
 
 ## Configuration
 
-Global config is stored in `~/.workway/config.json`:
+### Global Config
+
+Stored in `~/.workway/config.json`:
 
 ```json
 {
-  "apiUrl": "https://marketplace-api.half-dozen.workers.dev",
+  "apiUrl": "https://workway-api.half-dozen.workers.dev",
   "credentials": {
     "token": "...",
     "userId": "...",
     "email": "..."
-  },
-  "oauth": {
-    "callbackPort": 3456
   }
 }
 ```
 
-Project config can be defined in `workway.config.json`:
+### Project Config
+
+Stored in `workway.config.json`:
 
 ```json
 {
@@ -89,6 +213,10 @@ Project config can be defined in `workway.config.json`:
   "test": {
     "testDataFile": "./test-data.json",
     "timeout": 30000
+  },
+  "build": {
+    "outDir": "./dist",
+    "minify": false
   }
 }
 ```
@@ -112,6 +240,12 @@ npm test
 npm link
 ```
 
+## Documentation
+
+- [SDK Documentation](../sdk/README.md)
+- [Workers AI Models](https://developers.cloudflare.com/workers-ai/models/)
+- [WORKWAY Docs](https://docs.workway.dev)
+
 ## License
 
-MIT © WORKWAY Team
+Apache-2.0 © WORKWAY
