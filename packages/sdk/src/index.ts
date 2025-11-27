@@ -112,29 +112,72 @@ export { WorkflowRegistry, defineWorkflow, defineConfigField } from './workflow-
 // TESTING SDK EXPORTS
 // ============================================================================
 
-// Note: Testing utilities are available but not exported in v1.0.0
-// They will be included in a future release after updates to match
-// the latest DurableObjectStorage interface from @cloudflare/workers-types
+export type {
+	MockOAuthConfig,
+	MockContextOptions,
+	MockFetchResponse,
+} from './testing';
 
-// export type {
-// 	MockOAuthConfig,
-// 	MockContextOptions,
-// 	MockFetchResponse,
-// } from './testing';
+export {
+	MockOAuthManager,
+	MockStorage,
+	createMockContext,
+	createMockFetch,
+	createMockTokens,
+	createExpiredTokens,
+	waitFor,
+	expectError,
+	createTestWorkflow,
+	createMockTrigger,
+	setupIntegrationTests,
+} from './testing';
 
-// export {
-// 	MockOAuthManager,
-// 	MockStorage,
-// 	createMockContext,
-// 	createMockFetch,
-// 	createMockTokens,
-// 	createExpiredTokens,
-// 	waitFor,
-// 	expectError,
-// 	createTestWorkflow,
-// 	createMockTrigger,
-// 	setupIntegrationTests,
-// } from './testing';
+// ============================================================================
+// UTILITY MODULE EXPORTS
+// ============================================================================
+
+// HTTP client
+export { http, HttpError, type HttpOptions, type HttpRequestOptions, type HttpResponse } from './http';
+
+// Cache utilities
+export { Cache, createCache, type CacheOptions, type CacheEntry } from './cache';
+
+// Storage utilities
+export {
+	KVStorage,
+	ObjectStorage,
+	createKVStorage,
+	createObjectStorage,
+	storage,
+	type StorageOptions,
+	type ListOptions,
+	type ListResult,
+	type FileMetadata,
+} from './storage';
+
+// Transform utilities
+export {
+	transform,
+	filter,
+	map,
+	reduce,
+	find,
+	groupBy,
+	unique,
+	chunk,
+	flatten,
+	sortBy,
+	parseJSON,
+	parseCSV,
+	toCSV,
+	formatDate,
+	relativeTime,
+	slugify,
+	truncate,
+	capitalize,
+	titleCase,
+	template,
+} from './transform';
 
 // ============================================================================
 // RE-EXPORTS

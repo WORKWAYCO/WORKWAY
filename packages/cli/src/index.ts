@@ -24,6 +24,7 @@ import { logsCommand } from './commands/logs.js';
 import { developerRegisterCommand } from './commands/developer/register.js';
 import { developerProfileCommand } from './commands/developer/profile.js';
 import { developerEarningsCommand } from './commands/developer/earnings.js';
+import { developerStripeCommand } from './commands/developer/stripe.js';
 import { aiModelsCommand } from './commands/ai/models.js';
 import { aiTestCommand } from './commands/ai/test.js';
 import { aiEstimateCommand } from './commands/ai/estimate.js';
@@ -352,6 +353,25 @@ developerCommand
 	.action(async (options: any) => {
 		try {
 			await developerEarningsCommand(options);
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
+	});
+
+developerCommand
+	.command('stripe [action]')
+	.description('Manage Stripe Connect for receiving payments (setup/status/refresh)')
+	.action(async (action: string = 'status') => {
+		try {
+			const validActions = ['setup', 'status', 'refresh'];
+			if (!validActions.includes(action)) {
+				Logger.error(`Invalid action: ${action}`);
+				Logger.log('');
+				Logger.log('Valid actions: setup, status, refresh');
+				process.exit(1);
+			}
+			await developerStripeCommand({ action: action as 'setup' | 'status' | 'refresh' });
 		} catch (error: any) {
 			Logger.error(error.message);
 			process.exit(1);

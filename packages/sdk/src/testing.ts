@@ -38,7 +38,10 @@
  */
 
 import type { ActionContext, OAuthTokens } from './integration-sdk';
-import type { DurableObjectStorage } from '@cloudflare/workers-types';
+
+// Note: We don't implement DurableObjectStorage directly to avoid
+// type compatibility issues with different @cloudflare/workers-types versions.
+// Instead, we provide a duck-typed mock that works for testing.
 
 // ============================================================================
 // MOCK OAUTH MANAGER
@@ -98,7 +101,7 @@ export class MockOAuthManager {
 // MOCK STORAGE
 // ============================================================================
 
-export class MockStorage implements DurableObjectStorage {
+export class MockStorage {
 	private data = new Map<string, any>();
 	private alarms = new Map<number, () => void>();
 

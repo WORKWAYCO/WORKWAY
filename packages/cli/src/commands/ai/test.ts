@@ -10,8 +10,7 @@ import inquirer from 'inquirer';
 import { Logger } from '../../utils/logger.js';
 import { AI_MODELS } from './models.js';
 import { createAPIClient } from '../../lib/api-client.js';
-import { loadCredentials } from '../../lib/auth.js';
-import { loadConfig } from '../../lib/config.js';
+import { loadConfig, getAuthToken } from '../../lib/config.js';
 
 interface TestOptions {
 	model?: string;
@@ -109,8 +108,8 @@ export async function aiTestCommand(prompt?: string, options: TestOptions = {}):
 			result = mockAIResponse(testPrompt!, selectedModel!);
 		} else {
 			// Live mode - call actual Workers AI via WORKWAY API
-			const credentials = await loadCredentials();
-			if (!credentials) {
+			const token = await getAuthToken();
+			if (!token) {
 				spinner.stop();
 				Logger.blank();
 				Logger.warn('Live mode requires authentication.');
@@ -124,7 +123,7 @@ export async function aiTestCommand(prompt?: string, options: TestOptions = {}):
 			}
 
 			const config = await loadConfig();
-			const client = createAPIClient(config.apiUrl, credentials.token);
+			const client = createAPIClient(config.apiUrl, token);
 
 			// Map model alias to API model name
 			const modelAlias = modelInfo.alias?.replace('LLAMA_3_8B', 'llama-3-8b')

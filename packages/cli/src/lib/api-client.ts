@@ -382,6 +382,42 @@ export class WorkwayAPIClient {
 		const response = await this.client.get<{ success: boolean; data: { models: AIModel[] } }>('/ai/models');
 		return response.data.data.models;
 	}
+
+	// ============================================================================
+	// STRIPE CONNECT
+	// ============================================================================
+
+	/**
+	 * Start Stripe Connect onboarding
+	 */
+	async startStripeOnboarding(developerId: string): Promise<StripeOnboardingResponse> {
+		const response = await this.client.post<StripeOnboardingResponse>(`/developers/${developerId}/onboard`);
+		return response.data;
+	}
+
+	/**
+	 * Get Stripe Connect account status
+	 */
+	async getStripeStatus(developerId: string): Promise<StripeStatusResponse> {
+		const response = await this.client.get<StripeStatusResponse>(`/developers/${developerId}/stripe-status`);
+		return response.data;
+	}
+
+	/**
+	 * Complete Stripe Connect onboarding (verify status after returning from Stripe)
+	 */
+	async completeStripeOnboarding(developerId: string): Promise<StripeCompleteResponse> {
+		const response = await this.client.post<StripeCompleteResponse>(`/developers/${developerId}/onboarding/complete`);
+		return response.data;
+	}
+
+	/**
+	 * Refresh expired Stripe Connect onboarding link
+	 */
+	async refreshStripeOnboarding(developerId: string): Promise<StripeOnboardingResponse> {
+		const response = await this.client.post<StripeOnboardingResponse>(`/developers/${developerId}/onboarding/refresh`);
+		return response.data;
+	}
 }
 
 // ============================================================================
@@ -440,6 +476,34 @@ export interface OAuthProvider {
 	category: string;
 	configured: boolean;
 	scope: string;
+}
+
+export interface StripeOnboardingResponse {
+	success: boolean;
+	onboardingUrl: string;
+	stripeAccountId: string;
+}
+
+export interface StripeStatusResponse {
+	hasStripeAccount: boolean;
+	onboardingStatus: string | null;
+	accountStatus?: {
+		chargesEnabled: boolean;
+		payoutsEnabled: boolean;
+		detailsSubmitted: boolean;
+		requiresAction: boolean;
+	};
+}
+
+export interface StripeCompleteResponse {
+	success: boolean;
+	onboardingStatus: string;
+	accountStatus: {
+		chargesEnabled: boolean;
+		payoutsEnabled: boolean;
+		detailsSubmitted: boolean;
+		requiresAction: boolean;
+	};
 }
 
 // ============================================================================

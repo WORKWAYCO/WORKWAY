@@ -54,7 +54,7 @@ export async function statusCommand(): Promise<void> {
 					for (const workflow of workflows.slice(0, 5)) {
 						const status = workflow.status === 'published' ? '🟢' : '🟡';
 						Logger.log(`  ${status} ${workflow.name}`);
-						Logger.log(`     ⭐ ${workflow.rating || 0} • ${workflow.installs || 0} installs`);
+						Logger.log(`     ⭐ ${workflow.average_rating || 0} • ${workflow.install_count || 0} installs`);
 					}
 					if (workflows.length > 5) {
 						Logger.log(`  ... and ${workflows.length - 5} more`);
@@ -73,10 +73,10 @@ export async function statusCommand(): Promise<void> {
 				if (earnings.length === 0) {
 					Logger.log('  No earnings yet');
 				} else {
-					const totalEarnings = earnings.reduce((sum, e) => sum + (e.amount || 0), 0);
+					const totalEarnings = earnings.reduce((sum, e) => sum + (e.revenue || 0), 0);
 					const pendingEarnings = earnings
 						.filter(e => e.status === 'pending')
-						.reduce((sum, e) => sum + (e.amount || 0), 0);
+						.reduce((sum, e) => sum + (e.revenue || 0), 0);
 
 					Logger.listItem(`Total: $${(totalEarnings / 100).toFixed(2)}`);
 					Logger.listItem(`Pending: $${(pendingEarnings / 100).toFixed(2)}`);

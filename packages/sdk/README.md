@@ -476,49 +476,97 @@ const results = await ai.chain([
 
 > **WORKWAY is opinionated:** We use Cloudflare infrastructure exclusively. This keeps costs low and simplifies deployment. For complex reasoning tasks, Llama 3 and Mistral 7B are highly capable.
 
-### Utility Modules (Coming in v1.1.0)
-
-> **Note:** The following utility modules are planned for v1.1.0. For now, use native JavaScript/TypeScript equivalents or npm packages.
-
-#### HTTP Module (Planned)
+### HTTP Module
 
 ```typescript
-// Coming in v1.1.0
-// For now, use native fetch():
-const response = await fetch(url, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify(data)
+import { http } from '@workway/sdk'
+
+// GET request
+const { data } = await http.get('https://api.example.com/users', {
+  headers: { 'Authorization': 'Bearer token' },
+  query: { limit: '10' }
 })
-const result = await response.json()
+
+// POST request with retry
+const result = await http.post('https://api.example.com/data', {
+  body: { name: 'test' },
+  retry: { attempts: 3, backoff: 'exponential' }
+})
+
+// Other methods
+await http.put(url, options)
+await http.patch(url, options)
+await http.delete(url, options)
 ```
 
-#### Cache Module (Planned)
+### Cache Module
 
 ```typescript
-// Coming in v1.1.0
-// For now, use Cloudflare KV via env bindings:
-// In your wrangler.toml, add a KV binding
-// Then access it via env.MY_KV.get(key) / env.MY_KV.put(key, value)
+import { createCache } from '@workway/sdk'
+
+// Create cache from KV binding
+const cache = createCache(env.CACHE)
+
+// Set with TTL (seconds)
+await cache.set('user:123', userData, { ttl: 3600 })
+
+// Get
+const user = await cache.get('user:123')
+
+// Get or set pattern
+const data = await cache.getOrSet('key', async () => {
+  return await expensiveOperation()
+}, { ttl: 300 })
+
+// Invalidate by tags
+await cache.set('post:1', post, { tags: ['user:123', 'posts'] })
+await cache.invalidateByTags(['user:123']) // Clears all tagged entries
 ```
 
-#### Storage Module (Planned)
+### Storage Module
 
 ```typescript
-// Coming in v1.1.0
-// For now, use Cloudflare R2 via env bindings:
-// In your wrangler.toml, add an R2 binding
-// Then access it via env.MY_BUCKET.get(key) / env.MY_BUCKET.put(key, value)
+import { createKVStorage, createObjectStorage } from '@workway/sdk'
+
+// Key-Value storage (Cloudflare KV)
+const kv = createKVStorage(env.MY_KV)
+await kv.set('config', { theme: 'dark' })
+const config = await kv.get('config')
+const keys = await kv.list({ prefix: 'user:' })
+
+// Object storage (Cloudflare R2)
+const storage = createObjectStorage(env.MY_BUCKET)
+await storage.uploadFile('docs/report.pdf', pdfBuffer, {
+  contentType: 'application/pdf'
+})
+const file = await storage.downloadFile('docs/report.pdf')
+const metadata = await storage.getMetadata('docs/report.pdf')
 ```
 
-#### Transform Module (Planned)
+### Transform Module
 
 ```typescript
-// Coming in v1.1.0
-// For now, use standard JavaScript methods:
-const filtered = array.filter(predicate)
-const mapped = array.map(mapper)
-const json = JSON.parse(string)
+import { transform } from '@workway/sdk'
+
+// Array operations
+const grouped = transform.groupBy(users, u => u.department)
+const unique = transform.unique(items, i => i.id)
+const chunks = transform.chunk(items, 10)
+const sorted = transform.sortBy(items, i => i.date, 'desc')
+
+// Data parsing
+const data = transform.parseJSON(text, fallback)
+const rows = transform.parseCSV(csvText)
+const csv = transform.toCSV(data)
+
+// Date formatting
+const formatted = transform.formatDate(date, 'YYYY-MM-DD HH:mm')
+const relative = transform.relativeTime(date) // "2 hours ago"
+
+// String operations
+const slug = transform.slugify('Hello World') // "hello-world"
+const short = transform.truncate(text, 100)
+const filled = transform.template('Hello {{name}}!', { name: 'World' })
 ```
 
 ---

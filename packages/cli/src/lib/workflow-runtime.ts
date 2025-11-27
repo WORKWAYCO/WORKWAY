@@ -26,6 +26,16 @@ export interface WorkflowDefinition {
 		config?: any;
 	};
 	execute: (context: WorkflowContext) => Promise<WorkflowResult>;
+
+	// Lifecycle hooks
+	/** Called when workflow is enabled/installed */
+	onEnable?: (context: WorkflowContext) => Promise<void>;
+	/** Called when workflow is disabled/uninstalled */
+	onDisable?: (context: WorkflowContext) => Promise<void>;
+	/** Called when an error occurs during execution */
+	onError?: (error: Error, context: WorkflowContext) => Promise<void>;
+	/** Validate configuration before enabling */
+	validateConfig?: (config: any, userId: string) => Promise<boolean>;
 }
 
 export interface WorkflowContext {
@@ -154,6 +164,16 @@ export class WorkflowRuntime {
 		try {
 			result = await workflow.execute(context);
 		} catch (error: any) {
+			// Call onError hook if defined
+			if (workflow.onError) {
+				try {
+					await workflow.onError(error, context);
+				} catch (hookError) {
+					// Log but don't throw - the original error is more important
+					Logger.debug(`onError hook failed: ${(hookError as Error).message}`);
+				}
+			}
+
 			result = {
 				success: false,
 				error: error.message,
@@ -174,6 +194,64 @@ export class WorkflowRuntime {
 			steps: this.stepExecutions,
 			totalDuration,
 		};
+	}
+
+	/**
+	 * Enable a workflow - calls validateConfig and onEnable hooks
+	 */
+	async enable(
+		workflow: WorkflowDefinition,
+		config: Record<string, any> = {},
+		userId: string = 'cli-test-user'
+	): Promise<{ success: boolean; error?: string }> {
+		// Validate config if hook is defined
+		if (workflow.validateConfig) {
+			try {
+				const isValid = await workflow.validateConfig(config, userId);
+				if (!isValid) {
+					return { success: false, error: 'Configuration validation failed' };
+				}
+			} catch (error: any) {
+				return { success: false, error: `Config validation error: ${error.message}` };
+			}
+		}
+
+		// Create context for hooks
+		const context = this.createContext(workflow, { config }, config);
+
+		// Call onEnable hook if defined
+		if (workflow.onEnable) {
+			try {
+				await workflow.onEnable(context);
+			} catch (error: any) {
+				return { success: false, error: `onEnable hook failed: ${error.message}` };
+			}
+		}
+
+		return { success: true };
+	}
+
+	/**
+	 * Disable a workflow - calls onDisable hook
+	 */
+	async disable(
+		workflow: WorkflowDefinition,
+		config: Record<string, any> = {}
+	): Promise<{ success: boolean; error?: string }> {
+		// Create context for hooks
+		const context = this.createContext(workflow, { config }, config);
+
+		// Call onDisable hook if defined
+		if (workflow.onDisable) {
+			try {
+				await workflow.onDisable(context);
+			} catch (error: any) {
+				// Log but don't fail - we want to disable even if cleanup fails
+				Logger.warn(`onDisable hook failed: ${error.message}`);
+			}
+		}
+
+		return { success: true };
 	}
 
 	/**
@@ -478,7 +556,7 @@ export class WorkflowRuntime {
 			}),
 		});
 
-		const result = await response.json();
+		const result = await response.json() as { ok: boolean; error?: string; [key: string]: any };
 		if (!result.ok) {
 			throw new Error(`Slack API error: ${result.error}`);
 		}
@@ -501,7 +579,7 @@ export class WorkflowRuntime {
 			},
 		});
 
-		const result = await response.json();
+		const result = await response.json() as { ok: boolean; error?: string; [key: string]: any };
 		if (!result.ok) {
 			throw new Error(`Slack API error: ${result.error}`);
 		}
