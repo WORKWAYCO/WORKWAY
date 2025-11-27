@@ -425,6 +425,21 @@ export class WorkersAI {
   }
 
   /**
+   * Text completion (alias for generateText for API compatibility)
+   * Matches documentation examples using ai.completion()
+   */
+  async completion(options: {
+    prompt: string;
+    model?: string;
+    temperature?: number;
+    max_tokens?: number;
+    system?: string;
+    cache?: boolean;
+  }): Promise<ActionResult> {
+    return this.generateText(options);
+  }
+
+  /**
    * Run any Workers AI model
    */
   async runModel(options: AIModelOptions): Promise<ActionResult> {

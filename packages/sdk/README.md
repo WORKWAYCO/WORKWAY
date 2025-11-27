@@ -476,6 +476,129 @@ const results = await ai.chain([
 
 > **WORKWAY is opinionated:** We use Cloudflare infrastructure exclusively. This keeps costs low and simplifies deployment. For complex reasoning tasks, Llama 3 and Mistral 7B are highly capable.
 
+### Vectorize Module (Semantic Search & RAG)
+
+Build semantic search, knowledge bases, and RAG systems with Cloudflare Vectorize.
+
+```typescript
+import { createVectorClient } from '@workway/sdk/vectorize'
+
+export default defineWorkflow({
+  name: 'Knowledge Base Search',
+  type: 'ai-native',
+
+  async execute({ env, trigger }) {
+    // Create Vectorize client with AI binding for auto-embeddings
+    const vectors = createVectorClient(env)
+
+    // Store text with automatic embedding generation
+    await vectors.storeText({
+      id: 'doc-1',
+      text: 'Cloudflare Workers run JavaScript at the edge...',
+      metadata: { source: 'docs', category: 'platform' }
+    })
+
+    // Semantic text search
+    const results = await vectors.searchText({
+      query: 'How do edge functions work?',
+      topK: 5
+    })
+
+    return { matches: results.data.matches }
+  }
+})
+```
+
+#### RAG (Retrieval Augmented Generation)
+
+```typescript
+const vectors = createVectorClient(env)
+
+// Build knowledge base from documents
+await vectors.buildKnowledgeBase({
+  documents: [
+    { id: 'guide-1', content: 'Workflow SDK guide...', metadata: { type: 'guide' } },
+    { id: 'api-ref', content: 'API reference...', metadata: { type: 'reference' } }
+  ],
+  chunkSize: 500,  // Words per chunk
+  overlap: 50      // Overlap between chunks
+})
+
+// RAG query - searches, retrieves context, generates answer
+const answer = await vectors.rag({
+  query: 'How do I handle OAuth tokens?',
+  topK: 5,
+  generationModel: AIModels.LLAMA_3_8B,
+  temperature: 0.7
+})
+
+console.log(answer.data)
+// {
+//   answer: 'To handle OAuth tokens in WORKWAY...',
+//   sources: [{ id: 'guide-1_chunk_3', score: 0.89, text: '...' }],
+//   query: 'How do I handle OAuth tokens?'
+// }
+```
+
+#### Vectorize Methods
+
+```typescript
+const vectors = createVectorClient(env)
+
+// Store raw vectors
+await vectors.upsert({
+  id: 'item-1',
+  values: [0.1, 0.2, 0.3, ...],  // Embedding vector
+  metadata: { type: 'product' }
+})
+
+// Batch upsert
+await vectors.upsertBatch([
+  { id: 'item-1', values: [...], metadata: {} },
+  { id: 'item-2', values: [...], metadata: {} }
+])
+
+// Query with vector
+const results = await vectors.query({
+  vector: [0.1, 0.2, ...],
+  topK: 10,
+  filter: { category: 'electronics' }
+})
+
+// Text-based operations (auto-generates embeddings)
+await vectors.storeText({ id, text, metadata })
+await vectors.searchText({ query, topK, filter })
+
+// Build knowledge base
+await vectors.buildKnowledgeBase({ documents, chunkSize, overlap })
+
+// RAG query
+await vectors.rag({ query, topK, generationModel, systemPrompt })
+
+// Recommendations (collaborative filtering)
+await vectors.recommend({
+  userId: 'user-1',
+  itemIds: ['item-viewed-1', 'item-purchased-2'],
+  topK: 10
+})
+
+// Delete vectors
+await vectors.delete(['id-1', 'id-2'])
+```
+
+#### Vectorize Configuration
+
+Add Vectorize binding to `wrangler.toml`:
+
+```toml
+[[vectorize]]
+binding = "VECTORDB"
+index_name = "my-index"
+
+[ai]
+binding = "AI"  # Required for auto-embeddings
+```
+
 ### HTTP Module
 
 ```typescript
@@ -693,21 +816,21 @@ export default defineWorkflow({
     // Get transcript
     const transcript = await integrations.google_meet.getTranscript(recording.id)
 
-    // AI summarization
+    // AI summarization using Workers AI
     const summary = await ai.completion({
-      model: 'claude-sonnet-4',
-      systemPrompt: `Summarize meeting transcript. Format: ${inputs.summaryLength}`,
+      model: AIModels.LLAMA_3_8B, // High-quality model
+      system: `Summarize meeting transcript. Format: ${inputs.summaryLength}`,
       prompt: transcript,
-      maxTokens: inputs.summaryLength === 'brief' ? 500 : 1500,
+      max_tokens: inputs.summaryLength === 'brief' ? 500 : 1500,
       cache: false // Don't cache - each meeting is unique
     })
 
     // Extract action items with AI
     const actionItems = await ai.completion({
-      model: 'claude-haiku', // Cheaper model for simple task
-      systemPrompt: 'Extract action items from meeting summary. Return JSON array.',
-      prompt: summary,
-      maxTokens: 300
+      model: AIModels.LLAMA_2_7B, // Smaller, faster model for simple task
+      system: 'Extract action items from meeting summary. Return JSON array.',
+      prompt: summary.data,
+      max_tokens: 300
     })
 
     // Save to Notion
@@ -856,9 +979,9 @@ if (!cached) {
   await cache.set(key, cached, { ttl: 3600 })
 }
 
-// Use cheapest model for simple tasks
+// Use smaller model for simple tasks
 await ai.completion({
-  model: 'claude-haiku', // $0.25/1M tokens vs $3/1M
+  model: AIModels.LLAMA_2_7B, // Faster, cheaper than LLAMA_3_8B
   prompt: 'Classify this as A, B, or C'
 })
 
@@ -879,11 +1002,11 @@ await ai.completion({ prompt: 'Is 10 > 5?' }) // Use if/else!
 const a = await ai.completion(...)
 const b = await ai.completion(...) // Should be Promise.all
 
-// Don't use expensive models for simple tasks
+// Don't use large models for simple tasks
 await ai.completion({
-  model: 'gpt-4o', // $15/1M tokens
+  model: AIModels.LLAMA_3_8B, // Overkill for yes/no
   prompt: 'Say yes or no'
-})
+}) // Use LLAMA_2_7B or PHI_2 instead
 
 // Don't forget to cache
 await ai.completion({ prompt: 'same prompt every time' }) // Cache this!

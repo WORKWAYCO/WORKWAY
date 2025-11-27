@@ -8,6 +8,18 @@
     ".": {
       "import": "./dist/index.mjs",
       "require": "./dist/index.js"
+    },
+    "./workers-ai": {
+      "import": "./dist/workers-ai.mjs",
+      "require": "./dist/workers-ai.js"
+    },
+    "./vectorize": {
+      "import": "./dist/vectorize.mjs",
+      "require": "./dist/vectorize.js"
+    },
+    "./testing": {
+      "import": "./dist/testing.mjs",
+      "require": "./dist/testing.js"
     }
   },
   "files": [

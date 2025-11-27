@@ -238,6 +238,87 @@ export interface ActionResult<T = unknown> {
 	 * Integrations can provide this for easier interop
 	 */
 	standard?: StandardData;
+
+	/**
+	 * Success/failure flag (for simplified AI and internal use)
+	 */
+	success?: boolean;
+
+	/**
+	 * Error message (if failed)
+	 */
+	error?: string;
+}
+
+/**
+ * ActionResult namespace with helper methods
+ * Used by AI integrations for simplified result creation
+ */
+// eslint-disable-next-line @typescript-eslint/no-namespace
+export namespace ActionResult {
+	/**
+	 * Create a successful result
+	 */
+	export function success<T>(data: T, options?: {
+		metadata?: Record<string, any>;
+		capabilities?: string[];
+	}): ActionResult<T> {
+		return {
+			data,
+			success: true,
+			metadata: {
+				source: {
+					integration: 'internal',
+					action: 'success'
+				},
+				schema: 'internal.result.v1',
+				timestamp: Date.now(),
+				...options?.metadata
+			},
+			capabilities: {
+				canHandleText: true,
+				canHandleHtml: false,
+				canHandleMarkdown: false,
+				canHandleRichText: false,
+				canHandleAttachments: false,
+				supportsThreads: false,
+				supportsLabels: false,
+				supportsPriority: false,
+				maxContentLength: undefined
+			}
+		};
+	}
+
+	/**
+	 * Create an error result
+	 */
+	export function error<T = never>(message: string, code?: string): ActionResult<T> {
+		return {
+			data: undefined as any,
+			success: false,
+			error: message,
+			metadata: {
+				source: {
+					integration: 'internal',
+					action: 'error'
+				},
+				schema: 'internal.error.v1',
+				timestamp: Date.now(),
+				...(code && { errorCode: code })
+			},
+			capabilities: {
+				canHandleText: false,
+				canHandleHtml: false,
+				canHandleMarkdown: false,
+				canHandleRichText: false,
+				canHandleAttachments: false,
+				supportsThreads: false,
+				supportsLabels: false,
+				supportsPriority: false,
+				maxContentLength: undefined
+			}
+		};
+	}
 }
 
 // ============================================================================
