@@ -2,12 +2,12 @@
  * Logs Command
  *
  * View production workflow execution logs
- * Provides observability into deployed workflows
+ * Provides real observability into deployed workflows
  */
 
 import { Logger } from '../utils/logger.js';
 import { loadConfig, isAuthenticated } from '../lib/config.js';
-import { createAPIClient } from '../lib/api-client.js';
+import { createAPIClient, type WorkflowLog } from '../lib/api-client.js';
 
 interface LogsOptions {
 	workflow?: string;
@@ -24,7 +24,7 @@ export async function logsCommand(options: LogsOptions): Promise<void> {
 		if (!(await isAuthenticated())) {
 			Logger.warn('Not logged in');
 			Logger.log('');
-			Logger.log('💡 Login with: workway login');
+			Logger.log('Login with: workway login');
 			process.exit(1);
 		}
 
@@ -48,54 +48,91 @@ export async function logsCommand(options: LogsOptions): Promise<void> {
 
 		try {
 			// Get workflow runs from API
-			// Note: This would need an actual API endpoint for developer logs
-			// For now, we'll show a mock implementation
+			const { logs, pagination } = await client.getLogs({
+				limit,
+				status: statusFilter,
+				integrationId: options.workflow,
+			});
 
-			// In production, this would call something like:
-			// const runs = await client.getMyWorkflowRuns({ limit, status: statusFilter, workflowId: options.workflow });
-
-			spinner.succeed('Logs loaded');
+			spinner.succeed(`Loaded ${logs.length} logs (${pagination.total} total)`);
 			Logger.blank();
 
-			// Display logs (mock data for demonstration)
+			// Display logs
 			Logger.section('Recent Executions');
 
-			// This is mock data - in production, would come from API
-			const mockRuns = generateMockRuns(limit);
-
-			if (mockRuns.length === 0) {
+			if (logs.length === 0) {
 				Logger.log('  No execution logs found');
 				Logger.log('');
-				Logger.log('💡 Workflow executions will appear here after they run in production');
+				Logger.log('Workflow executions will appear here after they run in production');
 			} else {
-				for (const run of mockRuns) {
-					displayRunLog(run);
+				for (const log of logs) {
+					displayRunLog(log);
+				}
+
+				// Show pagination info
+				if (pagination.totalPages > 1) {
+					Logger.blank();
+					Logger.log(`Page ${pagination.page} of ${pagination.totalPages}`);
 				}
 			}
 
 			Logger.blank();
 
 			if (options.follow) {
-				Logger.log('👀 Following logs (Ctrl+C to stop)...');
-				Logger.log('   Note: Real-time log streaming coming soon');
+				Logger.log('Following logs (Ctrl+C to stop)...');
+				Logger.blank();
 
-				// In production, this would set up a WebSocket or polling connection
-				// For now, just wait
-				await new Promise((resolve) => {
+				// Poll for new logs every 5 seconds
+				let lastLogId = logs.length > 0 ? logs[0].id : null;
+
+				const pollInterval = setInterval(async () => {
+					try {
+						const { logs: newLogs } = await client.getLogs({
+							limit: 10,
+							status: statusFilter,
+							integrationId: options.workflow,
+						});
+
+						// Find new logs since last check
+						const newEntries = [];
+						for (const log of newLogs) {
+							if (log.id === lastLogId) break;
+							newEntries.push(log);
+						}
+
+						if (newEntries.length > 0) {
+							lastLogId = newEntries[0].id;
+							for (const log of newEntries.reverse()) {
+								displayRunLog(log);
+							}
+						}
+					} catch (error) {
+						// Silently continue polling
+					}
+				}, 5000);
+
+				// Wait for SIGINT
+				await new Promise<void>((resolve) => {
 					process.on('SIGINT', () => {
+						clearInterval(pollInterval);
 						Logger.blank();
 						Logger.log('Stopped following logs');
-						resolve(undefined);
+						resolve();
 					});
 				});
 			}
-
 		} catch (error: any) {
 			spinner.fail('Failed to load logs');
-			Logger.error(error.message);
+
+			if (error.statusCode === 404) {
+				Logger.log('');
+				Logger.log('Developer profile not found.');
+				Logger.log('Register as a developer first: workway developer register');
+			} else {
+				Logger.error(error.message);
+			}
 			process.exit(1);
 		}
-
 	} catch (error: any) {
 		Logger.error(error.message);
 		process.exit(1);
@@ -105,65 +142,29 @@ export async function logsCommand(options: LogsOptions): Promise<void> {
 /**
  * Display a single run log entry
  */
-function displayRunLog(run: any): void {
-	const statusEmoji = {
-		completed: '✅',
-		running: '🔄',
-		failed: '❌',
-		cancelled: '🚫',
-	}[run.status] || '❓';
+function displayRunLog(log: WorkflowLog): void {
+	const statusEmoji: Record<string, string> = {
+		completed: '[OK]',
+		running: '[..]',
+		failed: '[!!]',
+		cancelled: '[--]',
+	};
 
-	const timestamp = new Date(run.startedAt * 1000).toLocaleString();
-	const duration = run.duration ? `${run.duration}ms` : 'in progress';
+	const emoji = statusEmoji[log.status] || '[??]';
+	const timestamp = new Date(log.startedAt).toLocaleString();
+	const duration = log.durationMs ? `${log.durationMs}ms` : 'in progress';
 
-	Logger.log(`${statusEmoji} ${run.workflowName}`);
-	Logger.log(`   ID: ${run.id}`);
+	Logger.log(`${emoji} ${log.integrationName}`);
+	Logger.log(`   ID: ${log.id}`);
+	Logger.log(`   User: ${log.userEmail}`);
+	Logger.log(`   Trigger: ${log.triggerType}`);
 	Logger.log(`   Started: ${timestamp}`);
 	Logger.log(`   Duration: ${duration}`);
+	Logger.log(`   Steps: ${log.stepsCompleted}/${log.stepsTotal}${log.stepsFailed > 0 ? ` (${log.stepsFailed} failed)` : ''}`);
 
-	if (run.error) {
-		Logger.log(`   Error: ${run.error}`);
-	}
-
-	if (run.steps) {
-		Logger.log(`   Steps: ${run.stepsCompleted}/${run.stepsTotal}`);
+	if (log.error) {
+		Logger.log(`   Error: ${log.error}`);
 	}
 
 	Logger.blank();
-}
-
-/**
- * Generate mock run data for demonstration
- */
-function generateMockRuns(count: number): any[] {
-	const workflows = [
-		'Gmail to Notion Sync',
-		'Slack Digest Bot',
-		'Invoice Processor',
-		'Lead Enrichment',
-	];
-
-	const statuses = ['completed', 'completed', 'completed', 'failed', 'running'];
-
-	const runs = [];
-	const now = Date.now();
-
-	for (let i = 0; i < count; i++) {
-		const status = statuses[Math.floor(Math.random() * statuses.length)];
-		const workflow = workflows[Math.floor(Math.random() * workflows.length)];
-
-		runs.push({
-			id: `run_${Math.random().toString(36).substring(2, 10)}`,
-			workflowName: workflow,
-			status,
-			startedAt: (now - Math.random() * 86400000) / 1000, // Random time in last 24h
-			duration: status !== 'running' ? Math.floor(Math.random() * 5000) + 100 : null,
-			stepsTotal: Math.floor(Math.random() * 5) + 2,
-			stepsCompleted: status === 'running' ? 1 : status === 'failed' ? 2 : 3,
-			error: status === 'failed' ? 'Connection timeout to external API' : null,
-		});
-	}
-
-	// Sort by start time descending
-	return runs.sort((a, b) => b.startedAt - a.startedAt);
 }

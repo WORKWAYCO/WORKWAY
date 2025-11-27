@@ -296,6 +296,66 @@ export class WorkwayAPIClient {
 		});
 		return response.data;
 	}
+
+	// ============================================================================
+	// LOGS
+	// ============================================================================
+
+	/**
+	 * Get workflow execution logs for developer's integrations
+	 */
+	async getLogs(options: {
+		limit?: number;
+		page?: number;
+		status?: string;
+		integrationId?: string;
+	}): Promise<{
+		logs: WorkflowLog[];
+		pagination: { page: number; limit: number; total: number; totalPages: number };
+	}> {
+		const params = new URLSearchParams();
+		if (options.limit) params.append('limit', String(options.limit));
+		if (options.page) params.append('page', String(options.page));
+		if (options.status) params.append('status', options.status);
+		if (options.integrationId) params.append('integrationId', options.integrationId);
+
+		const response = await this.client.get<{
+			logs: WorkflowLog[];
+			pagination: { page: number; limit: number; total: number; totalPages: number };
+		}>(`/developers/me/logs?${params.toString()}`);
+		return response.data;
+	}
+
+	/**
+	 * Get developer analytics
+	 */
+	async getAnalytics(): Promise<any> {
+		const response = await this.client.get<any>('/developers/me/analytics');
+		return response.data;
+	}
+}
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface WorkflowLog {
+	id: string;
+	integrationId: string;
+	integrationName: string;
+	userId: string;
+	userEmail: string;
+	installationId: string;
+	triggerType: string;
+	status: 'running' | 'completed' | 'failed' | 'cancelled';
+	error: string | null;
+	startedAt: number;
+	completedAt: number | null;
+	durationMs: number | null;
+	stepsTotal: number;
+	stepsCompleted: number;
+	stepsFailed: number;
+	stepResults: any;
 }
 
 // ============================================================================

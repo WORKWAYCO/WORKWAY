@@ -1,13 +1,15 @@
 /**
  * Workflow Test Command
  *
- * Tests workflow execution with mock or live data
+ * Tests workflow execution with mock or live data.
+ * Live mode executes real API calls using stored OAuth tokens.
  */
 
 import fs from 'fs-extra';
 import path from 'path';
 import { Logger } from '../../utils/logger.js';
 import { loadProjectConfig, loadOAuthTokens } from '../../lib/config.js';
+import { WorkflowRuntime, loadWorkflow } from '../../lib/workflow-runtime.js';
 
 interface TestOptions {
 	mock?: boolean;
@@ -27,8 +29,8 @@ export async function workflowTestCommand(options: TestOptions): Promise<void> {
 		if (!(await fs.pathExists(workflowPath))) {
 			Logger.error('No workflow.ts found in current directory');
 			Logger.log('');
-			Logger.log('💡 Run this command from a workflow project directory');
-			Logger.log('💡 Or create a new workflow with: workway workflow init');
+			Logger.log('Run this command from a workflow project directory');
+			Logger.log('Or create a new workflow with: workway workflow init');
 			process.exit(1);
 		}
 
@@ -41,8 +43,8 @@ export async function workflowTestCommand(options: TestOptions): Promise<void> {
 		if (!(await fs.pathExists(testDataPath))) {
 			Logger.error(`Test data file not found: ${testDataFile}`);
 			Logger.log('');
-			Logger.log('💡 Create test-data.json with sample trigger data');
-			Logger.log('💡 Or specify a different file with: --data <file>');
+			Logger.log('Create test-data.json with sample trigger data');
+			Logger.log('Or specify a different file with: --data <file>');
 			process.exit(1);
 		}
 
@@ -69,10 +71,10 @@ export async function workflowTestCommand(options: TestOptions): Promise<void> {
 
 			if (result.success) {
 				Logger.blank();
-				Logger.success('Workflow test passed! ✅');
+				Logger.success('Workflow test passed!');
 			} else {
 				Logger.blank();
-				Logger.error('Workflow test failed ❌');
+				Logger.error('Workflow test failed');
 				process.exit(1);
 			}
 		} catch (error: any) {
@@ -101,11 +103,11 @@ async function executeWorkflowTest(
 	testData: any,
 	mode: string
 ): Promise<any> {
-	// In mock mode, simulate workflow execution
 	if (mode === 'mock') {
+		// Mock mode: simulate workflow execution with fake data
 		return await executeMockTest(workflowPath, testData);
 	} else {
-		// In live mode, use real OAuth tokens
+		// Live mode: execute real workflow with OAuth tokens
 		return await executeLiveTest(workflowPath, testData);
 	}
 }
@@ -182,6 +184,9 @@ async function executeMockTest(workflowPath: string, testData: any): Promise<any
 
 /**
  * Execute live test (with real OAuth)
+ *
+ * This executes the actual workflow code with real API calls
+ * using OAuth tokens stored in ~/.workway/oauth-tokens.json
  */
 async function executeLiveTest(workflowPath: string, testData: any): Promise<any> {
 	Logger.section('Workflow Steps (Live Mode)');
@@ -197,86 +202,91 @@ async function executeLiveTest(workflowPath: string, testData: any): Promise<any
 	}
 
 	// Display connected accounts
-	Logger.log(`📱 Using OAuth accounts: ${providers.join(', ')}`);
+	Logger.log(`Using OAuth accounts: ${providers.join(', ')}`);
 	Logger.blank();
 
-	// Simulate trigger
-	Logger.log(`🔔 Trigger: ${testData.trigger?.type || 'manual'}`);
+	// Display trigger
+	Logger.log(`Trigger: ${testData.trigger?.type || 'manual'}`);
 	if (testData.trigger?.data) {
 		Logger.listItem(`Data: ${JSON.stringify(testData.trigger.data)}`);
 	}
 	Logger.blank();
 
-	// In a real implementation, this would:
-	// 1. Import the workflow.ts file dynamically
-	// 2. Create WorkflowContext with real OAuth credentials
-	// 3. Execute the workflow with live API calls
-	// 4. Return actual results from the APIs
+	// Load and compile the workflow
+	Logger.log('Compiling workflow...');
+	const workflow = await loadWorkflow(workflowPath);
+	Logger.success(`Loaded: ${workflow.metadata?.name || 'workflow'}`);
+	Logger.blank();
 
-	// For now, simulate with realistic live API calls
-	const steps = [
-		{
-			name: 'gmail.fetch-email',
-			status: 'success',
-			duration: 892,
-			output: {
-				id: '18c2a1b4d5e6f7a8',
-				from: testData.trigger?.data?.from || 'real@example.com',
-				subject: testData.trigger?.data?.subject || 'Live Test Email',
-				body: 'This would be fetched from Gmail API',
-				labels: ['INBOX', 'UNREAD'],
-			},
-		},
-		{
-			name: 'slack.send-message',
-			status: 'success',
-			duration: 567,
-			output: {
-				ok: true,
-				channel: testData.config?.slackChannel || '#general',
-				ts: Date.now() / 1000,
-				message: {
-					text: 'New email from real@example.com',
-					type: 'message',
-				},
-			},
-		},
-	];
+	// Check required integrations
+	if (workflow.integrations && workflow.integrations.length > 0) {
+		Logger.log('Required integrations:');
+		for (const integration of workflow.integrations) {
+			const hasToken = !!oauthTokens[integration];
+			if (hasToken) {
+				Logger.success(`  ${integration}: connected`);
+			} else {
+				Logger.error(`  ${integration}: not connected`);
+			}
+		}
+		Logger.blank();
+	}
 
-	// Display each step with realistic timing
+	// Initialize runtime
+	const runtime = new WorkflowRuntime();
+	await runtime.initialize();
+
+	// Execute workflow
+	Logger.log('Executing workflow...');
+	Logger.blank();
+
+	const { result, steps, totalDuration } = await runtime.execute(
+		workflow,
+		testData,
+		testData.config || {}
+	);
+
+	// Display step results
+	Logger.section('Step Results');
 	for (let i = 0; i < steps.length; i++) {
 		const step = steps[i];
-		await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate API delay
 
 		if (step.status === 'success') {
-			Logger.success(`Step ${i + 1}: ${step.name} (LIVE)`);
+			Logger.success(`Step ${i + 1}: ${step.actionId} (LIVE)`);
 			Logger.listItem(`Duration: ${step.duration}ms`);
 
-			if (step.name === 'gmail.fetch-email') {
-				Logger.listItem(`From: ${step.output.from}`);
-				Logger.listItem(`Subject: ${step.output.subject}`);
-				Logger.listItem(`ID: ${step.output.id}`);
-			} else if (step.name === 'slack.send-message') {
-				Logger.listItem(`Channel: ${step.output.channel}`);
-				Logger.listItem(`Timestamp: ${step.output.ts}`);
-				Logger.listItem(`Sent: ✓`);
+			// Show relevant output based on action type
+			if (step.output) {
+				const outputPreview = JSON.stringify(step.output, null, 2);
+				if (outputPreview.length > 200) {
+					Logger.listItem(`Output: ${outputPreview.substring(0, 200)}...`);
+				} else {
+					Logger.listItem(`Output: ${outputPreview}`);
+				}
 			}
 		} else {
-			Logger.error(`Step ${i + 1}: ${step.name} failed`);
+			Logger.error(`Step ${i + 1}: ${step.actionId} FAILED`);
+			if (step.error) {
+				Logger.listItem(`Error: ${step.error}`);
+			}
 		}
 
 		Logger.blank();
 	}
 
 	return {
-		success: true,
+		success: result.success,
 		mode: 'live',
-		steps,
-		totalDuration: steps.reduce((sum, s) => sum + s.duration, 0),
-		output: {
-			emailProcessed: steps[0].output.subject,
-			slackMessage: steps[1].output.ts,
-		},
+		steps: steps.map((s) => ({
+			name: s.actionId,
+			status: s.status,
+			duration: s.duration,
+			output: s.output,
+			error: s.error,
+		})),
+		totalDuration,
+		output: result.data,
+		error: result.error,
 	};
 }
 

@@ -54,15 +54,16 @@ export default defineWorkflow({
 
 ---
 
-### AI-Enhanced Workflow (Selective AI Use)
+### AI-Enhanced Workflow (Cloudflare Workers AI)
 
 ```typescript
-import { defineWorkflow, webhook, ai } from '@workway/sdk'
+import { defineWorkflow, webhook } from '@workway/sdk'
+import { createAIClient, AIModels } from '@workway/sdk/workers-ai'
 
-// Integration + strategic AI for categorization
+// Integration + Cloudflare Workers AI for categorization
 export default defineWorkflow({
   name: 'Smart Support Ticket Router',
-  type: 'ai-enhanced', // ← Auto-optimizes AI usage
+  type: 'ai-enhanced', // ← Uses Cloudflare Workers AI
   pricing: { model: 'subscription', price: 15, executions: 200 },
 
   integrations: [
@@ -79,19 +80,20 @@ export default defineWorkflow({
 
   trigger: webhook({ service: 'zendesk', event: 'ticket.created' }),
 
-  async execute({ trigger, inputs, integrations }) {
+  async execute({ trigger, inputs, integrations, env }) {
     const ticket = trigger.data.ticket
+    const ai = createAIClient(env)
 
-    // Strategic AI use - only where needed
-    const category = await ai.completion({
-      model: 'claude-haiku', // Cheapest model for simple task
-      systemPrompt: `Classify ticket into: ${inputs.teams.map(t => t.name).join(', ')}`,
+    // Cloudflare Workers AI - fast, cheap, no API keys
+    const result = await ai.generateText({
+      model: AIModels.LLAMA_2_7B, // Fastest model for classification
+      system: `Classify ticket into: ${inputs.teams.map(t => t.name).join(', ')}. Reply with only the category name.`,
       prompt: `${ticket.subject}\n${ticket.description}`,
-      maxTokens: 20,
-      cache: true // ← SDK auto-caches similar prompts
+      max_tokens: 20
     })
 
     // Rest is pure business logic
+    const category = result.data.trim()
     const team = inputs.teams.find(t => t.name === category) || inputs.teams[0]
 
     await integrations.zendesk.tickets.update(ticket.id, {
@@ -108,19 +110,20 @@ export default defineWorkflow({
 })
 ```
 
-**Cost:** $0.008/execution | **Margin:** 85% | **Your earnings:** $8.40/mo per user
+**Cost:** $0.003/execution | **Margin:** 95% | **Your earnings:** $10.50/mo per user
 
 ---
 
-### AI-Native Workflow (Heavy AI Use)
+### AI-Native Workflow (Multi-Step AI)
 
 ```typescript
-import { defineWorkflow, schedule, ai, http } from '@workway/sdk'
+import { defineWorkflow, schedule, http } from '@workway/sdk'
+import { createAIClient, AIModels } from '@workway/sdk/workers-ai'
 
-// Multiple AI steps - needs optimization
+// Multiple AI steps using Cloudflare Workers AI
 export default defineWorkflow({
   name: 'Daily AI Newsletter',
-  type: 'ai-native', // ← SDK applies all optimizations
+  type: 'ai-native', // ← Multiple AI operations
   pricing: { model: 'subscription', price: 25, executions: 30 },
 
   inputs: {
@@ -130,28 +133,29 @@ export default defineWorkflow({
 
   trigger: schedule('0 8 * * *'),
 
-  async execute({ inputs, cache }) {
+  async execute({ inputs, cache, env }) {
+    const ai = createAIClient(env)
+
     // Step 1: Research (caching helps here)
     const cacheKey = `research_${inputs.topics.join('_')}_${new Date().toDateString()}`
     let research = await cache.get(cacheKey)
 
     if (!research) {
-      research = await ai.completion({
-        model: 'claude-sonnet-4', // SDK auto-routes to cheapest provider
-        prompt: `Research latest in: ${inputs.topics.join(', ')}`,
-        maxTokens: 2000,
-        routing: 'cost-optimized' // ← Let SDK choose provider
+      const result = await ai.generateText({
+        model: AIModels.LLAMA_3_8B, // Best quality/cost balance
+        prompt: `Research and summarize the latest developments in: ${inputs.topics.join(', ')}`,
+        max_tokens: 2000
       })
+      research = result.data
       await cache.set(cacheKey, research, { ttl: 3600 }) // 1 hour
     }
 
     // Step 2: Generate newsletter
-    const newsletter = await ai.completion({
-      model: 'gpt-4o',
-      systemPrompt: 'You are a newsletter writer',
-      prompt: `Write newsletter based on:\n\n${research}`,
-      maxTokens: 1500,
-      routing: 'quality-optimized' // ← Best quality for content
+    const newsletterResult = await ai.generateText({
+      model: AIModels.MISTRAL_7B, // Strong writing quality
+      system: 'You are a professional newsletter writer. Create engaging, informative content.',
+      prompt: `Write a newsletter based on:\n\n${research}`,
+      max_tokens: 1500
     })
 
     // Step 3: Send email (no AI cost)
@@ -160,7 +164,7 @@ export default defineWorkflow({
       body: {
         to: inputs.email,
         subject: `Your Daily ${inputs.topics[0]} Update`,
-        html: newsletter
+        html: newsletterResult.data
       }
     })
 
@@ -169,7 +173,7 @@ export default defineWorkflow({
 })
 ```
 
-**Cost:** $0.15/execution (with caching) | **Margin:** 82% | **Your earnings:** $14.70/mo per user
+**Cost:** $0.03/execution (with caching) | **Margin:** 96% | **Your earnings:** $17.20/mo per user
 
 ---
 
@@ -184,16 +188,18 @@ The SDK automatically optimizes based on workflow type:
 - **Examples:** Stripe→Notion, Airtable→Calendar, GitHub→Slack
 
 ### `type: 'ai-enhanced'` (20% of marketplace)
-- **Runtime:** Cloudflare Workers + Smart AI routing
-- **Cost:** $0.01-0.10/execution
+- **Runtime:** Cloudflare Workers + Workers AI
+- **Cost:** $0.003-0.02/execution
 - **Best for:** Workflows with 1-2 AI calls for categorization/analysis
 - **Examples:** Email categorization, sentiment analysis, smart routing
 
 ### `type: 'ai-native'` (10% of marketplace)
-- **Runtime:** Multi-provider AI routing + aggressive caching
-- **Cost:** $0.10-2.00/execution (optimized from $0.50-5.00)
+- **Runtime:** Cloudflare Workers AI + caching
+- **Cost:** $0.02-0.10/execution
 - **Best for:** Content generation, research, multi-step AI pipelines
 - **Examples:** Newsletter generation, research assistants, content creators
+
+> **Note:** WORKWAY is Cloudflare-native. All AI features use Cloudflare Workers AI — no external API keys required.
 
 ---
 
@@ -461,56 +467,14 @@ const results = await ai.chain([
 | Data | Stays in Cloudflare | Leaves network |
 | Models | Open source (Llama, Mistral) | Proprietary |
 
-**When to use Workers AI:**
-- High-volume, cost-sensitive workflows
-- Privacy-sensitive data (no external API calls)
-- Simple-to-moderate AI tasks
+**Why Workers AI only:**
+- **No API keys:** Works instantly with Cloudflare binding
+- **Data privacy:** Data stays within Cloudflare network
+- **Cost efficiency:** 10-100x cheaper than external providers
+- **Edge latency:** Runs close to users globally
+- **Open models:** Uses Llama, Mistral, and other open-source models
 
-**When to use external providers:**
-- Complex reasoning requiring GPT-4/Claude
-- Specific model capabilities (vision, etc.)
-
----
-
-### AI Module (Multi-Provider)
-
-```typescript
-import { ai } from '@workway/sdk'
-
-// Text completion
-const response = await ai.completion({
-  model: 'claude-sonnet-4' | 'gpt-4o' | 'gemini-1.5-pro',
-  prompt: string,
-  systemPrompt?: string,
-  maxTokens?: number,
-  temperature?: number,
-  routing?: 'cost-optimized' | 'quality-optimized' | 'speed-optimized',
-  cache?: boolean
-})
-
-// Streaming completion
-const stream = await ai.completionStream({
-  model: 'gpt-4o',
-  prompt: 'Write a long story...'
-})
-
-for await (const chunk of stream) {
-  console.log(chunk)
-}
-
-// Embeddings
-const embeddings = await ai.embed({
-  model: 'text-embedding-3-small',
-  text: string | string[]
-})
-
-// Image generation
-const image = await ai.generateImage({
-  model: 'dall-e-3',
-  prompt: string,
-  size: '1024x1024' | '1792x1024' | '1024x1792'
-})
-```
+> **WORKWAY is opinionated:** We use Cloudflare infrastructure exclusively. This keeps costs low and simplifies deployment. For complex reasoning tasks, Llama 3 and Mistral 7B are highly capable.
 
 ### HTTP Module
 
