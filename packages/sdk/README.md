@@ -476,96 +476,49 @@ const results = await ai.chain([
 
 > **WORKWAY is opinionated:** We use Cloudflare infrastructure exclusively. This keeps costs low and simplifies deployment. For complex reasoning tasks, Llama 3 and Mistral 7B are highly capable.
 
-### HTTP Module
+### Utility Modules (Coming in v1.1.0)
+
+> **Note:** The following utility modules are planned for v1.1.0. For now, use native JavaScript/TypeScript equivalents or npm packages.
+
+#### HTTP Module (Planned)
 
 ```typescript
-import { http } from '@workway/sdk'
-
-// GET request
-const data = await http.get(url, {
-  headers?: Record<string, string>,
-  query?: Record<string, string>
+// Coming in v1.1.0
+// For now, use native fetch():
+const response = await fetch(url, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(data)
 })
-
-// POST request
-const result = await http.post(url, {
-  headers?: Record<string, string>,
-  body?: any,
-  retry?: { attempts: 3, backoff: 'exponential' }
-})
-
-// Other methods
-await http.put(url, options)
-await http.patch(url, options)
-await http.delete(url, options)
+const result = await response.json()
 ```
 
-### Cache Module
+#### Cache Module (Planned)
 
 ```typescript
-import { cache } from '@workway/sdk'
-
-// Set cache entry
-await cache.set(key, value, {
-  ttl?: number, // seconds
-  tags?: string[]
-})
-
-// Get cache entry
-const value = await cache.get(key)
-
-// Delete cache entry
-await cache.delete(key)
-
-// Invalidate by tags
-await cache.invalidateByTags(['user_123', 'posts'])
+// Coming in v1.1.0
+// For now, use Cloudflare KV via env bindings:
+// In your wrangler.toml, add a KV binding
+// Then access it via env.MY_KV.get(key) / env.MY_KV.put(key, value)
 ```
 
-### Storage Module
+#### Storage Module (Planned)
 
 ```typescript
-import { storage } from '@workway/sdk'
-
-// Key-value storage
-await storage.set(key, value)
-const value = await storage.get(key)
-await storage.delete(key)
-
-// List keys
-const keys = await storage.list({ prefix: 'user_' })
-
-// File upload
-await storage.uploadFile(filename, buffer, {
-  contentType: 'application/pdf'
-})
-
-// File download
-const buffer = await storage.downloadFile(filename)
+// Coming in v1.1.0
+// For now, use Cloudflare R2 via env bindings:
+// In your wrangler.toml, add an R2 binding
+// Then access it via env.MY_BUCKET.get(key) / env.MY_BUCKET.put(key, value)
 ```
 
-### Transform Module
+#### Transform Module (Planned)
 
 ```typescript
-import { transform } from '@workway/sdk'
-
-// Array operations
-const filtered = transform.filter(array, predicate)
-const mapped = transform.map(array, mapper)
-const reduced = transform.reduce(array, reducer, initial)
-
-// Data parsing
-const json = transform.parseJSON(string)
-const csv = transform.parseCSV(string)
-const xml = transform.parseXML(string)
-
-// Date formatting
-const formatted = transform.formatDate(date, 'YYYY-MM-DD')
-const relative = transform.relativeTime(date) // "2 hours ago"
-
-// String operations
-const slug = transform.slugify('Hello World') // "hello-world"
-const truncated = transform.truncate(text, 100)
-const sanitized = transform.sanitize(html)
+// Coming in v1.1.0
+// For now, use standard JavaScript methods:
+const filtered = array.filter(predicate)
+const mapped = array.map(mapper)
+const json = JSON.parse(string)
 ```
 
 ---
@@ -786,43 +739,56 @@ npx workway update
 
 ## Cost Optimization
 
-The SDK automatically optimizes costs:
+WORKWAY uses Cloudflare Workers AI exclusively for maximum cost efficiency:
 
-### 1. **Semantic Caching**
+### 1. **Use the Right Model**
 ```typescript
-// SDK auto-caches similar AI prompts
-await ai.completion({
-  prompt: 'Summarize this article...',
-  cache: true // ← SDK uses semantic similarity to reuse responses
+import { createAIClient, AIModels } from '@workway/sdk/workers-ai'
+
+const ai = createAIClient(env)
+
+// Fast & cheap for simple tasks
+await ai.generateText({
+  model: AIModels.LLAMA_2_7B, // $0.01/1M tokens
+  prompt: 'Classify this text...'
+})
+
+// More capable for complex reasoning
+await ai.generateText({
+  model: AIModels.LLAMA_3_8B, // $0.01/1M tokens
+  prompt: 'Analyze this document...'
 })
 ```
 
-### 2. **Model Routing**
+### 2. **Avoid AI When Possible**
 ```typescript
-// SDK routes to cheapest provider that meets requirements
-await ai.completion({
-  model: 'gpt-4o',
-  routing: 'cost-optimized' // ← SDK may use Claude/Gemini if cheaper
+// Use 'integration' type for non-AI workflows
+type: 'integration' // ~$0.001/execution
+
+// Only use AI when needed
+type: 'ai-enhanced' // ~$0.01-0.10/execution depending on tokens
+```
+
+### 3. **Minimize Token Usage**
+```typescript
+// Be concise in prompts
+await ai.generateText({
+  model: AIModels.LLAMA_2_7B,
+  system: 'Reply with only: positive, negative, or neutral',
+  prompt: reviewText,
+  max_tokens: 10 // Limit output
 })
 ```
 
-### 3. **Batch Processing**
+### 4. **Cache Results**
 ```typescript
-// SDK batches multiple AI calls
-const results = await ai.batch([
-  { model: 'claude-haiku', prompt: 'Classify A' },
-  { model: 'claude-haiku', prompt: 'Classify B' },
-  { model: 'claude-haiku', prompt: 'Classify C' }
-])
-```
+// Cache expensive AI operations at application level
+const cacheKey = `sentiment:${hash(text)}`
+const cached = await env.KV.get(cacheKey)
+if (cached) return JSON.parse(cached)
 
-### 4. **Response Streaming**
-```typescript
-// For long responses, stream to reduce timeout costs
-const stream = await ai.completionStream({
-  model: 'gpt-4o',
-  prompt: 'Write a comprehensive guide...'
-})
+const result = await ai.generateText({ ... })
+await env.KV.put(cacheKey, JSON.stringify(result), { expirationTtl: 3600 })
 ```
 
 ---

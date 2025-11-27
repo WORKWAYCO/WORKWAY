@@ -5,44 +5,79 @@
  */
 
 import crypto from 'crypto';
+import chalk from 'chalk';
 import { Logger } from '../../utils/logger.js';
 import { loadConfig, setOAuthToken } from '../../lib/config.js';
-import { createAPIClient, APIError } from '../../lib/api-client.js';
+import { createAPIClient, APIError, type OAuthProvider } from '../../lib/api-client.js';
 import { startOAuthFlow } from '../../lib/oauth-flow.js';
-
-const SUPPORTED_PROVIDERS = ['gmail', 'slack', 'notion', 'stripe', 'salesforce'];
 
 export async function oauthConnectCommand(provider?: string): Promise<void> {
 	try {
+		// Load config
+		const config = await loadConfig();
+		const apiClient = createAPIClient(config.apiUrl, config.credentials?.token);
+
+		// Fetch available providers from API
+		let availableProviders: OAuthProvider[] = [];
+		try {
+			availableProviders = await apiClient.listOAuthProviders();
+		} catch (error) {
+			// Fallback to basic list if API unavailable
+			availableProviders = [
+				{ id: 'gmail', name: 'Gmail', category: 'google', configured: false, scope: '' },
+				{ id: 'slack', name: 'Slack', category: 'communication', configured: false, scope: '' },
+				{ id: 'notion', name: 'Notion', category: 'productivity', configured: false, scope: '' },
+			];
+		}
+
 		// Check if provider specified
 		if (!provider) {
-			Logger.error('Provider is required');
-			Logger.log('');
+			Logger.header('Available OAuth Providers');
+			Logger.blank();
+
+			// Group by category
+			const byCategory: Record<string, OAuthProvider[]> = {};
+			for (const p of availableProviders) {
+				if (!byCategory[p.category]) byCategory[p.category] = [];
+				byCategory[p.category].push(p);
+			}
+
+			for (const [category, providers] of Object.entries(byCategory)) {
+				Logger.section(category.charAt(0).toUpperCase() + category.slice(1));
+				for (const p of providers) {
+					const status = p.configured ? chalk.green('(ready)') : chalk.dim('(needs setup)');
+					Logger.listItem(`${p.id} ${status}`);
+				}
+				Logger.blank();
+			}
+
 			Logger.log('Usage: workway oauth connect <provider>');
 			Logger.log('');
-			Logger.log('Supported providers:');
-			SUPPORTED_PROVIDERS.forEach((p) => Logger.listItem(p));
-			process.exit(1);
+			Logger.log('Example:');
+			Logger.code('workway oauth connect gmail');
+			process.exit(0);
 		}
 
 		// Validate provider
-		if (!SUPPORTED_PROVIDERS.includes(provider.toLowerCase())) {
-			Logger.error(`Unsupported provider: ${provider}`);
+		const providerConfig = availableProviders.find(p => p.id === provider.toLowerCase());
+		if (!providerConfig) {
+			Logger.error(`Unknown provider: ${provider}`);
 			Logger.log('');
-			Logger.log('Supported providers:');
-			SUPPORTED_PROVIDERS.forEach((p) => Logger.listItem(p));
+			Logger.log('Run `workway oauth connect` to see available providers');
+			process.exit(1);
+		}
+
+		if (!providerConfig.configured) {
+			Logger.warn(`Provider '${provider}' is not configured on this WORKWAY instance.`);
+			Logger.log('');
+			Logger.log('Contact your administrator to configure OAuth credentials for this provider.');
 			process.exit(1);
 		}
 
 		Logger.header(`Connect ${provider.toUpperCase()} Account`);
 
-		// Load config
-		const config = await loadConfig();
 		const callbackPort = config.oauth?.callbackPort || 3456;
 		const callbackUrl = `http://localhost:${callbackPort}/callback`;
-
-		// Create API client
-		const apiClient = createAPIClient(config.apiUrl, config.credentials?.token);
 
 		// Generate state for CSRF protection
 		const state = crypto.randomBytes(16).toString('hex');

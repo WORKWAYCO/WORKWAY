@@ -144,8 +144,9 @@ export class WorkwayAPIClient {
 	/**
 	 * Get developer earnings
 	 */
-	async getEarnings(): Promise<Earnings[]> {
-		const response = await this.client.get<APIResponse<Earnings[]>>('/developers/earnings');
+	async getEarnings(period?: 'week' | 'month' | 'year'): Promise<Earnings[]> {
+		const params = period ? `?period=${period}` : '';
+		const response = await this.client.get<APIResponse<Earnings[]>>(`/developers/me/earnings${params}`);
 		return response.data.data!;
 	}
 
@@ -257,6 +258,18 @@ export class WorkwayAPIClient {
 	 */
 	async disconnectOAuth(provider: string): Promise<void> {
 		await this.client.delete(`/oauth/${provider}`);
+	}
+
+	/**
+	 * List available OAuth providers
+	 */
+	async listOAuthProviders(): Promise<OAuthProvider[]> {
+		const response = await this.client.get<{
+			providers: OAuthProvider[];
+			total: number;
+			configured: number;
+		}>('/oauth/providers');
+		return response.data.providers;
 	}
 
 	// ============================================================================
@@ -419,6 +432,14 @@ export interface AIModel {
 	id: string;
 	name: string;
 	type: 'text' | 'embeddings';
+}
+
+export interface OAuthProvider {
+	id: string;
+	name: string;
+	category: string;
+	configured: boolean;
+	scope: string;
 }
 
 // ============================================================================
