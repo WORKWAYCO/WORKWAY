@@ -10,6 +10,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { Logger } from '../../utils/logger.js';
 import { loadProjectConfig } from '../../lib/config.js';
+import { validateWorkflowFile, formatValidationResults, type ValidationResult } from '../../lib/workflow-validator.js';
 
 interface BuildOptions {
 	outDir?: string;
@@ -48,11 +49,58 @@ export async function workflowBuildCommand(options: BuildOptions): Promise<void>
 		const absoluteOutDir = path.resolve(process.cwd(), outDir);
 		await fs.ensureDir(absoluteOutDir);
 
-		// Step 1: Validate workflow structure
+		// Step 1: Validate workflow structure with comprehensive schema validation
 		const spinner1 = Logger.spinner('Validating workflow...');
+		let validationResult: ValidationResult;
 		try {
-			await validateWorkflow(workflowPath);
-			spinner1.succeed('Workflow validated');
+			validationResult = await validateWorkflowFile(workflowPath);
+
+			if (validationResult.errors.length > 0) {
+				spinner1.fail(`Validation failed (${validationResult.errors.length} error${validationResult.errors.length > 1 ? 's' : ''})`);
+				Logger.blank();
+				for (const line of formatValidationResults(validationResult)) {
+					if (line.startsWith('[ERROR]')) {
+						Logger.error(line.replace('[ERROR] ', ''));
+					} else if (line.startsWith('[WARN]')) {
+						Logger.warn(line.replace('[WARN]  ', ''));
+					} else {
+						Logger.log(`        ${line.replace('        Suggestion: ', '💡 ')}`);
+					}
+				}
+				process.exit(1);
+			}
+
+			if (validationResult.warnings.length > 0) {
+				spinner1.warn(`Workflow validated (${validationResult.warnings.length} warning${validationResult.warnings.length > 1 ? 's' : ''})`);
+				Logger.blank();
+				for (const warning of validationResult.warnings) {
+					Logger.warn(`${warning.code}: ${warning.message}`);
+					if (warning.suggestion) {
+						Logger.log(`        💡 ${warning.suggestion}`);
+					}
+				}
+				Logger.blank();
+			} else {
+				spinner1.succeed('Workflow validated');
+			}
+
+			// Display extracted metadata
+			if (validationResult.metadata?.name) {
+				Logger.listItem(`Name: ${validationResult.metadata.name}`);
+			}
+			if (validationResult.metadata?.type) {
+				Logger.listItem(`Type: ${validationResult.metadata.type}`);
+			}
+			if (validationResult.metadata?.integrations?.length) {
+				Logger.listItem(`Integrations: ${validationResult.metadata.integrations.join(', ')}`);
+			}
+			if (validationResult.metadata?.trigger) {
+				Logger.listItem(`Trigger: ${validationResult.metadata.trigger}`);
+			}
+			if (validationResult.metadata?.hasAI) {
+				Logger.listItem(`AI Enabled: Yes (Workers AI)`);
+			}
+			Logger.blank();
 		} catch (error: any) {
 			spinner1.fail('Validation failed');
 			Logger.error(error.message);
@@ -89,10 +137,10 @@ export async function workflowBuildCommand(options: BuildOptions): Promise<void>
 			spinner4.warn('Some assets could not be copied');
 		}
 
-		// Step 5: Generate manifest
+		// Step 5: Generate manifest with validation metadata
 		const spinner5 = Logger.spinner('Generating manifest...');
 		try {
-			await generateManifest(process.cwd(), absoluteOutDir, hasConfig ? configPath : null);
+			await generateManifest(process.cwd(), absoluteOutDir, hasConfig ? configPath : null, validationResult.metadata);
 			spinner5.succeed('Manifest generated');
 		} catch (error: any) {
 			spinner5.fail('Manifest generation failed');
@@ -117,25 +165,6 @@ export async function workflowBuildCommand(options: BuildOptions): Promise<void>
 	}
 }
 
-/**
- * Validate workflow structure
- */
-async function validateWorkflow(workflowPath: string): Promise<void> {
-	const content = await fs.readFile(workflowPath, 'utf-8');
-
-	// Check for required exports
-	const hasWorkflowExport = /export\s+(default\s+)?.*workflow/i.test(content) ||
-		/defineWorkflow|createWorkflow/.test(content);
-
-	if (!hasWorkflowExport) {
-		throw new Error('Workflow must export a workflow definition (use defineWorkflow or export default)');
-	}
-
-	// Check for basic structure
-	if (!content.includes('trigger') && !content.includes('steps') && !content.includes('run')) {
-		throw new Error('Workflow must define a trigger, steps, or run function');
-	}
-}
 
 /**
  * Bundle workflow with esbuild
@@ -212,12 +241,13 @@ async function copyAssets(srcDir: string, outDir: string): Promise<void> {
 }
 
 /**
- * Generate manifest file
+ * Generate manifest file with validation metadata
  */
 async function generateManifest(
 	srcDir: string,
 	outDir: string,
-	configPath: string | null
+	configPath: string | null,
+	validationMetadata?: import('../../lib/workflow-validator.js').WorkflowMetadata
 ): Promise<void> {
 	let config: any = {};
 
@@ -232,16 +262,23 @@ async function generateManifest(
 		packageJson = await fs.readJson(packagePath);
 	}
 
+	// Use validation metadata to enrich manifest
 	const manifest = {
-		name: packageJson.name || path.basename(srcDir),
+		name: validationMetadata?.name || packageJson.name || path.basename(srcDir),
 		version: packageJson.version || '1.0.0',
 		description: packageJson.description || config.description || '',
 		main: 'workflow.js',
 		workway: {
 			sdk: packageJson.dependencies?.['@workway/sdk'] || '*',
-			trigger: config.trigger || 'manual',
-			integrations: config.integrations || [],
+			type: validationMetadata?.type || config.type || 'integration',
+			trigger: validationMetadata?.trigger || config.trigger || 'manual',
+			integrations: validationMetadata?.integrations || config.integrations || [],
 			category: config.category || 'other',
+			ai: validationMetadata?.hasAI ? {
+				enabled: true,
+				provider: 'cloudflare-workers-ai',
+			} : undefined,
+			pricing: validationMetadata?.pricing || config.pricing,
 		},
 		buildTime: new Date().toISOString(),
 	};

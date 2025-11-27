@@ -15,6 +15,7 @@ import { workflowRunCommand } from './commands/workflow/run.js';
 import { workflowDevCommand } from './commands/workflow/dev.js';
 import { workflowBuildCommand } from './commands/workflow/build.js';
 import { workflowPublishCommand } from './commands/workflow/publish.js';
+import { workflowValidateCommand } from './commands/workflow/validate.js';
 import { oauthConnectCommand } from './commands/oauth/connect.js';
 import { oauthListCommand } from './commands/oauth/list.js';
 import { oauthDisconnectCommand } from './commands/oauth/disconnect.js';
@@ -164,6 +165,20 @@ workflowCommand
 	.action(async (options: any) => {
 		try {
 			await workflowPublishCommand(options);
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
+	});
+
+workflowCommand
+	.command('validate [file]')
+	.description('Validate workflow schema without building')
+	.option('--strict', 'Treat warnings as errors')
+	.option('--json', 'Output as JSON (for CI/CD)')
+	.action(async (file: string, options: any) => {
+		try {
+			await workflowValidateCommand(file, options);
 		} catch (error: any) {
 			Logger.error(error.message);
 			process.exit(1);

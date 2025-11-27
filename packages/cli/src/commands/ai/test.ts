@@ -9,6 +9,9 @@ import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { Logger } from '../../utils/logger.js';
 import { AI_MODELS } from './models.js';
+import { createAPIClient } from '../../lib/api-client.js';
+import { loadCredentials } from '../../lib/auth.js';
+import { loadConfig } from '../../lib/config.js';
 
 interface TestOptions {
 	model?: string;
@@ -105,19 +108,57 @@ export async function aiTestCommand(prompt?: string, options: TestOptions = {}):
 			await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate latency
 			result = mockAIResponse(testPrompt!, selectedModel!);
 		} else {
-			// Live mode - would call actual API
-			// For now, show instructions since we don't have auth context
-			spinner.stop();
-			Logger.blank();
-			Logger.warn('Live mode requires authentication and Workers AI binding.');
-			Logger.blank();
-			Logger.log('To test with live AI:');
-			Logger.log('1. Create a workflow project: `workway workflow init --ai`');
-			Logger.log('2. Run `workway workflow test --live` in the project directory');
-			Logger.blank();
-			Logger.log('For now, use mock mode to see the flow:');
-			Logger.code('workway ai test --mock');
-			return;
+			// Live mode - call actual Workers AI via WORKWAY API
+			const credentials = await loadCredentials();
+			if (!credentials) {
+				spinner.stop();
+				Logger.blank();
+				Logger.warn('Live mode requires authentication.');
+				Logger.blank();
+				Logger.log('Please log in first:');
+				Logger.code('workway login');
+				Logger.blank();
+				Logger.log('Or use mock mode to test without authentication:');
+				Logger.code('workway ai test --mock');
+				return;
+			}
+
+			const config = await loadConfig();
+			const client = createAPIClient(config.apiUrl, credentials.token);
+
+			// Map model alias to API model name
+			const modelAlias = modelInfo.alias?.replace('LLAMA_3_8B', 'llama-3-8b')
+				.replace('LLAMA_2_7B', 'llama-2-7b')
+				.replace('MISTRAL_7B', 'mistral-7b')
+				.replace('PHI_2', 'phi-2')
+				.replace('GEMMA_7B', 'gemma-7b')
+				.toLowerCase()
+				.replace(/_/g, '-') || 'llama-3-8b';
+
+			try {
+				const response = await client.aiGenerate({
+					prompt: testPrompt!,
+					model: modelAlias,
+					maxTokens: 256,
+					temperature: 0.7,
+				});
+
+				result = {
+					text: response.text,
+					tokens: response.metrics.outputTokens,
+					latency: response.metrics.latencyMs,
+				};
+			} catch (error: any) {
+				spinner.fail('AI inference failed');
+				Logger.blank();
+				if (error.statusCode === 401) {
+					Logger.error('Authentication expired. Please log in again:');
+					Logger.code('workway login');
+				} else {
+					Logger.error(error.message);
+				}
+				process.exit(1);
+			}
 		}
 
 		const endTime = Date.now();
@@ -176,7 +217,11 @@ export async function aiTestCommand(prompt?: string, options: TestOptions = {}):
 		}
 
 		Logger.blank();
-		Logger.info('This was a mock response. Use in a workflow for live AI.');
+		if (options.mock) {
+			Logger.info('This was a mock response. Run without --mock for live AI.');
+		} else {
+			Logger.success('Live Workers AI response via Cloudflare edge.');
+		}
 	} catch (error: any) {
 		spinner.fail('Failed to generate response');
 		Logger.error(error.message);

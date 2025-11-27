@@ -333,6 +333,42 @@ export class WorkwayAPIClient {
 		const response = await this.client.get<any>('/developers/me/analytics');
 		return response.data;
 	}
+
+	// ============================================================================
+	// AI - Workers AI
+	// ============================================================================
+
+	/**
+	 * Generate text using Workers AI
+	 */
+	async aiGenerate(options: {
+		prompt: string;
+		model?: string;
+		maxTokens?: number;
+		temperature?: number;
+	}): Promise<AIGenerateResponse> {
+		const response = await this.client.post<APIResponse<AIGenerateResponse>>('/ai/generate', options);
+		return response.data.data!;
+	}
+
+	/**
+	 * Generate embeddings using Workers AI
+	 */
+	async aiEmbeddings(options: {
+		text: string;
+		model?: string;
+	}): Promise<AIEmbeddingsResponse> {
+		const response = await this.client.post<APIResponse<AIEmbeddingsResponse>>('/ai/embeddings', options);
+		return response.data.data!;
+	}
+
+	/**
+	 * List available AI models
+	 */
+	async aiModels(): Promise<AIModel[]> {
+		const response = await this.client.get<{ success: boolean; data: { models: AIModel[] } }>('/ai/models');
+		return response.data.data.models;
+	}
 }
 
 // ============================================================================
@@ -356,6 +392,33 @@ export interface WorkflowLog {
 	stepsCompleted: number;
 	stepsFailed: number;
 	stepResults: any;
+}
+
+export interface AIGenerateResponse {
+	text: string;
+	model: string;
+	modelName: string;
+	metrics: {
+		inputTokens: number;
+		outputTokens: number;
+		totalTokens: number;
+		latencyMs: number;
+	};
+}
+
+export interface AIEmbeddingsResponse {
+	embedding: number[];
+	dimensions: number;
+	model: string;
+	modelName: string;
+	latencyMs: number;
+}
+
+export interface AIModel {
+	alias: string;
+	id: string;
+	name: string;
+	type: 'text' | 'embeddings';
 }
 
 // ============================================================================
