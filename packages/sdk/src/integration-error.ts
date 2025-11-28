@@ -59,6 +59,17 @@ export enum ErrorCode {
 	PERMISSION_DENIED = 'permission_denied', // User lacks permission
 	CONFLICT = 'conflict', // Resource conflict (e.g., duplicate)
 
+	// Database errors
+	DATABASE_ERROR = 'database_error', // Database operation failed
+	SEARCH_ERROR = 'search_error', // Search operation failed
+
+	// Processing errors
+	PROCESSING_ERROR = 'processing_error', // General processing/transformation error
+	CONFIGURATION_ERROR = 'configuration_error', // Service misconfiguration (alias for INVALID_CONFIG)
+
+	// AI errors
+	AI_MODEL_ERROR = 'ai_model_error', // AI model execution failed
+
 	// Network errors
 	NETWORK_ERROR = 'network_error', // Network timeout, connection failed
 	PROVIDER_DOWN = 'provider_down', // Provider service is down
@@ -219,7 +230,15 @@ export class IntegrationError extends Error {
 			return ErrorCategory.CONFIGURATION;
 		}
 
-		if ([ErrorCode.API_ERROR, ErrorCode.NOT_FOUND, ErrorCode.PERMISSION_DENIED, ErrorCode.CONFLICT].includes(code)) {
+		if ([
+			ErrorCode.API_ERROR,
+			ErrorCode.NOT_FOUND,
+			ErrorCode.PERMISSION_DENIED,
+			ErrorCode.CONFLICT,
+			ErrorCode.DATABASE_ERROR,
+			ErrorCode.SEARCH_ERROR,
+			ErrorCode.AI_MODEL_ERROR,
+		].includes(code)) {
 			return ErrorCategory.API;
 		}
 
@@ -229,6 +248,10 @@ export class IntegrationError extends Error {
 
 		if ([ErrorCode.TIMEOUT, ErrorCode.CANCELLED].includes(code)) {
 			return ErrorCategory.WORKFLOW;
+		}
+
+		if ([ErrorCode.PROCESSING_ERROR, ErrorCode.CONFIGURATION_ERROR].includes(code)) {
+			return ErrorCategory.CONFIGURATION;
 		}
 
 		return ErrorCategory.UNKNOWN;

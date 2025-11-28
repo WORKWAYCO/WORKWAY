@@ -44,3 +44,11 @@ credentials.json
 # Cloudflare
 .wrangler/
 .dev.vars
+
+# Proprietary components (separate private repo)
+packages/workflow-engine/
+workway-private/
+
+# Audit artifacts
+.triad-audit/
+triad-audit-report.json

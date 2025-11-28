@@ -1,0 +1,40 @@
+{
+	"name": "@workwayco/integrations",
+	"version": "0.1.0",
+	"description": "Official WORKWAY integrations - concrete implementations of the SDK patterns",
+	"type": "module",
+	"main": "./dist/index.js",
+	"types": "./dist/index.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
+		},
+		"./gmail": {
+			"types": "./dist/gmail/index.d.ts",
+			"import": "./dist/gmail/index.js"
+		},
+		"./slack": {
+			"types": "./dist/slack/index.d.ts",
+			"import": "./dist/slack/index.js"
+		},
+		"./notion": {
+			"types": "./dist/notion/index.d.ts",
+			"import": "./dist/notion/index.js"
+		}
+	},
+	"scripts": {
+		"build": "tsc",
+		"typecheck": "tsc --noEmit"
+	},
+	"dependencies": {
+		"@workwayco/sdk": "workspace:*"
+	},
+	"devDependencies": {
+		"typescript": "^5.3.0"
+	},
+	"peerDependencies": {
+		"@workwayco/sdk": "workspace:*"
+	},
+	"license": "Apache-2.0"
+}

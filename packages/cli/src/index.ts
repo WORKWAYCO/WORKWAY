@@ -29,6 +29,7 @@ import { aiModelsCommand } from './commands/ai/models.js';
 import { aiTestCommand } from './commands/ai/test.js';
 import { aiEstimateCommand } from './commands/ai/estimate.js';
 import { Logger } from './utils/logger.js';
+import { handleCommand, handleCommandError } from './utils/command-handler.js';
 
 // Create CLI program
 const program = new Command();
@@ -45,38 +46,17 @@ program
 program
 	.command('login')
 	.description('Authenticate with WORKWAY platform')
-	.action(async () => {
-		try {
-			await loginCommand();
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(loginCommand));
 
 program
 	.command('logout')
 	.description('Clear local authentication')
-	.action(async () => {
-		try {
-			await logoutCommand();
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(logoutCommand));
 
 program
 	.command('whoami')
 	.description('Display current authenticated user')
-	.action(async () => {
-		try {
-			await whoamiCommand();
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(whoamiCommand));
 
 // ============================================================================
 // WORKFLOW COMMANDS
@@ -88,14 +68,7 @@ workflowCommand
 	.command('init [name]')
 	.description('Create a new workflow project')
 	.option('--ai', 'Create AI-powered workflow using Cloudflare Workers AI')
-	.action(async (name: string, options: { ai?: boolean }) => {
-		try {
-			await workflowInitCommand(name, options);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(workflowInitCommand));
 
 workflowCommand
 	.command('test')
@@ -103,14 +76,7 @@ workflowCommand
 	.option('--mock', 'Use mocked integrations')
 	.option('--live', 'Use live OAuth connections')
 	.option('--data <file>', 'Path to test data file')
-	.action(async (options: any) => {
-		try {
-			await workflowTestCommand(options);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(workflowTestCommand));
 
 workflowCommand
 	.command('run')
@@ -119,14 +85,7 @@ workflowCommand
 	.option('--env <env>', 'Environment (development/production)')
 	.option('--verbose', 'Show verbose output')
 	.option('--timeout <ms>', 'Execution timeout in milliseconds')
-	.action(async (options: any) => {
-		try {
-			await workflowRunCommand(options);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(workflowRunCommand));
 
 workflowCommand
 	.command('dev')
@@ -134,14 +93,7 @@ workflowCommand
 	.option('--port <port>', 'Port number')
 	.option('--mock', 'Use mock mode')
 	.option('--no-mock', 'Use live OAuth connections')
-	.action(async (options: any) => {
-		try {
-			await workflowDevCommand(options);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(workflowDevCommand));
 
 workflowCommand
 	.command('build')
@@ -150,27 +102,13 @@ workflowCommand
 	.option('--minify', 'Minify output')
 	.option('--no-minify', 'Disable minification')
 	.option('--sourcemap', 'Generate sourcemaps')
-	.action(async (options: any) => {
-		try {
-			await workflowBuildCommand(options);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(workflowBuildCommand));
 
 workflowCommand
 	.command('publish')
 	.description('Publish workflow to marketplace')
 	.option('--draft', 'Publish as draft (not public)')
-	.action(async (options: any) => {
-		try {
-			await workflowPublishCommand(options);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(workflowPublishCommand));
 
 workflowCommand
 	.command('validate [file]')
@@ -197,14 +135,7 @@ aiCommand
 	.description('List available AI models with costs')
 	.option('--type <type>', 'Filter by type (text, embeddings, image, audio, translation, classification)')
 	.option('--json', 'Output as JSON')
-	.action(async (options: any) => {
-		try {
-			await aiModelsCommand(options);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(aiModelsCommand));
 
 aiCommand
 	.command('test [prompt]')
@@ -212,14 +143,7 @@ aiCommand
 	.option('--model <model>', 'Model to use (e.g., LLAMA_3_8B)')
 	.option('--mock', 'Use mock response (no API call)')
 	.option('--json', 'Output as JSON')
-	.action(async (prompt: string, options: any) => {
-		try {
-			await aiTestCommand(prompt, options);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(aiTestCommand));
 
 aiCommand
 	.command('estimate')
@@ -227,18 +151,15 @@ aiCommand
 	.option('--executions <n>', 'Monthly executions', parseInt)
 	.option('--tokens <n>', 'Tokens per execution', parseInt)
 	.option('--model <model>', 'Model to estimate (e.g., LLAMA_3_8B)')
-	.action(async (options: any) => {
-		try {
+	.action(
+		handleCommand(async (options: any) => {
 			await aiEstimateCommand({
 				executions: options.executions,
 				tokensPerExecution: options.tokens,
 				model: options.model,
 			});
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+		})
+	);
 
 // ============================================================================
 // OAUTH COMMANDS
@@ -249,38 +170,17 @@ const oauthCommand = program.command('oauth').description('OAuth connection mana
 oauthCommand
 	.command('connect [provider]')
 	.description('Connect an OAuth account for testing')
-	.action(async (provider: string) => {
-		try {
-			await oauthConnectCommand(provider);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(oauthConnectCommand));
 
 oauthCommand
 	.command('list')
 	.description('List connected OAuth accounts')
-	.action(async () => {
-		try {
-			await oauthListCommand();
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(oauthListCommand));
 
 oauthCommand
 	.command('disconnect [provider]')
 	.description('Disconnect an OAuth account')
-	.action(async (provider: string) => {
-		try {
-			await oauthDisconnectCommand(provider);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(oauthDisconnectCommand));
 
 // ============================================================================
 // STATUS & LOGS COMMANDS
@@ -289,14 +189,7 @@ oauthCommand
 program
 	.command('status')
 	.description('Show developer dashboard and status')
-	.action(async () => {
-		try {
-			await statusCommand();
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(statusCommand));
 
 program
 	.command('logs')
@@ -305,14 +198,7 @@ program
 	.option('--limit <n>', 'Number of logs to show', '20')
 	.option('--follow', 'Follow logs in real-time')
 	.option('--status <status>', 'Filter by status (completed/failed/running)')
-	.action(async (options: any) => {
-		try {
-			await logsCommand(options);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(logsCommand));
 
 // ============================================================================
 // DEVELOPER COMMANDS
@@ -323,41 +209,20 @@ const developerCommand = program.command('developer').description('Developer pro
 developerCommand
 	.command('register')
 	.description('Register as a workflow developer')
-	.action(async () => {
-		try {
-			await developerRegisterCommand();
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(developerRegisterCommand));
 
 developerCommand
 	.command('profile')
 	.description('View/edit developer profile')
 	.option('--edit', 'Edit profile interactively')
-	.action(async (options: any) => {
-		try {
-			await developerProfileCommand(options);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(developerProfileCommand));
 
 developerCommand
 	.command('earnings')
 	.description('View earnings and payouts')
 	.option('--setup', 'Set up Stripe Connect for payouts')
 	.option('--period <period>', 'Time period (week/month/year)')
-	.action(async (options: any) => {
-		try {
-			await developerEarningsCommand(options);
-		} catch (error: any) {
-			Logger.error(error.message);
-			process.exit(1);
-		}
-	});
+	.action(handleCommand(developerEarningsCommand));
 
 developerCommand
 	.command('stripe [action]')
@@ -397,12 +262,8 @@ program.on('command:*', (operands) => {
 export async function run(): Promise<void> {
 	try {
 		await program.parseAsync(process.argv);
-	} catch (error: any) {
-		Logger.error(error.message);
-		if (error.stack && process.env.DEBUG) {
-			Logger.debug(error.stack);
-		}
-		process.exit(1);
+	} catch (error: unknown) {
+		handleCommandError(error);
 	}
 }
 

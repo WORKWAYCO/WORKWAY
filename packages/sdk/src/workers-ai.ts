@@ -67,6 +67,12 @@ export interface AIModelOptions {
 
 /**
  * Popular AI models available on Workers AI
+ *
+ * NOTE: This list is a convenience subset and may become stale.
+ * For the complete, up-to-date list of available models, see:
+ * https://developers.cloudflare.com/workers-ai/models/
+ *
+ * You can use any model ID string directly with WorkersAI methods.
  */
 export const AIModels = {
   // Text Generation
@@ -152,9 +158,9 @@ export class WorkersAI {
 
       if (!response.success) {
         throw new IntegrationError(
-          'AI model execution failed',
           ErrorCode.AI_MODEL_ERROR,
-          { model, error: response.error }
+          'AI model execution failed',
+          { metadata: { model, error: response.error } }
         );
       }
 
@@ -196,9 +202,9 @@ export class WorkersAI {
 
       if (!response.success) {
         throw new IntegrationError(
-          'Embedding generation failed',
           ErrorCode.AI_MODEL_ERROR,
-          { model, error: response.error }
+          'Embedding generation failed',
+          { metadata: { model, error: response.error } }
         );
       }
 
@@ -241,9 +247,9 @@ export class WorkersAI {
 
       if (!response.success) {
         throw new IntegrationError(
-          'Image generation failed',
           ErrorCode.AI_MODEL_ERROR,
-          { model, error: response.error }
+          'Image generation failed',
+          { metadata: { model, error: response.error } }
         );
       }
 
@@ -254,7 +260,7 @@ export class WorkersAI {
           width: options.width || 1024,
           height: options.height || 1024
         },
-        capabilities: ['downloadable', 'viewable']
+        capabilities: { canHandleImages: true }
       });
     } catch (error) {
       return ActionResult.error(
@@ -280,9 +286,9 @@ export class WorkersAI {
 
       if (!response.success) {
         throw new IntegrationError(
-          'Image classification failed',
           ErrorCode.AI_MODEL_ERROR,
-          { model, error: response.error }
+          'Image classification failed',
+          { metadata: { model, error: response.error } }
         );
       }
 
@@ -318,9 +324,9 @@ export class WorkersAI {
 
       if (!response.success) {
         throw new IntegrationError(
-          'Audio transcription failed',
           ErrorCode.AI_MODEL_ERROR,
-          { model, error: response.error }
+          'Audio transcription failed',
+          { metadata: { model, error: response.error } }
         );
       }
 
@@ -362,9 +368,9 @@ export class WorkersAI {
 
       if (!response.success) {
         throw new IntegrationError(
-          'Translation failed',
           ErrorCode.AI_MODEL_ERROR,
-          { model, error: response.error }
+          'Translation failed',
+          { metadata: { model, error: response.error } }
         );
       }
 
@@ -402,9 +408,9 @@ export class WorkersAI {
 
       if (!response.success) {
         throw new IntegrationError(
-          'Sentiment analysis failed',
           ErrorCode.AI_MODEL_ERROR,
-          { model, error: response.error }
+          'Sentiment analysis failed',
+          { metadata: { model, error: response.error } }
         );
       }
 
@@ -459,9 +465,9 @@ export class WorkersAI {
 
       if (!response.success) {
         throw new IntegrationError(
-          `Model execution failed: ${response.error}`,
           ErrorCode.AI_MODEL_ERROR,
-          { model: options.model, error: response.error }
+          `Model execution failed: ${response.error}`,
+          { metadata: { model: options.model, error: response.error } }
         );
       }
 
@@ -526,9 +532,9 @@ export class WorkersAI {
       }
     } catch (error) {
       throw new IntegrationError(
-        `Streaming failed: ${error}`,
         ErrorCode.AI_MODEL_ERROR,
-        { model }
+        `Streaming failed: ${error}`,
+        { metadata: { model } }
       );
     }
   }

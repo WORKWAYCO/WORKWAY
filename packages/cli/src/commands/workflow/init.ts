@@ -23,18 +23,7 @@ import {
 	aiReadmeTemplate,
 	aiPackageJsonTemplate,
 } from '../../templates/workflow/ai.js';
-
-const CATEGORIES = [
-	'productivity',
-	'finance',
-	'sales',
-	'marketing',
-	'customer-support',
-	'hr',
-	'operations',
-	'development',
-	'other',
-];
+import { WORKFLOW_CATEGORIES } from '../../constants.js';
 
 interface InitOptions {
 	ai?: boolean;
@@ -86,7 +75,7 @@ export async function workflowInitCommand(nameArg?: string, options?: InitOption
 						type: 'list',
 						name: 'category',
 						message: 'Category:',
-						choices: CATEGORIES,
+						choices: [...WORKFLOW_CATEGORIES],
 						default: 'productivity',
 					},
 					{
@@ -121,7 +110,7 @@ export async function workflowInitCommand(nameArg?: string, options?: InitOption
 						type: 'list',
 						name: 'category',
 						message: 'Category:',
-						choices: CATEGORIES,
+						choices: [...WORKFLOW_CATEGORIES],
 						default: 'productivity',
 					},
 					{

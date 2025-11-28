@@ -6,8 +6,8 @@
  */
 
 import { Logger } from '../utils/logger.js';
-import { loadConfig, isAuthenticated } from '../lib/config.js';
-import { createAPIClient, type WorkflowLog } from '../lib/api-client.js';
+import { createAuthenticatedClient } from '../utils/auth-client.js';
+import { type WorkflowLog } from '../lib/api-client.js';
 
 interface LogsOptions {
 	workflow?: string;
@@ -20,16 +20,11 @@ export async function logsCommand(options: LogsOptions): Promise<void> {
 	try {
 		Logger.header('Production Logs');
 
-		// Check authentication
-		if (!(await isAuthenticated())) {
-			Logger.warn('Not logged in');
-			Logger.log('');
-			Logger.log('Login with: workway login');
-			process.exit(1);
-		}
-
-		const config = await loadConfig();
-		const client = createAPIClient(config.apiUrl, config.credentials?.token);
+		// Get authenticated client (DRY: shared utility)
+		const { apiClient: client } = await createAuthenticatedClient({
+			errorMessage: 'Not logged in',
+			hint: 'Login with: workway login',
+		});
 
 		const limit = options.limit || 20;
 		const statusFilter = options.status;

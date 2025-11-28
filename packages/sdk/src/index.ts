@@ -180,6 +180,27 @@ export {
 } from './transform';
 
 // ============================================================================
+// VECTORIZE SDK (Semantic Search & RAG)
+// ============================================================================
+
+export type { VectorMetadata, VectorSearchOptions, VectorMatch } from './vectorize';
+export { Vectorize, createVectorClient } from './vectorize';
+
+// ============================================================================
+// AI SDK (Cloudflare Workers AI)
+// ============================================================================
+
+export type { AIModelOptions } from './workers-ai';
+export { WorkersAI, AIModels, createAIClient } from './workers-ai';
+
+// ============================================================================
+// ACTION RESULT (Shared utilities)
+// ============================================================================
+
+export type { ActionCapabilities, StandardData } from './action-result';
+export { ActionResult, createActionResult, isActionResult, unwrapResult } from './action-result';
+
+// ============================================================================
 // RE-EXPORTS
 // ============================================================================
 

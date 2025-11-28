@@ -8,20 +8,9 @@ import inquirer from 'inquirer';
 import fs from 'fs-extra';
 import path from 'path';
 import { Logger } from '../../utils/logger.js';
-import { loadConfig, getAuthToken } from '../../lib/config.js';
-import { createAPIClient } from '../../lib/api-client.js';
-
-const CATEGORIES = [
-	'productivity',
-	'finance',
-	'sales',
-	'marketing',
-	'customer-support',
-	'hr',
-	'operations',
-	'development',
-	'other',
-];
+import { createAuthenticatedClient } from '../../utils/auth-client.js';
+import { WORKFLOW_CATEGORIES } from '../../constants.js';
+import { validateWorkflowProject, getWorkflowPath } from '../../utils/workflow-validation.js';
 
 interface PublishOptions {
 	draft?: boolean;
@@ -31,16 +20,11 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 	Logger.header('Publish Workflow to Marketplace');
 
 	try {
-		// Check if user is authenticated
-		const authToken = await getAuthToken();
-		if (!authToken) {
-			Logger.error('You must be logged in to publish workflows');
-			Logger.log('');
-			Logger.log('Run: workway login');
-			process.exit(1);
-		}
-
-		const config = await loadConfig();
+		// Get authenticated client (DRY: shared utility)
+		const { apiClient } = await createAuthenticatedClient({
+			errorMessage: 'You must be logged in to publish workflows',
+			hint: 'Run: workway login',
+		});
 
 		// Check for workway.config.json
 		const configPath = path.join(process.cwd(), 'workway.config.json');
@@ -51,14 +35,11 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 			process.exit(1);
 		}
 
-		// Check for workflow.ts
-		const workflowPath = path.join(process.cwd(), 'workflow.ts');
-		if (!(await fs.pathExists(workflowPath))) {
-			Logger.error('No workflow.ts found in current directory');
-			Logger.log('');
-			Logger.log('💡 Create a workflow.ts file with your workflow definition');
-			process.exit(1);
-		}
+		// Validate workflow project (DRY: shared utility)
+		await validateWorkflowProject({
+			createHint: '💡 Create a workflow.ts file with your workflow definition',
+		});
+		const workflowPath = getWorkflowPath();
 
 		Logger.blank();
 		Logger.section('Workflow Configuration');
@@ -110,7 +91,7 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 				type: 'list',
 				name: 'category',
 				message: 'Category:',
-				choices: CATEGORIES,
+				choices: [...WORKFLOW_CATEGORIES],
 				default: 'productivity',
 			},
 			{
@@ -236,9 +217,6 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 		const spinner = Logger.spinner('Publishing workflow to marketplace...');
 
 		try {
-			// Create API client
-			const apiClient = createAPIClient(config.apiUrl, authToken);
-
 			// Check if user is a developer
 			let profileResponse = null;
 			try {

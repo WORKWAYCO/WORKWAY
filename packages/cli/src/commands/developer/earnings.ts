@@ -6,8 +6,7 @@
 
 import open from 'open';
 import { Logger } from '../../utils/logger.js';
-import { loadConfig, isAuthenticated } from '../../lib/config.js';
-import { createAPIClient } from '../../lib/api-client.js';
+import { createAuthenticatedClient } from '../../utils/auth-client.js';
 
 interface EarningsOptions {
 	setup?: boolean;
@@ -18,16 +17,11 @@ export async function developerEarningsCommand(options: EarningsOptions): Promis
 	try {
 		Logger.header('Developer Earnings');
 
-		// Check authentication
-		if (!(await isAuthenticated())) {
-			Logger.warn('Not logged in');
-			Logger.log('');
-			Logger.log('💡 Login with: workway login');
-			process.exit(1);
-		}
-
-		const config = await loadConfig();
-		const client = createAPIClient(config.apiUrl, config.credentials?.token);
+		// Get authenticated client (DRY: shared utility)
+		const { apiClient: client } = await createAuthenticatedClient({
+			errorMessage: 'Not logged in',
+			hint: 'Login with: workway login',
+		});
 
 		// Check if developer
 		const spinner1 = Logger.spinner('Loading developer info...');

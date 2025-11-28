@@ -6,24 +6,18 @@
 
 import inquirer from 'inquirer';
 import { Logger } from '../../utils/logger.js';
-import { loadConfig, saveConfig, isAuthenticated } from '../../lib/config.js';
-import { createAPIClient } from '../../lib/api-client.js';
+import { saveConfig } from '../../lib/config.js';
+import { createAuthenticatedClient } from '../../utils/auth-client.js';
 
 export async function developerRegisterCommand(): Promise<void> {
 	try {
 		Logger.header('Developer Registration');
 
-		// Check if already authenticated
-		if (!(await isAuthenticated())) {
-			Logger.warn('You need to be logged in first');
-			Logger.log('');
-			Logger.log('💡 Login with: workway login');
-			Logger.log('💡 Or register with: workway login --register');
-			process.exit(1);
-		}
-
-		const config = await loadConfig();
-		const client = createAPIClient(config.apiUrl, config.credentials?.token);
+		// Get authenticated client (DRY: shared utility)
+		const { apiClient: client, config } = await createAuthenticatedClient({
+			errorMessage: 'You need to be logged in first',
+			hint: 'Login with: workway login\n💡 Or register with: workway login --register',
+		});
 
 		// Check if already a developer
 		const spinner1 = Logger.spinner('Checking developer status...');

@@ -11,6 +11,7 @@ import { spawn, type ChildProcess } from 'child_process';
 import { watch, type FSWatcher } from 'chokidar';
 import { Logger } from '../../utils/logger.js';
 import { loadProjectConfig, loadOAuthTokens } from '../../lib/config.js';
+import { validateWorkflowProject, getWorkflowPath } from '../../utils/workflow-validation.js';
 
 interface DevOptions {
 	port?: number;
@@ -24,15 +25,9 @@ export async function workflowDevCommand(options: DevOptions): Promise<void> {
 	try {
 		Logger.header('Development Server');
 
-		// Check if we're in a workflow project
-		const workflowPath = path.join(process.cwd(), 'workflow.ts');
-		if (!(await fs.pathExists(workflowPath))) {
-			Logger.error('No workflow.ts found in current directory');
-			Logger.log('');
-			Logger.log('💡 Run this command from a workflow project directory');
-			Logger.log('💡 Or create a new workflow with: workway workflow init');
-			process.exit(1);
-		}
+		// Validate workflow project (DRY: shared utility)
+		await validateWorkflowProject();
+		const workflowPath = getWorkflowPath();
 
 		// Load project config
 		const projectConfig = await loadProjectConfig();

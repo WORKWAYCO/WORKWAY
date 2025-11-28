@@ -175,10 +175,23 @@ export interface ActionCapabilities {
  */
 export interface ActionResult<T = unknown> {
 	/**
+	 * Whether the operation succeeded
+	 */
+	success: boolean;
+
+	/**
 	 * The actual data returned by the action
 	 * Can be provider-specific (T) or standardized (StandardData)
 	 */
 	data: T;
+
+	/**
+	 * Error information (only present when success is false)
+	 */
+	error?: {
+		message: string;
+		code: string;
+	};
 
 	/**
 	 * Metadata about the result
@@ -322,6 +335,84 @@ export namespace ActionResult {
 }
 
 // ============================================================================
+// ACTIONRESULT FACTORY METHODS (Static-like pattern)
+// ============================================================================
+
+/**
+ * ActionResult namespace provides factory methods for creating results
+ *
+ * Usage:
+ * ```typescript
+ * // Success
+ * return ActionResult.success({ id: '123' });
+ *
+ * // Success with metadata
+ * return ActionResult.success({ id: '123' }, { metadata: { cached: true } });
+ *
+ * // Error
+ * return ActionResult.error('Not found', ErrorCode.NOT_FOUND);
+ * ```
+ */
+export const ActionResult = {
+	/**
+	 * Create a successful ActionResult
+	 */
+	success<T>(
+		data: T,
+		options?: {
+			metadata?: Record<string, unknown>;
+			capabilities?: ActionCapabilities;
+			integration?: string;
+			action?: string;
+			schema?: string;
+		}
+	): ActionResult<T> {
+		return {
+			success: true,
+			data,
+			metadata: {
+				source: {
+					integration: options?.integration || 'sdk',
+					action: options?.action || 'unknown',
+				},
+				schema: options?.schema || 'sdk.result.v1',
+				timestamp: Date.now(),
+				...(options?.metadata as Record<string, unknown>),
+			},
+			capabilities: options?.capabilities || {},
+		};
+	},
+
+	/**
+	 * Create a failed ActionResult
+	 */
+	error<T = never>(
+		message: string,
+		code: string,
+		options?: {
+			data?: T;
+			integration?: string;
+			action?: string;
+		}
+	): ActionResult<T> {
+		return {
+			success: false,
+			data: (options?.data ?? null) as T,
+			error: { message, code },
+			metadata: {
+				source: {
+					integration: options?.integration || 'sdk',
+					action: options?.action || 'unknown',
+				},
+				schema: 'sdk.error.v1',
+				timestamp: Date.now(),
+			},
+			capabilities: {},
+		};
+	},
+};
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
@@ -350,6 +441,7 @@ export function createActionResult<T>(params: {
 	cost?: ActionResult<T>['metadata']['cost'];
 }): ActionResult<T> {
 	return {
+		success: true,
 		data: params.data,
 		metadata: {
 			source: {
@@ -375,6 +467,7 @@ export function isActionResult<T>(value: unknown): value is ActionResult<T> {
 	const result = value as Partial<ActionResult>;
 
 	return (
+		typeof result.success === 'boolean' &&
 		result.data !== undefined &&
 		result.metadata?.source?.integration !== undefined &&
 		result.metadata?.source?.action !== undefined &&

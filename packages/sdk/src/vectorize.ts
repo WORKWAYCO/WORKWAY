@@ -15,7 +15,7 @@
  */
 
 import { ActionResult } from './action-result';
-import { IntegrationError, ErrorCode } from './integration-error';
+import { ErrorCode } from './integration-error';
 import { WorkersAI, AIModels } from './workers-ai';
 
 /**
@@ -183,7 +183,7 @@ export class Vectorize {
 
       return await this.upsert({
         id: options.id,
-        values: embedResult.data[0],
+        values: (embedResult.data as number[][])[0],
         metadata
       });
     } catch (error) {
@@ -223,7 +223,7 @@ export class Vectorize {
 
       // Search with embeddings
       const searchResult = await this.query({
-        vector: embedResult.data[0],
+        vector: (embedResult.data as number[][])[0],
         topK: options.topK,
         filter: options.filter
       });
@@ -233,7 +233,7 @@ export class Vectorize {
       }
 
       // Enhance results with original text if available
-      const matches = searchResult.data.matches.map((match: any) => ({
+      const matches = (searchResult.data as { matches: any[] }).matches.map((match: any) => ({
         ...match,
         text: match.metadata?.text,
         snippet: match.metadata?.text?.slice(0, 200)
@@ -317,9 +317,10 @@ export class Vectorize {
       }
 
       // Store all chunks with embeddings
+      const embeddingsData = embeddings.data as number[][];
       const vectors = chunks.map((chunk, i) => ({
         id: chunk.id,
-        values: embeddings.data[i],
+        values: embeddingsData[i],
         metadata: {
           ...chunk.metadata,
           text: chunk.text,
@@ -379,7 +380,8 @@ export class Vectorize {
       }
 
       // Step 2: Build context from search results
-      const context = searchResult.data.matches
+      const searchData = searchResult.data as { matches: any[] };
+      const context = searchData.matches
         .map((match: any) => match.text || match.metadata?.text)
         .filter(Boolean)
         .join('\n\n');
@@ -409,9 +411,10 @@ export class Vectorize {
         return response;
       }
 
+      const responseData = response.data as { response: string };
       return ActionResult.success({
-        answer: response.data.response,
-        sources: searchResult.data.matches.map((m: any) => ({
+        answer: responseData.response,
+        sources: searchData.matches.map((m: any) => ({
           id: m.id,
           score: m.score,
           text: m.text?.slice(0, 200) + '...'
@@ -420,7 +423,7 @@ export class Vectorize {
       }, {
         metadata: {
           contextSize: context.length,
-          sourcesUsed: searchResult.data.matches.length,
+          sourcesUsed: searchData.matches.length,
           model: options.generationModel || AIModels.LLAMA_3_8B
         }
       });
@@ -514,7 +517,8 @@ export class Vectorize {
       }
 
       // Filter out items user already interacted with
-      const filtered = recommendations.data.matches
+      const recData = recommendations.data as { matches: any[] };
+      const filtered = recData.matches
         .filter((match: any) => !options.itemIds.includes(match.id))
         .slice(0, options.topK || 10);
 

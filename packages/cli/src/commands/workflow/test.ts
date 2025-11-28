@@ -9,6 +9,7 @@ import fs from 'fs-extra';
 import path from 'path';
 import { Logger } from '../../utils/logger.js';
 import { loadProjectConfig, loadOAuthTokens } from '../../lib/config.js';
+import { validateWorkflowProject, getWorkflowPath } from '../../utils/workflow-validation.js';
 import { WorkflowRuntime, loadWorkflow } from '../../lib/workflow-runtime.js';
 
 interface TestOptions {
@@ -24,15 +25,9 @@ export async function workflowTestCommand(options: TestOptions): Promise<void> {
 
 		Logger.header(`Test Workflow (${mode} mode)`);
 
-		// Check if we're in a workflow project
-		const workflowPath = path.join(process.cwd(), 'workflow.ts');
-		if (!(await fs.pathExists(workflowPath))) {
-			Logger.error('No workflow.ts found in current directory');
-			Logger.log('');
-			Logger.log('Run this command from a workflow project directory');
-			Logger.log('Or create a new workflow with: workway workflow init');
-			process.exit(1);
-		}
+		// Validate workflow project (DRY: shared utility)
+		await validateWorkflowProject();
+		const workflowPath = getWorkflowPath();
 
 		// Load project config
 		const projectConfig = await loadProjectConfig();

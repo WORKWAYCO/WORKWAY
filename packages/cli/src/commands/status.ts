@@ -6,23 +6,18 @@
  */
 
 import { Logger } from '../utils/logger.js';
-import { loadConfig, isAuthenticated, loadOAuthTokens } from '../lib/config.js';
-import { createAPIClient } from '../lib/api-client.js';
+import { loadOAuthTokens } from '../lib/config.js';
+import { createAuthenticatedClient } from '../utils/auth-client.js';
 
 export async function statusCommand(): Promise<void> {
 	try {
 		Logger.header('WORKWAY Status');
 
-		// Check authentication
-		if (!(await isAuthenticated())) {
-			Logger.warn('Not logged in');
-			Logger.log('');
-			Logger.log('💡 Login with: workway login');
-			process.exit(1);
-		}
-
-		const config = await loadConfig();
-		const client = createAPIClient(config.apiUrl, config.credentials?.token);
+		// Get authenticated client (DRY: shared utility)
+		const { apiClient: client, config } = await createAuthenticatedClient({
+			errorMessage: 'Not logged in',
+			hint: 'Login with: workway login',
+		});
 
 		const spinner = Logger.spinner('Loading developer status...');
 

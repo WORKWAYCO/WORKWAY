@@ -10,6 +10,7 @@ import path from 'path';
 import { spawn } from 'child_process';
 import { Logger } from '../../utils/logger.js';
 import { loadProjectConfig } from '../../lib/config.js';
+import { validateWorkflowProject, getWorkflowPath } from '../../utils/workflow-validation.js';
 import { validateWorkflowFile, formatValidationResults, type ValidationResult } from '../../lib/workflow-validator.js';
 
 interface BuildOptions {
@@ -22,15 +23,9 @@ export async function workflowBuildCommand(options: BuildOptions): Promise<void>
 	try {
 		Logger.header('Build Workflow');
 
-		// Check if we're in a workflow project
-		const workflowPath = path.join(process.cwd(), 'workflow.ts');
-		if (!(await fs.pathExists(workflowPath))) {
-			Logger.error('No workflow.ts found in current directory');
-			Logger.log('');
-			Logger.log('💡 Run this command from a workflow project directory');
-			Logger.log('💡 Or create a new workflow with: workway workflow init');
-			process.exit(1);
-		}
+		// Validate workflow project (DRY: shared utility)
+		await validateWorkflowProject();
+		const workflowPath = getWorkflowPath();
 
 		// Load project config
 		const projectConfig = await loadProjectConfig();

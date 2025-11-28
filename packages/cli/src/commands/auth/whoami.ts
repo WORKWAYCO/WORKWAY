@@ -5,23 +5,13 @@
  */
 
 import { Logger } from '../../utils/logger.js';
-import { loadConfig, getAuthToken } from '../../lib/config.js';
-import { createAPIClient, APIError } from '../../lib/api-client.js';
+import { createAuthenticatedClient } from '../../utils/auth-client.js';
+import { APIError } from '../../lib/api-client.js';
 
 export async function whoamiCommand(): Promise<void> {
 	try {
-		// Check if authenticated
-		const token = await getAuthToken();
-		if (!token) {
-			Logger.error('Not authenticated');
-			Logger.log('');
-			Logger.log('💡 Run `workway login` to authenticate');
-			process.exit(1);
-		}
-
-		// Load config
-		const config = await loadConfig();
-		const apiClient = createAPIClient(config.apiUrl, token);
+		// Get authenticated client (DRY: shared utility)
+		const { apiClient, apiUrl } = await createAuthenticatedClient();
 
 		// Show spinner
 		const spinner = Logger.spinner('Fetching account info...');
@@ -65,7 +55,7 @@ export async function whoamiCommand(): Promise<void> {
 			}
 
 			Logger.blank();
-			Logger.info('API URL: ' + config.apiUrl);
+			Logger.info('API URL: ' + apiUrl);
 		} catch (error) {
 			spinner.fail('Failed to fetch account info');
 
