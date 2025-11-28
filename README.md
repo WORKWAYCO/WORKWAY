@@ -37,7 +37,18 @@ This monorepo contains:
 
 - [`@workwayco/sdk`](packages/sdk) - Core SDK for building workflows
 - [`@workwayco/cli`](packages/cli) - Command-line interface
-- [`@workwayco/types`](packages/types) - Shared TypeScript types
+- [`@workwayco/integrations`](packages/integrations) - Official integrations (Gmail, Slack, Notion)
+
+## 🏗️ Architecture
+
+WORKWAY is two systems:
+
+| Component | Repository | License |
+|-----------|------------|---------|
+| SDK, CLI, Integrations | This repo (open source) | Apache 2.0 |
+| Workflow Engine, Platform API | [workway-platform](https://github.com/workwayco/workway-platform) (private) | Proprietary |
+
+See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full details.
 
 ## 💰 Business Model
 
