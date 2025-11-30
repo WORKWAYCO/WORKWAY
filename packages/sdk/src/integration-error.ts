@@ -70,6 +70,12 @@ export enum ErrorCode {
 	// AI errors
 	AI_MODEL_ERROR = 'ai_model_error', // AI model execution failed
 
+	// Payment errors
+	PAYMENT_FAILED = 'payment_failed', // Payment processing failed (card declined, etc.)
+
+	// Validation errors
+	VALIDATION_ERROR = 'validation_error', // Input validation failed
+
 	// Network errors
 	NETWORK_ERROR = 'network_error', // Network timeout, connection failed
 	PROVIDER_DOWN = 'provider_down', // Provider service is down

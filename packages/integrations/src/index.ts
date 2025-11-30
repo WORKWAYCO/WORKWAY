@@ -34,7 +34,68 @@ export type {
 	SendEmailOptions,
 } from './gmail/index.js';
 
-// Future integrations (placeholders)
-// export { Slack } from './slack/index.js';
-// export { Notion } from './notion/index.js';
+export { Slack } from './slack/index.js';
+export type {
+	SlackConfig,
+	SlackChannel,
+	SlackMessage,
+	SlackUser,
+	ListChannelsOptions,
+	GetMessagesOptions,
+	SendMessageOptions,
+	GetUserOptions,
+} from './slack/index.js';
+
+export { Notion } from './notion/index.js';
+export type {
+	NotionConfig,
+	NotionPage,
+	NotionDatabase,
+	NotionBlock,
+	NotionProperty,
+	NotionRichText,
+	SearchOptions,
+	GetPageOptions,
+	CreatePageOptions,
+	UpdatePageOptions,
+	QueryDatabaseOptions,
+	GetBlockChildrenOptions,
+} from './notion/index.js';
+
+export { Stripe } from './stripe/index.js';
+export type {
+	StripeConfig,
+	StripePaymentIntent,
+	StripeCustomer,
+	StripeSubscription,
+	StripeCharge,
+	StripeWebhookEvent,
+	StripeList,
+	CreatePaymentIntentOptions,
+	ListPaymentsOptions,
+	CreateCustomerOptions,
+	CreateSubscriptionOptions,
+	ListSubscriptionsOptions,
+} from './stripe/index.js';
+
+export { GoogleSheets } from './google-sheets/index.js';
+export type {
+	GoogleSheetsConfig,
+	Spreadsheet,
+	Sheet,
+	ValueRange,
+	UpdateValuesResponse,
+	AppendValuesResponse,
+	BatchUpdateResponse,
+	GetSpreadsheetOptions,
+	GetValuesOptions,
+	UpdateValuesOptions,
+	AppendValuesOptions,
+	ClearValuesOptions,
+	CreateSpreadsheetOptions,
+	BatchGetValuesOptions,
+	AddSheetOptions,
+} from './google-sheets/index.js';
+
+// Future integrations
 // export { WorkersAI } from './workers-ai/index.js';

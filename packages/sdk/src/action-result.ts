@@ -251,16 +251,6 @@ export interface ActionResult<T = unknown> {
 	 * Integrations can provide this for easier interop
 	 */
 	standard?: StandardData;
-
-	/**
-	 * Success/failure flag (for simplified AI and internal use)
-	 */
-	success?: boolean;
-
-	/**
-	 * Error message (if failed)
-	 */
-	error?: string;
 }
 
 // ============================================================================
@@ -444,4 +434,92 @@ export function areResultsCompatible(
 
 	// Compatible!
 	return { compatible: true };
+}
+
+// ============================================================================
+// ERROR ACCESS HELPERS (DX Improvement)
+// ============================================================================
+
+/**
+ * Get the error message from an ActionResult
+ * Returns undefined if result was successful
+ *
+ * @example
+ * ```typescript
+ * const result = await stripe.createPayment(options);
+ * if (!result.success) {
+ *   console.log(getErrorMessage(result)); // "Invalid card number"
+ * }
+ * ```
+ */
+export function getErrorMessage<T>(result: ActionResult<T>): string | undefined {
+	return result.error?.message;
+}
+
+/**
+ * Get the error code from an ActionResult
+ * Returns undefined if result was successful
+ *
+ * @example
+ * ```typescript
+ * const result = await stripe.createPayment(options);
+ * if (!result.success && getErrorCode(result) === ErrorCode.RATE_LIMITED) {
+ *   // Handle rate limiting
+ * }
+ * ```
+ */
+export function getErrorCode<T>(result: ActionResult<T>): string | undefined {
+	return result.error?.code;
+}
+
+/**
+ * Check if a result failed with a specific error code
+ *
+ * @example
+ * ```typescript
+ * if (hasErrorCode(result, ErrorCode.AUTH_EXPIRED)) {
+ *   await refreshOAuthToken();
+ * }
+ * ```
+ */
+export function hasErrorCode<T>(result: ActionResult<T>, code: string): boolean {
+	return !result.success && result.error?.code === code;
+}
+
+/**
+ * Check if a result is a failure (type guard)
+ * Narrows the type to ensure error is present
+ *
+ * @example
+ * ```typescript
+ * const result = await stripe.createPayment(options);
+ * if (isFailure(result)) {
+ *   // TypeScript knows result.error is defined here
+ *   console.log(result.error.message);
+ * }
+ * ```
+ */
+export function isFailure<T>(
+	result: ActionResult<T>
+): result is ActionResult<T> & { success: false; error: { message: string; code: string } } {
+	return !result.success && result.error !== undefined;
+}
+
+/**
+ * Check if a result is a success (type guard)
+ * Narrows the type to ensure data is valid
+ *
+ * @example
+ * ```typescript
+ * const result = await stripe.createPayment(options);
+ * if (isSuccess(result)) {
+ *   // TypeScript knows result.data is the expected type
+ *   console.log(result.data.id);
+ * }
+ * ```
+ */
+export function isSuccess<T>(
+	result: ActionResult<T>
+): result is ActionResult<T> & { success: true; error: undefined } {
+	return result.success === true;
 }

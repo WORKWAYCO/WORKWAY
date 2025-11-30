@@ -109,6 +109,31 @@ export type {
 export { WorkflowRegistry, defineWorkflow, defineConfigField } from './workflow-sdk';
 
 // ============================================================================
+// TRIGGER HELPERS
+// ============================================================================
+
+export type {
+	TriggerConfig,
+	WebhookTriggerConfig,
+	ScheduleTriggerConfig,
+	ManualTriggerConfig,
+	PollTriggerConfig,
+	Trigger,
+} from './triggers';
+
+export {
+	webhook,
+	schedule,
+	manual,
+	poll,
+	isWebhookTrigger,
+	isScheduleTrigger,
+	isManualTrigger,
+	isPollTrigger,
+	describeTrigger,
+} from './triggers';
+
+// ============================================================================
 // TESTING SDK EXPORTS
 // ============================================================================
 
@@ -138,6 +163,18 @@ export {
 
 // HTTP client
 export { http, HttpError, type HttpOptions, type HttpRequestOptions, type HttpResponse } from './http';
+
+// Retry utilities
+export {
+	withRetry,
+	fetchWithRetry,
+	defaultShouldRetry,
+	shouldRetryResponse,
+	parseRetryAfter,
+	createRateLimitAwareRetry,
+	type RetryOptions,
+	type RetryContext,
+} from './retry';
 
 // Cache utilities
 export { Cache, createCache, type CacheOptions, type CacheEntry } from './cache';
@@ -198,7 +235,32 @@ export { WorkersAI, AIModels, createAIClient } from './workers-ai';
 // ============================================================================
 
 export type { ActionCapabilities, StandardData } from './action-result';
-export { ActionResult, createActionResult, isActionResult, unwrapResult } from './action-result';
+export {
+	ActionResult,
+	createActionResult,
+	isActionResult,
+	unwrapResult,
+	// DX helpers for error handling
+	getErrorMessage,
+	getErrorCode,
+	hasErrorCode,
+	isFailure,
+	isSuccess,
+} from './action-result';
+
+// ============================================================================
+// ERROR HANDLING
+// ============================================================================
+
+export {
+	IntegrationError,
+	ErrorCode,
+	ErrorCategory,
+	createErrorFromResponse,
+	isIntegrationError,
+	toIntegrationError,
+	type ErrorContext,
+} from './integration-error';
 
 // ============================================================================
 // RE-EXPORTS

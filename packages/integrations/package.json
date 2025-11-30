@@ -21,17 +21,28 @@
 		"./notion": {
 			"types": "./dist/notion/index.d.ts",
 			"import": "./dist/notion/index.js"
+		},
+		"./stripe": {
+			"types": "./dist/stripe/index.d.ts",
+			"import": "./dist/stripe/index.js"
+		},
+		"./google-sheets": {
+			"types": "./dist/google-sheets/index.d.ts",
+			"import": "./dist/google-sheets/index.js"
 		}
 	},
 	"scripts": {
 		"build": "tsc",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:watch": "vitest"
 	},
 	"dependencies": {
 		"@workwayco/sdk": "workspace:*"
 	},
 	"devDependencies": {
-		"typescript": "^5.3.0"
+		"typescript": "^5.3.0",
+		"vitest": "^2.0.0"
 	},
 	"peerDependencies": {
 		"@workwayco/sdk": "workspace:*"

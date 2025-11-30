@@ -72,6 +72,8 @@ export interface GmailConfig {
 	accessToken: string;
 	/** Optional: Override API endpoint (for testing) */
 	apiUrl?: string;
+	/** Request timeout in milliseconds (default: 30000) */
+	timeout?: number;
 }
 
 /**
@@ -132,6 +134,7 @@ export interface SendEmailOptions {
 export class Gmail {
 	private accessToken: string;
 	private apiUrl: string;
+	private timeout: number;
 
 	constructor(config: GmailConfig) {
 		if (!config.accessToken) {
@@ -144,6 +147,7 @@ export class Gmail {
 
 		this.accessToken = config.accessToken;
 		this.apiUrl = config.apiUrl || 'https://gmail.googleapis.com/gmail/v1';
+		this.timeout = config.timeout ?? 30000;
 	}
 
 	// ==========================================================================
@@ -411,7 +415,7 @@ export class Gmail {
 	// ==========================================================================
 
 	/**
-	 * Make authenticated request to Gmail API
+	 * Make authenticated request to Gmail API with timeout
 	 */
 	private async request(path: string, options: RequestInit = {}): Promise<Response> {
 		const url = `${this.apiUrl}${path}`;
@@ -420,10 +424,19 @@ export class Gmail {
 		headers.set('Authorization', `Bearer ${this.accessToken}`);
 		headers.set('Content-Type', 'application/json');
 
-		return fetch(url, {
-			...options,
-			headers,
-		});
+		// Add timeout via AbortController
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+		try {
+			return await fetch(url, {
+				...options,
+				headers,
+				signal: controller.signal,
+			});
+		} finally {
+			clearTimeout(timeoutId);
+		}
 	}
 
 	/**
@@ -433,7 +446,8 @@ export class Gmail {
 		return {
 			canHandleText: true,
 			canHandleHtml: true,
-			canHandleAttachments: true,
+			// Note: Attachment downloading not yet implemented - only text content extracted
+			canHandleAttachments: false,
 			supportsSearch: true,
 			supportsPagination: true,
 		};
