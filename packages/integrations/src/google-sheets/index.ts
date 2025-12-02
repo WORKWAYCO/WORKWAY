@@ -1,17 +1,7 @@
 /**
  * Google Sheets Integration for WORKWAY
  *
- * Enables structured data workflows:
- * - Read spreadsheet data for AI processing
- * - Write AI results back to sheets
- * - Append rows (logging, data collection)
- * - Create new spreadsheets
- *
- * Implements the SDK patterns:
- * - ActionResult narrow waist for output
- * - IntegrationError narrow waist for errors
- * - StandardData for normalized data
- * - OAuth token handling
+ * Weniger, aber besser: Extends BaseAPIClient for shared HTTP logic.
  *
  * @example
  * ```typescript
@@ -44,9 +34,15 @@
 import {
 	ActionResult,
 	createActionResult,
+	ErrorCode,
 	type ActionCapabilities,
 } from '@workwayco/sdk';
-import { IntegrationError, ErrorCode } from '@workwayco/sdk';
+import {
+	BaseAPIClient,
+	validateAccessToken,
+	createErrorHandler,
+	assertResponseOk,
+} from '../core/index.js';
 
 // ============================================================================
 // TYPES
@@ -236,28 +232,22 @@ export interface AddSheetOptions {
 // GOOGLE SHEETS INTEGRATION CLASS
 // ============================================================================
 
+/** Error handler bound to Google Sheets integration */
+const handleError = createErrorHandler('google-sheets');
+
 /**
  * Google Sheets Integration
  *
- * Implements the WORKWAY SDK patterns for Google Sheets API access.
+ * Weniger, aber besser: Extends BaseAPIClient for shared HTTP logic.
  */
-export class GoogleSheets {
-	private accessToken: string;
-	private apiUrl: string;
-	private timeout: number;
-
+export class GoogleSheets extends BaseAPIClient {
 	constructor(config: GoogleSheetsConfig) {
-		if (!config.accessToken) {
-			throw new IntegrationError(
-				ErrorCode.AUTH_MISSING,
-				'Google Sheets access token is required',
-				{ integration: 'google-sheets', retryable: false }
-			);
-		}
-
-		this.accessToken = config.accessToken;
-		this.apiUrl = config.apiUrl || 'https://sheets.googleapis.com/v4/spreadsheets';
-		this.timeout = config.timeout ?? 30000;
+		validateAccessToken(config.accessToken, 'google-sheets');
+		super({
+			accessToken: config.accessToken,
+			apiUrl: config.apiUrl || 'https://sheets.googleapis.com/v4/spreadsheets',
+			timeout: config.timeout,
+		});
 	}
 
 	// ==========================================================================
@@ -280,11 +270,8 @@ export class GoogleSheets {
 			}
 
 			const url = `/${options.spreadsheetId}${params.toString() ? '?' + params.toString() : ''}`;
-			const response = await this.request(url);
-
-			if (!response.ok) {
-				return this.handleGoogleError(response, 'get-spreadsheet');
-			}
+			const response = await this.get(url);
+			await assertResponseOk(response, { integration: 'google-sheets', action: 'get-spreadsheet' });
 
 			const spreadsheet = (await response.json()) as Spreadsheet;
 
@@ -296,7 +283,7 @@ export class GoogleSheets {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'get-spreadsheet');
+			return handleError(error, 'get-spreadsheet');
 		}
 	}
 
@@ -324,14 +311,8 @@ export class GoogleSheets {
 				}));
 			}
 
-			const response = await this.request('', {
-				method: 'POST',
-				body: JSON.stringify(body),
-			});
-
-			if (!response.ok) {
-				return this.handleGoogleError(response, 'create-spreadsheet');
-			}
+			const response = await this.post('', body);
+			await assertResponseOk(response, { integration: 'google-sheets', action: 'create-spreadsheet' });
 
 			const spreadsheet = (await response.json()) as Spreadsheet;
 
@@ -343,7 +324,7 @@ export class GoogleSheets {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'create-spreadsheet');
+			return handleError(error, 'create-spreadsheet');
 		}
 	}
 
@@ -366,11 +347,8 @@ export class GoogleSheets {
 
 			const encodedRange = encodeURIComponent(options.range);
 			const url = `/${options.spreadsheetId}/values/${encodedRange}${params.toString() ? '?' + params.toString() : ''}`;
-			const response = await this.request(url);
-
-			if (!response.ok) {
-				return this.handleGoogleError(response, 'get-values');
-			}
+			const response = await this.get(url);
+			await assertResponseOk(response, { integration: 'google-sheets', action: 'get-values' });
 
 			const valueRange = (await response.json()) as ValueRange;
 
@@ -382,7 +360,7 @@ export class GoogleSheets {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'get-values');
+			return handleError(error, 'get-values');
 		}
 	}
 
@@ -402,11 +380,8 @@ export class GoogleSheets {
 			}
 
 			const url = `/${options.spreadsheetId}/values:batchGet?${params.toString()}`;
-			const response = await this.request(url);
-
-			if (!response.ok) {
-				return this.handleGoogleError(response, 'batch-get-values');
-			}
+			const response = await this.get(url);
+			await assertResponseOk(response, { integration: 'google-sheets', action: 'batch-get-values' });
 
 			const result = (await response.json()) as { valueRanges: ValueRange[] };
 
@@ -418,7 +393,7 @@ export class GoogleSheets {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'batch-get-values');
+			return handleError(error, 'batch-get-values');
 		}
 	}
 
@@ -438,6 +413,7 @@ export class GoogleSheets {
 			const encodedRange = encodeURIComponent(options.range);
 			const url = `/${options.spreadsheetId}/values/${encodedRange}?${params.toString()}`;
 
+			// Use PUT via protected request() method
 			const response = await this.request(url, {
 				method: 'PUT',
 				body: JSON.stringify({
@@ -446,10 +422,7 @@ export class GoogleSheets {
 					values: options.values,
 				}),
 			});
-
-			if (!response.ok) {
-				return this.handleGoogleError(response, 'update-values');
-			}
+			await assertResponseOk(response, { integration: 'google-sheets', action: 'update-values' });
 
 			const result = (await response.json()) as UpdateValuesResponse;
 
@@ -461,7 +434,7 @@ export class GoogleSheets {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'update-values');
+			return handleError(error, 'update-values');
 		}
 	}
 
@@ -479,18 +452,12 @@ export class GoogleSheets {
 			const encodedRange = encodeURIComponent(options.range);
 			const url = `/${options.spreadsheetId}/values/${encodedRange}:append?${params.toString()}`;
 
-			const response = await this.request(url, {
-				method: 'POST',
-				body: JSON.stringify({
-					range: options.range,
-					majorDimension: 'ROWS',
-					values: options.values,
-				}),
+			const response = await this.post(url, {
+				range: options.range,
+				majorDimension: 'ROWS',
+				values: options.values,
 			});
-
-			if (!response.ok) {
-				return this.handleGoogleError(response, 'append-values');
-			}
+			await assertResponseOk(response, { integration: 'google-sheets', action: 'append-values' });
 
 			const result = (await response.json()) as AppendValuesResponse;
 
@@ -502,7 +469,7 @@ export class GoogleSheets {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'append-values');
+			return handleError(error, 'append-values');
 		}
 	}
 
@@ -516,14 +483,8 @@ export class GoogleSheets {
 			const encodedRange = encodeURIComponent(options.range);
 			const url = `/${options.spreadsheetId}/values/${encodedRange}:clear`;
 
-			const response = await this.request(url, {
-				method: 'POST',
-				body: JSON.stringify({}),
-			});
-
-			if (!response.ok) {
-				return this.handleGoogleError(response, 'clear-values');
-			}
+			const response = await this.post(url, {});
+			await assertResponseOk(response, { integration: 'google-sheets', action: 'clear-values' });
 
 			const result = (await response.json()) as { clearedRange: string };
 
@@ -535,7 +496,7 @@ export class GoogleSheets {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'clear-values');
+			return handleError(error, 'clear-values');
 		}
 	}
 
@@ -550,28 +511,22 @@ export class GoogleSheets {
 		try {
 			const url = `/${options.spreadsheetId}:batchUpdate`;
 
-			const response = await this.request(url, {
-				method: 'POST',
-				body: JSON.stringify({
-					requests: [
-						{
-							addSheet: {
-								properties: {
-									title: options.title,
-									gridProperties: {
-										rowCount: options.rowCount || 1000,
-										columnCount: options.columnCount || 26,
-									},
+			const response = await this.post(url, {
+				requests: [
+					{
+						addSheet: {
+							properties: {
+								title: options.title,
+								gridProperties: {
+									rowCount: options.rowCount || 1000,
+									columnCount: options.columnCount || 26,
 								},
 							},
 						},
-					],
-				}),
+					},
+				],
 			});
-
-			if (!response.ok) {
-				return this.handleGoogleError(response, 'add-sheet');
-			}
+			await assertResponseOk(response, { integration: 'google-sheets', action: 'add-sheet' });
 
 			const result = (await response.json()) as {
 				replies: Array<{ addSheet: { properties: Sheet['properties'] } }>;
@@ -589,7 +544,7 @@ export class GoogleSheets {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'add-sheet');
+			return handleError(error, 'add-sheet');
 		}
 	}
 
@@ -603,22 +558,16 @@ export class GoogleSheets {
 		try {
 			const url = `/${spreadsheetId}:batchUpdate`;
 
-			const response = await this.request(url, {
-				method: 'POST',
-				body: JSON.stringify({
-					requests: [
-						{
-							deleteSheet: {
-								sheetId,
-							},
+			const response = await this.post(url, {
+				requests: [
+					{
+						deleteSheet: {
+							sheetId,
 						},
-					],
-				}),
+					},
+				],
 			});
-
-			if (!response.ok) {
-				return this.handleGoogleError(response, 'delete-sheet');
-			}
+			await assertResponseOk(response, { integration: 'google-sheets', action: 'delete-sheet' });
 
 			return createActionResult({
 				data: { deleted: true },
@@ -628,7 +577,7 @@ export class GoogleSheets {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'delete-sheet');
+			return handleError(error, 'delete-sheet');
 		}
 	}
 
@@ -675,34 +624,6 @@ export class GoogleSheets {
 	// ==========================================================================
 
 	/**
-	 * Make authenticated request to Google Sheets API with timeout
-	 */
-	private async request(
-		endpoint: string,
-		options: RequestInit = {}
-	): Promise<Response> {
-		const url = `${this.apiUrl}${endpoint}`;
-
-		// Add timeout via AbortController
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-		try {
-			return await fetch(url, {
-				...options,
-				headers: {
-					Authorization: `Bearer ${this.accessToken}`,
-					'Content-Type': 'application/json',
-					...options.headers,
-				},
-				signal: controller.signal,
-			});
-		} finally {
-			clearTimeout(timeoutId);
-		}
-	}
-
-	/**
 	 * Get capabilities for Google Sheets actions
 	 */
 	private getCapabilities(): ActionCapabilities {
@@ -712,78 +633,5 @@ export class GoogleSheets {
 			supportsPagination: false,
 			supportsBulkOperations: true,
 		};
-	}
-
-	/**
-	 * Handle Google API errors
-	 */
-	private async handleGoogleError<T>(
-		response: Response,
-		action: string
-	): Promise<ActionResult<T>> {
-		try {
-			const errorData = (await response.json()) as {
-				error?: { message?: string; status?: string; code?: number };
-			};
-			const message = errorData.error?.message || 'Google Sheets API error';
-			const code = this.mapGoogleError(response.status, errorData.error?.status);
-
-			return ActionResult.error(message, code, {
-				integration: 'google-sheets',
-				action,
-			});
-		} catch {
-			return ActionResult.error(
-				`Google Sheets API error: ${response.status}`,
-				ErrorCode.API_ERROR,
-				{ integration: 'google-sheets', action }
-			);
-		}
-	}
-
-	/**
-	 * Map Google error status to ErrorCode
-	 */
-	private mapGoogleError(status: number, errorStatus?: string): string {
-		if (status === 401) return ErrorCode.AUTH_INVALID;
-		if (status === 403) return ErrorCode.AUTH_INSUFFICIENT_SCOPE;
-		if (status === 404) return ErrorCode.NOT_FOUND;
-		if (status === 429) return ErrorCode.RATE_LIMITED;
-
-		switch (errorStatus) {
-			case 'UNAUTHENTICATED':
-				return ErrorCode.AUTH_INVALID;
-			case 'PERMISSION_DENIED':
-				return ErrorCode.PERMISSION_DENIED;
-			case 'NOT_FOUND':
-				return ErrorCode.NOT_FOUND;
-			case 'ALREADY_EXISTS':
-				return ErrorCode.CONFLICT;
-			case 'RESOURCE_EXHAUSTED':
-				return ErrorCode.RATE_LIMITED;
-			case 'INVALID_ARGUMENT':
-				return ErrorCode.VALIDATION_ERROR;
-			default:
-				return ErrorCode.API_ERROR;
-		}
-	}
-
-	/**
-	 * Handle general errors
-	 */
-	private handleError<T>(error: unknown, action: string): ActionResult<T> {
-		if (error instanceof IntegrationError) {
-			const integrationErr = error as IntegrationError;
-			return ActionResult.error(integrationErr.message, integrationErr.code, {
-				integration: 'google-sheets',
-				action,
-			});
-		}
-
-		const message = error instanceof Error ? error.message : 'Unknown error';
-		return ActionResult.error(message, ErrorCode.UNKNOWN, {
-			integration: 'google-sheets',
-			action,
-		});
 	}
 }
