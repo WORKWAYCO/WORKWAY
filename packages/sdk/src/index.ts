@@ -263,6 +263,19 @@ export {
 } from './integration-error';
 
 // ============================================================================
+// TEMPLATE REGISTRY (Marketplace Templates)
+// ============================================================================
+
+export type { MarketplaceTemplate, TemplateCategoryId } from './template-registry';
+
+export {
+	TEMPLATE_CATEGORIES,
+	SEED_TEMPLATES,
+	TemplateRegistry,
+	templateRegistry,
+} from './template-registry';
+
+// ============================================================================
 // RE-EXPORTS
 // ============================================================================
 

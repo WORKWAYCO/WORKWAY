@@ -112,6 +112,16 @@ export const AIModels = {
 } as const;
 
 /**
+ * AI operation result configuration
+ * Weniger, aber besser: One interface drives all AI operations
+ */
+interface AIOperationResult<T> {
+  data: T;
+  metadata: Record<string, any>;
+  capabilities?: Record<string, any>;
+}
+
+/**
  * Workers AI client for executing AI models
  */
 export class WorkersAI {
@@ -121,6 +131,43 @@ export class WorkersAI {
   constructor(ai: any) {
     this.ai = ai;
     this.cache = new Map();
+  }
+
+  /**
+   * Execute AI operation with standardized error handling
+   * Weniger, aber besser: One method handles all error patterns
+   */
+  private async executeAIOperation<T>(
+    model: string,
+    input: any,
+    operationName: string,
+    extractResult: (response: any) => AIOperationResult<T>
+  ): Promise<ActionResult> {
+    try {
+      const response = await this.ai.run(model, input);
+
+      if (!response.success) {
+        throw new IntegrationError(
+          ErrorCode.AI_MODEL_ERROR,
+          `${operationName} failed`,
+          { metadata: { model, error: response.error } }
+        );
+      }
+
+      const { data, metadata, capabilities } = extractResult(response);
+      return ActionResult.success(data, {
+        metadata: { model, ...metadata },
+        ...(capabilities && { capabilities })
+      });
+    } catch (error) {
+      if (error instanceof IntegrationError) {
+        throw error;
+      }
+      return ActionResult.error(
+        `Failed to ${operationName.toLowerCase()}: ${error}`,
+        ErrorCode.AI_MODEL_ERROR
+      );
+    }
   }
 
   /**
@@ -195,32 +242,18 @@ export class WorkersAI {
   }): Promise<ActionResult> {
     const model = options.model || AIModels.BGE_BASE;
 
-    try {
-      const response = await this.ai.run(model, {
-        text: Array.isArray(options.text) ? options.text : [options.text]
-      });
-
-      if (!response.success) {
-        throw new IntegrationError(
-          ErrorCode.AI_MODEL_ERROR,
-          'Embedding generation failed',
-          { metadata: { model, error: response.error } }
-        );
-      }
-
-      return ActionResult.success(response.data, {
+    return this.executeAIOperation(
+      model,
+      { text: Array.isArray(options.text) ? options.text : [options.text] },
+      'Embedding generation',
+      (response) => ({
+        data: response.data,
         metadata: {
-          model,
           dimensions: response.data[0]?.length,
           count: response.data.length
         }
-      });
-    } catch (error) {
-      return ActionResult.error(
-        `Failed to generate embeddings: ${error}`,
-        ErrorCode.AI_MODEL_ERROR
-      );
-    }
+      })
+    );
   }
 
   /**
@@ -235,39 +268,25 @@ export class WorkersAI {
     height?: number;
   }): Promise<ActionResult> {
     const model = options.model || AIModels.STABLE_DIFFUSION_XL;
+    const width = options.width || 1024;
+    const height = options.height || 1024;
 
-    try {
-      const response = await this.ai.run(model, {
+    return this.executeAIOperation(
+      model,
+      {
         prompt: options.prompt,
         negative_prompt: options.negative_prompt,
         num_steps: options.steps || 20,
-        width: options.width || 1024,
-        height: options.height || 1024,
-      });
-
-      if (!response.success) {
-        throw new IntegrationError(
-          ErrorCode.AI_MODEL_ERROR,
-          'Image generation failed',
-          { metadata: { model, error: response.error } }
-        );
-      }
-
-      return ActionResult.success(response.image, {
-        metadata: {
-          model,
-          format: 'base64',
-          width: options.width || 1024,
-          height: options.height || 1024
-        },
+        width,
+        height,
+      },
+      'Image generation',
+      (response) => ({
+        data: response.image,
+        metadata: { format: 'base64', width, height },
         capabilities: { canHandleImages: true }
-      });
-    } catch (error) {
-      return ActionResult.error(
-        `Failed to generate image: ${error}`,
-        ErrorCode.AI_MODEL_ERROR
-      );
-    }
+      })
+    );
   }
 
   /**
@@ -279,31 +298,15 @@ export class WorkersAI {
   }): Promise<ActionResult> {
     const model = options.model || AIModels.RESNET_50;
 
-    try {
-      const response = await this.ai.run(model, {
-        image: Array.from(new Uint8Array(options.image))
-      });
-
-      if (!response.success) {
-        throw new IntegrationError(
-          ErrorCode.AI_MODEL_ERROR,
-          'Image classification failed',
-          { metadata: { model, error: response.error } }
-        );
-      }
-
-      return ActionResult.success(response.predictions, {
-        metadata: {
-          model,
-          topPrediction: response.predictions[0]
-        }
-      });
-    } catch (error) {
-      return ActionResult.error(
-        `Failed to classify image: ${error}`,
-        ErrorCode.AI_MODEL_ERROR
-      );
-    }
+    return this.executeAIOperation(
+      model,
+      { image: Array.from(new Uint8Array(options.image)) },
+      'Image classification',
+      (response) => ({
+        data: response.predictions,
+        metadata: { topPrediction: response.predictions[0] }
+      })
+    );
   }
 
   /**
@@ -316,36 +319,22 @@ export class WorkersAI {
   }): Promise<ActionResult> {
     const model = options.model || AIModels.WHISPER;
 
-    try {
-      const response = await this.ai.run(model, {
+    return this.executeAIOperation(
+      model,
+      {
         audio: Array.from(new Uint8Array(options.audio)),
         language: options.language
-      });
-
-      if (!response.success) {
-        throw new IntegrationError(
-          ErrorCode.AI_MODEL_ERROR,
-          'Audio transcription failed',
-          { metadata: { model, error: response.error } }
-        );
-      }
-
-      return ActionResult.success({
-        text: response.text,
-        language: response.language,
-        duration: response.duration
-      }, {
-        metadata: {
-          model,
-          confidence: response.confidence
-        }
-      });
-    } catch (error) {
-      return ActionResult.error(
-        `Failed to transcribe audio: ${error}`,
-        ErrorCode.AI_MODEL_ERROR
-      );
-    }
+      },
+      'Audio transcription',
+      (response) => ({
+        data: {
+          text: response.text,
+          language: response.language,
+          duration: response.duration
+        },
+        metadata: { confidence: response.confidence }
+      })
+    );
   }
 
   /**
@@ -359,37 +348,23 @@ export class WorkersAI {
   }): Promise<ActionResult> {
     const model = options.model || AIModels.M2M100;
 
-    try {
-      const response = await this.ai.run(model, {
+    return this.executeAIOperation(
+      model,
+      {
         text: options.text,
         source_lang: options.source,
         target_lang: options.target
-      });
-
-      if (!response.success) {
-        throw new IntegrationError(
-          ErrorCode.AI_MODEL_ERROR,
-          'Translation failed',
-          { metadata: { model, error: response.error } }
-        );
-      }
-
-      return ActionResult.success({
-        text: response.translated_text,
-        source: options.source,
-        target: options.target
-      }, {
-        metadata: {
-          model,
-          confidence: response.confidence
-        }
-      });
-    } catch (error) {
-      return ActionResult.error(
-        `Failed to translate text: ${error}`,
-        ErrorCode.AI_MODEL_ERROR
-      );
-    }
+      },
+      'Translation',
+      (response) => ({
+        data: {
+          text: response.translated_text,
+          source: options.source,
+          target: options.target
+        },
+        metadata: { confidence: response.confidence }
+      })
+    );
   }
 
   /**
@@ -401,33 +376,20 @@ export class WorkersAI {
   }): Promise<ActionResult> {
     const model = options.model || AIModels.DISTILBERT_SST2;
 
-    try {
-      const response = await this.ai.run(model, {
-        text: options.text
-      });
-
-      if (!response.success) {
-        throw new IntegrationError(
-          ErrorCode.AI_MODEL_ERROR,
-          'Sentiment analysis failed',
-          { metadata: { model, error: response.error } }
-        );
-      }
-
-      return ActionResult.success({
-        sentiment: response.label,
-        confidence: response.score,
-        positive: response.label === 'POSITIVE' ? response.score : 1 - response.score,
-        negative: response.label === 'NEGATIVE' ? response.score : 1 - response.score
-      }, {
-        metadata: { model }
-      });
-    } catch (error) {
-      return ActionResult.error(
-        `Failed to analyze sentiment: ${error}`,
-        ErrorCode.AI_MODEL_ERROR
-      );
-    }
+    return this.executeAIOperation(
+      model,
+      { text: options.text },
+      'Sentiment analysis',
+      (response) => ({
+        data: {
+          sentiment: response.label,
+          confidence: response.score,
+          positive: response.label === 'POSITIVE' ? response.score : 1 - response.score,
+          negative: response.label === 'NEGATIVE' ? response.score : 1 - response.score
+        },
+        metadata: {}
+      })
+    );
   }
 
   /**

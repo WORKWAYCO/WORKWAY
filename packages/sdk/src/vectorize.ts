@@ -64,6 +64,40 @@ export class Vectorize {
   }
 
   /**
+   * Require AI client for operation
+   * Weniger, aber besser: One check for all AI-dependent operations
+   */
+  private requireAI(operation: string): ActionResult | null {
+    if (!this.ai) {
+      return ActionResult.error(
+        `AI client required for ${operation}`,
+        ErrorCode.CONFIGURATION_ERROR
+      );
+    }
+    return null;
+  }
+
+  /**
+   * Generate embeddings with error propagation
+   * Weniger, aber besser: Centralized embedding generation
+   */
+  private async getEmbeddings(
+    text: string | string[],
+    model?: string
+  ): Promise<{ success: true; embeddings: number[][] } | { success: false; error: ActionResult }> {
+    const result = await this.ai!.generateEmbeddings({
+      text,
+      model: model || this.defaultModel
+    });
+
+    if (!result.success) {
+      return { success: false, error: result };
+    }
+
+    return { success: true, embeddings: result.data as number[][] };
+  }
+
+  /**
    * Store embeddings with metadata
    */
   async upsert(options: {
@@ -155,36 +189,22 @@ export class Vectorize {
     metadata?: VectorMetadata;
     model?: string;
   }): Promise<ActionResult> {
-    if (!this.ai) {
-      return ActionResult.error(
-        'AI client required for text embedding',
-        ErrorCode.CONFIGURATION_ERROR
-      );
-    }
+    const aiError = this.requireAI('text embedding');
+    if (aiError) return aiError;
 
     try {
-      // Generate embeddings
-      const embedResult = await this.ai.generateEmbeddings({
-        text: options.text,
-        model: options.model || this.defaultModel
-      });
-
-      if (!embedResult.success) {
-        return embedResult;
-      }
-
-      // Store with metadata including original text
-      const metadata = {
-        ...options.metadata,
-        text: options.text,
-        model: options.model || this.defaultModel,
-        timestamp: Date.now()
-      };
+      const embedResult = await this.getEmbeddings(options.text, options.model);
+      if (!embedResult.success) return embedResult.error;
 
       return await this.upsert({
         id: options.id,
-        values: (embedResult.data as number[][])[0],
-        metadata
+        values: embedResult.embeddings[0],
+        metadata: {
+          ...options.metadata,
+          text: options.text,
+          model: options.model || this.defaultModel,
+          timestamp: Date.now()
+        }
       });
     } catch (error) {
       return ActionResult.error(
@@ -203,34 +223,20 @@ export class Vectorize {
     filter?: Record<string, any>;
     model?: string;
   }): Promise<ActionResult> {
-    if (!this.ai) {
-      return ActionResult.error(
-        'AI client required for text search',
-        ErrorCode.CONFIGURATION_ERROR
-      );
-    }
+    const aiError = this.requireAI('text search');
+    if (aiError) return aiError;
 
     try {
-      // Generate query embeddings
-      const embedResult = await this.ai.generateEmbeddings({
-        text: options.query,
-        model: options.model || this.defaultModel
-      });
+      const embedResult = await this.getEmbeddings(options.query, options.model);
+      if (!embedResult.success) return embedResult.error;
 
-      if (!embedResult.success) {
-        return embedResult;
-      }
-
-      // Search with embeddings
       const searchResult = await this.query({
-        vector: (embedResult.data as number[][])[0],
+        vector: embedResult.embeddings[0],
         topK: options.topK,
         filter: options.filter
       });
 
-      if (!searchResult.success) {
-        return searchResult;
-      }
+      if (!searchResult.success) return searchResult;
 
       // Enhance results with original text if available
       const matches = (searchResult.data as { matches: any[] }).matches.map((match: any) => ({
@@ -270,20 +276,12 @@ export class Vectorize {
     overlap?: number;
     model?: string;
   }): Promise<ActionResult> {
-    if (!this.ai) {
-      return ActionResult.error(
-        'AI client required for knowledge base',
-        ErrorCode.CONFIGURATION_ERROR
-      );
-    }
+    const aiError = this.requireAI('knowledge base');
+    if (aiError) return aiError;
 
     const chunkSize = options.chunkSize || 500;
     const overlap = options.overlap || 50;
-    const chunks: Array<{
-      id: string;
-      text: string;
-      metadata: any;
-    }> = [];
+    const chunks: Array<{ id: string; text: string; metadata: any }> = [];
 
     try {
       // Chunk documents
@@ -307,20 +305,13 @@ export class Vectorize {
       }
 
       // Generate embeddings for all chunks
-      const embeddings = await this.ai.generateEmbeddings({
-        text: chunks.map(c => c.text),
-        model: options.model || this.defaultModel
-      });
-
-      if (!embeddings.success) {
-        return embeddings;
-      }
+      const embedResult = await this.getEmbeddings(chunks.map(c => c.text), options.model);
+      if (!embedResult.success) return embedResult.error;
 
       // Store all chunks with embeddings
-      const embeddingsData = embeddings.data as number[][];
       const vectors = chunks.map((chunk, i) => ({
         id: chunk.id,
-        values: embeddingsData[i],
+        values: embedResult.embeddings[i],
         metadata: {
           ...chunk.metadata,
           text: chunk.text,
@@ -360,12 +351,8 @@ export class Vectorize {
     systemPrompt?: string;
     temperature?: number;
   }): Promise<ActionResult> {
-    if (!this.ai) {
-      return ActionResult.error(
-        'AI client required for RAG',
-        ErrorCode.CONFIGURATION_ERROR
-      );
-    }
+    const aiError = this.requireAI('RAG');
+    if (aiError) return aiError;
 
     try {
       // Step 1: Search for relevant context
@@ -375,9 +362,7 @@ export class Vectorize {
         model: options.model
       });
 
-      if (!searchResult.success) {
-        return searchResult;
-      }
+      if (!searchResult.success) return searchResult;
 
       // Step 2: Build context from search results
       const searchData = searchResult.data as { matches: any[] };
@@ -387,29 +372,22 @@ export class Vectorize {
         .join('\n\n');
 
       if (!context) {
-        return ActionResult.error(
-          'No relevant context found',
-          ErrorCode.NOT_FOUND
-        );
+        return ActionResult.error('No relevant context found', ErrorCode.NOT_FOUND);
       }
 
       // Step 3: Generate response with context
       const systemPrompt = options.systemPrompt ||
         'You are a helpful assistant. Use the following context to answer the question. If the answer is not in the context, say so.';
 
-      const prompt = `Context:\n${context}\n\nQuestion: ${options.query}\n\nAnswer:`;
-
-      const response = await this.ai.generateText({
-        prompt,
+      const response = await this.ai!.generateText({
+        prompt: `Context:\n${context}\n\nQuestion: ${options.query}\n\nAnswer:`,
         system: systemPrompt,
         model: options.generationModel || AIModels.LLAMA_3_8B,
         temperature: options.temperature || 0.7,
         max_tokens: 1000
       });
 
-      if (!response.success) {
-        return response;
-      }
+      if (!response.success) return response;
 
       const responseData = response.data as { response: string };
       return ActionResult.success({
