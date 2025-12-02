@@ -1,11 +1,7 @@
 /**
  * Slack Integration for WORKWAY
  *
- * Demonstrates the SDK patterns:
- * - ActionResult narrow waist for output
- * - IntegrationError narrow waist for errors
- * - StandardMessage for normalized data
- * - OAuth token handling
+ * Weniger, aber besser: Extends BaseAPIClient for shared HTTP logic.
  *
  * @example
  * ```typescript
@@ -30,15 +26,18 @@
 import {
 	ActionResult,
 	createActionResult,
+	IntegrationError,
+	ErrorCode,
 	type StandardMessage,
 	type StandardList,
 	type ActionCapabilities,
 } from '@workwayco/sdk';
 import {
-	IntegrationError,
-	ErrorCode,
-	createErrorFromResponse,
-} from '@workwayco/sdk';
+	BaseAPIClient,
+	validateAccessToken,
+	createErrorHandler,
+	assertResponseOk,
+} from '../core/index.js';
 
 // ============================================================================
 // TYPES
@@ -183,28 +182,22 @@ export interface GetUserOptions {
 // SLACK INTEGRATION CLASS
 // ============================================================================
 
+/** Error handler bound to Slack integration */
+const handleError = createErrorHandler('slack');
+
 /**
  * Slack Integration
  *
- * Implements the WORKWAY SDK patterns for Slack API access.
+ * Weniger, aber besser: Extends BaseAPIClient for shared HTTP logic.
  */
-export class Slack {
-	private accessToken: string;
-	private apiUrl: string;
-	private timeout: number;
-
+export class Slack extends BaseAPIClient {
 	constructor(config: SlackConfig) {
-		if (!config.accessToken) {
-			throw new IntegrationError(
-				ErrorCode.AUTH_MISSING,
-				'Slack access token is required',
-				{ integration: 'slack', retryable: false }
-			);
-		}
-
-		this.accessToken = config.accessToken;
-		this.apiUrl = config.apiUrl || 'https://slack.com/api';
-		this.timeout = config.timeout ?? 30000;
+		validateAccessToken(config.accessToken, 'slack');
+		super({
+			accessToken: config.accessToken,
+			apiUrl: config.apiUrl || 'https://slack.com/api',
+			timeout: config.timeout,
+		});
 	}
 
 	// ==========================================================================
@@ -233,16 +226,10 @@ export class Slack {
 
 			if (cursor) params.set('cursor', cursor);
 
-			const response = await this.request(`/conversations.list?${params}`);
+			const response = await this.get(`/conversations.list?${params}`);
+			await assertResponseOk(response, { integration: 'slack', action: 'list-channels' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'slack',
-					action: 'list-channels',
-				});
-			}
-
-			const data = await response.json() as {
+			const data = (await response.json()) as {
 				ok: boolean;
 				error?: string;
 				channels?: SlackChannel[];
@@ -283,8 +270,8 @@ export class Slack {
 				capabilities: this.getCapabilities(),
 				standard,
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'list-channels');
+		} catch (error) {
+			return handleError(error, 'list-channels');
 		}
 	}
 
@@ -294,21 +281,13 @@ export class Slack {
 	 * @returns ActionResult with list of messages
 	 */
 	async getMessages(options: GetMessagesOptions): Promise<ActionResult<SlackMessage[]>> {
-		const {
-			channel,
-			limit = 20,
-			cursor,
-			oldest,
-			latest,
-			inclusive = false,
-		} = options;
+		const { channel, limit = 20, cursor, oldest, latest, inclusive = false } = options;
 
 		if (!channel) {
-			return ActionResult.error(
-				'Channel ID is required',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'slack', action: 'get-messages' }
-			);
+			return ActionResult.error('Channel ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'slack',
+				action: 'get-messages',
+			});
 		}
 
 		try {
@@ -322,16 +301,10 @@ export class Slack {
 			if (oldest) params.set('oldest', oldest);
 			if (latest) params.set('latest', latest);
 
-			const response = await this.request(`/conversations.history?${params}`);
+			const response = await this.get(`/conversations.history?${params}`);
+			await assertResponseOk(response, { integration: 'slack', action: 'get-messages' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'slack',
-					action: 'get-messages',
-				});
-			}
-
-			const data = await response.json() as {
+			const data = (await response.json()) as {
 				ok: boolean;
 				error?: string;
 				messages?: SlackMessage[];
@@ -343,17 +316,15 @@ export class Slack {
 				throw this.createSlackError(data.error || 'Unknown error', 'get-messages');
 			}
 
-			const messages = data.messages || [];
-
 			return createActionResult({
-				data: messages,
+				data: data.messages || [],
 				integration: 'slack',
 				action: 'get-messages',
 				schema: 'slack.message-list.v1',
 				capabilities: this.getCapabilities(),
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'get-messages');
+		} catch (error) {
+			return handleError(error, 'get-messages');
 		}
 	}
 
@@ -380,16 +351,10 @@ export class Slack {
 				limit: '1',
 			});
 
-			const response = await this.request(`/conversations.history?${params}`);
+			const response = await this.get(`/conversations.history?${params}`);
+			await assertResponseOk(response, { integration: 'slack', action: 'get-message' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'slack',
-					action: 'get-message',
-				});
-			}
-
-			const data = await response.json() as {
+			const data = (await response.json()) as {
 				ok: boolean;
 				error?: string;
 				messages?: SlackMessage[];
@@ -400,11 +365,10 @@ export class Slack {
 			}
 
 			if (!data.messages || data.messages.length === 0) {
-				return ActionResult.error(
-					'Message not found',
-					ErrorCode.NOT_FOUND,
-					{ integration: 'slack', action: 'get-message' }
-				);
+				return ActionResult.error('Message not found', ErrorCode.NOT_FOUND, {
+					integration: 'slack',
+					action: 'get-message',
+				});
 			}
 
 			const message = data.messages[0];
@@ -418,8 +382,8 @@ export class Slack {
 				capabilities: this.getCapabilities(),
 				standard,
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'get-message');
+		} catch (error) {
+			return handleError(error, 'get-message');
 		}
 	}
 
@@ -428,7 +392,9 @@ export class Slack {
 	 *
 	 * @returns ActionResult with sent message info
 	 */
-	async sendMessage(options: SendMessageOptions): Promise<ActionResult<{ ts: string; channel: string }>> {
+	async sendMessage(
+		options: SendMessageOptions
+	): Promise<ActionResult<{ ts: string; channel: string }>> {
 		const {
 			channel,
 			text,
@@ -440,19 +406,17 @@ export class Slack {
 		} = options;
 
 		if (!channel) {
-			return ActionResult.error(
-				'Channel ID is required',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'slack', action: 'send-message' }
-			);
+			return ActionResult.error('Channel ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'slack',
+				action: 'send-message',
+			});
 		}
 
 		if (!text) {
-			return ActionResult.error(
-				'Message text is required',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'slack', action: 'send-message' }
-			);
+			return ActionResult.error('Message text is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'slack',
+				action: 'send-message',
+			});
 		}
 
 		try {
@@ -469,19 +433,10 @@ export class Slack {
 				body.reply_broadcast = reply_broadcast;
 			}
 
-			const response = await this.request('/chat.postMessage', {
-				method: 'POST',
-				body: JSON.stringify(body),
-			});
+			const response = await this.post('/chat.postMessage', body);
+			await assertResponseOk(response, { integration: 'slack', action: 'send-message' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'slack',
-					action: 'send-message',
-				});
-			}
-
-			const data = await response.json() as {
+			const data = (await response.json()) as {
 				ok: boolean;
 				error?: string;
 				ts?: string;
@@ -502,8 +457,8 @@ export class Slack {
 					capabilities: { canHandleText: true },
 				}
 			);
-		} catch (error: unknown) {
-			return this.handleError(error, 'send-message');
+		} catch (error) {
+			return handleError(error, 'send-message');
 		}
 	}
 
@@ -516,25 +471,18 @@ export class Slack {
 		const { user } = options;
 
 		if (!user) {
-			return ActionResult.error(
-				'User ID is required',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'slack', action: 'get-user' }
-			);
+			return ActionResult.error('User ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'slack',
+				action: 'get-user',
+			});
 		}
 
 		try {
 			const params = new URLSearchParams({ user });
-			const response = await this.request(`/users.info?${params}`);
+			const response = await this.get(`/users.info?${params}`);
+			await assertResponseOk(response, { integration: 'slack', action: 'get-user' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'slack',
-					action: 'get-user',
-				});
-			}
-
-			const data = await response.json() as {
+			const data = (await response.json()) as {
 				ok: boolean;
 				error?: string;
 				user?: SlackUser;
@@ -551,8 +499,8 @@ export class Slack {
 				schema: 'slack.user.v1',
 				capabilities: this.getCapabilities(),
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'get-user');
+		} catch (error) {
+			return handleError(error, 'get-user');
 		}
 	}
 
@@ -568,11 +516,10 @@ export class Slack {
 		const { count = 20, sort = 'score' } = options;
 
 		if (!query) {
-			return ActionResult.error(
-				'Search query is required',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'slack', action: 'search-messages' }
-			);
+			return ActionResult.error('Search query is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'slack',
+				action: 'search-messages',
+			});
 		}
 
 		try {
@@ -582,16 +529,10 @@ export class Slack {
 				sort,
 			});
 
-			const response = await this.request(`/search.messages?${params}`);
+			const response = await this.get(`/search.messages?${params}`);
+			await assertResponseOk(response, { integration: 'slack', action: 'search-messages' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'slack',
-					action: 'search-messages',
-				});
-			}
-
-			const data = await response.json() as {
+			const data = (await response.json()) as {
 				ok: boolean;
 				error?: string;
 				messages?: {
@@ -611,39 +552,14 @@ export class Slack {
 				schema: 'slack.message-list.v1',
 				capabilities: this.getCapabilities(),
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'search-messages');
+		} catch (error) {
+			return handleError(error, 'search-messages');
 		}
 	}
 
 	// ==========================================================================
 	// HELPERS
 	// ==========================================================================
-
-	/**
-	 * Make authenticated request to Slack API with timeout
-	 */
-	private async request(path: string, options: RequestInit = {}): Promise<Response> {
-		const url = `${this.apiUrl}${path}`;
-
-		const headers = new Headers(options.headers);
-		headers.set('Authorization', `Bearer ${this.accessToken}`);
-		headers.set('Content-Type', 'application/json; charset=utf-8');
-
-		// Add timeout via AbortController
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-		try {
-			return await fetch(url, {
-				...options,
-				headers,
-				signal: controller.signal,
-			});
-		} finally {
-			clearTimeout(timeoutId);
-		}
-	}
 
 	/**
 	 * Get capabilities for Slack actions
@@ -726,22 +642,4 @@ export class Slack {
 		});
 	}
 
-	/**
-	 * Handle errors consistently
-	 */
-	private handleError<T>(error: unknown, action: string): ActionResult<T> {
-		if (error instanceof IntegrationError) {
-			const integrationErr = error as IntegrationError;
-			return ActionResult.error(integrationErr.message, integrationErr.code, {
-				integration: 'slack',
-				action,
-			});
-		}
-		const errMessage = error instanceof Error ? error.message : String(error);
-		return ActionResult.error(
-			`Failed to ${action.replace('-', ' ')}: ${errMessage}`,
-			ErrorCode.API_ERROR,
-			{ integration: 'slack', action }
-		);
-	}
 }
