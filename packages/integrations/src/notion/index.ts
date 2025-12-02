@@ -33,16 +33,18 @@
 import {
 	ActionResult,
 	createActionResult,
+	ErrorCode,
 	type StandardDocument,
 	type StandardTask,
 	type StandardList,
 	type ActionCapabilities,
 } from '@workwayco/sdk';
 import {
-	IntegrationError,
-	ErrorCode,
-	createErrorFromResponse,
-} from '@workwayco/sdk';
+	BaseAPIClient,
+	validateAccessToken,
+	createErrorHandler,
+	assertResponseOk,
+} from '../core/index.js';
 
 // ============================================================================
 // TYPES
@@ -270,30 +272,30 @@ export interface GetBlockChildrenOptions {
 // NOTION INTEGRATION CLASS
 // ============================================================================
 
+/** Error handler bound to Notion integration */
+const handleError = createErrorHandler('notion');
+
 /**
  * Notion Integration
  *
- * Implements the WORKWAY SDK patterns for Notion API access.
+ * Weniger, aber besser: Extends BaseAPIClient for shared HTTP logic.
  */
-export class Notion {
-	private accessToken: string;
+export class Notion extends BaseAPIClient {
 	private notionVersion: string;
-	private apiUrl: string;
-	private timeout: number;
 
 	constructor(config: NotionConfig) {
-		if (!config.accessToken) {
-			throw new IntegrationError(
-				ErrorCode.AUTH_MISSING,
-				'Notion access token is required',
-				{ integration: 'notion', retryable: false }
-			);
-		}
-
-		this.accessToken = config.accessToken;
+		validateAccessToken(config.accessToken, 'notion');
+		super({
+			accessToken: config.accessToken,
+			apiUrl: config.apiUrl || 'https://api.notion.com/v1',
+			timeout: config.timeout,
+		});
 		this.notionVersion = config.notionVersion || '2022-06-28';
-		this.apiUrl = config.apiUrl || 'https://api.notion.com/v1';
-		this.timeout = config.timeout ?? 30000;
+	}
+
+	/** Get Notion-specific headers */
+	private get notionHeaders(): Record<string, string> {
+		return { 'Notion-Version': this.notionVersion };
 	}
 
 	// ==========================================================================
@@ -306,13 +308,7 @@ export class Notion {
 	 * @returns ActionResult with search results
 	 */
 	async search(options: SearchOptions = {}): Promise<ActionResult<Array<NotionPage | NotionDatabase>>> {
-		const {
-			query,
-			filter,
-			sort,
-			start_cursor,
-			page_size = 100,
-		} = options;
+		const { query, filter, sort, start_cursor, page_size = 100 } = options;
 
 		try {
 			const body: Record<string, unknown> = {
@@ -324,19 +320,10 @@ export class Notion {
 			if (sort) body.sort = sort;
 			if (start_cursor) body.start_cursor = start_cursor;
 
-			const response = await this.request('/search', {
-				method: 'POST',
-				body: JSON.stringify(body),
-			});
+			const response = await this.post('/search', body, this.notionHeaders);
+			await assertResponseOk(response, { integration: 'notion', action: 'search' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'notion',
-					action: 'search',
-				});
-			}
-
-			const data = await response.json() as {
+			const data = (await response.json()) as {
 				object: 'list';
 				results: Array<NotionPage | NotionDatabase>;
 				has_more: boolean;
@@ -349,9 +336,10 @@ export class Notion {
 				items: data.results.map((item) => ({
 					id: item.id,
 					title: this.extractTitle(item),
-					description: item.object === 'database'
-						? this.richTextToPlain((item as NotionDatabase).description)
-						: undefined,
+					description:
+						item.object === 'database'
+							? this.richTextToPlain((item as NotionDatabase).description)
+							: undefined,
 					url: item.url,
 					metadata: {
 						object: item.object,
@@ -373,8 +361,8 @@ export class Notion {
 				capabilities: this.getCapabilities(),
 				standard,
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'search');
+		} catch (error) {
+			return handleError(error, 'search');
 		}
 	}
 
@@ -387,24 +375,17 @@ export class Notion {
 		const { pageId } = options;
 
 		if (!pageId) {
-			return ActionResult.error(
-				'Page ID is required',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'notion', action: 'get-page' }
-			);
+			return ActionResult.error('Page ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'notion',
+				action: 'get-page',
+			});
 		}
 
 		try {
-			const response = await this.request(`/pages/${pageId}`);
+			const response = await this.get(`/pages/${pageId}`, this.notionHeaders);
+			await assertResponseOk(response, { integration: 'notion', action: 'get-page' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'notion',
-					action: 'get-page',
-				});
-			}
-
-			const page = await response.json() as NotionPage;
+			const page = (await response.json()) as NotionPage;
 			const standard = this.toStandardDocument(page);
 
 			return createActionResult({
@@ -415,8 +396,8 @@ export class Notion {
 				capabilities: this.getCapabilities(),
 				standard,
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'get-page');
+		} catch (error) {
+			return handleError(error, 'get-page');
 		}
 	}
 
@@ -448,19 +429,10 @@ export class Notion {
 			if (icon) body.icon = icon;
 			if (cover) body.cover = cover;
 
-			const response = await this.request('/pages', {
-				method: 'POST',
-				body: JSON.stringify(body),
-			});
+			const response = await this.post('/pages', body, this.notionHeaders);
+			await assertResponseOk(response, { integration: 'notion', action: 'create-page' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'notion',
-					action: 'create-page',
-				});
-			}
-
-			const page = await response.json() as NotionPage;
+			const page = (await response.json()) as NotionPage;
 
 			return createActionResult({
 				data: page,
@@ -469,8 +441,8 @@ export class Notion {
 				schema: 'notion.page.v1',
 				capabilities: this.getCapabilities(),
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'create-page');
+		} catch (error) {
+			return handleError(error, 'create-page');
 		}
 	}
 
@@ -483,11 +455,10 @@ export class Notion {
 		const { pageId, properties, archived, icon, cover } = options;
 
 		if (!pageId) {
-			return ActionResult.error(
-				'Page ID is required',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'notion', action: 'update-page' }
-			);
+			return ActionResult.error('Page ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'notion',
+				action: 'update-page',
+			});
 		}
 
 		try {
@@ -497,19 +468,10 @@ export class Notion {
 			if (icon !== undefined) body.icon = icon;
 			if (cover !== undefined) body.cover = cover;
 
-			const response = await this.request(`/pages/${pageId}`, {
-				method: 'PATCH',
-				body: JSON.stringify(body),
-			});
+			const response = await this.patch(`/pages/${pageId}`, body, this.notionHeaders);
+			await assertResponseOk(response, { integration: 'notion', action: 'update-page' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'notion',
-					action: 'update-page',
-				});
-			}
-
-			const page = await response.json() as NotionPage;
+			const page = (await response.json()) as NotionPage;
 
 			return createActionResult({
 				data: page,
@@ -518,8 +480,8 @@ export class Notion {
 				schema: 'notion.page.v1',
 				capabilities: this.getCapabilities(),
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'update-page');
+		} catch (error) {
+			return handleError(error, 'update-page');
 		}
 	}
 
@@ -532,11 +494,10 @@ export class Notion {
 		const { databaseId, filter, sorts, start_cursor, page_size = 100 } = options;
 
 		if (!databaseId) {
-			return ActionResult.error(
-				'Database ID is required',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'notion', action: 'query-database' }
-			);
+			return ActionResult.error('Database ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'notion',
+				action: 'query-database',
+			});
 		}
 
 		try {
@@ -548,19 +509,10 @@ export class Notion {
 			if (sorts) body.sorts = sorts;
 			if (start_cursor) body.start_cursor = start_cursor;
 
-			const response = await this.request(`/databases/${databaseId}/query`, {
-				method: 'POST',
-				body: JSON.stringify(body),
-			});
+			const response = await this.post(`/databases/${databaseId}/query`, body, this.notionHeaders);
+			await assertResponseOk(response, { integration: 'notion', action: 'query-database' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'notion',
-					action: 'query-database',
-				});
-			}
-
-			const data = await response.json() as {
+			const data = (await response.json()) as {
 				object: 'list';
 				results: NotionPage[];
 				has_more: boolean;
@@ -574,8 +526,8 @@ export class Notion {
 				schema: 'notion.page-list.v1',
 				capabilities: this.getCapabilities(),
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'query-database');
+		} catch (error) {
+			return handleError(error, 'query-database');
 		}
 	}
 
@@ -586,24 +538,17 @@ export class Notion {
 	 */
 	async getDatabase(databaseId: string): Promise<ActionResult<NotionDatabase>> {
 		if (!databaseId) {
-			return ActionResult.error(
-				'Database ID is required',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'notion', action: 'get-database' }
-			);
+			return ActionResult.error('Database ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'notion',
+				action: 'get-database',
+			});
 		}
 
 		try {
-			const response = await this.request(`/databases/${databaseId}`);
+			const response = await this.get(`/databases/${databaseId}`, this.notionHeaders);
+			await assertResponseOk(response, { integration: 'notion', action: 'get-database' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'notion',
-					action: 'get-database',
-				});
-			}
-
-			const database = await response.json() as NotionDatabase;
+			const database = (await response.json()) as NotionDatabase;
 
 			return createActionResult({
 				data: database,
@@ -612,8 +557,8 @@ export class Notion {
 				schema: 'notion.database.v1',
 				capabilities: this.getCapabilities(),
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'get-database');
+		} catch (error) {
+			return handleError(error, 'get-database');
 		}
 	}
 
@@ -626,11 +571,10 @@ export class Notion {
 		const { blockId, start_cursor, page_size = 100 } = options;
 
 		if (!blockId) {
-			return ActionResult.error(
-				'Block ID is required',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'notion', action: 'get-block-children' }
-			);
+			return ActionResult.error('Block ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'notion',
+				action: 'get-block-children',
+			});
 		}
 
 		try {
@@ -639,16 +583,10 @@ export class Notion {
 			});
 			if (start_cursor) params.set('start_cursor', start_cursor);
 
-			const response = await this.request(`/blocks/${blockId}/children?${params}`);
+			const response = await this.get(`/blocks/${blockId}/children?${params}`, this.notionHeaders);
+			await assertResponseOk(response, { integration: 'notion', action: 'get-block-children' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'notion',
-					action: 'get-block-children',
-				});
-			}
-
-			const data = await response.json() as {
+			const data = (await response.json()) as {
 				object: 'list';
 				results: NotionBlock[];
 				has_more: boolean;
@@ -662,8 +600,8 @@ export class Notion {
 				schema: 'notion.block-list.v1',
 				capabilities: this.getCapabilities(),
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'get-block-children');
+		} catch (error) {
+			return handleError(error, 'get-block-children');
 		}
 	}
 
@@ -680,24 +618,17 @@ export class Notion {
 	 */
 	async getTask(pageId: string): Promise<ActionResult<NotionPage>> {
 		if (!pageId) {
-			return ActionResult.error(
-				'Page ID is required',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'notion', action: 'get-task' }
-			);
+			return ActionResult.error('Page ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'notion',
+				action: 'get-task',
+			});
 		}
 
 		try {
-			const response = await this.request(`/pages/${pageId}`);
+			const response = await this.get(`/pages/${pageId}`, this.notionHeaders);
+			await assertResponseOk(response, { integration: 'notion', action: 'get-task' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'notion',
-					action: 'get-task',
-				});
-			}
-
-			const page = await response.json() as NotionPage;
+			const page = (await response.json()) as NotionPage;
 			const standard = this.toStandardTask(page);
 
 			return createActionResult({
@@ -708,8 +639,8 @@ export class Notion {
 				capabilities: this.getCapabilities(),
 				standard,
 			});
-		} catch (error: unknown) {
-			return this.handleError(error, 'get-task');
+		} catch (error) {
+			return handleError(error, 'get-task');
 		}
 	}
 
@@ -738,32 +669,6 @@ export class Notion {
 	// ==========================================================================
 	// HELPERS
 	// ==========================================================================
-
-	/**
-	 * Make authenticated request to Notion API with timeout
-	 */
-	private async request(path: string, options: RequestInit = {}): Promise<Response> {
-		const url = `${this.apiUrl}${path}`;
-
-		const headers = new Headers(options.headers);
-		headers.set('Authorization', `Bearer ${this.accessToken}`);
-		headers.set('Content-Type', 'application/json');
-		headers.set('Notion-Version', this.notionVersion);
-
-		// Add timeout via AbortController
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-		try {
-			return await fetch(url, {
-				...options,
-				headers,
-				signal: controller.signal,
-			});
-		} finally {
-			clearTimeout(timeoutId);
-		}
-	}
 
 	/**
 	 * Get capabilities for Notion actions
@@ -911,22 +816,4 @@ export class Notion {
 		};
 	}
 
-	/**
-	 * Handle errors consistently
-	 */
-	private handleError<T>(error: unknown, action: string): ActionResult<T> {
-		if (error instanceof IntegrationError) {
-			const integrationErr = error as IntegrationError;
-			return ActionResult.error(integrationErr.message, integrationErr.code, {
-				integration: 'notion',
-				action,
-			});
-		}
-		const errMessage = error instanceof Error ? error.message : String(error);
-		return ActionResult.error(
-			`Failed to ${action.replace('-', ' ')}: ${errMessage}`,
-			ErrorCode.API_ERROR,
-			{ integration: 'notion', action }
-		);
-	}
 }

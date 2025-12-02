@@ -1,11 +1,7 @@
 /**
  * Gmail Integration for WORKWAY
  *
- * Demonstrates the SDK patterns:
- * - ActionResult narrow waist for output
- * - IntegrationError narrow waist for errors
- * - StandardMessage for normalized data
- * - OAuth token handling
+ * Weniger, aber besser: Extends BaseAPIClient for shared HTTP logic.
  *
  * @example
  * ```typescript
@@ -31,14 +27,16 @@
 import {
 	ActionResult,
 	createActionResult,
+	ErrorCode,
 	type StandardMessage,
 	type ActionCapabilities,
 } from '@workwayco/sdk';
 import {
-	IntegrationError,
-	ErrorCode,
-	createErrorFromResponse,
-} from '@workwayco/sdk';
+	BaseAPIClient,
+	validateAccessToken,
+	createErrorHandler,
+	assertResponseOk,
+} from '../core/index.js';
 
 // ============================================================================
 // TYPES
@@ -126,28 +124,22 @@ export interface SendEmailOptions {
 // GMAIL INTEGRATION CLASS
 // ============================================================================
 
+/** Error handler bound to Gmail integration */
+const handleError = createErrorHandler('gmail');
+
 /**
  * Gmail Integration
  *
- * Implements the WORKWAY SDK patterns for Gmail API access.
+ * Weniger, aber besser: Extends BaseAPIClient for shared HTTP logic.
  */
-export class Gmail {
-	private accessToken: string;
-	private apiUrl: string;
-	private timeout: number;
-
+export class Gmail extends BaseAPIClient {
 	constructor(config: GmailConfig) {
-		if (!config.accessToken) {
-			throw new IntegrationError(
-				ErrorCode.AUTH_MISSING,
-				'Gmail access token is required',
-				{ integration: 'gmail', retryable: false }
-			);
-		}
-
-		this.accessToken = config.accessToken;
-		this.apiUrl = config.apiUrl || 'https://gmail.googleapis.com/gmail/v1';
-		this.timeout = config.timeout ?? 30000;
+		validateAccessToken(config.accessToken, 'gmail');
+		super({
+			accessToken: config.accessToken,
+			apiUrl: config.apiUrl || 'https://gmail.googleapis.com/gmail/v1',
+			timeout: config.timeout,
+		});
 	}
 
 	// ==========================================================================
@@ -180,16 +172,10 @@ export class Gmail {
 			if (pageToken) params.set('pageToken', pageToken);
 
 			// Fetch message list
-			const listResponse = await this.request(`/users/me/messages?${params}`);
+			const listResponse = await this.get(`/users/me/messages?${params}`);
+			await assertResponseOk(listResponse, { integration: 'gmail', action: 'list-emails' });
 
-			if (!listResponse.ok) {
-				throw await createErrorFromResponse(listResponse, {
-					integration: 'gmail',
-					action: 'list-emails',
-				});
-			}
-
-			const listData = await listResponse.json() as {
+			const listData = (await listResponse.json()) as {
 				messages?: Array<{ id: string; threadId: string }>;
 				nextPageToken?: string;
 				resultSizeEstimate?: number;
@@ -212,15 +198,8 @@ export class Gmail {
 			// Fetch full message details for each email
 			const messages = await Promise.all(
 				listData.messages.map(async (msg) => {
-					const msgResponse = await this.request(
-						`/users/me/messages/${msg.id}?format=full`
-					);
-					if (!msgResponse.ok) {
-						throw await createErrorFromResponse(msgResponse, {
-							integration: 'gmail',
-							action: 'list-emails',
-						});
-					}
+					const msgResponse = await this.get(`/users/me/messages/${msg.id}?format=full`);
+					await assertResponseOk(msgResponse, { integration: 'gmail', action: 'list-emails' });
 					return msgResponse.json() as Promise<GmailMessage>;
 				})
 			);
@@ -232,20 +211,8 @@ export class Gmail {
 				schema: 'gmail.email-list.v1',
 				capabilities: this.getCapabilities(),
 			});
-		} catch (error: unknown) {
-			if (error instanceof IntegrationError) {
-				const integrationErr = error as IntegrationError;
-				return ActionResult.error(integrationErr.message, integrationErr.code, {
-					integration: 'gmail',
-					action: 'list-emails',
-				});
-			}
-			const errMessage = error instanceof Error ? error.message : String(error);
-			return ActionResult.error(
-				`Failed to list emails: ${errMessage}`,
-				ErrorCode.API_ERROR,
-				{ integration: 'gmail', action: 'list-emails' }
-			);
+		} catch (error) {
+			return handleError(error, 'list-emails');
 		}
 	}
 
@@ -258,18 +225,10 @@ export class Gmail {
 		const { id, format = 'full' } = options;
 
 		try {
-			const response = await this.request(
-				`/users/me/messages/${id}?format=${format}`
-			);
+			const response = await this.get(`/users/me/messages/${id}?format=${format}`);
+			await assertResponseOk(response, { integration: 'gmail', action: 'get-email' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'gmail',
-					action: 'get-email',
-				});
-			}
-
-			const message = await response.json() as GmailMessage;
+			const message = (await response.json()) as GmailMessage;
 
 			// Also provide standardized format
 			const standard = this.toStandardMessage(message);
@@ -282,20 +241,8 @@ export class Gmail {
 				capabilities: this.getCapabilities(),
 				standard,
 			});
-		} catch (error: unknown) {
-			if (error instanceof IntegrationError) {
-				const integrationErr = error as IntegrationError;
-				return ActionResult.error(integrationErr.message, integrationErr.code, {
-					integration: 'gmail',
-					action: 'get-email',
-				});
-			}
-			const errMessage = error instanceof Error ? error.message : String(error);
-			return ActionResult.error(
-				`Failed to get email: ${errMessage}`,
-				ErrorCode.API_ERROR,
-				{ integration: 'gmail', action: 'get-email' }
-			);
+		} catch (error) {
+			return handleError(error, 'get-email');
 		}
 	}
 
@@ -364,19 +311,10 @@ export class Gmail {
 			}
 
 			// Send the email
-			const response = await this.request('/users/me/messages/send', {
-				method: 'POST',
-				body: JSON.stringify(requestBody),
-			});
+			const response = await this.post('/users/me/messages/send', requestBody);
+			await assertResponseOk(response, { integration: 'gmail', action: 'send-email' });
 
-			if (!response.ok) {
-				throw await createErrorFromResponse(response, {
-					integration: 'gmail',
-					action: 'send-email',
-				});
-			}
-
-			const result = await response.json() as { id: string; threadId: string };
+			const result = (await response.json()) as { id: string; threadId: string };
 
 			return ActionResult.success(result, {
 				integration: 'gmail',
@@ -384,20 +322,8 @@ export class Gmail {
 				schema: 'gmail.send-result.v1',
 				capabilities: { canHandleText: true, canHandleHtml: !!htmlBody },
 			});
-		} catch (error: unknown) {
-			if (error instanceof IntegrationError) {
-				const integrationErr = error as IntegrationError;
-				return ActionResult.error(integrationErr.message, integrationErr.code, {
-					integration: 'gmail',
-					action: 'send-email',
-				});
-			}
-			const errMessage = error instanceof Error ? error.message : String(error);
-			return ActionResult.error(
-				`Failed to send email: ${errMessage}`,
-				ErrorCode.API_ERROR,
-				{ integration: 'gmail', action: 'send-email' }
-			);
+		} catch (error) {
+			return handleError(error, 'send-email');
 		}
 	}
 
@@ -413,31 +339,6 @@ export class Gmail {
 	// ==========================================================================
 	// HELPERS
 	// ==========================================================================
-
-	/**
-	 * Make authenticated request to Gmail API with timeout
-	 */
-	private async request(path: string, options: RequestInit = {}): Promise<Response> {
-		const url = `${this.apiUrl}${path}`;
-
-		const headers = new Headers(options.headers);
-		headers.set('Authorization', `Bearer ${this.accessToken}`);
-		headers.set('Content-Type', 'application/json');
-
-		// Add timeout via AbortController
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-		try {
-			return await fetch(url, {
-				...options,
-				headers,
-				signal: controller.signal,
-			});
-		} finally {
-			clearTimeout(timeoutId);
-		}
-	}
 
 	/**
 	 * Get capabilities for Gmail actions
