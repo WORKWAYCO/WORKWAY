@@ -7,7 +7,7 @@
 
 ## Summary
 
-The integrations core utilities embody "Weniger, aber besser" at the code architecture level. By extracting shared HTTP and error handling patterns into a minimal set of composable utilities, we eliminated ~212 lines of duplicate code across Gmail and Notion integrations, with potential for ~400+ more across remaining integrations.
+The integrations core utilities embody "Weniger, aber besser" at the code architecture level. By extracting shared HTTP and error handling patterns into a minimal set of composable utilities, we eliminated **466 lines** of duplicate code across Gmail, Notion, Slack, and Google Sheets integrations.
 
 ## Principle Scores
 
@@ -118,19 +118,31 @@ The implementation is canonically sound.
 | Lines of code (core) | 228 |
 | Lines eliminated (Gmail) | 99 |
 | Lines eliminated (Notion) | 113 |
-| Projected total elimination | ~400-600 |
+| Lines eliminated (Slack) | 102 |
+| Lines eliminated (Google Sheets) | 152 |
+| **Total elimination** | **466 lines** |
 | External dependencies | 0 |
 | Files | 3 |
+
+## Intentional Non-Refactoring: Stripe
+
+Stripe was **intentionally** not refactored to use BaseAPIClient because it has fundamentally different API requirements:
+
+1. **Content-Type**: `application/x-www-form-urlencoded` (not JSON)
+2. **Authentication**: Secret key (not OAuth access token)
+3. **Special features**: Rate limit header extraction, webhook signature verification
+
+Per Principle #6 (Honest) and Principle #10 (As little as possible), adding form-urlencoded support to BaseAPIClient for a single use case would add complexity without justification. Stripe's pattern is legitimately different—and acknowledging this is more canonical than forcing abstraction.
 
 ## Hermeneutic Validation
 
 This pattern was validated through:
-- **Practice (.space)**: Applied to real integrations (Gmail, Notion)
-- **Research (.io)**: Analyzed 6 integrations to identify common patterns
+- **Practice (.space)**: Applied to real integrations (Gmail, Notion, Slack, Google Sheets)
+- **Research (.io)**: Analyzed 6 integrations to identify common patterns (4 refactorable, 1 unique)
 - **Service (.agency)**: Reduces maintenance burden for production integrations
 
-The canon is strengthened: "Weniger, aber besser" applies not just to UI, but to code architecture.
+The canon is strengthened: "Weniger, aber besser" applies not just to UI, but to code architecture. Knowing when NOT to abstract is equally canonical.
 
 ---
 
-**Verdict**: Canonical. Ready for continued application to remaining integrations.
+**Verdict**: Canonical. Pattern fully applied to all applicable integrations.
