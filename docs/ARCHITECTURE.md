@@ -144,6 +144,87 @@ my-workflow/
 └── package.json       # Dependencies
 ```
 
+## Design Patterns: Weniger, aber besser
+
+> "Less, but better" - Dieter Rams
+
+WORKWAY applies configuration-driven patterns to eliminate duplication while maintaining clarity.
+
+### OAuth Token Refresh (workway-platform)
+
+Instead of separate refresh handlers per provider:
+
+```typescript
+// REFRESH_CONFIGS: Adding a new provider = 8 lines
+const REFRESH_CONFIGS: Record<string, RefreshConfig> = {
+  google: {
+    tokenUrl: 'https://oauth2.googleapis.com/token',
+    authMethod: 'body',
+    contentType: 'form',
+    clientIdKey: 'GOOGLE_CLIENT_ID',
+    clientSecretKey: 'GOOGLE_CLIENT_SECRET',
+    keepOldRefreshToken: true,
+  },
+  // Add new providers here...
+};
+
+// PROVIDER_TO_CONFIG: Map service names to config
+const PROVIDER_TO_CONFIG: Record<string, string> = {
+  gmail: 'google',
+  'google-sheets': 'google',
+  slack: 'slack',
+  // Add new mappings here...
+};
+```
+
+**Error Classification**: OAuth errors are typed for actionable handling:
+- `retryable: true` → exponential backoff
+- `requiresReauth: true` → prompt user to reconnect
+- `type: 'config_error'` → alert admin
+
+### Workers AI Operations (SDK)
+
+All AI operations use a shared executor:
+
+```typescript
+// Single helper handles all error patterns
+private async executeAIOperation<T>(
+  model: string,
+  input: any,
+  operationName: string,
+  extractResult: (response: any) => AIOperationResult<T>
+): Promise<ActionResult>
+
+// Methods become declarative
+async generateEmbeddings(options) {
+  return this.executeAIOperation(
+    options.model || AIModels.BGE_BASE,
+    { text: options.text },
+    'Embedding generation',
+    (response) => ({
+      data: response.data,
+      metadata: { dimensions: response.data[0]?.length }
+    })
+  );
+}
+```
+
+### Vectorize Embedding Pipeline (SDK)
+
+AI-dependent operations share helpers:
+
+```typescript
+// Check AI availability once
+private requireAI(operation: string): ActionResult | null
+
+// Centralized embedding generation
+private async getEmbeddings(text, model): Promise<{
+  success: true; embeddings: number[][]
+} | {
+  success: false; error: ActionResult
+}>
+```
+
 ## Contributing
 
 Contributions are welcome to the open source components (CLI and SDK). See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
@@ -152,4 +233,4 @@ For feature requests related to the proprietary platform, please use [GitHub Iss
 
 ---
 
-*This architecture document reflects the honest state of WORKWAY as of November 2024. Following the Heideggerian principle of Aletheia, we believe developers deserve to understand what they're building with.*
+*This architecture document reflects the honest state of WORKWAY as of December 2024. Following the Heideggerian principle of Aletheia, we believe developers deserve to understand what they're building with.*
