@@ -120,6 +120,37 @@ export interface SendEmailOptions {
 	threadId?: string;
 }
 
+/**
+ * Options for creating a draft
+ */
+export interface CreateDraftOptions {
+	/** Recipients */
+	to?: string[];
+	/** CC recipients */
+	cc?: string[];
+	/** BCC recipients */
+	bcc?: string[];
+	/** Email subject */
+	subject: string;
+	/** Plain text body */
+	body: string;
+	/** HTML body (optional) */
+	htmlBody?: string;
+	/** Thread ID to reply to */
+	threadId?: string;
+}
+
+/**
+ * Draft message response
+ */
+export interface GmailDraft {
+	id: string;
+	message: {
+		id: string;
+		threadId: string;
+	};
+}
+
 // ============================================================================
 // GMAIL INTEGRATION CLASS
 // ============================================================================
@@ -334,6 +365,151 @@ export class Gmail extends BaseAPIClient {
 	 */
 	async searchEmails(query: string, maxResults = 20): Promise<ActionResult<GmailMessage[]>> {
 		return this.listEmails({ query, maxResults });
+	}
+
+	/**
+	 * Create a draft email
+	 *
+	 * Zuhandenheit: User reviews and sends when ready.
+	 * Perfect for meeting follow-ups that need personal touches.
+	 *
+	 * @returns ActionResult with draft info
+	 */
+	async createDraft(options: CreateDraftOptions): Promise<ActionResult<GmailDraft>> {
+		const { to, cc, bcc, subject, body, htmlBody, threadId } = options;
+
+		if (!subject) {
+			return ActionResult.error(
+				'Subject is required',
+				ErrorCode.MISSING_REQUIRED_FIELD,
+				{ integration: 'gmail', action: 'create-draft' }
+			);
+		}
+
+		try {
+			// Build RFC 2822 email message
+			const messageParts = [
+				to && to.length > 0 ? `To: ${to.join(', ')}` : '',
+				cc && cc.length > 0 ? `Cc: ${cc.join(', ')}` : '',
+				bcc && bcc.length > 0 ? `Bcc: ${bcc.join(', ')}` : '',
+				`Subject: ${subject}`,
+				'MIME-Version: 1.0',
+				htmlBody
+					? 'Content-Type: multipart/alternative; boundary="boundary"'
+					: 'Content-Type: text/plain; charset=utf-8',
+				'',
+			].filter(Boolean);
+
+			if (htmlBody) {
+				messageParts.push(
+					'--boundary',
+					'Content-Type: text/plain; charset=utf-8',
+					'',
+					body,
+					'--boundary',
+					'Content-Type: text/html; charset=utf-8',
+					'',
+					htmlBody,
+					'--boundary--'
+				);
+			} else {
+				messageParts.push(body);
+			}
+
+			const rawMessage = messageParts.join('\r\n');
+			const encodedMessage = this.base64UrlEncode(rawMessage);
+
+			// Build request body
+			const requestBody: { message: { raw: string; threadId?: string } } = {
+				message: { raw: encodedMessage },
+			};
+			if (threadId) {
+				requestBody.message.threadId = threadId;
+			}
+
+			// Create the draft
+			const response = await this.post('/users/me/drafts', requestBody);
+			await assertResponseOk(response, { integration: 'gmail', action: 'create-draft' });
+
+			const result = (await response.json()) as GmailDraft;
+
+			return createActionResult({
+				data: result,
+				integration: 'gmail',
+				action: 'create-draft',
+				schema: 'gmail.draft.v1',
+				capabilities: this.getCapabilities(),
+			});
+		} catch (error) {
+			return handleError(error, 'create-draft');
+		}
+	}
+
+	/**
+	 * Create a follow-up email draft from meeting data
+	 *
+	 * Zuhandenheit: Developer thinks "draft follow-up email"
+	 * not "construct MIME message, encode base64, POST to drafts API"
+	 *
+	 * @returns ActionResult with draft info
+	 */
+	async createMeetingFollowup(options: {
+		meetingTitle: string;
+		attendees?: string[];
+		summary: string;
+		actionItems: Array<{ task: string; assignee?: string }>;
+		notionUrl?: string;
+		customMessage?: string;
+	}): Promise<ActionResult<GmailDraft>> {
+		const { meetingTitle, attendees, summary, actionItems, notionUrl, customMessage } = options;
+
+		// Build action items list
+		const actionItemsList = actionItems.length > 0
+			? actionItems
+					.map((item) => `- ${item.task}${item.assignee ? ` (${item.assignee})` : ''}`)
+					.join('\n')
+			: 'No action items recorded.';
+
+		// Build email body
+		const body = `Hi${attendees && attendees.length > 0 ? ' all' : ''},
+
+${customMessage || `Thank you for joining the meeting: ${meetingTitle}`}
+
+**Summary:**
+${summary}
+
+**Action Items:**
+${actionItemsList}
+
+${notionUrl ? `Full meeting notes: ${notionUrl}` : ''}
+
+Best regards`;
+
+		// Build HTML version
+		const htmlBody = `
+<p>Hi${attendees && attendees.length > 0 ? ' all' : ''},</p>
+
+<p>${customMessage || `Thank you for joining the meeting: <strong>${meetingTitle}</strong>`}</p>
+
+<h3>Summary</h3>
+<p>${summary}</p>
+
+<h3>Action Items</h3>
+<ul>
+${actionItems.map((item) => `<li>${item.task}${item.assignee ? ` <em>(${item.assignee})</em>` : ''}</li>`).join('\n')}
+</ul>
+
+${notionUrl ? `<p><a href="${notionUrl}">View full meeting notes</a></p>` : ''}
+
+<p>Best regards</p>
+`.trim();
+
+		return this.createDraft({
+			to: attendees,
+			subject: `Follow-up: ${meetingTitle}`,
+			body,
+			htmlBody,
+		});
 	}
 
 	// ==========================================================================
