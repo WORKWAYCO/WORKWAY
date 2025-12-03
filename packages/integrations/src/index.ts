@@ -29,9 +29,11 @@ export { Gmail } from './gmail/index.js';
 export type {
 	GmailConfig,
 	GmailMessage,
+	GmailDraft,
 	ListEmailsOptions,
 	GetEmailOptions,
 	SendEmailOptions,
+	CreateDraftOptions,
 } from './gmail/index.js';
 
 export { Slack } from './slack/index.js';
@@ -135,6 +137,19 @@ export type {
 	GetClipsOptions,
 	GetClipTranscriptOptions,
 } from './zoom/index.js';
+
+export { HubSpot } from './hubspot/index.js';
+export type {
+	HubSpotConfig,
+	HubSpotContact,
+	HubSpotCompany,
+	HubSpotDeal,
+	HubSpotEngagement,
+	SearchOptions as HubSpotSearchOptions,
+	UpdateDealOptions,
+	UpdateDealFromMeetingOptions,
+	LogMeetingActivityOptions,
+} from './hubspot/index.js';
 
 // Future integrations
 // export { WorkersAI } from './workers-ai/index.js';

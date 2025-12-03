@@ -8,7 +8,7 @@
  * ZUHANDENHEIT: The tool recedes, the outcome remains.
  * User thinks: "My meetings are documented and follow-up is automatic"
  *
- * Integrations: Zoom, Notion, Slack, Gmail (optional)
+ * Integrations: Zoom, Notion, Slack, Gmail (optional), HubSpot (optional)
  * Trigger: Daily cron (7 AM) OR Zoom webhook (recording.completed)
  */
 
@@ -42,6 +42,7 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
 		{ service: 'slack', scopes: ['send_messages', 'read_channels'] },
 		{ service: 'gmail', scopes: ['compose'], optional: true },
+		{ service: 'hubspot', scopes: ['crm.objects.deals.read', 'crm.objects.deals.write', 'crm.objects.contacts.read'], optional: true },
 	],
 
 	inputs: {
@@ -114,6 +115,32 @@ export default defineWorkflow({
 			default: false,
 			description: 'Create a Gmail draft with action items for external attendees',
 		},
+
+		// CRM settings
+		updateCRM: {
+			type: 'boolean',
+			label: 'Update CRM (HubSpot)',
+			default: false,
+			description: 'Log meeting activity and update deals in HubSpot',
+		},
+		crmDealSearchEnabled: {
+			type: 'boolean',
+			label: 'Auto-find Deals',
+			default: true,
+			description: 'Search HubSpot for deals matching attendee companies',
+		},
+		crmLogMeetingActivity: {
+			type: 'boolean',
+			label: 'Log Meeting in CRM',
+			default: true,
+			description: 'Create a meeting activity record in HubSpot',
+		},
+		crmUpdateDealNotes: {
+			type: 'boolean',
+			label: 'Update Deal Notes',
+			default: true,
+			description: 'Append meeting summary to deal description',
+		},
 	},
 
 	// Support both cron and webhook triggers
@@ -136,6 +163,7 @@ export default defineWorkflow({
 			notionPageUrl?: string;
 			slackPosted: boolean;
 			emailDrafted: boolean;
+			crmUpdated: boolean;
 			actionItemCount: number;
 		}> = [];
 
@@ -231,11 +259,13 @@ export default defineWorkflow({
 		// Summary
 		const totalSynced = results.length;
 		const totalActionItems = results.reduce((sum, r) => sum + r.actionItemCount, 0);
+		const totalCRMUpdated = results.filter((r) => r.crmUpdated).length;
 
 		return {
 			success: true,
 			synced: totalSynced,
 			actionItems: totalActionItems,
+			crmUpdated: totalCRMUpdated,
 			results,
 		};
 	},
@@ -335,11 +365,26 @@ async function processMeeting(params: ProcessMeetingParams) {
 		});
 	}
 
+	// 6. Update CRM (HubSpot - if enabled)
+	let crmUpdated = false;
+	if (inputs.updateCRM && integrations.hubspot) {
+		crmUpdated = await updateCRM({
+			topic,
+			summary: analysis?.summary,
+			actionItems: analysis?.actionItems || [],
+			speakers,
+			notionUrl: notionPage?.url,
+			inputs,
+			integrations,
+		});
+	}
+
 	return {
 		meeting: { id: meetingId, topic, date: startTime },
 		notionPageUrl: notionPage?.url,
 		slackPosted,
 		emailDrafted,
+		crmUpdated,
 		actionItemCount: analysis?.actionItems?.length || 0,
 	};
 }
@@ -408,6 +453,7 @@ async function processClip(params: ProcessClipParams) {
 		notionPageUrl: notionPage?.url,
 		slackPosted,
 		emailDrafted: false,
+		crmUpdated: false, // Clips typically don't need CRM updates
 		actionItemCount: analysis?.actionItems?.length || 0,
 	};
 }
@@ -807,6 +853,94 @@ Best regards`;
 		});
 		return true;
 	} catch {
+		return false;
+	}
+}
+
+interface UpdateCRMParams {
+	topic: string;
+	summary?: string;
+	actionItems: Array<{ task: string; assignee?: string }>;
+	speakers: string[];
+	notionUrl?: string;
+	inputs: any;
+	integrations: any;
+}
+
+/**
+ * Update CRM (HubSpot) with meeting data
+ *
+ * Zuhandenheit: Developer thinks "sync meeting to CRM"
+ * not "search deals by attendee, log engagement, update notes"
+ */
+async function updateCRM(params: UpdateCRMParams): Promise<boolean> {
+	const { topic, summary, actionItems, speakers, notionUrl, inputs, integrations } = params;
+
+	try {
+		let dealId: string | null = null;
+		let contactIds: string[] = [];
+
+		// 1. Try to find relevant deal (if auto-search enabled)
+		if (inputs.crmDealSearchEnabled && speakers.length > 0) {
+			// Search for deals by meeting topic or attendee names
+			const dealSearch = await integrations.hubspot.searchDeals({
+				query: topic,
+				limit: 1,
+			});
+
+			if (dealSearch.success && dealSearch.data?.length > 0) {
+				dealId = dealSearch.data[0].id;
+			} else {
+				// Try searching by speaker name (might be company name)
+				for (const speaker of speakers.slice(0, 3)) {
+					const companySearch = await integrations.hubspot.searchDeals({
+						query: speaker.split(' ')[0], // First name or company
+						limit: 1,
+					});
+					if (companySearch.success && companySearch.data?.length > 0) {
+						dealId = companySearch.data[0].id;
+						break;
+					}
+				}
+			}
+
+			// Also try to find contacts by speaker names (for meeting activity)
+			for (const speaker of speakers.slice(0, 5)) {
+				const contactSearch = await integrations.hubspot.searchContacts({
+					query: speaker,
+					limit: 1,
+				});
+				if (contactSearch.success && contactSearch.data?.length > 0) {
+					contactIds.push(contactSearch.data[0].id);
+				}
+			}
+		}
+
+		// 2. Log meeting activity (if enabled)
+		if (inputs.crmLogMeetingActivity && (dealId || contactIds.length > 0)) {
+			await integrations.hubspot.logMeetingActivity({
+				dealId: dealId || undefined,
+				contactIds: contactIds.length > 0 ? contactIds : undefined,
+				meetingTitle: topic,
+				notes: summary || `Meeting: ${topic}`,
+				externalUrl: notionUrl,
+			});
+		}
+
+		// 3. Update deal notes (if enabled and we found a deal)
+		if (inputs.crmUpdateDealNotes && dealId) {
+			await integrations.hubspot.updateDealFromMeeting({
+				dealId,
+				meetingTitle: topic,
+				summary: summary,
+				actionItems: actionItems,
+				notionUrl: notionUrl,
+			});
+		}
+
+		return !!(dealId || contactIds.length > 0);
+	} catch (error) {
+		console.error('CRM update failed:', error);
 		return false;
 	}
 }
