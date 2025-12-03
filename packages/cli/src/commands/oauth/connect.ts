@@ -25,8 +25,13 @@ export async function oauthConnectCommand(provider?: string): Promise<void> {
 			// Fallback to basic list if API unavailable
 			availableProviders = [
 				{ id: 'gmail', name: 'Gmail', category: 'google', configured: false, scope: '' },
+				{ id: 'google-sheets', name: 'Google Sheets', category: 'google', configured: false, scope: '' },
 				{ id: 'slack', name: 'Slack', category: 'communication', configured: false, scope: '' },
 				{ id: 'notion', name: 'Notion', category: 'productivity', configured: false, scope: '' },
+				{ id: 'zoom', name: 'Zoom', category: 'meetings', configured: false, scope: '' },
+				{ id: 'hubspot', name: 'HubSpot', category: 'crm', configured: false, scope: '' },
+				{ id: 'linear', name: 'Linear', category: 'productivity', configured: false, scope: '' },
+				{ id: 'airtable', name: 'Airtable', category: 'productivity', configured: false, scope: '' },
 			];
 		}
 
