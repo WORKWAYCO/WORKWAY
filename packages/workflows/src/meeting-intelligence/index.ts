@@ -1,0 +1,819 @@
+/**
+ * Meeting Intelligence Workflow
+ *
+ * Full compound workflow for Zoom meeting follow-up automation.
+ * Syncs meetings and clips to Notion with transcripts, extracts action items,
+ * posts summaries to Slack, and optionally drafts follow-up emails.
+ *
+ * ZUHANDENHEIT: The tool recedes, the outcome remains.
+ * User thinks: "My meetings are documented and follow-up is automatic"
+ *
+ * Integrations: Zoom, Notion, Slack, Gmail (optional)
+ * Trigger: Daily cron (7 AM) OR Zoom webhook (recording.completed)
+ */
+
+import { defineWorkflow, cron, webhook } from '@workwayco/sdk';
+import { AIModels } from '@workwayco/sdk';
+
+// Schema for AI meeting analysis
+const MeetingAnalysisSchema = {
+	summary: 'string',
+	decisions: 'string[]',
+	actionItems: 'Array<{ task: string; assignee?: string; dueDate?: string }>',
+	followUps: 'string[]',
+	keyTopics: 'string[]',
+	sentiment: "'positive' | 'neutral' | 'concerned'",
+} as const;
+
+export default defineWorkflow({
+	name: 'Meeting Intelligence',
+	description: 'Sync Zoom meetings to Notion with transcripts, action items, and Slack summaries',
+	version: '1.0.0',
+
+	pricing: {
+		model: 'usage',
+		pricePerExecution: 0.25, // Heavy tier: AI + multiple APIs
+		freeExecutions: 20,
+		description: 'Per meeting synced (includes transcription + AI analysis)',
+	},
+
+	integrations: [
+		{ service: 'zoom', scopes: ['meeting:read', 'recording:read', 'clip:read'] },
+		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
+		{ service: 'slack', scopes: ['send_messages', 'read_channels'] },
+		{ service: 'gmail', scopes: ['compose'], optional: true },
+	],
+
+	inputs: {
+		// Core configuration
+		notionDatabaseId: {
+			type: 'notion_database_picker',
+			label: 'Meeting Notes Database',
+			required: true,
+			description: 'Where to store meeting notes',
+		},
+		slackChannel: {
+			type: 'slack_channel_picker',
+			label: 'Meeting Summaries Channel',
+			required: true,
+			description: 'Where to post meeting summaries',
+		},
+
+		// Sync settings
+		syncMode: {
+			type: 'select',
+			label: 'What to Sync',
+			options: ['meetings_only', 'clips_only', 'both'],
+			default: 'both',
+			description: 'Sync meetings, clips, or both',
+		},
+		lookbackDays: {
+			type: 'number',
+			label: 'Days to Look Back',
+			default: 1,
+			description: 'How many days of meetings to sync (for daily cron)',
+		},
+
+		// Transcript settings
+		transcriptMode: {
+			type: 'select',
+			label: 'Transcript Extraction',
+			options: ['oauth_only', 'prefer_speakers', 'always_browser'],
+			default: 'prefer_speakers',
+			description: 'oauth_only: Fast but may lack speaker names. prefer_speakers: Falls back to browser scraper for speaker attribution.',
+		},
+		browserScraperUrl: {
+			type: 'text',
+			label: 'Browser Scraper URL',
+			description: 'Cloudflare Worker URL for transcript scraping (required for speaker attribution)',
+		},
+
+		// AI settings
+		enableAI: {
+			type: 'boolean',
+			label: 'AI Analysis',
+			default: true,
+			description: 'Extract action items, decisions, and key topics',
+		},
+		analysisDepth: {
+			type: 'select',
+			label: 'Analysis Depth',
+			options: ['brief', 'standard', 'detailed'],
+			default: 'standard',
+		},
+
+		// Notification settings
+		postToSlack: {
+			type: 'boolean',
+			label: 'Post Slack Summary',
+			default: true,
+		},
+		draftFollowupEmail: {
+			type: 'boolean',
+			label: 'Draft Follow-up Email',
+			default: false,
+			description: 'Create a Gmail draft with action items for external attendees',
+		},
+	},
+
+	// Support both cron and webhook triggers
+	trigger: cron({
+		schedule: '0 7 * * *', // 7 AM UTC daily
+		timezone: 'UTC',
+	}),
+
+	// Alternative webhook trigger
+	webhooks: [
+		webhook({
+			service: 'zoom',
+			event: 'recording.completed',
+		}),
+	],
+
+	async execute({ trigger, inputs, integrations, env }) {
+		const results: Array<{
+			meeting: { id: string; topic: string; date: string };
+			notionPageUrl?: string;
+			slackPosted: boolean;
+			emailDrafted: boolean;
+			actionItemCount: number;
+		}> = [];
+
+		// Determine if this is a webhook trigger (single meeting) or cron (batch)
+		const isWebhookTrigger = trigger.type === 'webhook';
+
+		if (isWebhookTrigger) {
+			// Single meeting from webhook
+			const recording = trigger.data;
+			const meetingResult = await processMeeting({
+				meetingId: recording.meeting_id || recording.id,
+				topic: recording.topic,
+				startTime: recording.start_time,
+				shareUrl: recording.share_url,
+				inputs,
+				integrations,
+				env,
+			});
+			results.push(meetingResult);
+		} else {
+			// Batch sync from cron
+			const syncMeetings = inputs.syncMode !== 'clips_only';
+			const syncClips = inputs.syncMode !== 'meetings_only';
+
+			// Fetch meetings
+			if (syncMeetings) {
+				const meetingsResult = await integrations.zoom.getMeetings({
+					days: inputs.lookbackDays || 1,
+					type: 'previous_meetings',
+				});
+
+				if (meetingsResult.success) {
+					for (const meeting of meetingsResult.data) {
+						// Check if already synced (deduplication by meeting ID)
+						const existingPage = await checkExistingPage(
+							integrations.notion,
+							inputs.notionDatabaseId,
+							String(meeting.id)
+						);
+
+						if (existingPage) {
+							continue; // Skip already synced meetings
+						}
+
+						const meetingResult = await processMeeting({
+							meetingId: String(meeting.id),
+							topic: meeting.topic,
+							startTime: meeting.start_time,
+							shareUrl: meeting.join_url,
+							inputs,
+							integrations,
+							env,
+						});
+						results.push(meetingResult);
+					}
+				}
+			}
+
+			// Fetch clips
+			if (syncClips) {
+				const clipsResult = await integrations.zoom.getClips({
+					days: inputs.lookbackDays || 1,
+				});
+
+				if (clipsResult.success) {
+					for (const clip of clipsResult.data) {
+						// Check if already synced
+						const existingPage = await checkExistingPage(
+							integrations.notion,
+							inputs.notionDatabaseId,
+							clip.id
+						);
+
+						if (existingPage) {
+							continue;
+						}
+
+						const clipResult = await processClip({
+							clipId: clip.id,
+							title: clip.title,
+							createdAt: clip.created_at,
+							shareUrl: clip.share_url,
+							inputs,
+							integrations,
+							env,
+						});
+						results.push(clipResult);
+					}
+				}
+			}
+		}
+
+		// Summary
+		const totalSynced = results.length;
+		const totalActionItems = results.reduce((sum, r) => sum + r.actionItemCount, 0);
+
+		return {
+			success: true,
+			synced: totalSynced,
+			actionItems: totalActionItems,
+			results,
+		};
+	},
+
+	onError: async ({ error, inputs, integrations }) => {
+		if (inputs.slackChannel && integrations.slack) {
+			await integrations.slack.chat.postMessage({
+				channel: inputs.slackChannel,
+				text: `Meeting Intelligence sync failed: ${error.message}`,
+			});
+		}
+	},
+});
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+interface ProcessMeetingParams {
+	meetingId: string;
+	topic: string;
+	startTime: string;
+	shareUrl?: string;
+	inputs: any;
+	integrations: any;
+	env: any;
+}
+
+async function processMeeting(params: ProcessMeetingParams) {
+	const { meetingId, topic, startTime, shareUrl, inputs, integrations, env } = params;
+
+	let transcript: string | null = null;
+	let speakers: string[] = [];
+
+	// 1. Get transcript
+	const fallbackToBrowser = inputs.transcriptMode !== 'oauth_only';
+	const transcriptResult = await integrations.zoom.getTranscript({
+		meetingId,
+		fallbackToBrowser,
+		shareUrl,
+	});
+
+	if (transcriptResult.success && transcriptResult.data) {
+		transcript = transcriptResult.data.transcript_text;
+		speakers = transcriptResult.data.speakers || [];
+	}
+
+	// 2. AI Analysis (if enabled and we have transcript)
+	let analysis: {
+		summary: string;
+		decisions: string[];
+		actionItems: Array<{ task: string; assignee?: string }>;
+		followUps: string[];
+		keyTopics: string[];
+		sentiment: string;
+	} | null = null;
+
+	if (inputs.enableAI && transcript && transcript.length > 100) {
+		analysis = await analyzeMeeting(transcript, topic, inputs.analysisDepth, integrations, env);
+	}
+
+	// 3. Create Notion page
+	const notionPage = await createNotionMeetingPage({
+		databaseId: inputs.notionDatabaseId,
+		topic,
+		startTime,
+		transcript,
+		speakers,
+		analysis,
+		sourceId: meetingId,
+		sourceType: 'meeting',
+		sourceUrl: shareUrl,
+		integrations,
+	});
+
+	// 4. Post to Slack (if enabled)
+	let slackPosted = false;
+	if (inputs.postToSlack && inputs.slackChannel) {
+		slackPosted = await postSlackSummary({
+			channel: inputs.slackChannel,
+			topic,
+			summary: analysis?.summary || 'Meeting synced (no AI summary)',
+			actionItems: analysis?.actionItems || [],
+			notionUrl: notionPage?.url,
+			integrations,
+		});
+	}
+
+	// 5. Draft follow-up email (if enabled)
+	let emailDrafted = false;
+	if (inputs.draftFollowupEmail && analysis?.actionItems?.length && integrations.gmail) {
+		emailDrafted = await draftFollowupEmail({
+			topic,
+			actionItems: analysis.actionItems,
+			notionUrl: notionPage?.url,
+			integrations,
+		});
+	}
+
+	return {
+		meeting: { id: meetingId, topic, date: startTime },
+		notionPageUrl: notionPage?.url,
+		slackPosted,
+		emailDrafted,
+		actionItemCount: analysis?.actionItems?.length || 0,
+	};
+}
+
+interface ProcessClipParams {
+	clipId: string;
+	title: string;
+	createdAt: string;
+	shareUrl?: string;
+	inputs: any;
+	integrations: any;
+	env: any;
+}
+
+async function processClip(params: ProcessClipParams) {
+	const { clipId, title, createdAt, shareUrl, inputs, integrations, env } = params;
+
+	let transcript: string | null = null;
+
+	// 1. Get transcript (clips require browser scraper)
+	if (shareUrl && inputs.browserScraperUrl) {
+		const transcriptResult = await integrations.zoom.getClipTranscript({
+			shareUrl,
+		});
+
+		if (transcriptResult.success && transcriptResult.data) {
+			transcript = transcriptResult.data.transcript_text;
+		}
+	}
+
+	// 2. AI Analysis (if enabled)
+	let analysis: any = null;
+	if (inputs.enableAI && transcript && transcript.length > 50) {
+		analysis = await analyzeMeeting(transcript, title, inputs.analysisDepth, integrations, env);
+	}
+
+	// 3. Create Notion page
+	const notionPage = await createNotionMeetingPage({
+		databaseId: inputs.notionDatabaseId,
+		topic: title,
+		startTime: createdAt,
+		transcript,
+		speakers: [],
+		analysis,
+		sourceId: clipId,
+		sourceType: 'clip',
+		sourceUrl: shareUrl,
+		integrations,
+	});
+
+	// 4. Post to Slack (if enabled)
+	let slackPosted = false;
+	if (inputs.postToSlack && inputs.slackChannel) {
+		slackPosted = await postSlackSummary({
+			channel: inputs.slackChannel,
+			topic: title,
+			summary: analysis?.summary || 'Clip synced (no AI summary)',
+			actionItems: analysis?.actionItems || [],
+			notionUrl: notionPage?.url,
+			integrations,
+		});
+	}
+
+	return {
+		meeting: { id: clipId, topic: title, date: createdAt },
+		notionPageUrl: notionPage?.url,
+		slackPosted,
+		emailDrafted: false,
+		actionItemCount: analysis?.actionItems?.length || 0,
+	};
+}
+
+async function analyzeMeeting(
+	transcript: string,
+	topic: string,
+	depth: string,
+	integrations: any,
+	env: any
+) {
+	const depthInstructions: Record<string, string> = {
+		brief: 'Keep summary to 2-3 sentences. List only the most critical items.',
+		standard: 'Provide thorough summary in 4-6 sentences. Include all notable items.',
+		detailed: 'Comprehensive analysis with full context. Include all items discussed.',
+	};
+
+	try {
+		const result = await integrations.ai.generateText({
+			model: AIModels.LLAMA_3_8B,
+			system: `You are a meeting analyst. Analyze the transcript and extract structured insights.
+
+${depthInstructions[depth] || depthInstructions.standard}
+
+Return ONLY valid JSON in this format:
+{
+  "summary": "Brief summary of the meeting",
+  "decisions": ["Decision 1", "Decision 2"],
+  "actionItems": [
+    {"task": "Task description", "assignee": "Person name or null"},
+    {"task": "Another task", "assignee": null}
+  ],
+  "followUps": ["Follow-up item 1", "Follow-up item 2"],
+  "keyTopics": ["Topic 1", "Topic 2"],
+  "sentiment": "positive" | "neutral" | "concerned"
+}`,
+			prompt: `Meeting: ${topic}\n\nTranscript:\n${transcript.slice(0, 8000)}`,
+			temperature: 0.3,
+			max_tokens: 1000,
+		});
+
+		const responseText = result.data?.response || '{}';
+
+		// Parse JSON from response
+		const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+		if (jsonMatch) {
+			return JSON.parse(jsonMatch[0]);
+		}
+
+		return null;
+	} catch (error) {
+		console.error('AI analysis failed:', error);
+		return null;
+	}
+}
+
+async function checkExistingPage(
+	notion: any,
+	databaseId: string,
+	sourceId: string
+): Promise<boolean> {
+	try {
+		const result = await notion.databases.query({
+			database_id: databaseId,
+			filter: {
+				property: 'Source ID',
+				rich_text: { equals: sourceId },
+			},
+			page_size: 1,
+		});
+
+		return result.success && result.data?.length > 0;
+	} catch {
+		return false;
+	}
+}
+
+interface CreateNotionPageParams {
+	databaseId: string;
+	topic: string;
+	startTime: string;
+	transcript: string | null;
+	speakers: string[];
+	analysis: any;
+	sourceId: string;
+	sourceType: 'meeting' | 'clip';
+	sourceUrl?: string;
+	integrations: any;
+}
+
+async function createNotionMeetingPage(params: CreateNotionPageParams) {
+	const {
+		databaseId,
+		topic,
+		startTime,
+		transcript,
+		speakers,
+		analysis,
+		sourceId,
+		sourceType,
+		sourceUrl,
+		integrations,
+	} = params;
+
+	// Build properties
+	const properties: Record<string, any> = {
+		Title: {
+			title: [{ text: { content: topic } }],
+		},
+		Date: {
+			date: { start: startTime.split('T')[0] },
+		},
+		Type: {
+			select: { name: sourceType === 'meeting' ? 'Meeting' : 'Clip' },
+		},
+		'Source ID': {
+			rich_text: [{ text: { content: sourceId } }],
+		},
+		Status: {
+			select: { name: 'Synced' },
+		},
+	};
+
+	if (sourceUrl) {
+		properties['Source URL'] = { url: sourceUrl };
+	}
+
+	if (analysis?.sentiment) {
+		properties['Sentiment'] = { select: { name: analysis.sentiment } };
+	}
+
+	// Build content blocks
+	const children: any[] = [];
+
+	// Meeting info callout
+	children.push({
+		object: 'block',
+		type: 'callout',
+		callout: {
+			rich_text: [
+				{
+					text: {
+						content: `${sourceType === 'meeting' ? 'Meeting' : 'Clip'} on ${new Date(startTime).toLocaleDateString()}${speakers.length > 0 ? ` • Speakers: ${speakers.join(', ')}` : ''}`,
+					},
+				},
+			],
+			icon: { emoji: sourceType === 'meeting' ? '📅' : '🎬' },
+			color: 'blue_background',
+		},
+	});
+
+	// AI Summary (if available)
+	if (analysis?.summary) {
+		children.push({
+			object: 'block',
+			type: 'heading_2',
+			heading_2: { rich_text: [{ text: { content: 'Summary' } }] },
+		});
+		children.push({
+			object: 'block',
+			type: 'paragraph',
+			paragraph: { rich_text: [{ text: { content: analysis.summary } }] },
+		});
+	}
+
+	// Decisions
+	if (analysis?.decisions?.length > 0) {
+		children.push({
+			object: 'block',
+			type: 'heading_2',
+			heading_2: { rich_text: [{ text: { content: '✅ Decisions' } }] },
+		});
+		for (const decision of analysis.decisions) {
+			children.push({
+				object: 'block',
+				type: 'numbered_list_item',
+				numbered_list_item: { rich_text: [{ text: { content: decision } }] },
+			});
+		}
+	}
+
+	// Action Items
+	if (analysis?.actionItems?.length > 0) {
+		children.push({
+			object: 'block',
+			type: 'heading_2',
+			heading_2: { rich_text: [{ text: { content: '📋 Action Items' } }] },
+		});
+		for (const item of analysis.actionItems) {
+			const text = item.assignee ? `${item.task} (@${item.assignee})` : item.task;
+			children.push({
+				object: 'block',
+				type: 'to_do',
+				to_do: {
+					rich_text: [{ text: { content: text } }],
+					checked: false,
+				},
+			});
+		}
+	}
+
+	// Follow-ups
+	if (analysis?.followUps?.length > 0) {
+		children.push({
+			object: 'block',
+			type: 'heading_2',
+			heading_2: { rich_text: [{ text: { content: '📆 Follow-ups' } }] },
+		});
+		for (const followUp of analysis.followUps) {
+			children.push({
+				object: 'block',
+				type: 'bulleted_list_item',
+				bulleted_list_item: { rich_text: [{ text: { content: followUp } }] },
+			});
+		}
+	}
+
+	// Key Topics
+	if (analysis?.keyTopics?.length > 0) {
+		children.push({
+			object: 'block',
+			type: 'heading_2',
+			heading_2: { rich_text: [{ text: { content: '💡 Key Topics' } }] },
+		});
+		for (const topic of analysis.keyTopics) {
+			children.push({
+				object: 'block',
+				type: 'bulleted_list_item',
+				bulleted_list_item: { rich_text: [{ text: { content: topic } }] },
+			});
+		}
+	}
+
+	// Full Transcript (in toggle)
+	if (transcript) {
+		children.push({
+			object: 'block',
+			type: 'divider',
+			divider: {},
+		});
+		children.push({
+			object: 'block',
+			type: 'toggle',
+			toggle: {
+				rich_text: [{ text: { content: '📜 Full Transcript' } }],
+				children: splitTranscriptIntoBlocks(transcript),
+			},
+		});
+	}
+
+	// Create page
+	try {
+		const result = await integrations.notion.pages.create({
+			parent: { database_id: databaseId },
+			properties,
+			children,
+		});
+
+		return result.success ? { url: result.data?.url } : null;
+	} catch (error) {
+		console.error('Failed to create Notion page:', error);
+		return null;
+	}
+}
+
+function splitTranscriptIntoBlocks(transcript: string): any[] {
+	const blocks: any[] = [];
+	const maxChars = 1900; // Notion limit is 2000, leave buffer
+
+	// Split by paragraphs or speaker changes
+	const segments = transcript.split(/\n\n|\n(?=[A-Z][a-z]+:)/);
+
+	let currentBlock = '';
+
+	for (const segment of segments) {
+		if (currentBlock.length + segment.length + 1 > maxChars) {
+			if (currentBlock) {
+				blocks.push({
+					object: 'block',
+					type: 'paragraph',
+					paragraph: { rich_text: [{ text: { content: currentBlock } }] },
+				});
+			}
+			currentBlock = segment;
+		} else {
+			currentBlock = currentBlock ? `${currentBlock}\n${segment}` : segment;
+		}
+	}
+
+	if (currentBlock) {
+		blocks.push({
+			object: 'block',
+			type: 'paragraph',
+			paragraph: { rich_text: [{ text: { content: currentBlock } }] },
+		});
+	}
+
+	return blocks.length > 0 ? blocks : [
+		{
+			object: 'block',
+			type: 'paragraph',
+			paragraph: { rich_text: [{ text: { content: 'No transcript available' } }] },
+		},
+	];
+}
+
+interface PostSlackSummaryParams {
+	channel: string;
+	topic: string;
+	summary: string;
+	actionItems: Array<{ task: string; assignee?: string }>;
+	notionUrl?: string;
+	integrations: any;
+}
+
+async function postSlackSummary(params: PostSlackSummaryParams): Promise<boolean> {
+	const { channel, topic, summary, actionItems, notionUrl, integrations } = params;
+
+	const actionItemsList = actionItems.length > 0
+		? actionItems.map((a) => `• ${a.task}${a.assignee ? ` (@${a.assignee})` : ''}`).join('\n')
+		: null;
+
+	const blocks: any[] = [
+		{
+			type: 'header',
+			text: { type: 'plain_text', text: `📋 ${topic}`, emoji: true },
+		},
+		{
+			type: 'section',
+			text: { type: 'mrkdwn', text: `*Summary:*\n${summary}` },
+		},
+	];
+
+	if (actionItemsList) {
+		blocks.push({
+			type: 'section',
+			text: { type: 'mrkdwn', text: `*Action Items (${actionItems.length}):*\n${actionItemsList}` },
+		});
+	}
+
+	if (notionUrl) {
+		blocks.push({
+			type: 'actions',
+			elements: [
+				{
+					type: 'button',
+					text: { type: 'plain_text', text: 'View in Notion', emoji: true },
+					url: notionUrl,
+				},
+			],
+		});
+	}
+
+	try {
+		await integrations.slack.chat.postMessage({
+			channel,
+			text: `Meeting synced: ${topic}`,
+			blocks,
+		});
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+interface DraftEmailParams {
+	topic: string;
+	actionItems: Array<{ task: string; assignee?: string }>;
+	notionUrl?: string;
+	integrations: any;
+}
+
+async function draftFollowupEmail(params: DraftEmailParams): Promise<boolean> {
+	const { topic, actionItems, notionUrl, integrations } = params;
+
+	const actionItemsList = actionItems
+		.map((a) => `- ${a.task}${a.assignee ? ` (${a.assignee})` : ''}`)
+		.join('\n');
+
+	const body = `Hi,
+
+Following up on our meeting: ${topic}
+
+Action items:
+${actionItemsList}
+
+${notionUrl ? `Full notes: ${notionUrl}` : ''}
+
+Best regards`;
+
+	try {
+		await integrations.gmail.drafts.create({
+			message: {
+				subject: `Follow-up: ${topic}`,
+				body,
+			},
+		});
+		return true;
+	} catch {
+		return false;
+	}
+}
+
+export const metadata = {
+	id: 'meeting-intelligence',
+	category: 'productivity',
+	featured: true,
+	stats: { rating: 4.9, users: 0, reviews: 0 },
+};
