@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:workway-web.half-dozen.workers.dev)",
+      "WebFetch(domain:workway-api.half-dozen.workers.dev)",
+      "WebFetch(domain:developers.zoom.us)",
+      "WebFetch(domain:developers.notion.com)",
+      "WebFetch(domain:api.slack.com)"
+    ],
+    "deny": [],
+    "ask": []
+  },
+  "mcpServers": {
+    "cloudflare": {
+      "command": "npx",
+      "args": ["-y", "@anthropic/mcp-cloudflare"]
+    }
+  }
+}
