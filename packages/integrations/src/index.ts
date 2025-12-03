@@ -97,5 +97,44 @@ export type {
 	AddSheetOptions,
 } from './google-sheets/index.js';
 
+export { Linear, toStandardTask } from './linear/index.js';
+export type {
+	LinearConfig,
+	LinearIssue,
+	LinearTeam,
+	LinearUser,
+	LinearProject,
+	LinearComment,
+} from './linear/index.js';
+
+export { Airtable } from './airtable/index.js';
+export type {
+	AirtableConfig,
+	AirtableRecord,
+	AirtableTable,
+	AirtableField,
+	ListRecordsOptions,
+	CreateRecordOptions,
+	UpdateRecordOptions,
+} from './airtable/index.js';
+
+export { Zoom } from './zoom/index.js';
+export type {
+	ZoomConfig,
+	ZoomMeeting,
+	ZoomRecording,
+	ZoomRecordingFile,
+	ZoomClip,
+	TranscriptResult,
+	MeetingsResponse,
+	ClipsResponse,
+	GetMeetingsOptions,
+	GetMeetingOptions,
+	GetRecordingsOptions,
+	GetTranscriptOptions,
+	GetClipsOptions,
+	GetClipTranscriptOptions,
+} from './zoom/index.js';
+
 // Future integrations
 // export { WorkersAI } from './workers-ai/index.js';
