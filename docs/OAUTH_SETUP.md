@@ -310,6 +310,25 @@ Uses the same Google OAuth as Gmail. You can request both scopes in a single OAu
    - `fallbackToBrowser: false` - OAuth API only (fast, may lack speaker names)
    - `fallbackToBrowser: true` - Falls back to browser scraper for speaker attribution
 
+8. **Browser Scraper for Speaker Attribution**:
+
+   The WORKWAY Zoom Scraper is deployed at: `https://zoom-scraper.half-dozen.workers.dev`
+
+   To enable speaker-attributed transcripts:
+
+   a. Visit `https://zoom-scraper.half-dozen.workers.dev/sync`
+   b. Drag the "Sync Cookies" bookmarklet to your bookmarks bar
+   c. Log into Zoom (us06web.zoom.us)
+   d. Click the bookmark to sync your session cookies (expires 24h)
+
+   Then configure your Zoom integration:
+   ```typescript
+   const zoom = new Zoom({
+     accessToken: tokens.zoom.access_token,
+     browserScraperUrl: 'https://zoom-scraper.half-dozen.workers.dev'
+   });
+   ```
+
 ### Stripe (API Key Authentication)
 
 Stripe uses API keys instead of OAuth. This is simpler but requires secure key management.
