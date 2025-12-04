@@ -1,0 +1,22 @@
+{
+  "name": "daily-standup-synthesizer",
+  "version": "1.0.0",
+  "description": "Synthesize team standup discussions into actionable knowledge",
+  "category": "productivity",
+  "icon": "notebook",
+  "integrations": ["slack", "notion"],
+  "ai": {
+    "enabled": true,
+    "models": ["LLAMA_2_7B", "LLAMA_3_8B", "MISTRAL_7B"]
+  },
+  "trigger": {
+    "type": "schedule",
+    "cron": "0 9 * * 1-5"
+  },
+  "pricing": {
+    "model": "freemium",
+    "freeTier": {
+      "executionsPerMonth": 30
+    }
+  }
+}

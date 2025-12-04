@@ -1,0 +1,30 @@
+{
+  "name": "daily-standup-synthesizer",
+  "version": "1.0.0",
+  "description": "Synthesize team standup discussions into actionable knowledge",
+  "type": "module",
+  "main": "workflow.ts",
+  "scripts": {
+    "dev": "workway workflow dev",
+    "test": "workway workflow test --mock",
+    "test:live": "workway workflow test --live",
+    "build": "workway workflow build",
+    "publish": "workway workflow publish"
+  },
+  "dependencies": {
+    "@workwayco/sdk": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "keywords": [
+    "standup",
+    "slack",
+    "notion",
+    "ai",
+    "team",
+    "synthesis"
+  ],
+  "author": "WORKWAY",
+  "license": "Apache-2.0"
+}
