@@ -9,8 +9,7 @@ browser = { binding = "BROWSER" }
 # KV for cookie storage
 [[kv_namespaces]]
 binding = "ZOOM_COOKIES"
-id = "ZOOM_COOKIES_PROD"
-preview_id = "ZOOM_COOKIES_DEV"
+id = "466a957ef3e54f3f8a0a03e87b98a188"
 
 # Environment variables (set via wrangler secret put)
 # UPLOAD_SECRET - Secret for cookie upload authorization
