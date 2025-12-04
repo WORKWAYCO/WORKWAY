@@ -816,4 +816,677 @@ export class Notion extends BaseAPIClient {
 		};
 	}
 
+	// ==========================================================================
+	// ZUHANDENHEIT: Document Builder
+	// ==========================================================================
+
+	/**
+	 * Create a document from a template
+	 *
+	 * Zuhandenheit: Developer thinks "create a standup summary" not
+	 * "construct 100 lines of Notion block objects"
+	 *
+	 * @example
+	 * ```typescript
+	 * // BEFORE: 100+ lines of block construction
+	 * await notion.createPage({
+	 *   children: [
+	 *     { object: 'block', type: 'heading_2', heading_2: { rich_text: [...] } },
+	 *     // ... 100 more lines
+	 *   ]
+	 * });
+	 *
+	 * // AFTER: Template-based
+	 * await notion.createDocument({
+	 *   database: 'db123',
+	 *   template: 'summary',
+	 *   data: {
+	 *     title: 'Standup - 2024-01-15',
+	 *     summary: 'Team made progress on...',
+	 *     sections: {
+	 *       themes: ['API work', 'Testing'],
+	 *       blockers: ['Waiting on design'],
+	 *       actionItems: ['Review PR #123']
+	 *     }
+	 *   }
+	 * });
+	 * ```
+	 */
+	async createDocument(options: {
+		database: string;
+		template: 'summary' | 'report' | 'notes' | 'article' | 'meeting' | 'feedback' | 'custom';
+		data: {
+			title: string;
+			summary?: string;
+			date?: string;
+			mood?: 'positive' | 'neutral' | 'concerned';
+			properties?: Record<string, unknown>;
+			sections?: Record<string, string[]>;
+			content?: string;
+			metadata?: Record<string, unknown>;
+		};
+		customBlocks?: any[];
+	}): Promise<ActionResult<NotionPage>> {
+		const { database, template, data, customBlocks } = options;
+
+		// Build properties
+		const properties: Record<string, unknown> = {
+			Title: {
+				title: [{ text: { content: data.title } }],
+			},
+			...(data.date && {
+				Date: { date: { start: data.date } },
+			}),
+			...(data.mood && {
+				Mood: { select: { name: data.mood } },
+			}),
+			...data.properties,
+		};
+
+		// Build blocks based on template
+		let children: any[];
+
+		switch (template) {
+			case 'summary':
+				children = this.buildSummaryBlocks(data);
+				break;
+			case 'report':
+				children = this.buildReportBlocks(data);
+				break;
+			case 'notes':
+				children = this.buildNotesBlocks(data);
+				break;
+			case 'article':
+				children = this.buildArticleBlocks(data);
+				break;
+			case 'meeting':
+				children = this.buildMeetingBlocks(data);
+				break;
+			case 'feedback':
+				children = this.buildFeedbackBlocks(data);
+				break;
+			case 'custom':
+				children = customBlocks || [];
+				break;
+			default:
+				children = this.buildSummaryBlocks(data);
+		}
+
+		return this.createPage({
+			parentDatabaseId: database,
+			properties,
+			children,
+		});
+	}
+
+	/**
+	 * Build summary template blocks (standup, meeting notes, etc.)
+	 */
+	private buildSummaryBlocks(data: {
+		summary?: string;
+		sections?: Record<string, string[]>;
+		content?: string;
+	}): any[] {
+		const blocks: any[] = [];
+
+		// Summary callout
+		if (data.summary) {
+			blocks.push({
+				object: 'block',
+				type: 'callout',
+				callout: {
+					rich_text: [{ text: { content: data.summary } }],
+					icon: { emoji: '📋' },
+				},
+			});
+		}
+
+		// Sections
+		if (data.sections) {
+			for (const [sectionName, items] of Object.entries(data.sections)) {
+				// Section header
+				const displayName = this.formatSectionName(sectionName);
+				blocks.push({
+					object: 'block',
+					type: 'heading_2',
+					heading_2: {
+						rich_text: [{ text: { content: displayName } }],
+					},
+				});
+
+				// Section items
+				if (items.length === 0) {
+					blocks.push({
+						object: 'block',
+						type: 'paragraph',
+						paragraph: {
+							rich_text: [{ text: { content: `No ${sectionName.toLowerCase()} reported` } }],
+						},
+					});
+				} else {
+					// Use to_do for action items, bulleted_list for others
+					const blockType = sectionName.toLowerCase().includes('action') ? 'to_do' : 'bulleted_list_item';
+
+					for (const item of items) {
+						if (blockType === 'to_do') {
+							blocks.push({
+								object: 'block',
+								type: 'to_do',
+								to_do: {
+									rich_text: [{ text: { content: item } }],
+									checked: false,
+								},
+							});
+						} else {
+							blocks.push({
+								object: 'block',
+								type: 'bulleted_list_item',
+								bulleted_list_item: {
+									rich_text: [{ text: { content: item } }],
+								},
+							});
+						}
+					}
+				}
+			}
+		}
+
+		// Raw content at the end (in a toggle)
+		if (data.content) {
+			blocks.push({
+				object: 'block',
+				type: 'divider',
+				divider: {},
+			});
+			blocks.push({
+				object: 'block',
+				type: 'toggle',
+				toggle: {
+					rich_text: [{ text: { content: 'View Original Content' } }],
+					children: [{
+						object: 'block',
+						type: 'paragraph',
+						paragraph: {
+							rich_text: [{ text: { content: data.content.slice(0, 2000) } }],
+						},
+					}],
+				},
+			});
+		}
+
+		return blocks;
+	}
+
+	/**
+	 * Build report template blocks
+	 */
+	private buildReportBlocks(data: {
+		summary?: string;
+		sections?: Record<string, string[]>;
+		content?: string;
+		metadata?: Record<string, unknown>;
+	}): any[] {
+		const blocks: any[] = [];
+
+		// Title section with metadata
+		if (data.metadata) {
+			const metaText = Object.entries(data.metadata)
+				.map(([k, v]) => `**${k}:** ${v}`)
+				.join(' | ');
+
+			blocks.push({
+				object: 'block',
+				type: 'paragraph',
+				paragraph: {
+					rich_text: [{ text: { content: metaText } }],
+				},
+			});
+			blocks.push({
+				object: 'block',
+				type: 'divider',
+				divider: {},
+			});
+		}
+
+		// Executive summary
+		if (data.summary) {
+			blocks.push({
+				object: 'block',
+				type: 'heading_2',
+				heading_2: {
+					rich_text: [{ text: { content: 'Executive Summary' } }],
+				},
+			});
+			blocks.push({
+				object: 'block',
+				type: 'quote',
+				quote: {
+					rich_text: [{ text: { content: data.summary } }],
+				},
+			});
+		}
+
+		// Sections as collapsible toggles
+		if (data.sections) {
+			for (const [sectionName, items] of Object.entries(data.sections)) {
+				const displayName = this.formatSectionName(sectionName);
+				blocks.push({
+					object: 'block',
+					type: 'toggle',
+					toggle: {
+						rich_text: [{ text: { content: `${displayName} (${items.length})` } }],
+						children: items.map((item) => ({
+							object: 'block',
+							type: 'bulleted_list_item',
+							bulleted_list_item: {
+								rich_text: [{ text: { content: item } }],
+							},
+						})),
+					},
+				});
+			}
+		}
+
+		return blocks;
+	}
+
+	/**
+	 * Build notes template blocks
+	 */
+	private buildNotesBlocks(data: {
+		summary?: string;
+		sections?: Record<string, string[]>;
+		content?: string;
+	}): any[] {
+		const blocks: any[] = [];
+
+		// Quick summary
+		if (data.summary) {
+			blocks.push({
+				object: 'block',
+				type: 'callout',
+				callout: {
+					rich_text: [{ text: { content: data.summary } }],
+					icon: { emoji: '📝' },
+					color: 'gray_background',
+				},
+			});
+		}
+
+		// Content first for notes
+		if (data.content) {
+			blocks.push({
+				object: 'block',
+				type: 'paragraph',
+				paragraph: {
+					rich_text: [{ text: { content: data.content } }],
+				},
+			});
+		}
+
+		// Key points as sections
+		if (data.sections) {
+			blocks.push({
+				object: 'block',
+				type: 'divider',
+				divider: {},
+			});
+
+			for (const [sectionName, items] of Object.entries(data.sections)) {
+				const displayName = this.formatSectionName(sectionName);
+				blocks.push({
+					object: 'block',
+					type: 'heading_3',
+					heading_3: {
+						rich_text: [{ text: { content: displayName } }],
+					},
+				});
+
+				for (const item of items) {
+					blocks.push({
+						object: 'block',
+						type: 'bulleted_list_item',
+						bulleted_list_item: {
+							rich_text: [{ text: { content: item } }],
+						},
+					});
+				}
+			}
+		}
+
+		return blocks;
+	}
+
+	/**
+	 * Build article template blocks
+	 */
+	private buildArticleBlocks(data: {
+		summary?: string;
+		content?: string;
+		sections?: Record<string, string[]>;
+	}): any[] {
+		const blocks: any[] = [];
+
+		// Lead paragraph
+		if (data.summary) {
+			blocks.push({
+				object: 'block',
+				type: 'paragraph',
+				paragraph: {
+					rich_text: [{
+						text: { content: data.summary },
+						annotations: { italic: true },
+					}],
+				},
+			});
+		}
+
+		// Main content
+		if (data.content) {
+			// Split content into paragraphs
+			const paragraphs = data.content.split('\n\n').filter(p => p.trim());
+			for (const para of paragraphs) {
+				blocks.push({
+					object: 'block',
+					type: 'paragraph',
+					paragraph: {
+						rich_text: [{ text: { content: para } }],
+					},
+				});
+			}
+		}
+
+		// Related sections
+		if (data.sections) {
+			blocks.push({
+				object: 'block',
+				type: 'divider',
+				divider: {},
+			});
+
+			for (const [sectionName, items] of Object.entries(data.sections)) {
+				const displayName = this.formatSectionName(sectionName);
+				blocks.push({
+					object: 'block',
+					type: 'heading_2',
+					heading_2: {
+						rich_text: [{ text: { content: displayName } }],
+					},
+				});
+
+				for (const item of items) {
+					blocks.push({
+						object: 'block',
+						type: 'bulleted_list_item',
+						bulleted_list_item: {
+							rich_text: [{ text: { content: item } }],
+						},
+					});
+				}
+			}
+		}
+
+		return blocks;
+	}
+
+	/**
+	 * Build meeting template blocks (optimized for meeting transcripts)
+	 */
+	private buildMeetingBlocks(data: {
+		summary?: string;
+		sections?: Record<string, string[]>;
+		content?: string;
+		metadata?: Record<string, unknown>;
+	}): any[] {
+		const blocks: any[] = [];
+
+		// Meeting info header
+		if (data.metadata) {
+			const metaText = Object.entries(data.metadata)
+				.map(([k, v]) => `**${k}:** ${v}`)
+				.join(' • ');
+
+			blocks.push({
+				object: 'block',
+				type: 'callout',
+				callout: {
+					rich_text: [{ text: { content: metaText } }],
+					icon: { emoji: '📅' },
+					color: 'blue_background',
+				},
+			});
+		}
+
+		// Meeting summary
+		if (data.summary) {
+			blocks.push({
+				object: 'block',
+				type: 'heading_2',
+				heading_2: {
+					rich_text: [{ text: { content: 'Summary' } }],
+				},
+			});
+			blocks.push({
+				object: 'block',
+				type: 'paragraph',
+				paragraph: {
+					rich_text: [{ text: { content: data.summary } }],
+				},
+			});
+		}
+
+		// Sections with meeting-specific formatting
+		if (data.sections) {
+			const sectionOrder = ['decisions', 'actionItems', 'followUps', 'keyTopics'];
+			const sectionEmojis: Record<string, string> = {
+				decisions: '✅',
+				actionItems: '📋',
+				followUps: '📆',
+				keyTopics: '💡',
+			};
+
+			// Process ordered sections first
+			for (const sectionName of sectionOrder) {
+				const items = data.sections[sectionName];
+				if (!items || items.length === 0) continue;
+
+				const displayName = this.formatSectionName(sectionName);
+				const emoji = sectionEmojis[sectionName] || '•';
+
+				blocks.push({
+					object: 'block',
+					type: 'heading_2',
+					heading_2: {
+						rich_text: [{ text: { content: `${emoji} ${displayName}` } }],
+					},
+				});
+
+				// Use to_do for action items, numbered for decisions
+				const isActionItem = sectionName === 'actionItems';
+				const isDecision = sectionName === 'decisions';
+
+				for (const item of items) {
+					if (isActionItem) {
+						blocks.push({
+							object: 'block',
+							type: 'to_do',
+							to_do: {
+								rich_text: [{ text: { content: item } }],
+								checked: false,
+							},
+						});
+					} else if (isDecision) {
+						blocks.push({
+							object: 'block',
+							type: 'numbered_list_item',
+							numbered_list_item: {
+								rich_text: [{ text: { content: item } }],
+							},
+						});
+					} else {
+						blocks.push({
+							object: 'block',
+							type: 'bulleted_list_item',
+							bulleted_list_item: {
+								rich_text: [{ text: { content: item } }],
+							},
+						});
+					}
+				}
+			}
+
+			// Process any remaining sections
+			for (const [sectionName, items] of Object.entries(data.sections)) {
+				if (sectionOrder.includes(sectionName) || items.length === 0) continue;
+
+				const displayName = this.formatSectionName(sectionName);
+				blocks.push({
+					object: 'block',
+					type: 'heading_3',
+					heading_3: {
+						rich_text: [{ text: { content: displayName } }],
+					},
+				});
+
+				for (const item of items) {
+					blocks.push({
+						object: 'block',
+						type: 'bulleted_list_item',
+						bulleted_list_item: {
+							rich_text: [{ text: { content: item } }],
+						},
+					});
+				}
+			}
+		}
+
+		// Full transcript in toggle
+		if (data.content) {
+			blocks.push({
+				object: 'block',
+				type: 'divider',
+				divider: {},
+			});
+			blocks.push({
+				object: 'block',
+				type: 'toggle',
+				toggle: {
+					rich_text: [{ text: { content: '📜 Full Transcript' } }],
+					children: [{
+						object: 'block',
+						type: 'paragraph',
+						paragraph: {
+							rich_text: [{ text: { content: data.content.slice(0, 2000) } }],
+						},
+					}],
+				},
+			});
+		}
+
+		return blocks;
+	}
+
+	/**
+	 * Build feedback template blocks (customer feedback analysis)
+	 */
+	private buildFeedbackBlocks(data: {
+		summary?: string;
+		sections?: Record<string, string[]>;
+		content?: string;
+		metadata?: Record<string, unknown>;
+	}): any[] {
+		const blocks: any[] = [];
+
+		// Feedback metadata (sentiment, urgency, etc.)
+		if (data.metadata) {
+			const metaText = Object.entries(data.metadata)
+				.map(([k, v]) => `**${k}:** ${v}`)
+				.join(' | ');
+
+			blocks.push({
+				object: 'block',
+				type: 'callout',
+				callout: {
+					rich_text: [{ text: { content: metaText } }],
+					icon: { emoji: '💬' },
+					color: 'yellow_background',
+				},
+			});
+		}
+
+		// Summary insight
+		if (data.summary) {
+			blocks.push({
+				object: 'block',
+				type: 'quote',
+				quote: {
+					rich_text: [{ text: { content: data.summary } }],
+				},
+			});
+		}
+
+		// Themes and insights
+		if (data.sections) {
+			for (const [sectionName, items] of Object.entries(data.sections)) {
+				if (items.length === 0) continue;
+
+				const displayName = this.formatSectionName(sectionName);
+				blocks.push({
+					object: 'block',
+					type: 'heading_2',
+					heading_2: {
+						rich_text: [{ text: { content: displayName } }],
+					},
+				});
+
+				for (const item of items) {
+					blocks.push({
+						object: 'block',
+						type: 'bulleted_list_item',
+						bulleted_list_item: {
+							rich_text: [{ text: { content: item } }],
+						},
+					});
+				}
+			}
+		}
+
+		// Original feedback content
+		if (data.content) {
+			blocks.push({
+				object: 'block',
+				type: 'divider',
+				divider: {},
+			});
+			blocks.push({
+				object: 'block',
+				type: 'heading_3',
+				heading_3: {
+					rich_text: [{ text: { content: 'Original Feedback' } }],
+				},
+			});
+			blocks.push({
+				object: 'block',
+				type: 'paragraph',
+				paragraph: {
+					rich_text: [{ text: { content: data.content } }],
+				},
+			});
+		}
+
+		return blocks;
+	}
+
+	/**
+	 * Format section name for display
+	 */
+	private formatSectionName(name: string): string {
+		// Convert camelCase or snake_case to Title Case
+		return name
+			.replace(/([A-Z])/g, ' $1')
+			.replace(/_/g, ' ')
+			.replace(/^\w/, c => c.toUpperCase())
+			.trim();
+	}
+
 }

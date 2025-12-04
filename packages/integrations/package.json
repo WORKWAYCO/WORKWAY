@@ -29,6 +29,10 @@
 		"./google-sheets": {
 			"types": "./dist/google-sheets/index.d.ts",
 			"import": "./dist/google-sheets/index.js"
+		},
+		"./airtable": {
+			"types": "./dist/airtable/index.d.ts",
+			"import": "./dist/airtable/index.js"
 		}
 	},
 	"scripts": {

@@ -68,6 +68,8 @@ export interface SlackMessage {
 	type: string;
 	ts: string;
 	user?: string;
+	bot_id?: string;
+	subtype?: string; // channel_join, channel_leave, bot_message, etc.
 	text: string;
 	thread_ts?: string;
 	reply_count?: number;
@@ -142,12 +144,24 @@ export interface GetMessagesOptions {
 	limit?: number;
 	/** Pagination cursor */
 	cursor?: string;
-	/** Only messages after this timestamp */
+	/**
+	 * Only messages after this time. Accepts:
+	 * - Duration string: "1h", "24h", "7d" (hours/days ago)
+	 * - Date object: new Date('2024-01-01')
+	 * - Unix seconds string: "1699900000" (raw Slack format)
+	 */
+	since?: string | Date;
+	/** Only messages after this timestamp (raw Slack format - prefer 'since') */
 	oldest?: string;
 	/** Only messages before this timestamp */
 	latest?: string;
 	/** Include all metadata about channels/messages (default: false) */
 	inclusive?: boolean;
+	/**
+	 * Filter to human messages only (excludes bots, system messages, joins/leaves)
+	 * Zuhandenheit: You think "get what people said" not "filter by bot_id and type"
+	 */
+	humanOnly?: boolean;
 }
 
 /**
@@ -278,10 +292,34 @@ export class Slack extends BaseAPIClient {
 	/**
 	 * Get messages from a channel
 	 *
+	 * @example
+	 * ```typescript
+	 * // Get last 24 hours of messages (Zuhandenheit - tool recedes)
+	 * const messages = await slack.getMessages({
+	 *   channel: 'C123456',
+	 *   since: '24h'
+	 * });
+	 *
+	 * // Get last 7 days
+	 * const weekMessages = await slack.getMessages({
+	 *   channel: 'C123456',
+	 *   since: '7d'
+	 * });
+	 *
+	 * // Get since specific date
+	 * const messages = await slack.getMessages({
+	 *   channel: 'C123456',
+	 *   since: new Date('2024-01-01')
+	 * });
+	 * ```
+	 *
 	 * @returns ActionResult with list of messages
 	 */
 	async getMessages(options: GetMessagesOptions): Promise<ActionResult<SlackMessage[]>> {
-		const { channel, limit = 20, cursor, oldest, latest, inclusive = false } = options;
+		const { channel, limit = 20, cursor, since, oldest, latest, inclusive = false, humanOnly = false } = options;
+
+		// Parse 'since' into Slack's oldest format (Zuhandenheit: hide the conversion)
+		const resolvedOldest = since ? this.parseSince(since) : oldest;
 
 		if (!channel) {
 			return ActionResult.error('Channel ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
@@ -298,7 +336,7 @@ export class Slack extends BaseAPIClient {
 			});
 
 			if (cursor) params.set('cursor', cursor);
-			if (oldest) params.set('oldest', oldest);
+			if (resolvedOldest) params.set('oldest', resolvedOldest);
 			if (latest) params.set('latest', latest);
 
 			const response = await this.get(`/conversations.history?${params}`);
@@ -316,8 +354,20 @@ export class Slack extends BaseAPIClient {
 				throw this.createSlackError(data.error || 'Unknown error', 'get-messages');
 			}
 
+			// Zuhandenheit: Filter to human messages if requested
+			// Developer thinks "get what people said" not "filter by bot_id, subtype, type"
+			let messages = data.messages || [];
+			if (humanOnly) {
+				messages = messages.filter((m) =>
+					!m.bot_id &&
+					m.type === 'message' &&
+					!m.subtype && // Excludes channel_join, channel_leave, etc.
+					m.text
+				);
+			}
+
 			return createActionResult({
-				data: data.messages || [],
+				data: messages,
 				integration: 'slack',
 				action: 'get-messages',
 				schema: 'slack.message-list.v1',
@@ -560,6 +610,53 @@ export class Slack extends BaseAPIClient {
 	// ==========================================================================
 	// HELPERS
 	// ==========================================================================
+
+	/**
+	 * Parse human-friendly 'since' value into Slack's timestamp format
+	 *
+	 * Zuhandenheit: The developer thinks "get last 24 hours" not
+	 * "convert milliseconds to seconds and format as string"
+	 *
+	 * @param since - Duration string ("1h", "24h", "7d"), Date, or raw timestamp
+	 * @returns Slack timestamp string (Unix seconds)
+	 */
+	private parseSince(since: string | Date): string {
+		// If it's a Date object, convert to Unix seconds
+		if (since instanceof Date) {
+			return Math.floor(since.getTime() / 1000).toString();
+		}
+
+		// If it looks like a raw timestamp (all digits), pass through
+		if (/^\d+(\.\d+)?$/.test(since)) {
+			return since;
+		}
+
+		// Parse duration strings: "1h", "24h", "7d", "30d"
+		const match = since.match(/^(\d+)(h|d)$/i);
+		if (match) {
+			const value = parseInt(match[1], 10);
+			const unit = match[2].toLowerCase();
+			const now = Date.now();
+
+			let ms: number;
+			if (unit === 'h') {
+				ms = value * 60 * 60 * 1000; // hours to ms
+			} else {
+				ms = value * 24 * 60 * 60 * 1000; // days to ms
+			}
+
+			return Math.floor((now - ms) / 1000).toString();
+		}
+
+		// Fallback: try parsing as ISO date string
+		const parsed = Date.parse(since);
+		if (!isNaN(parsed)) {
+			return Math.floor(parsed / 1000).toString();
+		}
+
+		// If nothing works, return as-is (let Slack API error if invalid)
+		return since;
+	}
 
 	/**
 	 * Get capabilities for Slack actions
