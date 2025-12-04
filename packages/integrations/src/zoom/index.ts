@@ -5,7 +5,26 @@
  * Supports both OAuth API transcripts and browser scraper fallback
  * for full speaker attribution.
  *
- * @example
+ * ## Transcript Retrieval (3-tier approach)
+ *
+ * 1. **OAuth API** - Fast, but may lack speaker names
+ * 2. **Recordings API** - Falls back to download URL
+ * 3. **Browser Scraper** - Full speaker attribution (requires setup)
+ *
+ * ## Browser Scraper Setup
+ *
+ * For speaker-attributed transcripts, deploy the WORKWAY Zoom Scraper:
+ *
+ * ```bash
+ * cd packages/workers/zoom-scraper
+ * wrangler kv:namespace create ZOOM_COOKIES
+ * wrangler secret put UPLOAD_SECRET
+ * wrangler deploy
+ * ```
+ *
+ * Then visit `/sync` to authenticate via bookmarklet.
+ *
+ * @example Basic usage (OAuth API only)
  * ```typescript
  * import { Zoom } from '@workwayco/integrations/zoom';
  *
@@ -14,11 +33,24 @@
  * // Get recent meetings
  * const meetings = await zoom.getMeetings({ days: 1 });
  *
- * // Get meeting with transcript
+ * // Get transcript (OAuth API)
  * const transcript = await zoom.getTranscript({ meetingId: '123456' });
+ * ```
  *
- * // Get clips
- * const clips = await zoom.getClips({ days: 7 });
+ * @example With browser scraper fallback (speaker attribution)
+ * ```typescript
+ * const zoom = new Zoom({
+ *   accessToken: tokens.zoom.access_token,
+ *   browserScraperUrl: 'https://zoom-scraper.your-domain.workers.dev'
+ * });
+ *
+ * // Get transcript with speaker names
+ * const transcript = await zoom.getTranscript({
+ *   meetingId: '123456',
+ *   fallbackToBrowser: true,
+ *   shareUrl: recording.share_url
+ * });
+ * // Returns: { speakers: ['Alice', 'Bob'], has_speaker_attribution: true }
  * ```
  */
 

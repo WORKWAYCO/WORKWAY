@@ -1,0 +1,19 @@
+name = "zoom-scraper"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Browser Rendering API
+browser = { binding = "BROWSER" }
+
+# KV for cookie storage
+[[kv_namespaces]]
+binding = "ZOOM_COOKIES"
+id = "ZOOM_COOKIES_PROD"
+preview_id = "ZOOM_COOKIES_DEV"
+
+# Environment variables (set via wrangler secret put)
+# UPLOAD_SECRET - Secret for cookie upload authorization
+
+[vars]
+# Public variables only - secrets set via CLI

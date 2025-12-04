@@ -528,7 +528,58 @@ ZOOM_CLIENT_ID=your-zoom-client-id
 ZOOM_CLIENT_SECRET=your-zoom-client-secret
 
 # Optional: Browser scraper for speaker attribution
-BROWSER_SCRAPER_URL=https://your-scraper.workers.dev
+BROWSER_SCRAPER_URL=https://zoom-scraper.workway.co
+```
+
+---
+
+## Browser Scraper Setup (Speaker Attribution)
+
+The Zoom OAuth API provides transcripts but often lacks speaker names. For full speaker attribution, deploy the WORKWAY Zoom Scraper worker:
+
+### Deploy the Worker
+
+```bash
+cd packages/workers/zoom-scraper
+
+# Create KV namespace for cookie storage
+wrangler kv:namespace create ZOOM_COOKIES
+# Note the ID output, update wrangler.toml
+
+# Set upload secret
+wrangler secret put UPLOAD_SECRET
+# Enter a random secret (save this for the bookmarklet)
+
+# Deploy
+wrangler deploy
+```
+
+### Authenticate via Bookmarklet
+
+1. Visit your deployed worker: `https://your-worker.workers.dev/sync`
+2. Drag the "Sync Cookies" button to your bookmarks bar
+3. Log into Zoom (us06web.zoom.us)
+4. Click the bookmark to sync your session cookies
+
+Cookies expire after 24 hours. Re-sync when prompted.
+
+### Configure Workflow
+
+Set the browser scraper URL in your workflow environment:
+
+```typescript
+const zoom = new Zoom({
+  accessToken: tokens.zoom.access_token,
+  browserScraperUrl: env.BROWSER_SCRAPER_URL
+});
+
+// Now getTranscript with fallbackToBrowser: true will include speakers
+const transcript = await zoom.getTranscript({
+  meetingId: '123456',
+  fallbackToBrowser: true,
+  shareUrl: recording.share_url
+});
+// transcript.speakers = ['Alice', 'Bob', 'Charlie']
 ```
 
 ---
