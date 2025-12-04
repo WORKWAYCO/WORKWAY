@@ -86,6 +86,7 @@ export default defineWorkflow({
 		browserScraperUrl: {
 			type: 'text',
 			label: 'Browser Scraper URL',
+			default: 'https://zoom-scraper.half-dozen.workers.dev',
 			description: 'Cloudflare Worker URL for transcript scraping (required for speaker attribution)',
 		},
 
