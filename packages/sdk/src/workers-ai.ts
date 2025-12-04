@@ -554,12 +554,548 @@ export class WorkersAI {
   }
 }
 
+// ============================================================================
+// ZUHANDENHEIT: Intent-based AI Configuration
+// ============================================================================
+
+/**
+ * Intent-to-model mapping
+ * Developer thinks "I need to synthesize" not "I need LLAMA_3_8B"
+ */
+const INTENT_MODEL_MAP: Record<string, Record<string, string>> = {
+  synthesis: {
+    quick: AIModels.LLAMA_2_7B,
+    standard: AIModels.LLAMA_3_8B,
+    detailed: AIModels.MISTRAL_7B,
+  },
+  analysis: {
+    quick: AIModels.LLAMA_2_7B,
+    standard: AIModels.LLAMA_3_8B,
+    detailed: AIModels.MISTRAL_7B,
+  },
+  generation: {
+    quick: AIModels.LLAMA_2_7B,
+    standard: AIModels.LLAMA_3_8B,
+    creative: AIModels.MISTRAL_7B,
+  },
+  code: {
+    quick: AIModels.DEEPSEEK_CODER,
+    standard: AIModels.CODE_LLAMA,
+    detailed: AIModels.DEEPSEEK_CODER,
+  },
+  extraction: {
+    quick: AIModels.LLAMA_2_7B,
+    standard: AIModels.LLAMA_3_8B,
+    detailed: AIModels.LLAMA_3_8B,
+  },
+};
+
+/**
+ * Structured output schema definition
+ */
+export interface StructuredSchema {
+  [key: string]: 'string' | 'number' | 'boolean' | 'string[]' | 'number[]' | StructuredSchema;
+}
+
+/**
+ * Extended WorkersAI with Zuhandenheit methods
+ */
+export class FluentAI extends WorkersAI {
+  private selectedModel: string = AIModels.LLAMA_3_8B;
+  private selectedTemperature: number = 0.5;
+
+  /**
+   * Intent-based model selection
+   *
+   * Zuhandenheit: Developer thinks "I need synthesis" not "I need LLAMA_3_8B"
+   *
+   * @example
+   * ```typescript
+   * // BEFORE: Must know model names
+   * const model = depth === 'quick' ? AIModels.LLAMA_2_7B : AIModels.LLAMA_3_8B;
+   *
+   * // AFTER: Intent-based
+   * const ai = createAIClient(env).for('synthesis', 'quick');
+   * ```
+   */
+  for(intent: 'synthesis' | 'analysis' | 'generation' | 'code' | 'extraction', depth: 'quick' | 'standard' | 'detailed' | 'creative' = 'standard'): this {
+    const mapping = INTENT_MODEL_MAP[intent];
+    if (mapping && mapping[depth]) {
+      this.selectedModel = mapping[depth];
+    }
+
+    // Adjust temperature based on intent
+    if (intent === 'generation' && depth === 'creative') {
+      this.selectedTemperature = 0.8;
+    } else if (intent === 'extraction' || intent === 'analysis') {
+      this.selectedTemperature = 0.3;
+    } else {
+      this.selectedTemperature = 0.5;
+    }
+
+    return this;
+  }
+
+  /**
+   * Extract structured data with guaranteed JSON output
+   *
+   * Zuhandenheit: Developer thinks "extract themes as array" not
+   * "parse JSON with regex fallback handling markdown code blocks"
+   *
+   * @example
+   * ```typescript
+   * // BEFORE: Manual JSON parsing with regex
+   * const jsonMatch = response.match(/\{[\s\S]*\}/);
+   * const data = JSON.parse(jsonMatch ? jsonMatch[0] : '{}');
+   *
+   * // AFTER: Guaranteed structured output
+   * const data = await ai.extractStructured(text, {
+   *   themes: 'string[]',
+   *   mood: 'string',
+   *   summary: 'string'
+   * });
+   * ```
+   */
+  async extractStructured<T extends Record<string, any>>(
+    text: string,
+    schema: StructuredSchema,
+    options: { context?: string } = {}
+  ): Promise<ActionResult<T>> {
+    const schemaDescription = this.describeSchema(schema);
+
+    const systemPrompt = `You are a data extraction expert. Extract structured information from text.
+${options.context ? `Context: ${options.context}` : ''}
+
+CRITICAL: You MUST respond with ONLY valid JSON. No markdown, no explanation, no code blocks.
+The JSON must match this exact structure:
+${schemaDescription}
+
+If a field cannot be determined, use null for optional fields or empty array [] for arrays.`;
+
+    const result = await this.generateText({
+      model: this.selectedModel,
+      system: systemPrompt,
+      prompt: `Extract from this text:\n\n${text}`,
+      temperature: 0.2, // Low temperature for consistent extraction
+      max_tokens: 1000,
+    });
+
+    if (!result.success) {
+      return result as ActionResult<T>;
+    }
+
+    // Parse the response with fallback handling
+    const parsed = this.parseStructuredResponse<T>(result.data?.response || result.data, schema);
+
+    return ActionResult.success(parsed, {
+      metadata: {
+        model: this.selectedModel,
+        extractionSchema: Object.keys(schema),
+      },
+    });
+  }
+
+  /**
+   * Synthesize content (messages, documents, etc.) into structured insights
+   *
+   * @example
+   * ```typescript
+   * const synthesis = await ai.synthesize(messages, {
+   *   type: 'standup',
+   *   output: { themes: 'string[]', blockers: 'string[]', mood: 'string' }
+   * });
+   * ```
+   */
+  async synthesize<T extends Record<string, any>>(
+    content: string | string[],
+    options: {
+      type: 'standup' | 'email' | 'support' | 'content' | 'meeting' | 'feedback' | 'general';
+      output: StructuredSchema;
+      context?: string;
+    }
+  ): Promise<ActionResult<T>> {
+    const contentText = Array.isArray(content) ? content.join('\n\n') : content;
+
+    const typePrompts: Record<string, string> = {
+      standup: 'You are synthesizing team standup discussions. Focus on themes, blockers, accomplishments, and action items.',
+      email: 'You are synthesizing email content. Focus on key points, required actions, and priority.',
+      support: 'You are synthesizing support tickets. Focus on issue category, sentiment, and resolution steps.',
+      content: 'You are synthesizing content for creation. Focus on main points, structure, and audience.',
+      meeting: 'You are synthesizing meeting transcripts. Focus on decisions made, action items with assignees, key discussion topics, and follow-ups needed.',
+      feedback: 'You are synthesizing customer feedback. Focus on sentiment, recurring themes, urgency, and actionable insights.',
+      general: 'You are synthesizing information. Extract the essential patterns and insights.',
+    };
+
+    return this.extractStructured<T>(contentText, options.output, {
+      context: `${typePrompts[options.type]}${options.context ? ` ${options.context}` : ''}`,
+    });
+  }
+
+  /**
+   * Generate a response with a specific tone/style
+   */
+  async respond(
+    context: string,
+    options: {
+      tone: 'professional' | 'friendly' | 'empathetic' | 'technical' | 'casual';
+      length?: 'brief' | 'standard' | 'detailed';
+      format?: 'text' | 'email' | 'message';
+    }
+  ): Promise<ActionResult<string>> {
+    const toneInstructions: Record<string, string> = {
+      professional: 'Use a professional, formal tone. Be clear and direct.',
+      friendly: 'Use a warm, friendly tone. Be personable but professional.',
+      empathetic: 'Use an empathetic tone. Acknowledge concerns and show understanding.',
+      technical: 'Use a technical tone. Be precise and detailed.',
+      casual: 'Use a casual, conversational tone.',
+    };
+
+    const lengthTokens: Record<string, number> = {
+      brief: 150,
+      standard: 300,
+      detailed: 500,
+    };
+
+    const result = await this.generateText({
+      model: this.selectedModel,
+      system: toneInstructions[options.tone],
+      prompt: context,
+      temperature: options.tone === 'empathetic' ? 0.7 : 0.5,
+      max_tokens: lengthTokens[options.length || 'standard'],
+    });
+
+    return ActionResult.success(result.data?.response || result.data, {
+      metadata: { tone: options.tone, length: options.length },
+    });
+  }
+
+  // Helper: Describe schema for prompt
+  private describeSchema(schema: StructuredSchema, indent: number = 0): string {
+    const spaces = '  '.repeat(indent);
+    let description = '{\n';
+
+    for (const [key, type] of Object.entries(schema)) {
+      if (typeof type === 'object') {
+        description += `${spaces}  "${key}": ${this.describeSchema(type, indent + 1)},\n`;
+      } else {
+        const typeExample = this.getTypeExample(type);
+        description += `${spaces}  "${key}": ${typeExample},\n`;
+      }
+    }
+
+    description += `${spaces}}`;
+    return description;
+  }
+
+  // Helper: Get example for type
+  private getTypeExample(type: string): string {
+    switch (type) {
+      case 'string': return '"..."';
+      case 'number': return '0';
+      case 'boolean': return 'true|false';
+      case 'string[]': return '["...", "..."]';
+      case 'number[]': return '[0, 0]';
+      default: return '"..."';
+    }
+  }
+
+  // Helper: Parse structured response with fallback
+  private parseStructuredResponse<T>(response: string, schema: StructuredSchema): T {
+    // Try direct parse first
+    try {
+      return JSON.parse(response);
+    } catch {
+      // Try extracting JSON from markdown code block
+      const codeBlockMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        try {
+          return JSON.parse(codeBlockMatch[1].trim());
+        } catch {}
+      }
+
+      // Try extracting any JSON object
+      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        try {
+          return JSON.parse(jsonMatch[0]);
+        } catch {}
+      }
+
+      // Return empty object matching schema
+      return this.createEmptyFromSchema(schema) as T;
+    }
+  }
+
+  // Helper: Create empty object from schema
+  private createEmptyFromSchema(schema: StructuredSchema): Record<string, any> {
+    const result: Record<string, any> = {};
+    for (const [key, type] of Object.entries(schema)) {
+      if (typeof type === 'object') {
+        result[key] = this.createEmptyFromSchema(type);
+      } else if (type.endsWith('[]')) {
+        result[key] = [];
+      } else if (type === 'number') {
+        result[key] = 0;
+      } else if (type === 'boolean') {
+        result[key] = false;
+      } else {
+        result[key] = '';
+      }
+    }
+    return result;
+  }
+
+  // ============================================================================
+  // ZUHANDENHEIT: Content Pipeline Methods
+  // Tools recede - developer thinks intent, not implementation
+  // ============================================================================
+
+  /**
+   * Generate content with type and audience awareness
+   *
+   * Zuhandenheit: Developer thinks "generate blog post for technical audience"
+   * not "build prompt string with 20-line template"
+   *
+   * @example
+   * ```typescript
+   * // BEFORE: Manual prompt engineering
+   * const prompt = contentType === 'blog-post'
+   *   ? `Write a comprehensive 800-word blog post about "${topic}"...`
+   *   : contentType === 'social-media'
+   *   ? `Create social media content...`
+   *   : ...
+   *
+   * // AFTER: Intent-based
+   * const content = await ai.generateContent(topic, { type: 'blog-post', audience: 'technical' });
+   * ```
+   */
+  async generateContent(
+    topic: string,
+    options: {
+      type: 'blog-post' | 'social-media' | 'newsletter' | 'technical-article' | 'landing-page';
+      audience: 'general' | 'technical' | 'business' | 'academic';
+      wordCount?: number;
+      includeCallToAction?: boolean;
+    }
+  ): Promise<ActionResult<{ content: string; wordCount: number; readingTime: string }>> {
+    const contentTemplates: Record<string, string> = {
+      'blog-post': `Write a comprehensive ${options.wordCount || 800}-word blog post about "${topic}".
+Include: engaging introduction, 3-4 main sections with subheadings, practical examples, ${options.includeCallToAction !== false ? 'and conclusion with call-to-action' : 'and conclusion'}.
+Format with markdown.`,
+      'social-media': `Create social media content about "${topic}":
+1. Twitter thread (5-7 tweets, each under 280 chars)
+2. LinkedIn post (200 words, professional)
+3. Instagram caption (150 words, engaging)
+Include relevant hashtags.`,
+      'newsletter': `Write a newsletter about "${topic}":
+1. Attention-grabbing subject line
+2. ${options.wordCount || 500}-word main content
+3. 3 key takeaways as bullet points
+4. Next steps or links section
+Format for email delivery.`,
+      'technical-article': `Write a technical article about "${topic}":
+1. Abstract/overview
+2. Background and context
+3. Technical deep-dive with code examples if relevant
+4. Best practices
+5. Conclusion and further reading
+Target word count: ${options.wordCount || 1200} words.`,
+      'landing-page': `Create landing page copy for "${topic}":
+1. Hero headline and subheadline
+2. 3 key benefits with brief descriptions
+3. Social proof placeholder
+4. Feature list (5-7 items)
+5. Call-to-action copy`,
+    };
+
+    const audienceContext: Record<string, string> = {
+      general: 'Use clear, accessible language. Avoid jargon.',
+      technical: 'Include technical details. Assume familiarity with industry concepts.',
+      business: 'Focus on ROI, efficiency, and business impact. Use professional tone.',
+      academic: 'Use formal, research-oriented language. Include citations format.',
+    };
+
+    const result = await this.generateText({
+      model: this.selectedModel,
+      system: `You are an expert content writer. ${audienceContext[options.audience]}`,
+      prompt: contentTemplates[options.type],
+      temperature: 0.7,
+      max_tokens: Math.min((options.wordCount || 800) * 2, 4000),
+    });
+
+    const content = result.data?.response || result.data || '';
+    const words = content.split(/\s+/).length;
+
+    return ActionResult.success({
+      content,
+      wordCount: words,
+      readingTime: `${Math.ceil(words / 200)} min`,
+    }, {
+      metadata: { type: options.type, audience: options.audience },
+    });
+  }
+
+  /**
+   * Extract SEO metadata from content
+   *
+   * Zuhandenheit: Developer thinks "get SEO" not "parse JSON with try-catch fallback"
+   */
+  async seoOptimize(content: string): Promise<ActionResult<{
+    title: string;
+    description: string;
+    keywords: string[];
+    socialPreview: string;
+  }>> {
+    const schema = {
+      title: 'string',
+      description: 'string',
+      keywords: 'string[]',
+      socialPreview: 'string',
+    } as const;
+
+    return this.extractStructured(content.slice(0, 1500), schema, {
+      context: 'Extract SEO metadata: title (60 chars max), meta description (160 chars max), 5-10 keywords, and social media preview text.',
+    });
+  }
+
+  /**
+   * Generate image with style awareness
+   *
+   * Zuhandenheit: Developer thinks "photorealistic image of topic"
+   * not "Professional photograph: ${topic}, high quality, detailed, 8k"
+   */
+  async generateStyledImage(
+    subject: string,
+    options: {
+      style: 'photorealistic' | 'illustration' | 'abstract' | 'technical-diagram' | 'minimalist';
+      size?: 'hero' | 'thumbnail' | 'social' | 'square';
+    }
+  ): Promise<ActionResult<{ data: any; prompt: string }>> {
+    const stylePrompts: Record<string, string> = {
+      photorealistic: `Professional photograph: ${subject}, high quality, detailed, 8k, sharp focus`,
+      illustration: `Digital illustration: ${subject}, modern style, vibrant colors, clean lines`,
+      abstract: `Abstract art representing: ${subject}, creative, colorful, dynamic composition`,
+      'technical-diagram': `Technical diagram: ${subject}, clean, professional, informative, labeled`,
+      minimalist: `Minimalist design: ${subject}, simple shapes, limited color palette, elegant`,
+    };
+
+    const sizeDimensions: Record<string, { width: number; height: number }> = {
+      hero: { width: 1024, height: 768 },
+      thumbnail: { width: 512, height: 512 },
+      social: { width: 1200, height: 630 },
+      square: { width: 1024, height: 1024 },
+    };
+
+    const dims = sizeDimensions[options.size || 'hero'];
+    const prompt = stylePrompts[options.style];
+
+    const result = await this.generateImage({
+      prompt,
+      negative_prompt: 'text, watermark, low quality, blurry, distorted',
+      width: dims.width,
+      height: dims.height,
+      steps: options.size === 'thumbnail' ? 15 : 25,
+    });
+
+    return ActionResult.success({
+      data: result.data,
+      prompt,
+    }, {
+      metadata: { style: options.style, size: options.size },
+    });
+  }
+
+  /**
+   * Batch translate content to multiple languages
+   *
+   * Zuhandenheit: Developer thinks "translate to these languages"
+   * not "loop through languages, skip source, handle errors"
+   */
+  async translateBatch(
+    content: string,
+    options: {
+      source: string;
+      targets: string[];
+      includeSEO?: { title: string; description: string };
+    }
+  ): Promise<ActionResult<Record<string, { content: string; seo?: { title: string; description: string } }>>> {
+    const translations: Record<string, { content: string; seo?: { title: string; description: string } }> = {};
+
+    // Include source language
+    translations[options.source] = {
+      content,
+      seo: options.includeSEO,
+    };
+
+    // Translate to each target
+    for (const target of options.targets) {
+      if (target === options.source) continue;
+
+      const contentResult = await this.translateText({
+        text: content,
+        source: options.source,
+        target,
+      });
+
+      translations[target] = {
+        content: contentResult.data?.text || '',
+      };
+
+      // Translate SEO if provided
+      if (options.includeSEO) {
+        const seoResult = await this.translateText({
+          text: `${options.includeSEO.title}\n---\n${options.includeSEO.description}`,
+          source: options.source,
+          target,
+        });
+        const [title, description] = (seoResult.data?.text || '').split('\n---\n');
+        translations[target].seo = { title: title || '', description: description || '' };
+      }
+    }
+
+    return ActionResult.success(translations, {
+      metadata: { languages: [options.source, ...options.targets] },
+    });
+  }
+
+  /**
+   * Create social media variants from content
+   *
+   * Zuhandenheit: Developer thinks "create social posts"
+   * not "chain 3 prompts with different models and temperatures"
+   */
+  async createSocialVariants(
+    content: string,
+    topic: string
+  ): Promise<ActionResult<{
+    twitter: string[];
+    linkedin: string;
+    instagram: string;
+  }>> {
+    const contentPreview = content.slice(0, 800);
+
+    // Generate all variants in one call for efficiency
+    const schema = {
+      twitter: 'string[]',
+      linkedin: 'string',
+      instagram: 'string',
+    } as const;
+
+    return this.extractStructured(contentPreview, schema, {
+      context: `Create social media content about "${topic}":
+- twitter: Array of 5-7 tweets (each under 280 chars, include hashtags)
+- linkedin: Professional 200-word post for LinkedIn
+- instagram: Engaging 150-word caption with emojis and hashtags`,
+    });
+  }
+}
+
 /**
  * Helper function to create a Workers AI client
  */
-export function createAIClient(env: { AI: any }): WorkersAI {
+export function createAIClient(env: { AI: any }): FluentAI {
   if (!env.AI) {
     throw new Error('Workers AI binding not found. Add [ai] binding to wrangler.toml');
   }
-  return new WorkersAI(env.AI);
+  return new FluentAI(env.AI);
 }

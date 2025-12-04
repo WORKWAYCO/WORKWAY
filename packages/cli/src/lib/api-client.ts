@@ -171,6 +171,37 @@ export class WorkwayAPIClient {
 	}
 
 	/**
+	 * Check for similar workflows before publishing
+	 */
+	async checkSimilarity(data: {
+		name: string;
+		description: string;
+		code: string;
+		integrations?: string[];
+		triggers?: string[];
+		excludeId?: string;
+	}): Promise<{
+		isDuplicate: boolean;
+		action: 'allow' | 'suggest_fork' | 'review' | 'block';
+		overallSimilarity: number;
+		similarWorkflows: Array<{
+			id: string;
+			name: string;
+			developerName: string;
+			developerId: string;
+			codeSimilarity: number;
+			semanticSimilarity: number;
+			overallSimilarity: number;
+			allowForks: boolean;
+			installCount: number;
+		}>;
+		message: string;
+	}> {
+		const response = await this.client.post<any>('/integrations/check-similarity', data);
+		return response.data;
+	}
+
+	/**
 	 * Update a workflow
 	 */
 	async updateWorkflow(workflowId: string, updates: any): Promise<WorkflowListing> {

@@ -189,6 +189,106 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 		// Read workflow file
 		const workflowContent = await fs.readFile(workflowPath, 'utf-8');
 
+		// =====================================================================
+		// DUPLICATE DETECTION CHECK
+		// =====================================================================
+		Logger.blank();
+		const similaritySpinner = Logger.spinner('Checking for similar workflows...');
+
+		try {
+			const similarityResult = await apiClient.checkSimilarity({
+				name: answers.name,
+				description: answers.description,
+				code: workflowContent,
+			});
+
+			if (similarityResult.action === 'block') {
+				similaritySpinner.fail('Similar workflow detected');
+				Logger.blank();
+				Logger.error(similarityResult.message);
+				Logger.blank();
+
+				if (similarityResult.similarWorkflows.length > 0) {
+					const similar = similarityResult.similarWorkflows[0];
+					Logger.info('Most similar workflow:');
+					Logger.log(`  ${similar.developerName}/${similar.name}`);
+					Logger.log(`  ${similar.installCount.toLocaleString()} installs`);
+					Logger.log(`  Similarity: ${Math.round(similar.overallSimilarity * 100)}%`);
+					Logger.blank();
+
+					if (similar.allowForks) {
+						Logger.info('Consider forking instead:');
+						Logger.code(`workway workflow fork ${similar.developerName}/${similar.name}`);
+						Logger.blank();
+						Logger.log('Forking gives attribution to the original creator and');
+						Logger.log('shares revenue (68% you / 12% original / 20% platform).');
+					}
+				}
+				process.exit(1);
+			}
+
+			if (similarityResult.action === 'suggest_fork') {
+				similaritySpinner.warn('Similar workflows found');
+				Logger.blank();
+				Logger.warn(similarityResult.message);
+				Logger.blank();
+
+				// Show similar workflows
+				for (const similar of similarityResult.similarWorkflows.slice(0, 3)) {
+					Logger.log(`  ${similar.developerName}/${similar.name} (${Math.round(similar.overallSimilarity * 100)}% similar)`);
+				}
+				Logger.blank();
+
+				const forkAnswer = await inquirer.prompt([
+					{
+						type: 'list',
+						name: 'action',
+						message: 'How would you like to proceed?',
+						choices: [
+							{
+								name: `🔀 Fork "${similarityResult.similarWorkflows[0].name}" (recommended)`,
+								value: 'fork',
+							},
+							{
+								name: '📝 Continue publishing as original (I have a unique approach)',
+								value: 'continue',
+							},
+							{
+								name: '✕ Cancel',
+								value: 'cancel',
+							},
+						],
+					},
+				]);
+
+				if (forkAnswer.action === 'fork') {
+					const similar = similarityResult.similarWorkflows[0];
+					Logger.blank();
+					Logger.info('To fork this workflow, run:');
+					Logger.code(`workway workflow fork ${similar.developerName}/${similar.name}`);
+					process.exit(0);
+				}
+
+				if (forkAnswer.action === 'cancel') {
+					Logger.warn('Publish cancelled');
+					process.exit(0);
+				}
+
+				// Continue with publish - user acknowledged similarity
+				Logger.blank();
+				Logger.info('Continuing with original publish...');
+			} else if (similarityResult.action === 'review') {
+				similaritySpinner.info('Some similar workflows exist');
+				Logger.log(`  ${similarityResult.message}`);
+			} else {
+				similaritySpinner.succeed('No similar workflows found');
+			}
+		} catch (error: any) {
+			// If similarity check fails, log warning but allow publish to continue
+			similaritySpinner.warn('Could not check for similar workflows');
+			Logger.log('  Continuing with publish...');
+		}
+
 		// Build pricing details
 		const pricingDetails = {
 			upfront_price: upfrontPrice,

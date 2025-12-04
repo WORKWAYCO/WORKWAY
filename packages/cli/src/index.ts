@@ -16,6 +16,8 @@ import { workflowDevCommand } from './commands/workflow/dev.js';
 import { workflowBuildCommand } from './commands/workflow/build.js';
 import { workflowPublishCommand } from './commands/workflow/publish.js';
 import { workflowValidateCommand } from './commands/workflow/validate.js';
+import { workflowForkCommand } from './commands/workflow/fork.js';
+import { workflowLineageCommand } from './commands/workflow/lineage.js';
 import { oauthConnectCommand } from './commands/oauth/connect.js';
 import { oauthListCommand } from './commands/oauth/list.js';
 import { oauthDisconnectCommand } from './commands/oauth/disconnect.js';
@@ -28,6 +30,10 @@ import { developerStripeCommand } from './commands/developer/stripe.js';
 import { aiModelsCommand } from './commands/ai/models.js';
 import { aiTestCommand } from './commands/ai/test.js';
 import { aiEstimateCommand } from './commands/ai/estimate.js';
+import { createCommand } from './commands/agentic/create.js';
+import { explainCommand } from './commands/agentic/explain.js';
+import { modifyCommand } from './commands/agentic/modify.js';
+import { marketplaceSearchCommand, marketplaceBrowseCommand, marketplaceInfoCommand } from './commands/marketplace/index.js';
 import { Logger } from './utils/logger.js';
 import { handleCommand, handleCommandError } from './utils/command-handler.js';
 
@@ -123,6 +129,57 @@ workflowCommand
 			process.exit(1);
 		}
 	});
+
+workflowCommand
+	.command('fork [workflow]')
+	.description('Fork a workflow from the marketplace')
+	.action(handleCommand(workflowForkCommand));
+
+workflowCommand
+	.command('lineage [workflow]')
+	.description('View fork lineage and ancestry')
+	.action(handleCommand(workflowLineageCommand));
+
+// ============================================================================
+// MARKETPLACE COMMANDS
+// ============================================================================
+
+const marketplaceCommand = program.command('marketplace').description('Discover and explore workflows');
+
+marketplaceCommand
+	.command('search [query]')
+	.description('Search workflows in the marketplace')
+	.option('--category <category>', 'Filter by category')
+	.option('--developer <developer>', 'Filter by developer')
+	.option('--sort <sort>', 'Sort by: relevance, popular, recent, rating')
+	.option('--limit <n>', 'Limit results', parseInt)
+	.action(handleCommand(async (query: string, options: any) => {
+		await marketplaceSearchCommand(query, {
+			category: options.category,
+			developer: options.developer,
+			sortBy: options.sort,
+			limit: options.limit,
+		});
+	}));
+
+marketplaceCommand
+	.command('browse')
+	.description('Browse workflows by category')
+	.option('--category <category>', 'Browse specific category')
+	.option('--featured', 'Show featured workflows')
+	.option('--limit <n>', 'Limit results', parseInt)
+	.action(handleCommand(async (options: any) => {
+		await marketplaceBrowseCommand({
+			category: options.category,
+			featured: options.featured,
+			limit: options.limit,
+		});
+	}));
+
+marketplaceCommand
+	.command('info [workflow]')
+	.description('View detailed workflow information')
+	.action(handleCommand(marketplaceInfoCommand));
 
 // ============================================================================
 // AI COMMANDS - Cloudflare Workers AI
@@ -237,6 +294,32 @@ developerCommand
 				process.exit(1);
 			}
 			await developerStripeCommand({ action: action as 'setup' | 'status' | 'refresh' });
+		} catch (error: any) {
+			Logger.error(error.message);
+			process.exit(1);
+		}
+	});
+
+// ============================================================================
+// AGENTIC COMMANDS - AI-Assisted Workflow Creation
+// ============================================================================
+
+program
+	.command('create [prompt]')
+	.description('Create a workflow from natural language description')
+	.action(handleCommand(createCommand));
+
+program
+	.command('explain [file]')
+	.description('Explain what a workflow does in plain English')
+	.action(handleCommand(explainCommand));
+
+program
+	.command('modify [file] [request]')
+	.description('Modify a workflow using natural language')
+	.action(async (file: string, request: string) => {
+		try {
+			await modifyCommand(file, request);
 		} catch (error: any) {
 			Logger.error(error.message);
 			process.exit(1);
