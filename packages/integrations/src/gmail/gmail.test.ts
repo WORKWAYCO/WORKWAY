@@ -16,7 +16,7 @@ import { Gmail } from './index.js';
 
 describe('Gmail Constructor', () => {
 	it('should require access token', () => {
-		expect(() => new Gmail({ accessToken: '' })).toThrow('Gmail access token is required');
+		expect(() => new Gmail({ accessToken: '' })).toThrow('gmail access token is required');
 	});
 
 	it('should accept valid access token', () => {

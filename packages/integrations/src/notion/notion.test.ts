@@ -17,7 +17,7 @@ import { Notion } from './index.js';
 
 describe('Notion Constructor', () => {
 	it('should require access token', () => {
-		expect(() => new Notion({ accessToken: '' })).toThrow('Notion access token is required');
+		expect(() => new Notion({ accessToken: '' })).toThrow('notion access token is required');
 	});
 
 	it('should accept valid access token', () => {

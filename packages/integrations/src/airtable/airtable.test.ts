@@ -18,7 +18,7 @@ import { Airtable } from './index.js';
 
 describe('Airtable Constructor', () => {
 	it('should require access token', () => {
-		expect(() => new Airtable({ accessToken: '', baseId: 'appXXX' })).toThrow('Airtable access token is required');
+		expect(() => new Airtable({ accessToken: '', baseId: 'appXXX' })).toThrow('airtable access token is required');
 	});
 
 	it('should require base ID', () => {
