@@ -18,7 +18,83 @@ import type {
 	DiscoveryMoment,
 	WorkflowSuggestion,
 	OutcomeFrame,
+	BreakdownEvent,
+	ToolVisibilityState,
 } from './workflow-sdk';
+
+import {
+	BreakdownSeverity,
+	createBreakdown,
+	classifyBreakdown,
+} from './workflow-sdk';
+
+// ============================================================================
+// TEMPORAL ECSTASES (Heideggerian Time Structures)
+// ============================================================================
+
+/**
+ * Temporal Ecstases - Heidegger's three modes of existential time
+ *
+ * Not clock time, but lived time. Discovery should match the user's
+ * temporal situation.
+ *
+ * See: docs/HEIDEGGER_DESIGN.md
+ */
+export interface TemporalContext {
+	/**
+	 * Having-been (Gewesenheit) - What has happened
+	 *
+	 * Recent events that shape the current situation.
+	 * "A meeting just ended" triggers post-meeting workflows.
+	 */
+	havingBeen: {
+		recentEvents: Array<{
+			type: string; // e.g., 'zoom.meeting.ended'
+			service: string;
+			timestamp: number;
+			data?: Record<string, unknown>;
+		}>;
+		/** How far back to consider (milliseconds) */
+		horizon: number;
+	};
+
+	/**
+	 * Making-present (Gegenwärtigen) - Current situation
+	 *
+	 * What integrations are connected, what time is it, what's the context.
+	 */
+	makingPresent: {
+		connectedIntegrations: string[];
+		currentTime: Date;
+		timezone: string;
+		/** Day of week (0 = Sunday) */
+		dayOfWeek: number;
+		/** Hour of day (0-23) */
+		hourOfDay: number;
+		/** Is it a workday? */
+		isWorkday: boolean;
+	};
+
+	/**
+	 * Coming-toward (Zukunft) - Anticipated future
+	 *
+	 * What's scheduled, what deadlines are approaching.
+	 * "You have a meeting in 10 minutes" triggers pre-meeting workflows.
+	 */
+	comingToward: {
+		scheduledEvents?: Array<{
+			type: string;
+			timestamp: number;
+			data?: Record<string, unknown>;
+		}>;
+		upcomingDeadlines?: Array<{
+			description: string;
+			dueAt: number;
+		}>;
+		/** How far ahead to consider (milliseconds) */
+		horizon: number;
+	};
+}
 
 // ============================================================================
 // DISCOVERY CONTEXT
@@ -53,6 +129,16 @@ export interface DiscoveryContext {
 
 	/** User preferences (for smart defaults) */
 	preferences?: Record<string, unknown>;
+
+	/**
+	 * Full temporal context (optional, for advanced discovery)
+	 *
+	 * When provided, enables temporal-aware suggestions:
+	 * - "Monday morning" → Weekly digest
+	 * - "Just after meeting" → Meeting notes
+	 * - "Deadline approaching" → Reminder workflows
+	 */
+	temporal?: TemporalContext;
 }
 
 // ============================================================================
@@ -64,11 +150,19 @@ export interface DiscoveryContext {
  *
  * Not a list. Not options. One path to the outcome.
  * Users don't choose between workflows - they accept or defer.
+ *
+ * Heideggerian principles:
+ * - Zuhandenheit: Tool recedes during normal use
+ * - Vorhandenheit: Tool becomes visible on breakdown
+ * - Temporal Ecstases: Discovery matches user's lived time
  */
 export class DiscoveryService {
 	private workflows: Map<string, WorkflowDefinition> = new Map();
 	private integrationPairIndex: Map<string, string[]> = new Map();
 	private eventTypeIndex: Map<string, string[]> = new Map();
+
+	/** Track visibility state per workflow (Zuhandenheit ↔ Vorhandenheit) */
+	private visibilityStates: Map<string, ToolVisibilityState> = new Map();
 
 	/**
 	 * Register workflows for discovery
@@ -502,6 +596,309 @@ export class DiscoveryService {
 			index.set(key, existing);
 		}
 	}
+
+	// ========================================================================
+	// VORHANDENHEIT: BREAKDOWN HANDLING
+	// ========================================================================
+
+	/**
+	 * Report a breakdown for a workflow
+	 *
+	 * When a workflow fails, it transitions from Zuhandenheit (invisible)
+	 * to Vorhandenheit (visible). This method tracks that transition.
+	 *
+	 * @param workflowId - The workflow that broke down
+	 * @param error - The error that caused the breakdown
+	 * @param context - Additional context about the breakdown
+	 */
+	reportBreakdown(
+		workflowId: string,
+		error: Error,
+		_context?: { attemptedRecovery?: boolean; userNotified?: boolean }
+	): BreakdownEvent {
+		const severity = classifyBreakdown(error);
+		const breakdown = createBreakdown(
+			this.classifyBreakdownType(error),
+			workflowId,
+			this.getBreakdownMessage(error, severity),
+			{
+				severity,
+				originalError: error,
+				recovery: {
+					automatic: severity === BreakdownSeverity.SILENT,
+					steps: this.getRecoverySteps(error),
+					estimatedTime: this.estimateRecoveryTime(severity),
+				},
+			}
+		);
+
+		// Update visibility state
+		const state = this.getOrCreateVisibilityState(workflowId);
+		state.zuhandenheit = false;
+		state.breakdown = breakdown;
+		state.breakdownHistory.push({
+			event: breakdown,
+			resolvedAt: undefined,
+			resolutionMethod: undefined,
+		});
+
+		// Recalculate disappearance score
+		state.disappearanceScore = this.calculateDisappearanceScore(state);
+
+		return breakdown;
+	}
+
+	/**
+	 * Report that a breakdown has been resolved
+	 *
+	 * The tool returns to Zuhandenheit (invisibility).
+	 */
+	resolveBreakdown(
+		workflowId: string,
+		resolutionMethod: 'automatic' | 'manual' = 'manual'
+	): void {
+		const state = this.visibilityStates.get(workflowId);
+		if (!state) return;
+
+		// Mark the current breakdown as resolved
+		if (state.breakdownHistory.length > 0) {
+			const lastBreakdown = state.breakdownHistory[state.breakdownHistory.length - 1];
+			lastBreakdown.resolvedAt = Date.now();
+			lastBreakdown.resolutionMethod = resolutionMethod;
+		}
+
+		// Return to Zuhandenheit
+		state.zuhandenheit = true;
+		state.breakdown = undefined;
+		state.timeSinceLastBreakdown = 0;
+
+		// Recalculate disappearance score
+		state.disappearanceScore = this.calculateDisappearanceScore(state);
+	}
+
+	/**
+	 * Get the visibility state for a workflow
+	 *
+	 * Returns whether the tool is currently in Zuhandenheit (invisible)
+	 * or Vorhandenheit (visible due to breakdown).
+	 */
+	getVisibilityState(workflowId: string): ToolVisibilityState | undefined {
+		return this.visibilityStates.get(workflowId);
+	}
+
+	/**
+	 * Check if a workflow is currently in Zuhandenheit (working invisibly)
+	 */
+	isZuhandenheit(workflowId: string): boolean {
+		const state = this.visibilityStates.get(workflowId);
+		return state?.zuhandenheit ?? true; // Default to invisible
+	}
+
+	/**
+	 * Get workflows currently in breakdown state
+	 */
+	getBreakdowns(): Array<{ workflowId: string; breakdown: BreakdownEvent }> {
+		const breakdowns: Array<{ workflowId: string; breakdown: BreakdownEvent }> = [];
+
+		for (const [workflowId, state] of this.visibilityStates) {
+			if (!state.zuhandenheit && state.breakdown) {
+				breakdowns.push({ workflowId, breakdown: state.breakdown });
+			}
+		}
+
+		return breakdowns;
+	}
+
+	/**
+	 * Get breakdowns that require user action
+	 */
+	getBlockingBreakdowns(): Array<{ workflowId: string; breakdown: BreakdownEvent }> {
+		return this.getBreakdowns().filter(
+			({ breakdown }) => breakdown.severity === BreakdownSeverity.BLOCKING
+		);
+	}
+
+	// ========================================================================
+	// TEMPORAL-AWARE DISCOVERY
+	// ========================================================================
+
+	/**
+	 * Get suggestion with full temporal awareness
+	 *
+	 * Considers all three temporal ecstases:
+	 * - Having-been: Recent events that shape the situation
+	 * - Making-present: Current context (time, integrations)
+	 * - Coming-toward: Anticipated future (scheduled events)
+	 */
+	async getSuggestionWithTemporalContext(
+		context: DiscoveryContext & { temporal: TemporalContext }
+	): Promise<WorkflowSuggestion | null> {
+		// Check having-been first (most immediate - something just happened)
+		if (context.temporal.havingBeen.recentEvents.length > 0) {
+			const recentEvent = context.temporal.havingBeen.recentEvents[0];
+			const contextWithEvent: DiscoveryContext = {
+				...context,
+				recentEvent,
+			};
+
+			const suggestion = await this.getSuggestionForTrigger('event_received', contextWithEvent);
+			if (suggestion) return suggestion;
+		}
+
+		// Check coming-toward (anticipatory care - something is about to happen)
+		if (context.temporal.comingToward.scheduledEvents?.length) {
+			const nextEvent = context.temporal.comingToward.scheduledEvents[0];
+			const timeUntil = nextEvent.timestamp - Date.now();
+
+			// If event is within 30 minutes, suggest preparation workflows
+			if (timeUntil > 0 && timeUntil < 30 * 60 * 1000) {
+				// Could add pre-event workflow suggestions here
+				// For now, fall through to making-present
+			}
+		}
+
+		// Fall back to making-present (general context)
+		// Check for time-based suggestions (e.g., Monday morning → Team Digest)
+		const { hourOfDay, dayOfWeek, isWorkday } = context.temporal.makingPresent;
+
+		if (isWorkday && hourOfDay >= 8 && hourOfDay <= 10 && dayOfWeek === 1) {
+			// Monday morning - suggest weekly digest
+			const suggestion = await this.getSuggestionForTrigger('time_based', context);
+			if (suggestion) return suggestion;
+		}
+
+		// Default to regular suggestion
+		return this.getSuggestion(context);
+	}
+
+	// ========================================================================
+	// PRIVATE HELPER METHODS (BREAKDOWN)
+	// ========================================================================
+
+	private getOrCreateVisibilityState(workflowId: string): ToolVisibilityState {
+		let state = this.visibilityStates.get(workflowId);
+		if (!state) {
+			state = {
+				zuhandenheit: true,
+				breakdownHistory: [],
+				disappearanceScore: 100, // Start with perfect invisibility
+			};
+			this.visibilityStates.set(workflowId, state);
+		}
+		return state;
+	}
+
+	private classifyBreakdownType(error: Error): BreakdownEvent['type'] {
+		const message = error.message.toLowerCase();
+
+		if (message.includes('configuration') || message.includes('config') || message.includes('missing')) {
+			return 'configuration_required';
+		}
+		if (message.includes('unauthorized') || message.includes('token') || message.includes('oauth')) {
+			return 'integration_disconnected';
+		}
+		if (message.includes('rate limit') || message.includes('throttle') || message.includes('429')) {
+			return 'rate_limited';
+		}
+		if (message.includes('unavailable') || message.includes('down') || message.includes('503')) {
+			return 'dependency_unavailable';
+		}
+
+		return 'execution_failed';
+	}
+
+	private getBreakdownMessage(error: Error, severity: BreakdownSeverity): string {
+		// Messages focus on outcomes, not technical details
+		const message = error.message.toLowerCase();
+
+		if (message.includes('unauthorized') || message.includes('token')) {
+			return 'Reconnection needed to continue';
+		}
+		if (message.includes('rate limit')) {
+			return 'Temporarily paused (will resume shortly)';
+		}
+		if (message.includes('configuration')) {
+			return 'Quick setup needed';
+		}
+		if (severity === BreakdownSeverity.SILENT) {
+			return 'Retrying automatically';
+		}
+
+		return 'Something went wrong';
+	}
+
+	private getRecoverySteps(error: Error): string[] {
+		const message = error.message.toLowerCase();
+
+		if (message.includes('unauthorized') || message.includes('token')) {
+			return ['Reconnect your integration', 'We\'ll resume automatically'];
+		}
+		if (message.includes('configuration')) {
+			return ['Review workflow settings', 'Update missing fields'];
+		}
+
+		return ['Check workflow status', 'Contact support if issue persists'];
+	}
+
+	private estimateRecoveryTime(severity: BreakdownSeverity): number {
+		switch (severity) {
+			case BreakdownSeverity.SILENT:
+				return 1; // 1 minute - auto-retry
+			case BreakdownSeverity.AMBIENT:
+				return 5; // 5 minutes - rate limit cooldown
+			case BreakdownSeverity.NOTIFICATION:
+				return 15; // 15 minutes - user needs to reconnect
+			case BreakdownSeverity.BLOCKING:
+				return 30; // 30 minutes - configuration needed
+		}
+	}
+
+	private calculateDisappearanceScore(state: ToolVisibilityState): number {
+		// Higher score = more invisible (better Zuhandenheit)
+		// Score decreases with breakdowns, increases with time since last breakdown
+
+		let score = 100;
+
+		// Penalty for recent breakdowns
+		const recentBreakdowns = state.breakdownHistory.filter(
+			(b) => Date.now() - b.event.timestamp < 7 * 24 * 60 * 60 * 1000 // Last 7 days
+		);
+
+		for (const breakdown of recentBreakdowns) {
+			switch (breakdown.event.severity) {
+				case BreakdownSeverity.SILENT:
+					score -= 2; // Minor penalty for silent issues
+					break;
+				case BreakdownSeverity.AMBIENT:
+					score -= 5;
+					break;
+				case BreakdownSeverity.NOTIFICATION:
+					score -= 15;
+					break;
+				case BreakdownSeverity.BLOCKING:
+					score -= 25;
+					break;
+			}
+
+			// Bonus for auto-resolved issues
+			if (breakdown.resolutionMethod === 'automatic') {
+				score += 5;
+			}
+		}
+
+		// Bonus for long periods without breakdown
+		if (state.timeSinceLastBreakdown) {
+			const daysSinceBreakdown = state.timeSinceLastBreakdown / (24 * 60 * 60 * 1000);
+			score += Math.min(daysSinceBreakdown * 2, 20); // Up to +20 for 10+ days
+		}
+
+		// Current breakdown penalty
+		if (!state.zuhandenheit) {
+			score -= 30;
+		}
+
+		return Math.max(0, Math.min(100, score));
+	}
 }
 
 // ============================================================================
@@ -516,7 +913,49 @@ export function createDiscoveryService(): DiscoveryService {
 }
 
 // ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Create a temporal context from the current moment
+ *
+ * Helper to construct a TemporalContext for discovery.
+ */
+export function createTemporalContext(
+	connectedIntegrations: string[],
+	timezone: string = 'UTC',
+	recentEvents: TemporalContext['havingBeen']['recentEvents'] = [],
+	scheduledEvents: TemporalContext['comingToward']['scheduledEvents'] = []
+): TemporalContext {
+	const now = new Date();
+	const dayOfWeek = now.getDay();
+	const hourOfDay = now.getHours();
+	const isWorkday = dayOfWeek >= 1 && dayOfWeek <= 5;
+
+	return {
+		havingBeen: {
+			recentEvents,
+			horizon: 60 * 60 * 1000, // 1 hour default
+		},
+		makingPresent: {
+			connectedIntegrations,
+			currentTime: now,
+			timezone,
+			dayOfWeek,
+			hourOfDay,
+			isWorkday,
+		},
+		comingToward: {
+			scheduledEvents,
+			horizon: 24 * 60 * 60 * 1000, // 24 hours default
+		},
+	};
+}
+
+// ============================================================================
 // EXPORTS
 // ============================================================================
 
-// DiscoveryContext is already exported via the interface declaration above
+// Types exported via declarations above:
+// - TemporalContext
+// - DiscoveryContext
