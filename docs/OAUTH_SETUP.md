@@ -329,6 +329,96 @@ Uses the same Google OAuth as Gmail. You can request both scopes in a single OAu
    });
    ```
 
+### Typeform
+
+1. **Create a Typeform App**: https://admin.typeform.com/account#/section/tokens (Developer Apps)
+
+2. **Configure OAuth**:
+   - Redirect URL: `http://localhost:3456/callback` (for CLI)
+   - Redirect URL: `https://api.workway.co/oauth/typeform/callback` (for production)
+
+3. **Required Scopes**:
+   ```
+   accounts:read
+   forms:read
+   responses:read
+   webhooks:read
+   webhooks:write
+   workspaces:read
+   offline
+   ```
+   Note: `offline` scope is required to receive refresh tokens.
+
+4. **Environment Variables**:
+   ```toml
+   [vars]
+   TYPEFORM_CLIENT_ID = "your-client-id"
+
+   # In secrets (wrangler secret put TYPEFORM_CLIENT_SECRET)
+   TYPEFORM_CLIENT_SECRET = "your-client-secret"
+   ```
+
+5. **OAuth URLs**:
+   - Authorize: `https://api.typeform.com/oauth/authorize`
+   - Token: `https://api.typeform.com/oauth/token`
+
+6. **Usage in Workflows**:
+   ```typescript
+   import { Typeform } from '@workwayco/integrations/typeform';
+
+   const typeform = new Typeform({ accessToken: tokens.typeform.access_token });
+
+   // List forms
+   const forms = await typeform.listForms();
+
+   // Get responses
+   const responses = await typeform.getResponses({
+     formId: 'abc123',
+     since: '2024-01-01T00:00:00Z',
+   });
+
+   // Extract answers as key-value object
+   if (responses.success) {
+     for (const item of responses.data.items) {
+       const data = Typeform.extractAnswers(item);
+       console.log(data.email, data.name, data._score);
+     }
+   }
+
+   // Create webhook for real-time responses
+   await typeform.createWebhook({
+     formId: 'abc123',
+     tag: 'workway-integration',
+     url: 'https://api.workway.co/webhooks/typeform',
+     secret: 'your-webhook-secret',
+   });
+   ```
+
+7. **Webhook Verification**:
+   ```typescript
+   // In webhook handler
+   const event = await typeform.verifyWebhook(
+     rawBody,
+     request.headers.get('Typeform-Signature'),
+     env.TYPEFORM_WEBHOOK_SECRET
+   );
+
+   if (event.success) {
+     const submission = Typeform.extractAnswers(event.data.form_response);
+     // → Route to Notion, Slack, HubSpot, etc.
+   }
+   ```
+
+8. **EU Data Center**: If your Typeform account uses the EU data center, configure:
+   ```typescript
+   const typeform = new Typeform({
+     accessToken: tokens.typeform.access_token,
+     apiUrl: 'https://api.eu.typeform.com',
+   });
+   ```
+
+---
+
 ### Stripe (API Key Authentication)
 
 Stripe uses API keys instead of OAuth. This is simpler but requires secure key management.
@@ -444,6 +534,13 @@ const OAUTH_PROVIDERS = {
     tokenUrl: 'https://zoom.us/oauth/token',
     scopes: ['meeting:read', 'recording:read', 'clip:read'],
   },
+  typeform: {
+    clientId: env.TYPEFORM_CLIENT_ID,
+    clientSecret: env.TYPEFORM_CLIENT_SECRET,
+    authorizeUrl: 'https://api.typeform.com/oauth/authorize',
+    tokenUrl: 'https://api.typeform.com/oauth/token',
+    scopes: ['accounts:read', 'forms:read', 'responses:read', 'webhooks:read', 'webhooks:write', 'workspaces:read', 'offline'],
+  },
 };
 ```
 
@@ -466,6 +563,9 @@ workway oauth connect hubspot
 
 # Connect Zoom
 workway oauth connect zoom
+
+# Connect Typeform
+workway oauth connect typeform
 
 # List connected integrations
 workway oauth list

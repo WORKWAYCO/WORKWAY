@@ -548,9 +548,9 @@ Forks must meet the same quality standards:
 - ≥85% success rate
 - Pass automated validation
 - Meet code quality thresholds
-- Subject to same pruning rules
+- Subject to same quality support triggers
 
-Low-effort forks get unlisted just like any other workflow.
+Low-effort forks move to "Needs Work" status just like any other workflow—with support to improve.
 
 **5. Network Effects Favor Originals**
 

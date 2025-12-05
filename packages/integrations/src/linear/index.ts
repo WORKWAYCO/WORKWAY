@@ -358,7 +358,7 @@ export class Linear {
 				throw new Error(`Linear API error: ${response.status} ${response.statusText}`);
 			}
 
-			return response.json();
+			return response.json() as Promise<{ data?: T; errors?: Array<{ message: string }> }>;
 		} finally {
 			clearTimeout(timeoutId);
 		}
@@ -388,7 +388,7 @@ export class Linear {
 			const data = extractData ? extractData(result.data) : result.data;
 			return createActionResult({ success: true, data });
 		} catch (error) {
-			return createErrorHandler('Linear')(error as Error);
+			return createErrorHandler('Linear')(error as Error, 'execute');
 		}
 	}
 
