@@ -16,6 +16,54 @@ export default defineWorkflow({
 	description: 'AI-generated summaries with action items',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'after_meetings',
+
+		outcomeStatement: {
+			suggestion: 'Want AI summaries of your meeting notes?',
+			explanation: 'When you update meeting notes in Notion, we\'ll generate summaries and extract action items.',
+			outcome: 'Meeting notes summarized with AI',
+		},
+
+		primaryPair: {
+			from: 'notion',
+			to: 'slack',
+			workflowId: 'meeting-summarizer',
+			outcome: 'Meeting notes that summarize themselves',
+		},
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['notion', 'slack'],
+				workflowId: 'meeting-summarizer',
+				priority: 70, // Lower than meeting-intelligence (which is more complete)
+			},
+			{
+				trigger: 'event_received',
+				eventType: 'notion.page.updated',
+				integrations: ['notion', 'slack'],
+				workflowId: 'meeting-summarizer',
+				priority: 70,
+			},
+		],
+
+		smartDefaults: {
+			autoAssignTasks: { value: true },
+			summaryLength: { value: 'standard' },
+		},
+
+		essentialFields: ['meetingNotesDatabase'],
+
+		zuhandenheit: {
+			timeToValue: 2,
+			worksOutOfBox: true,
+			gracefulDegradation: true,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'paid',
 		pricePerMonth: 12,

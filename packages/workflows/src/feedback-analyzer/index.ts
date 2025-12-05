@@ -16,6 +16,59 @@ export default defineWorkflow({
 	description: 'AI analyzes customer feedback and extracts insights',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'when_tickets_arrive',
+
+		outcomeStatement: {
+			suggestion: 'Analyze customer feedback automatically?',
+			explanation: 'When feedback emails arrive, AI will analyze sentiment, extract insights, and log them to Notion.',
+			outcome: 'Customer feedback analyzed with AI',
+		},
+
+		primaryPair: {
+			from: 'gmail',
+			to: 'notion',
+			workflowId: 'feedback-analyzer',
+			outcome: 'Feedback that analyzes itself',
+		},
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['gmail', 'notion'],
+				workflowId: 'feedback-analyzer',
+				priority: 50, // Lower priority - specific use case
+			},
+			{
+				trigger: 'pattern_detected',
+				integrations: ['gmail'],
+				workflowId: 'feedback-analyzer',
+				priority: 70,
+				pattern: {
+					action: 'manual_email_categorization',
+					threshold: 10,
+					period: 'week',
+				},
+			},
+		],
+
+		smartDefaults: {
+			emailQuery: { value: 'subject:(feedback OR review OR suggestion) is:unread' },
+			pollInterval: { value: '15min' },
+			sentimentThreshold: { value: 0.7 },
+		},
+
+		essentialFields: ['feedbackDatabase'],
+
+		zuhandenheit: {
+			timeToValue: 15, // Minutes until first analysis
+			worksOutOfBox: true,
+			gracefulDegradation: true,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'paid',
 		pricePerMonth: 15,

@@ -15,6 +15,58 @@ export default defineWorkflow({
 	description: 'Create and send invoices from project completion',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'when_payments_arrive',
+
+		outcomeStatement: {
+			suggestion: 'Generate invoices automatically?',
+			explanation: 'When projects are marked complete in Notion, we\'ll create and send invoices through Stripe.',
+			outcome: 'Invoices that generate themselves',
+		},
+
+		primaryPair: {
+			from: 'notion',
+			to: 'stripe',
+			workflowId: 'invoice-generator',
+			outcome: 'Projects that invoice themselves',
+		},
+
+		additionalPairs: [
+			{ from: 'notion', to: 'gmail', workflowId: 'invoice-generator', outcome: 'Invoice emails sent automatically' },
+		],
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['notion', 'stripe'],
+				workflowId: 'invoice-generator',
+				priority: 75,
+			},
+			{
+				trigger: 'event_received',
+				eventType: 'notion.page.property_updated',
+				integrations: ['notion', 'stripe'],
+				workflowId: 'invoice-generator',
+				priority: 80,
+			},
+		],
+
+		smartDefaults: {
+			triggerStatus: { value: 'Completed' },
+			defaultDueDays: { value: 30 },
+		},
+
+		essentialFields: ['projectsDatabase', 'companyName'],
+
+		zuhandenheit: {
+			timeToValue: 5,
+			worksOutOfBox: true,
+			gracefulDegradation: false,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'paid',
 		pricePerMonth: 15,

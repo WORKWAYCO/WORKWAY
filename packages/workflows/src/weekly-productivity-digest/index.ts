@@ -22,6 +22,58 @@ export default defineWorkflow({
 		'Get AI-powered weekly summaries of your completed tasks, productivity patterns, and actionable insights delivered to Slack and Notion',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'weekly_automatically',
+
+		outcomeStatement: {
+			suggestion: 'Want weekly productivity insights?',
+			explanation: 'Every week, we\'ll summarize your completed tasks, identify patterns, and suggest improvements.',
+			outcome: 'Weekly productivity digest',
+		},
+
+		primaryPair: {
+			from: 'todoist',
+			to: 'slack',
+			workflowId: 'weekly-productivity-digest',
+			outcome: 'Productivity insights that compile themselves',
+		},
+
+		additionalPairs: [
+			{ from: 'todoist', to: 'notion', workflowId: 'weekly-productivity-digest', outcome: 'Productivity archives in Notion' },
+		],
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['todoist', 'slack'],
+				workflowId: 'weekly-productivity-digest',
+				priority: 50,
+			},
+			{
+				trigger: 'time_based',
+				integrations: ['todoist'],
+				workflowId: 'weekly-productivity-digest',
+				priority: 40,
+			},
+		],
+
+		smartDefaults: {
+			scheduleDay: { value: 'monday' },
+			scheduleHour: { value: 9 },
+			enableAIInsights: { value: true },
+		},
+
+		essentialFields: ['slackChannel'],
+
+		zuhandenheit: {
+			timeToValue: 10080, // One week until first digest
+			worksOutOfBox: true,
+			gracefulDegradation: true,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'freemium',
 		pricePerMonth: 9,

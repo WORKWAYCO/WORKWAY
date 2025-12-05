@@ -15,6 +15,57 @@ export default defineWorkflow({
 	description: 'Collect and share daily standups in Slack',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'every_morning',
+
+		outcomeStatement: {
+			suggestion: 'Automate daily standups?',
+			explanation: 'Every morning, we\'ll prompt your team for updates and share a summary in Slack.',
+			outcome: 'Daily standups in Slack',
+		},
+
+		primaryPair: {
+			from: 'slack',
+			to: 'slack',
+			workflowId: 'standup-bot',
+			outcome: 'Standups that run themselves',
+		},
+
+		additionalPairs: [
+			{ from: 'slack', to: 'notion', workflowId: 'standup-bot', outcome: 'Standup history in Notion' },
+		],
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['slack'],
+				workflowId: 'standup-bot',
+				priority: 40, // Lower priority - team specific
+			},
+		],
+
+		smartDefaults: {
+			standupTime: { value: '09:00' },
+			summaryTime: { value: '10:00' },
+			timezone: { inferFrom: 'user_timezone' },
+			promptQuestions: { value: [
+				'What did you accomplish yesterday?',
+				'What are you working on today?',
+				'Any blockers?',
+			]},
+		},
+
+		essentialFields: ['standupChannel'],
+
+		zuhandenheit: {
+			timeToValue: 1440, // 24 hours until first standup
+			worksOutOfBox: true,
+			gracefulDegradation: true,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'free',
 		description: 'Free for all teams',

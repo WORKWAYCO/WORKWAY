@@ -37,7 +37,8 @@
     "open": "^9.1.0",
     "fs-extra": "^11.2.0",
     "zod": "^3.22.4",
-    "chokidar": "^3.5.3"
+    "chokidar": "^3.5.3",
+    "@workwayco/workflows": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.10.5",

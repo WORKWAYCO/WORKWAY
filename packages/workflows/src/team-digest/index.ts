@@ -15,6 +15,58 @@ export default defineWorkflow({
 	description: 'Daily digest of team activity across all tools',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'every_morning',
+
+		outcomeStatement: {
+			suggestion: 'Want a daily team activity digest?',
+			explanation: 'Every morning, we\'ll summarize your team\'s Slack, email, and Notion activity.',
+			outcome: 'Daily team digest in Slack',
+		},
+
+		primaryPair: {
+			from: 'slack',
+			to: 'slack',
+			workflowId: 'team-digest',
+			outcome: 'Team updates that compile themselves',
+		},
+
+		additionalPairs: [
+			{ from: 'notion', to: 'slack', workflowId: 'team-digest', outcome: 'Notion updates in Slack' },
+		],
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['slack', 'notion'],
+				workflowId: 'team-digest',
+				priority: 50, // Lower priority - scheduled, not event-driven
+			},
+			{
+				trigger: 'time_based',
+				integrations: ['slack'],
+				workflowId: 'team-digest',
+				priority: 40,
+			},
+		],
+
+		smartDefaults: {
+			digestTime: { value: '09:00' },
+			timezone: { inferFrom: 'user_timezone' },
+			includeEmailSummary: { value: true },
+		},
+
+		essentialFields: ['digestChannel'],
+
+		zuhandenheit: {
+			timeToValue: 1440, // 24 hours until first digest
+			worksOutOfBox: true,
+			gracefulDegradation: true,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'freemium',
 		pricePerMonth: 12,

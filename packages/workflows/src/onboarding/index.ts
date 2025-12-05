@@ -15,6 +15,63 @@ export default defineWorkflow({
 	description: 'Automate new team member onboarding process',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'when_clients_onboard', // Team members use same frame as clients
+
+		outcomeStatement: {
+			suggestion: 'Automate team member onboarding?',
+			explanation: 'When you add someone to your team database, we\'ll create tasks, send welcome emails, and notify the team.',
+			outcome: 'New hires onboarded automatically',
+		},
+
+		primaryPair: {
+			from: 'notion',
+			to: 'slack',
+			workflowId: 'onboarding',
+			outcome: 'Team members that onboard themselves',
+		},
+
+		additionalPairs: [
+			{ from: 'notion', to: 'gmail', workflowId: 'onboarding', outcome: 'Welcome emails sent automatically' },
+		],
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['notion', 'slack', 'gmail'],
+				workflowId: 'onboarding',
+				priority: 60,
+			},
+			{
+				trigger: 'event_received',
+				eventType: 'notion.page.created',
+				integrations: ['notion', 'slack'],
+				workflowId: 'onboarding',
+				priority: 70,
+			},
+		],
+
+		smartDefaults: {
+			defaultOnboardingTasks: { value: [
+				'Complete I-9 form',
+				'Set up workstation',
+				'Read company handbook',
+				'Meet with team lead',
+				'Complete first project',
+			]},
+		},
+
+		essentialFields: ['teamDatabase', 'announcementChannel'],
+
+		zuhandenheit: {
+			timeToValue: 5,
+			worksOutOfBox: true,
+			gracefulDegradation: true,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'paid',
 		pricePerMonth: 19,

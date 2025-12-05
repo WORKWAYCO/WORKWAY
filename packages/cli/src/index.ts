@@ -33,7 +33,7 @@ import { aiEstimateCommand } from './commands/ai/estimate.js';
 import { createCommand } from './commands/agentic/create.js';
 import { explainCommand } from './commands/agentic/explain.js';
 import { modifyCommand } from './commands/agentic/modify.js';
-import { marketplaceSearchCommand, marketplaceBrowseCommand, marketplaceInfoCommand } from './commands/marketplace/index.js';
+import { marketplaceNeedsCommand, marketplaceSearchCommand, marketplaceBrowseCommand, marketplaceInfoCommand } from './commands/marketplace/index.js';
 import { Logger } from './utils/logger.js';
 import { handleCommand, handleCommandError } from './utils/command-handler.js';
 
@@ -146,9 +146,27 @@ workflowCommand
 
 const marketplaceCommand = program.command('marketplace').description('Discover and explore workflows');
 
+// Primary discovery command (Pathway Model)
+marketplaceCommand
+	.command('needs')
+	.description('Discover workflows based on your needs (recommended)')
+	.option('--from <integration>', 'Source integration (e.g., zoom, stripe)')
+	.option('--to <integration>', 'Target integration (e.g., notion, slack)')
+	.option('--after <outcome>', 'Outcome frame (e.g., meetings, calls)')
+	.option('--show-outcomes', 'Show available outcome frames')
+	.action(handleCommand(async (options: any) => {
+		await marketplaceNeedsCommand({
+			from: options.from,
+			to: options.to,
+			after: options.after,
+			showOutcomes: options.showOutcomes,
+		});
+	}));
+
+// Legacy commands (consider using 'needs' instead)
 marketplaceCommand
 	.command('search [query]')
-	.description('Search workflows in the marketplace')
+	.description('Search workflows in the marketplace (legacy)')
 	.option('--category <category>', 'Filter by category')
 	.option('--developer <developer>', 'Filter by developer')
 	.option('--sort <sort>', 'Sort by: relevance, popular, recent, rating')
@@ -164,7 +182,7 @@ marketplaceCommand
 
 marketplaceCommand
 	.command('browse')
-	.description('Browse workflows by category')
+	.description('Browse workflows by category (legacy - use "needs" instead)')
 	.option('--category <category>', 'Browse specific category')
 	.option('--featured', 'Show featured workflows')
 	.option('--limit <n>', 'Limit results', parseInt)
@@ -180,6 +198,27 @@ marketplaceCommand
 	.command('info [workflow]')
 	.description('View detailed workflow information')
 	.action(handleCommand(marketplaceInfoCommand));
+
+// ============================================================================
+// TOP-LEVEL DISCOVERY (Pathway Model Shortcut)
+// ============================================================================
+
+// Allow `workway needs` as shortcut for `workway marketplace needs`
+program
+	.command('needs')
+	.description('Discover workflows based on your needs')
+	.option('--from <integration>', 'Source integration (e.g., zoom, stripe)')
+	.option('--to <integration>', 'Target integration (e.g., notion, slack)')
+	.option('--after <outcome>', 'Outcome frame (e.g., meetings, calls)')
+	.option('--show-outcomes', 'Show available outcome frames')
+	.action(handleCommand(async (options: any) => {
+		await marketplaceNeedsCommand({
+			from: options.from,
+			to: options.to,
+			after: options.after,
+			showOutcomes: options.showOutcomes,
+		});
+	}));
 
 // ============================================================================
 // AI COMMANDS - Cloudflare Workers AI

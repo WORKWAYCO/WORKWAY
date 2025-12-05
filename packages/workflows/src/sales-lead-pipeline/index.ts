@@ -24,6 +24,67 @@ export default defineWorkflow({
 		'Automatically route form leads to your CRM, notify sales on Slack, create follow-up tasks, and draft outreach emails',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'when_leads_come_in',
+
+		outcomeStatement: {
+			suggestion: 'Want leads to flow into your CRM automatically?',
+			explanation: 'When forms are submitted, we\'ll create contacts, notify your team, and start follow-up tasks.',
+			outcome: 'Leads flowing into your pipeline',
+		},
+
+		primaryPair: {
+			from: 'typeform',
+			to: 'hubspot',
+			workflowId: 'sales-lead-pipeline',
+			outcome: 'Leads that route themselves',
+		},
+
+		additionalPairs: [
+			{ from: 'typeform', to: 'slack', workflowId: 'sales-lead-pipeline', outcome: 'Lead alerts in Slack' },
+			{ from: 'typeform', to: 'notion', workflowId: 'sales-lead-pipeline', outcome: 'Leads tracked in Notion' },
+		],
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['typeform', 'hubspot'],
+				workflowId: 'sales-lead-pipeline',
+				priority: 100,
+			},
+			{
+				trigger: 'integration_connected',
+				integrations: ['typeform', 'slack'],
+				workflowId: 'sales-lead-pipeline',
+				priority: 80,
+			},
+			{
+				trigger: 'event_received',
+				eventType: 'typeform.form_response',
+				integrations: ['typeform'],
+				workflowId: 'sales-lead-pipeline',
+				priority: 100,
+			},
+		],
+
+		smartDefaults: {
+			enableCRM: { value: true },
+			enableEmailDraft: { value: false },
+			enableAIScoring: { value: true },
+			followUpDays: { value: 1 },
+		},
+
+		essentialFields: ['typeformId', 'slackChannel'],
+
+		zuhandenheit: {
+			timeToValue: 5,
+			worksOutOfBox: true,
+			gracefulDegradation: true,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'freemium',
 		pricePerMonth: 19,

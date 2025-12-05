@@ -15,6 +15,48 @@ export default defineWorkflow({
 	description: 'Send automated payment reminders to clients',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'when_payments_arrive',
+
+		outcomeStatement: {
+			suggestion: 'Send payment reminders automatically?',
+			explanation: 'We\'ll check for overdue invoices daily and send reminder emails to clients at the right intervals.',
+			outcome: 'Payment reminders that send themselves',
+		},
+
+		primaryPair: {
+			from: 'stripe',
+			to: 'gmail',
+			workflowId: 'payment-reminders',
+			outcome: 'Invoices that chase themselves',
+		},
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['stripe', 'gmail'],
+				workflowId: 'payment-reminders',
+				priority: 70, // Lower than stripe-to-notion for tracking
+			},
+		],
+
+		smartDefaults: {
+			reminderDays: { value: [1, 7, 14, 30] },
+			checkTime: { value: '09:00' },
+			timezone: { inferFrom: 'user_timezone' },
+		},
+
+		essentialFields: ['companyName', 'companyEmail'],
+
+		zuhandenheit: {
+			timeToValue: 1440, // 24 hours until first check
+			worksOutOfBox: true,
+			gracefulDegradation: false,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'paid',
 		pricePerMonth: 12,

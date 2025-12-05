@@ -23,6 +23,60 @@ export default defineWorkflow({
 		'Automatically create prep tasks before meetings, log meetings in Notion, and draft follow-up emails when meetings are scheduled or completed',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'after_calls',
+
+		outcomeStatement: {
+			suggestion: 'Want meetings that follow up on themselves?',
+			explanation: 'When meetings are scheduled or complete, we\'ll create tasks, log them, and draft follow-ups.',
+			outcome: 'Meetings with automatic follow-up',
+		},
+
+		primaryPair: {
+			from: 'calendly',
+			to: 'todoist',
+			workflowId: 'meeting-followup-engine',
+			outcome: 'Meetings that create their own tasks',
+		},
+
+		additionalPairs: [
+			{ from: 'calendly', to: 'notion', workflowId: 'meeting-followup-engine', outcome: 'Meetings logged automatically' },
+			{ from: 'calendly', to: 'gmail', workflowId: 'meeting-followup-engine', outcome: 'Follow-up emails drafted' },
+		],
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['calendly', 'todoist'],
+				workflowId: 'meeting-followup-engine',
+				priority: 90,
+			},
+			{
+				trigger: 'event_received',
+				eventType: 'calendly.invitee.created',
+				integrations: ['calendly'],
+				workflowId: 'meeting-followup-engine',
+				priority: 100,
+			},
+		],
+
+		smartDefaults: {
+			triggerOn: { value: 'both' },
+			createPrepTasks: { value: true },
+			createFollowUpTasks: { value: true },
+		},
+
+		essentialFields: ['todoistProjectId'],
+
+		zuhandenheit: {
+			timeToValue: 5,
+			worksOutOfBox: true,
+			gracefulDegradation: true,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'freemium',
 		pricePerMonth: 15,

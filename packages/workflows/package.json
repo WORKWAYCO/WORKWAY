@@ -4,68 +4,67 @@
 	"description": "Official WORKWAY marketplace workflow templates",
 	"type": "module",
 	"main": "./dist/index.js",
-	"module": "./dist/index.mjs",
 	"types": "./dist/index.d.ts",
 	"exports": {
 		".": {
 			"types": "./dist/index.d.ts",
-			"import": "./dist/index.mjs",
-			"require": "./dist/index.js"
+			"import": "./dist/index.js",
+			"default": "./dist/index.js"
 		},
 		"./stripe-to-notion": {
 			"types": "./dist/stripe-to-notion/index.d.ts",
-			"import": "./dist/stripe-to-notion/index.mjs",
-			"require": "./dist/stripe-to-notion/index.js"
+			"import": "./dist/stripe-to-notion/index.js",
+			"default": "./dist/stripe-to-notion/index.js"
 		},
 		"./support-ticket-router": {
 			"types": "./dist/support-ticket-router/index.d.ts",
-			"import": "./dist/support-ticket-router/index.mjs",
-			"require": "./dist/support-ticket-router/index.js"
+			"import": "./dist/support-ticket-router/index.js",
+			"default": "./dist/support-ticket-router/index.js"
 		},
 		"./team-digest": {
 			"types": "./dist/team-digest/index.d.ts",
-			"import": "./dist/team-digest/index.mjs",
-			"require": "./dist/team-digest/index.js"
+			"import": "./dist/team-digest/index.js",
+			"default": "./dist/team-digest/index.js"
 		},
 		"./ai-newsletter": {
 			"types": "./dist/ai-newsletter/index.d.ts",
-			"import": "./dist/ai-newsletter/index.mjs",
-			"require": "./dist/ai-newsletter/index.js"
+			"import": "./dist/ai-newsletter/index.js",
+			"default": "./dist/ai-newsletter/index.js"
 		},
 		"./meeting-summarizer": {
 			"types": "./dist/meeting-summarizer/index.d.ts",
-			"import": "./dist/meeting-summarizer/index.mjs",
-			"require": "./dist/meeting-summarizer/index.js"
+			"import": "./dist/meeting-summarizer/index.js",
+			"default": "./dist/meeting-summarizer/index.js"
 		},
 		"./feedback-analyzer": {
 			"types": "./dist/feedback-analyzer/index.d.ts",
-			"import": "./dist/feedback-analyzer/index.mjs",
-			"require": "./dist/feedback-analyzer/index.js"
+			"import": "./dist/feedback-analyzer/index.js",
+			"default": "./dist/feedback-analyzer/index.js"
 		},
 		"./invoice-generator": {
 			"types": "./dist/invoice-generator/index.d.ts",
-			"import": "./dist/invoice-generator/index.mjs",
-			"require": "./dist/invoice-generator/index.js"
+			"import": "./dist/invoice-generator/index.js",
+			"default": "./dist/invoice-generator/index.js"
 		},
 		"./payment-reminders": {
 			"types": "./dist/payment-reminders/index.d.ts",
-			"import": "./dist/payment-reminders/index.mjs",
-			"require": "./dist/payment-reminders/index.js"
+			"import": "./dist/payment-reminders/index.js",
+			"default": "./dist/payment-reminders/index.js"
 		},
 		"./onboarding": {
 			"types": "./dist/onboarding/index.d.ts",
-			"import": "./dist/onboarding/index.mjs",
-			"require": "./dist/onboarding/index.js"
+			"import": "./dist/onboarding/index.js",
+			"default": "./dist/onboarding/index.js"
 		},
 		"./standup-bot": {
 			"types": "./dist/standup-bot/index.d.ts",
-			"import": "./dist/standup-bot/index.mjs",
-			"require": "./dist/standup-bot/index.js"
+			"import": "./dist/standup-bot/index.js",
+			"default": "./dist/standup-bot/index.js"
 		},
 		"./meeting-intelligence": {
 			"types": "./dist/meeting-intelligence/index.d.ts",
-			"import": "./dist/meeting-intelligence/index.mjs",
-			"require": "./dist/meeting-intelligence/index.js"
+			"import": "./dist/meeting-intelligence/index.js",
+			"default": "./dist/meeting-intelligence/index.js"
 		}
 	},
 	"files": [

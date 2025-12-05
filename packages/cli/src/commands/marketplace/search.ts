@@ -1,14 +1,22 @@
 /**
  * Marketplace Search Command
  *
- * Search workflows in the WORKWAY marketplace from the terminal.
- * Zuhandenheit: The tool recedes, discovery emerges.
+ * @deprecated Consider using `workway needs` for outcome-based discovery.
+ *
+ * Search implies users know what they're looking for.
+ * The pathway model (`workway needs`) surfaces workflows based on
+ * user context and connected integrations - matching how users
+ * actually think about automation.
+ *
+ * See: docs/MARKETPLACE_CURATION.md (The Pathway Model)
  *
  * @example
  * ```bash
+ * # New way (recommended):
+ * workway needs --from zoom --to notion
+ *
+ * # Old way (search):
  * workway marketplace search "email automation"
- * workway marketplace search --category=productivity
- * workway marketplace search --developer=alexchen
  * ```
  */
 

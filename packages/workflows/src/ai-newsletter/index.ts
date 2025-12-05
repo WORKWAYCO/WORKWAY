@@ -16,6 +16,50 @@ export default defineWorkflow({
 	description: 'Generate personalized newsletters based on your interests',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'every_morning',
+
+		outcomeStatement: {
+			suggestion: 'Want AI-curated news every morning?',
+			explanation: 'Every day, we\'ll curate and summarize content on your topics and send it to your inbox.',
+			outcome: 'Personalized newsletter in your inbox',
+		},
+
+		primaryPair: {
+			from: 'ai',
+			to: 'gmail',
+			workflowId: 'ai-newsletter',
+			outcome: 'Newsletters that write themselves',
+		},
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['gmail'],
+				workflowId: 'ai-newsletter',
+				priority: 30, // Lower priority - niche use case
+			},
+		],
+
+		smartDefaults: {
+			topics: { value: ['technology', 'business', 'productivity'] },
+			newsletterName: { value: 'Your Daily Digest' },
+			sendTime: { value: '07:00' },
+			timezone: { inferFrom: 'user_timezone' },
+			tone: { value: 'professional' },
+		},
+
+		essentialFields: ['recipientEmail'],
+
+		zuhandenheit: {
+			timeToValue: 1440, // 24 hours until first newsletter
+			worksOutOfBox: true,
+			gracefulDegradation: false,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'paid',
 		pricePerMonth: 15,

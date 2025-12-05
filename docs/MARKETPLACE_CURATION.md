@@ -1,432 +1,443 @@
-# Marketplace Curation: Taste as a Moat
+# Marketplace Curation: The Pathway Model
 
 ## The Core Insight
 
-The WORKWAY marketplace moat isn't just technology—it's **taste**. The best workflows naturally rise; mediocre ones fade. But "taste" is subjective. How do we operationalize it?
+The WORKWAY "marketplace" isn't a marketplace at all. It's a **pathway**.
 
-**Heideggerian lens**: A workflow with "taste" achieves Zuhandenheit—it recedes from consciousness. The user thinks about their goal, not the tool. Bad workflows force users to think about the workflow itself (Vorhandenheit).
+Traditional marketplaces present abundance: browse, compare, evaluate, choose. This forces users into *Vorhandenheit*—theoretical contemplation of tools as objects. The tool becomes visible; the outcome recedes.
+
+WORKWAY inverts this. We pre-curate. We surface ONE path. The user never "shops"—they accept a recommendation and achieve an outcome.
+
+**Heideggerian lens**: A marketplace with "taste" achieves Zuhandenheit by **disappearing**. The user doesn't think "I should check the marketplace." The right automation appears at the right moment. The tool recedes; the outcome remains.
 
 ---
 
-## Quality Signals: Operationalizing Taste
+## The Phenomenological Problem with Traditional Marketplaces
 
-### 1. Reliability Metrics (Objective)
+### Abundance Creates Burden
 
-| Metric | Description | Weight |
-|--------|-------------|--------|
-| **Success Rate** | % of executions that complete successfully | High |
-| **Error Recovery** | Does it handle errors gracefully? | Medium |
-| **Response Time** | P50/P95 execution duration | Medium |
-| **Uptime** | % of time the workflow is operational | High |
+When users encounter:
+- 15 workflows across 9 categories
+- Featured vs. non-featured distinctions
+- Ratings, reviews, developer reputation
+- Pricing tiers to compare
 
-**Pruning threshold**: Workflows with <85% success rate for 30 days are flagged.
+...they must become **evaluators**. They think *about* workflows instead of *through* them to outcomes.
 
-### 2. User Engagement (Behavioral)
+Every choice is a burden. Every comparison is cognitive load. The marketplace itself becomes the obstacle.
 
-| Metric | Description | Weight |
-|--------|-------------|--------|
-| **Active Installations** | Current number of active users | High |
-| **30-Day Retention** | % of users still active after 30 days | Very High |
-| **Re-purchase Rate** | For paid workflows, repeat purchases | High |
-| **Time-to-Value** | How quickly users see results | Medium |
+### Users Arrive Thrown, Not Browsing
 
-**Key insight**: Retention is more important than raw installs. A workflow with 100 users and 80% retention beats one with 1000 users and 10% retention.
+Users don't think: "I need a productivity workflow."
 
-### 3. Code Quality (Technical Taste)
+Users think: "I just had a Zoom meeting and need to get notes somewhere."
 
-| Metric | Description | Weight |
-|--------|-------------|--------|
-| **Zuhandenheit Score** | Uses intent-based SDK patterns | Medium |
-| **Error Handling** | Has `onError` handler | Medium |
-| **Type Safety** | Proper TypeScript usage | Low |
-| **Documentation** | Clear description, examples | Medium |
-| **Test Coverage** | Has tests that pass | Low |
+They arrive in **situations** (Geworfenheit), not categories. The taxonomy of traditional marketplaces mismatches the phenomenology of need.
 
-**Zuhandenheit Score calculation**:
+---
+
+## The Pathway Model
+
+### From Marketplace to Moment
+
+**Traditional**: User → Marketplace → Browse → Compare → Evaluate → Choose → Configure → Activate
+
+**Pathway**: Trigger → Suggestion → Accept → Done
+
+The "marketplace" dissolves into contextual moments:
+- User connects Zoom + Notion → "Want meeting notes automated?"
+- User finishes a meeting → "Send notes to Notion?"
+- User receives a payment → "Track this in Notion?"
+
+No browsing. No comparison. One path to the outcome.
+
+### One Integration-Pair, One Workflow
+
+Instead of showing multiple workflows for the same use case, we **pre-curate**:
+
+| Integration Pair | Outcome | Workflow |
+|------------------|---------|----------|
+| Zoom → Notion | Meeting notes | Meeting Intelligence |
+| Stripe → Notion | Invoice tracking | Stripe to Notion |
+| Typeform → HubSpot | Lead capture | Sales Lead Pipeline |
+| Slack → Notion | Message archiving | (future) |
+
+If users want alternatives, they can ask. But the default is **one path**.
+
+### Outcome Taxonomy (Verbs, Not Nouns)
+
+Replace category taxonomy with **outcome statements**:
+
+| Old Category | New Outcome Frame |
+|--------------|-------------------|
+| productivity | "After meetings..." |
+| finance | "When payments arrive..." |
+| sales | "When leads come in..." |
+| marketing | "Weekly, automatically..." |
+| customer-support | "When tickets arrive..." |
+| operations | "Every morning..." |
+
+These are temporal, situational, verb-driven. They match how users actually think.
+
+---
+
+## Quality Without Social Proof
+
+### Pre-Launch Reality
+
+We don't have users yet. No ratings. No reviews. No install counts. No retention data.
+
+**This is a feature, not a bug.**
+
+Traditional marketplaces need social proof to help users choose between options. But we're not offering choices—we're offering **paths**. One integration pair = one workflow.
+
+### Editorial Curation (Pre-Users)
+
+Without social signals, curation is **editorial**:
+
+| Signal | How We Measure | Why It Matters |
+|--------|----------------|----------------|
+| **Zuhandenheit Score** | Code analysis | Does the tool recede? |
+| **Essential Fields** | Count ≤ 3 | Minimal configuration |
+| **Works Out of Box** | Smart defaults | One-click ready |
+| **Graceful Degradation** | Optional integrations | Handles missing pieces |
+| **Automatic Trigger** | Webhook vs manual | No user action needed |
+
+### Post-Launch Metrics (Future)
+
+Once we have users, we'll add:
+
+| Signal | When Available | Purpose |
+|--------|----------------|---------|
+| Success Rate | After ~100 executions | Reliability |
+| Time-to-Value | After ~50 activations | Tool recession validation |
+| 30-Day Retention | After 30 days | Outcome achievement |
+
+**Key insight**: We don't need social proof to pre-curate. We need good taste.
+
+### The Zuhandenheit Score
+
+Calculated from pathway metadata—no user data required:
+
 ```typescript
-function calculateZuhandenheitScore(code: string): number {
-  let score = 50; // Base score
+function calculateZuhandenheitScore(pathway: PathwayMetadata): number {
+  let score = 50;
 
-  // Positive signals (tools recede)
-  if (code.includes('.for(')) score += 10;           // Intent-based AI
-  if (code.includes('ai.synthesize')) score += 10;  // High-level synthesis
-  if (code.includes('createDocument')) score += 10; // Template-based docs
-  if (code.includes('assigneeByName')) score += 5;  // Human-readable refs
-  if (code.includes('humanOnly:')) score += 5;      // Intent parameters
+  // From pathway.zuhandenheit (declared by workflow author)
+  if (pathway.zuhandenheit.worksOutOfBox) score += 15;
+  if (pathway.zuhandenheit.gracefulDegradation) score += 10;
+  if (pathway.zuhandenheit.automaticTrigger) score += 10;
 
-  // Negative signals (tools visible)
-  if (code.includes('AIModels.')) score -= 10;      // Explicit model names
-  if (code.match(/JSON\.parse.*catch/)) score -= 5; // Manual JSON handling
-  if (code.includes('Math.floor(Date.now()')) score -= 5; // Manual timestamps
+  // From pathway.essentialFields (fewer = better)
+  const fieldCount = pathway.essentialFields.length;
+  if (fieldCount === 0) score += 20;      // One-click ready
+  else if (fieldCount === 1) score += 15;
+  else if (fieldCount <= 3) score += 10;
+  else score -= 10;                        // Too many fields
+
+  // From pathway.zuhandenheit.timeToValue (faster = better)
+  if (pathway.zuhandenheit.timeToValue < 5) score += 10;
+  else if (pathway.zuhandenheit.timeToValue < 60) score += 5;
+  else if (pathway.zuhandenheit.timeToValue > 1440) score -= 5; // > 1 day
 
   return Math.max(0, Math.min(100, score));
 }
 ```
 
-### 4. Community Signals (Social Proof)
+High Zuhandenheit score = the workflow disappears into use.
 
-| Metric | Description | Weight |
-|--------|-------------|--------|
-| **Rating** | Average star rating (1-5) | High |
-| **Review Count** | Number of reviews | Medium |
-| **Fork Count** | Times workflow was forked/modified | Medium |
-| **Discussion Activity** | Community engagement | Low |
+**Current workflow scores** (from pathway metadata):
+
+| Workflow | Essential Fields | Works Out of Box | Score |
+|----------|------------------|------------------|-------|
+| stripe-to-notion | 1 | Yes | 85 |
+| meeting-intelligence | 1 | Yes | 85 |
+| standup-bot | 1 | Yes | 85 |
+| team-digest | 1 | Yes | 85 |
+| sales-lead-pipeline | 2 | Yes | 80 |
+| support-ticket-router | 1 | No | 70 |
 
 ---
 
-## Curation Mechanisms
+## Contextual Surfacing
 
-### Tier 1: Algorithmic Ranking
+### Trigger-Based Discovery
 
-Default marketplace sort uses a composite score:
+Instead of users visiting a marketplace, workflows surface at moments of relevance:
 
 ```typescript
-function calculateRankingScore(workflow: Workflow): number {
-  const weights = {
-    successRate: 0.20,
-    retention30d: 0.25,
-    rating: 0.15,
-    activeInstalls: 0.10,
-    zuhandenheitScore: 0.10,
-    recency: 0.10,
-    reviewCount: 0.05,
-    developerReputation: 0.05,
-  };
+interface DiscoveryMoment {
+  // When this moment occurs
+  trigger:
+    | 'integration_connected'      // User just connected Zoom
+    | 'event_received'             // Webhook fired (meeting ended)
+    | 'time_based'                 // Monday morning
+    | 'pattern_detected';          // User manually did this 3 times
 
-  return (
-    workflow.successRate * weights.successRate +
-    workflow.retention30d * weights.retention30d +
-    normalize(workflow.rating, 1, 5) * weights.rating +
-    normalize(Math.log(workflow.activeInstalls + 1), 0, 10) * weights.activeInstalls +
-    workflow.zuhandenheitScore / 100 * weights.zuhandenheitScore +
-    recencyScore(workflow.lastUpdated) * weights.recency +
-    normalize(Math.log(workflow.reviewCount + 1), 0, 5) * weights.reviewCount +
-    workflow.developer.reputationScore * weights.developerReputation
-  );
+  // What integrations are involved
+  integrations: string[];
+
+  // The outcome to suggest
+  suggestedWorkflow: string;
+
+  // How to phrase it (outcome-focused)
+  suggestionText: string;
 }
+
+// Examples
+const moments: DiscoveryMoment[] = [
+  {
+    trigger: 'integration_connected',
+    integrations: ['zoom', 'notion'],
+    suggestedWorkflow: 'meeting-intelligence',
+    suggestionText: 'Want meeting notes in Notion automatically?'
+  },
+  {
+    trigger: 'event_received',
+    integrations: ['stripe'],
+    suggestedWorkflow: 'stripe-to-notion',
+    suggestionText: 'Track this payment in Notion?'
+  },
+  {
+    trigger: 'pattern_detected',
+    integrations: ['slack', 'notion'],
+    suggestedWorkflow: 'slack-to-notion',
+    suggestionText: "You've saved 3 Slack messages to Notion this week. Automate it?"
+  }
+];
 ```
 
-### Tier 2: Editorial Curation
+### The Suggestion Interface
 
-**WORKWAY Picks**: Hand-selected workflows that exemplify:
-- Zuhandenheit excellence
-- Novel use cases
-- Exceptional documentation
-- Community impact
+When a discovery moment fires:
 
-Displayed prominently on:
-- Homepage featured section
-- Category landing pages
-- "Staff Picks" collection
+```
+┌─────────────────────────────────────────────────────┐
+│                                                     │
+│  📝 Want meeting notes in Notion automatically?     │
+│                                                     │
+│  After Zoom meetings, we'll create a Notion page    │
+│  with transcript, action items, and summary.        │
+│                                                     │
+│  [Enable]                          [Not now]        │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
 
-**Criteria for WORKWAY Picks**:
-1. ≥95% success rate
-2. ≥70% 30-day retention
-3. ≥80 Zuhandenheit score
-4. ≥4.5 star rating with ≥10 reviews
-5. Editorial review confirms quality
-
-### Tier 3: Developer Verification
-
-**Verified Developer** badge for developers who:
-- Have ≥3 published workflows
-- Average ≥90% success rate across workflows
-- ≥50% 30-day retention average
-- No policy violations
-- Complete Stripe Connect setup
-
-Benefits:
-- Badge on profile and workflows
-- Higher ranking weight
-- Access to beta features
-- Priority support
+No browsing. No comparison. One path.
 
 ---
 
-## Pruning Mechanisms
+## Minimal Configuration
 
-### Automated Pruning
+### The 3-Field Maximum
 
-| Condition | Action | Timeline |
-|-----------|--------|----------|
-| Success rate <70% for 14 days | Warning email | Immediate |
-| Success rate <70% for 30 days | Unlisted (hidden from search) | Day 30 |
-| Success rate <50% for 7 days | Unlisted | Immediate |
-| No updates for 12 months | "Legacy" label | 12 months |
-| No updates for 18 months | Unlisted | 18 months |
-| Zero installations for 6 months | Archived | 6 months |
-
-### Manual Pruning
-
-**Reasons for removal**:
-1. Policy violations (spam, malware, abuse)
-2. Intellectual property claims
-3. Developer request
-4. Persistent low quality despite warnings
-
-**Appeal process**:
-1. Developer receives removal notice with reason
-2. 14-day window to address issues
-3. Review by trust & safety team
-4. Final decision communicated
-
----
-
-## Developer Reputation System
-
-### Reputation Score (0-100)
+Workflows should require **at most 3 configuration fields** for initial setup:
 
 ```typescript
-interface DeveloperReputation {
-  score: number;  // 0-100
-  tier: 'new' | 'established' | 'trusted' | 'expert';
-  badges: string[];
+// Good: Minimal config
+inputs: {
+  notionDatabase: { type: 'notion_database_picker', required: true },
 }
 
-function calculateDeveloperReputation(developer: Developer): DeveloperReputation {
-  let score = 0;
-
-  // Workflow performance (40 points max)
-  const avgSuccessRate = average(developer.workflows.map(w => w.successRate));
-  score += avgSuccessRate * 0.4;
-
-  // User satisfaction (30 points max)
-  const avgRating = average(developer.workflows.map(w => w.rating));
-  score += (avgRating / 5) * 30;
-
-  // Engagement (20 points max)
-  const totalInstalls = sum(developer.workflows.map(w => w.activeInstalls));
-  score += Math.min(20, Math.log10(totalInstalls + 1) * 5);
-
-  // Longevity (10 points max)
-  const monthsActive = monthsSince(developer.joinedAt);
-  score += Math.min(10, monthsActive / 6);
-
-  // Penalties
-  if (developer.violations > 0) score -= developer.violations * 10;
-
-  return {
-    score: Math.max(0, Math.min(100, score)),
-    tier: getTier(score),
-    badges: getBadges(developer),
-  };
-}
-
-function getTier(score: number): string {
-  if (score >= 90) return 'expert';
-  if (score >= 70) return 'trusted';
-  if (score >= 40) return 'established';
-  return 'new';
+// Bad: Too many choices
+inputs: {
+  notionDatabase: { required: true },
+  slackChannel: { required: true },
+  enableAI: { required: true },
+  aiModel: { required: true },
+  summaryLength: { required: true },
+  includeTranscript: { required: true },
+  // ... 15 more fields
 }
 ```
 
-### Reputation Tiers
+### Smart Defaults
 
-| Tier | Score | Benefits |
-|------|-------|----------|
-| **New** | 0-39 | Basic listing, standard support |
-| **Established** | 40-69 | Higher visibility, analytics dashboard |
-| **Trusted** | 70-89 | Verified badge, priority support, beta access |
-| **Expert** | 90-100 | Featured placement, WORKWAY partnership, revenue share boost |
+Everything beyond the essential 1-3 fields should have **intelligent defaults**:
+
+| Field | Default | Reasoning |
+|-------|---------|-----------|
+| `enableAI` | `true` | Users want AI; that's why they're here |
+| `postToSlack` | `true` if Slack connected | Assume yes if available |
+| `summaryLength` | `'medium'` | Safe middle ground |
+| `timezone` | Detected from browser | Don't ask what we can infer |
+
+Users can adjust later. But **first activation should be one click**.
+
+### Progressive Disclosure
+
+```
+Initial Setup:        "Where should meeting notes go?" → [Notion picker]
+After first run:      "Want to also post to Slack?"
+After 5 runs:         "Customize your summary format?"
+```
+
+Complexity reveals itself over time, not upfront.
 
 ---
 
-## Lifecycle of a Workflow
+## Developer Support (Preserved)
+
+Quality signals still trigger support pathways. The platform catches problems before users do.
+
+### Proactive Support Triggers
+
+| Condition | Action |
+|-----------|--------|
+| Success rate <85% for 7 days | Health alert with diagnostics |
+| Success rate <70% for 14 days | Support ticket opened |
+| Success rate <70% for 30 days | Workflow hidden, still accessible via direct link |
+| No updates for 12 months | "Legacy" label |
+
+### Graduated Visibility
 
 ```
-┌─────────────┐
-│  SUBMITTED  │ → Initial review (automated + manual)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│   LISTED    │ → Visible in marketplace
-└──────┬──────┘
-       │
-       ├─── High quality ──→ ┌─────────────┐
-       │                     │  FEATURED   │ → WORKWAY Pick
-       │                     └─────────────┘
-       │
-       ├─── Declining ─────→ ┌─────────────┐
-       │                     │  WARNING    │ → Developer notified
-       │                     └──────┬──────┘
-       │                            │
-       │                            ▼
-       │                     ┌─────────────┐
-       │                     │  UNLISTED   │ → Hidden from search
-       │                     └──────┬──────┘
-       │                            │
-       │                            ▼
-       └─── Inactive ──────→ ┌─────────────┐
-                             │  ARCHIVED   │ → Removed from marketplace
-                             └─────────────┘
+Recommended → Listed → Needs Work → Dormant
+     ↑                               ↓
+     └──── Recovery path available ──┘
 ```
+
+**"Needs Work"**: Hidden from suggestions, accessible via direct URL, developer gets diagnostics.
+
+**"Dormant"**: Fully hidden, one-click reactivation, data preserved.
+
+### Key Principle
+
+Every status has a recovery path. The platform supports developers through difficulties.
 
 ---
 
-## Implementation: Curation Service
+## What We Removed
+
+| Removed | Why |
+|---------|-----|
+| **Category browsing** | Users don't think in categories |
+| **Featured vs. non-featured** | Creates meta-decisions |
+| **User-visible ratings** | Makes users evaluate instead of act |
+| **Developer reputation display** | Users don't care who made it |
+| **Workflow comparison** | One path, not many |
+| **Complex search filters** | Discovery is contextual, not searched |
+
+## What We Kept
+
+| Kept | Why |
+|------|-----|
+| **Quality tracking** | Informs which workflow we recommend |
+| **Developer support** | Maintains ecosystem health |
+| **Zuhandenheit scoring** | Measures tool recession |
+| **Graceful degradation** | Optional features work automatically |
+
+---
+
+## Implementation: Discovery Service
 
 ```typescript
-// packages/api/src/services/curation.ts
-
-export class CurationService {
+export class DiscoveryService {
   /**
-   * Calculate workflow quality score
+   * Surface a workflow suggestion based on context
+   * Returns at most ONE workflow—the best path
    */
-  async calculateQualityScore(workflowId: string): Promise<QualityScore> {
-    const workflow = await this.getWorkflow(workflowId);
-    const metrics = await this.getMetrics(workflowId);
+  async getSuggestion(context: DiscoveryContext): Promise<WorkflowSuggestion | null> {
+    const { userId, connectedIntegrations, recentEvent } = context;
+
+    // Find workflows matching user's integration set
+    const candidates = await this.findCandidates(connectedIntegrations);
+
+    if (candidates.length === 0) return null;
+
+    // Pre-curate: return THE best option, not a list
+    const best = this.selectBest(candidates, context);
 
     return {
-      overall: this.calculateOverallScore(workflow, metrics),
-      reliability: metrics.successRate,
-      engagement: this.calculateEngagementScore(metrics),
-      codeQuality: await this.analyzeCodeQuality(workflow.code),
-      community: this.calculateCommunityScore(workflow),
+      workflow: best,
+      suggestionText: this.generateOutcomeText(best, recentEvent),
+      oneClickConfig: this.inferDefaults(best, context),
     };
   }
 
   /**
-   * Run daily curation job
+   * Select the single best workflow
+   * Users never see this comparison—we do it for them
    */
-  async runDailyCuration(): Promise<CurationResult> {
-    const workflows = await this.getAllActiveWorkflows();
-
-    const results = {
-      featured: [] as string[],
-      warned: [] as string[],
-      unlisted: [] as string[],
-      archived: [] as string[],
-    };
-
-    for (const workflow of workflows) {
-      const score = await this.calculateQualityScore(workflow.id);
-
-      // Feature high-quality workflows
-      if (this.shouldFeature(workflow, score)) {
-        await this.featureWorkflow(workflow.id);
-        results.featured.push(workflow.id);
-      }
-
-      // Warn declining workflows
-      if (this.shouldWarn(workflow, score)) {
-        await this.warnDeveloper(workflow.developerId, workflow.id);
-        results.warned.push(workflow.id);
-      }
-
-      // Unlist poor-quality workflows
-      if (this.shouldUnlist(workflow, score)) {
-        await this.unlistWorkflow(workflow.id);
-        results.unlisted.push(workflow.id);
-      }
-
-      // Archive abandoned workflows
-      if (this.shouldArchive(workflow)) {
-        await this.archiveWorkflow(workflow.id);
-        results.archived.push(workflow.id);
-      }
-    }
-
-    return results;
+  private selectBest(candidates: Workflow[], context: DiscoveryContext): Workflow {
+    return candidates
+      .map(w => ({
+        workflow: w,
+        score: this.calculateFitScore(w, context)
+      }))
+      .sort((a, b) => b.score - a.score)
+      [0].workflow;
   }
 
-  private shouldFeature(workflow: Workflow, score: QualityScore): boolean {
-    return (
-      score.reliability >= 0.95 &&
-      score.engagement >= 0.70 &&
-      score.codeQuality >= 80 &&
-      workflow.rating >= 4.5 &&
-      workflow.reviewCount >= 10 &&
-      !workflow.isFeatured
-    );
+  /**
+   * Fit score considers quality AND context match
+   */
+  private calculateFitScore(workflow: Workflow, context: DiscoveryContext): number {
+    const quality = workflow.qualityScore;           // Success rate, retention
+    const zuhandenheit = workflow.zuhandenheitScore; // Tool recession
+    const contextMatch = this.matchContext(workflow, context); // Relevance
+
+    return quality * 0.4 + zuhandenheit * 0.3 + contextMatch * 0.3;
   }
 
-  private shouldWarn(workflow: Workflow, score: QualityScore): boolean {
-    return (
-      score.reliability < 0.70 &&
-      workflow.status === 'listed' &&
-      !workflow.hasRecentWarning
-    );
-  }
-
-  private shouldUnlist(workflow: Workflow, score: QualityScore): boolean {
-    return (
-      (score.reliability < 0.70 && workflow.daysSinceWarning >= 30) ||
-      (score.reliability < 0.50)
-    );
-  }
-
-  private shouldArchive(workflow: Workflow): boolean {
-    return (
-      workflow.activeInstalls === 0 &&
-      workflow.daysSinceLastInstall >= 180
-    );
+  /**
+   * Generate outcome-focused suggestion text
+   */
+  private generateOutcomeText(workflow: Workflow, event?: TriggerEvent): string {
+    // Not: "Enable Meeting Intelligence workflow"
+    // But: "Want meeting notes in Notion automatically?"
+    return workflow.outcomeStatement;
   }
 }
 ```
 
 ---
 
-## Database Schema
+## The Disappearing Marketplace
 
-```sql
--- Workflow quality metrics (updated daily)
-CREATE TABLE workflow_quality_scores (
-  workflow_id UUID PRIMARY KEY REFERENCES workflows(id),
-  overall_score DECIMAL(5,2),
-  reliability_score DECIMAL(5,2),
-  engagement_score DECIMAL(5,2),
-  code_quality_score DECIMAL(5,2),
-  community_score DECIMAL(5,2),
-  zuhandenheit_score INTEGER,
-  calculated_at TIMESTAMP DEFAULT NOW()
-);
+The ultimate goal: **users forget the marketplace exists**.
 
--- Developer reputation
-CREATE TABLE developer_reputation (
-  developer_id UUID PRIMARY KEY REFERENCES developers(id),
-  score DECIMAL(5,2),
-  tier VARCHAR(20),
-  badges JSONB,
-  violations INTEGER DEFAULT 0,
-  calculated_at TIMESTAMP DEFAULT NOW()
-);
+They don't "visit WORKWAY to find a workflow." They:
+1. Connect their tools
+2. Accept contextual suggestions
+3. Achieve outcomes
 
--- Curation events
-CREATE TABLE curation_events (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workflow_id UUID REFERENCES workflows(id),
-  event_type VARCHAR(50), -- 'featured', 'warned', 'unlisted', 'archived'
-  reason TEXT,
-  created_at TIMESTAMP DEFAULT NOW()
-);
+The marketplace becomes infrastructure—invisible, reliable, receding.
 
--- Workflow status history
-CREATE TABLE workflow_status_history (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  workflow_id UUID REFERENCES workflows(id),
-  old_status VARCHAR(20),
-  new_status VARCHAR(20),
-  reason TEXT,
-  changed_at TIMESTAMP DEFAULT NOW()
-);
-```
+*Weniger, aber besser. Fewer choices, better outcomes.*
 
 ---
 
-## Summary: Taste as Algorithm + Human Judgment
+## Metrics That Matter
 
-| Layer | Mechanism | What it catches |
-|-------|-----------|-----------------|
-| **Automated** | Success rate, retention | Broken or abandoned workflows |
-| **Algorithmic** | Composite ranking score | Surfaces quality organically |
-| **Editorial** | WORKWAY Picks | Showcases exemplary taste |
-| **Community** | Reviews, forks, discussions | Validates real-world value |
-| **Developer** | Reputation tiers | Rewards consistent quality |
+### Pre-Launch (Now)
 
-The marketplace moat is **earned through taste**:
-- Workflows that achieve Zuhandenheit rise
-- Developers who consistently ship quality gain reputation
-- The community validates what actually works
+Without users, we measure **editorial quality**:
 
-*Weniger, aber besser. Fewer workflows, but better ones.*
+| Metric | How to Measure | Target |
+|--------|----------------|--------|
+| **Zuhandenheit score** | Pathway metadata analysis | ≥ 80 for canonical workflows |
+| **Essential field count** | pathway.essentialFields.length | ≤ 2 |
+| **Integration pair coverage** | Unique pairs with workflows | All common pairs covered |
+| **Outcome frame coverage** | Frames with ≥1 workflow | All 8 frames |
+
+### Post-Launch (Future)
+
+Once we have users, we'll add:
+
+| Metric | What It Measures | When Available |
+|--------|------------------|----------------|
+| **Suggestion acceptance rate** | Right workflow, right moment? | After first users |
+| **Time-to-first-outcome** | How fast do users see value? | After ~50 activations |
+| **One-click activation rate** | Are defaults good enough? | After ~100 activations |
+| **30-day outcome retention** | Still getting value? | After 30 days |
+
+### Metrics We'll Never Track
+
+- Marketplace page views (there's no page to view)
+- Time spent browsing (there's no browsing)
+- Workflows compared (there's no comparison)
+- Search queries (discovery is contextual)
+
+The best marketplace is the one users never think about.

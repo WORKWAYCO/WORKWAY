@@ -15,6 +15,54 @@ export default defineWorkflow({
 	description: 'Automatically log all Stripe payments to your Notion database',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'when_payments_arrive',
+
+		outcomeStatement: {
+			suggestion: 'Track payments in Notion automatically?',
+			explanation: 'When Stripe payments succeed, we\'ll log them to your Notion database with all the details.',
+			outcome: 'Payments tracked in Notion',
+		},
+
+		primaryPair: {
+			from: 'stripe',
+			to: 'notion',
+			workflowId: 'stripe-to-notion',
+			outcome: 'Payments that track themselves',
+		},
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['stripe', 'notion'],
+				workflowId: 'stripe-to-notion',
+				priority: 100,
+			},
+			{
+				trigger: 'event_received',
+				eventType: 'stripe.payment_intent.succeeded',
+				integrations: ['stripe', 'notion'],
+				workflowId: 'stripe-to-notion',
+				priority: 100,
+			},
+		],
+
+		smartDefaults: {
+			includeRefunds: { value: true },
+			currencyFormat: { value: 'symbol' },
+		},
+
+		essentialFields: ['notionDatabaseId'],
+
+		zuhandenheit: {
+			timeToValue: 2,
+			worksOutOfBox: true,
+			gracefulDegradation: false,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'freemium',
 		pricePerMonth: 9,

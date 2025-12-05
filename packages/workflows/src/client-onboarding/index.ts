@@ -23,6 +23,60 @@ export default defineWorkflow({
 		'Automatically set up new clients in Notion, create onboarding tasks, notify your team, and send welcome emails when payments complete',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'when_clients_onboard',
+
+		outcomeStatement: {
+			suggestion: 'Automate client onboarding?',
+			explanation: 'When payments complete, we\'ll set up the client in Notion, create onboarding tasks, and send welcome emails.',
+			outcome: 'New clients onboarded automatically',
+		},
+
+		primaryPair: {
+			from: 'stripe',
+			to: 'notion',
+			workflowId: 'client-onboarding',
+			outcome: 'Clients that onboard themselves',
+		},
+
+		additionalPairs: [
+			{ from: 'stripe', to: 'todoist', workflowId: 'client-onboarding', outcome: 'Onboarding tasks created automatically' },
+			{ from: 'stripe', to: 'slack', workflowId: 'client-onboarding', outcome: 'Team notified of new clients' },
+		],
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['stripe', 'notion', 'todoist'],
+				workflowId: 'client-onboarding',
+				priority: 90,
+			},
+			{
+				trigger: 'event_received',
+				eventType: 'stripe.checkout.session.completed',
+				integrations: ['stripe', 'notion'],
+				workflowId: 'client-onboarding',
+				priority: 85,
+			},
+		],
+
+		smartDefaults: {
+			onboardingTemplate: { value: 'standard' },
+			sendWelcomeEmail: { value: true },
+			enableAIRecommendations: { value: true },
+		},
+
+		essentialFields: ['notionDatabaseId', 'slackChannel'],
+
+		zuhandenheit: {
+			timeToValue: 5,
+			worksOutOfBox: true,
+			gracefulDegradation: true,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'freemium',
 		pricePerMonth: 29,

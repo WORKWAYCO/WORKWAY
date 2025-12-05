@@ -30,6 +30,67 @@ export default defineWorkflow({
 	description: 'Sync Zoom meetings to Notion with transcripts, action items, and Slack summaries',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	// See: docs/OUTCOME_TAXONOMY.md
+	pathway: {
+		outcomeFrame: 'after_meetings',
+
+		outcomeStatement: {
+			suggestion: 'Want meeting notes in Notion automatically?',
+			explanation: 'After Zoom meetings, we\'ll create a Notion page with transcript, action items, and AI summary.',
+			outcome: 'Meeting notes in Notion',
+		},
+
+		primaryPair: {
+			from: 'zoom',
+			to: 'notion',
+			workflowId: 'meeting-intelligence',
+			outcome: 'Zoom meetings that write their own notes',
+		},
+
+		additionalPairs: [
+			{ from: 'zoom', to: 'slack', workflowId: 'meeting-intelligence', outcome: 'Meeting summaries in Slack' },
+		],
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['zoom', 'notion'],
+				workflowId: 'meeting-intelligence',
+				priority: 100,
+			},
+			{
+				trigger: 'event_received',
+				eventType: 'zoom.recording.completed',
+				integrations: ['zoom', 'notion'],
+				workflowId: 'meeting-intelligence',
+				priority: 100,
+			},
+		],
+
+		// Smart defaults - infer from context, don't ask
+		smartDefaults: {
+			syncMode: { value: 'both' },
+			lookbackDays: { value: 1 },
+			transcriptMode: { value: 'prefer_speakers' },
+			enableAI: { value: true },
+			analysisDepth: { value: 'standard' },
+			postToSlack: { value: true },
+			draftFollowupEmail: { value: false },
+			updateCRM: { value: false },
+		},
+
+		// Only these 1-2 fields are required for first activation
+		essentialFields: ['notionDatabaseId'],
+
+		zuhandenheit: {
+			timeToValue: 3, // Minutes to first outcome
+			worksOutOfBox: true, // Works with just essential fields
+			gracefulDegradation: true, // Optional integrations handled gracefully
+			automaticTrigger: true, // Webhook-triggered, no manual invocation
+		},
+	},
+
 	pricing: {
 		model: 'usage',
 		pricePerExecution: 0.25, // Heavy tier: AI + multiple APIs

@@ -74,7 +74,10 @@ export interface WorkflowMetadata {
 	/** Full description */
 	description: string;
 
-	/** Category */
+	/**
+	 * Category (legacy - prefer pathway.outcomeFrame)
+	 * @deprecated Use pathway.outcomeFrame for verb-driven discovery
+	 */
 	category:
 		| 'productivity'
 		| 'finance'
@@ -107,6 +110,19 @@ export interface WorkflowMetadata {
 
 	/** Demo video */
 	videoUrl?: string;
+
+	/**
+	 * Pathway metadata for Heideggerian discovery model
+	 *
+	 * When present, enables:
+	 * - Outcome-based discovery (verb-driven frames)
+	 * - Contextual suggestions (integration_connected, event_received)
+	 * - One-click activation (smart defaults)
+	 * - Zuhandenheit scoring (tool recession metrics)
+	 *
+	 * See: docs/OUTCOME_TAXONOMY.md
+	 */
+	pathway?: PathwayMetadata;
 }
 
 // ============================================================================
@@ -243,6 +259,172 @@ export interface WorkflowStorage {
 
 	/** List all keys */
 	keys(): Promise<string[]>;
+}
+
+// ============================================================================
+// VORHANDENHEIT (BREAKDOWN) TYPES
+// ============================================================================
+
+/**
+ * Breakdown Severity - When Zuhandenheit fails
+ *
+ * Heideggerian principle: Tools become visible (Vorhandenheit) when they break.
+ * We minimize visibility and provide paths back to invisibility.
+ *
+ * See: docs/HEIDEGGER_DESIGN.md
+ */
+export enum BreakdownSeverity {
+	/** Auto-recover, user never knows */
+	SILENT = 'silent',
+
+	/** Subtle indicator, no action required */
+	AMBIENT = 'ambient',
+
+	/** User informed, action optional */
+	NOTIFICATION = 'notification',
+
+	/** User must act to proceed */
+	BLOCKING = 'blocking',
+}
+
+/**
+ * Breakdown Event - When a workflow becomes visible
+ *
+ * The tool recedes in normal use (Zuhandenheit).
+ * Breakdown makes the tool visible (Vorhandenheit).
+ */
+export interface BreakdownEvent {
+	/** Type of breakdown */
+	type:
+		| 'configuration_required' // Missing config
+		| 'integration_disconnected' // OAuth expired
+		| 'execution_failed' // Runtime error
+		| 'rate_limited' // API throttled
+		| 'dependency_unavailable'; // Service down
+
+	/** Affected workflow */
+	workflowId: string;
+
+	/** When breakdown occurred */
+	timestamp: number;
+
+	/** Severity determines visibility */
+	severity: BreakdownSeverity;
+
+	/** Human-readable message (outcome-focused) */
+	message: string;
+
+	/** Path back to Zuhandenheit */
+	recovery: {
+		/** Can we auto-recover? */
+		automatic: boolean;
+
+		/** Steps if manual recovery needed */
+		steps?: string[];
+
+		/** Estimated time to resolution (minutes) */
+		estimatedTime?: number;
+
+		/** Action to trigger recovery */
+		action?: string;
+	};
+
+	/** Original error (for logging, not display) */
+	originalError?: Error;
+}
+
+/**
+ * Breakdown Response - How to handle visibility
+ */
+export interface BreakdownResponse {
+	/** Chosen severity */
+	severity: BreakdownSeverity;
+
+	/** Message to show (if any) */
+	message?: string;
+
+	/** Recovery action (if any) */
+	recoveryAction?: () => Promise<void>;
+
+	/** Estimated time back to Zuhandenheit */
+	estimatedRecoveryTime?: number;
+}
+
+/**
+ * Tool Visibility State
+ *
+ * Tracks whether a workflow is in Zuhandenheit (invisible) or
+ * Vorhandenheit (visible due to breakdown).
+ */
+export interface ToolVisibilityState {
+	/** Is the tool currently invisible (working properly)? */
+	zuhandenheit: boolean;
+
+	/** Current breakdown (if any) */
+	breakdown?: BreakdownEvent;
+
+	/** History of breakdowns (for pattern detection) */
+	breakdownHistory: Array<{
+		event: BreakdownEvent;
+		resolvedAt?: number;
+		resolutionMethod?: 'automatic' | 'manual';
+	}>;
+
+	/** Time since last breakdown */
+	timeSinceLastBreakdown?: number;
+
+	/** Disappearance score (higher = more invisible) */
+	disappearanceScore: number;
+}
+
+/**
+ * Create a breakdown event with recovery path
+ */
+export function createBreakdown(
+	type: BreakdownEvent['type'],
+	workflowId: string,
+	message: string,
+	options: Partial<BreakdownEvent> = {}
+): BreakdownEvent {
+	return {
+		type,
+		workflowId,
+		timestamp: Date.now(),
+		severity: options.severity ?? BreakdownSeverity.NOTIFICATION,
+		message,
+		recovery: options.recovery ?? { automatic: false },
+		originalError: options.originalError,
+	};
+}
+
+/**
+ * Determine breakdown severity based on error type
+ */
+export function classifyBreakdown(error: Error): BreakdownSeverity {
+	const message = error.message.toLowerCase();
+
+	// Silent recovery for transient issues
+	if (message.includes('timeout') || message.includes('retry')) {
+		return BreakdownSeverity.SILENT;
+	}
+
+	// Ambient for rate limiting (auto-resolves)
+	if (message.includes('rate limit') || message.includes('throttle')) {
+		return BreakdownSeverity.AMBIENT;
+	}
+
+	// Notification for auth issues
+	if (message.includes('unauthorized') || message.includes('token expired')) {
+		return BreakdownSeverity.NOTIFICATION;
+	}
+
+	// Blocking for configuration issues
+	if (message.includes('configuration') || message.includes('missing')) {
+		return BreakdownSeverity.BLOCKING;
+	}
+
+	// Default to notification
+	return BreakdownSeverity.NOTIFICATION;
 }
 
 // ============================================================================
@@ -440,12 +622,186 @@ export function defineConfigField<T extends ZodSchema>(
 }
 
 // ============================================================================
+// PATHWAY MODEL TYPES (Heideggerian Discovery)
+// ============================================================================
+
+/**
+ * Outcome frame - temporal, verb-driven discovery
+ *
+ * Users don't think in categories ("productivity", "finance").
+ * They think in situations: "After meetings...", "When payments arrive..."
+ *
+ * The outcome frame matches the phenomenology of need.
+ */
+export type OutcomeFrame =
+	| 'after_meetings' // "After meetings..." → Meeting Intelligence
+	| 'when_payments_arrive' // "When payments arrive..." → Stripe to Notion
+	| 'when_leads_come_in' // "When leads come in..." → Sales Lead Pipeline
+	| 'weekly_automatically' // "Weekly, automatically..." → Team Digest
+	| 'when_tickets_arrive' // "When tickets arrive..." → Support Router
+	| 'every_morning' // "Every morning..." → Daily Standup
+	| 'when_clients_onboard' // "When clients onboard..." → Client Onboarding
+	| 'after_calls'; // "After calls..." → Call Followup
+
+/**
+ * Human-readable outcome statement
+ *
+ * Not: "Meeting Intelligence Workflow"
+ * But: "Zoom meetings that write their own notes"
+ *
+ * This is what users see in suggestions.
+ */
+export interface OutcomeStatement {
+	/** The question we ask: "Want meeting notes in Notion automatically?" */
+	suggestion: string;
+
+	/** Brief explanation: "After Zoom meetings, we'll create a Notion page..." */
+	explanation: string;
+
+	/** The outcome achieved: "Meeting notes in Notion" */
+	outcome: string;
+}
+
+/**
+ * Discovery moment - when to surface a workflow suggestion
+ *
+ * Instead of users visiting a marketplace, workflows surface at moments of relevance.
+ * The marketplace dissolves into the user's workflow.
+ */
+export interface DiscoveryMoment {
+	/** When this moment occurs */
+	trigger: 'integration_connected' | 'event_received' | 'time_based' | 'pattern_detected';
+
+	/** What integrations are involved */
+	integrations: string[];
+
+	/** The workflow to suggest */
+	workflowId: string;
+
+	/** Priority (for when multiple moments match) */
+	priority: number;
+
+	/** Optional: specific event type that triggers this (e.g., 'zoom.meeting.ended') */
+	eventType?: string;
+
+	/** Optional: pattern detection config */
+	pattern?: {
+		action: string; // "manual_notion_page_creation"
+		threshold: number; // 3 times
+		period: 'day' | 'week' | 'month';
+	};
+}
+
+/**
+ * Workflow suggestion - the ONE path we show users
+ *
+ * Not a list. Not options. One path to the outcome.
+ * Users don't choose between workflows—they accept or defer.
+ */
+export interface WorkflowSuggestion {
+	/** The suggested workflow */
+	workflowId: string;
+
+	/** Outcome-focused text (not workflow name) */
+	outcomeStatement: OutcomeStatement;
+
+	/** Pre-computed defaults based on user context */
+	inferredConfig: Record<string, unknown>;
+
+	/** What triggered this suggestion */
+	triggerContext: {
+		moment: DiscoveryMoment;
+		timestamp: number;
+		relevantIntegrations: string[];
+	};
+
+	/** Can this be activated with one click? */
+	oneClickReady: boolean;
+
+	/** If not one-click ready, what's required? */
+	requiredFields?: Array<{
+		key: string;
+		label: string;
+		type: 'notion_database_picker' | 'slack_channel_picker' | 'text' | 'boolean';
+	}>;
+}
+
+/**
+ * Integration pair - the primary discovery axis
+ *
+ * Users think: "Zoom and Notion" not "productivity category"
+ * One integration pair → One workflow (pre-curated)
+ */
+export interface IntegrationPair {
+	/** Source integration (trigger) */
+	from: string;
+
+	/** Destination integration (action) */
+	to: string;
+
+	/** The canonical workflow for this pair */
+	workflowId: string;
+
+	/** Outcome achieved */
+	outcome: string;
+}
+
+/**
+ * Pathway metadata - extends WorkflowMetadata for the pathway model
+ *
+ * This is the NEW metadata structure that supports contextual discovery.
+ */
+export interface PathwayMetadata {
+	/** Outcome frame (replaces category) */
+	outcomeFrame: OutcomeFrame;
+
+	/** Human-readable outcome statement */
+	outcomeStatement: OutcomeStatement;
+
+	/** Primary integration pair */
+	primaryPair: IntegrationPair;
+
+	/** Additional integration pairs this workflow supports */
+	additionalPairs?: IntegrationPair[];
+
+	/** Discovery moments when this workflow should surface */
+	discoveryMoments: DiscoveryMoment[];
+
+	/** Smart defaults - config that can be inferred from context */
+	smartDefaults: Record<
+		string,
+		| { inferFrom: 'connected_integration'; integration: string; field: string }
+		| { inferFrom: 'user_timezone' }
+		| { inferFrom: 'user_preference'; key: string }
+		| { value: unknown }
+	>;
+
+	/** Essential fields - the 1-3 fields users MUST configure */
+	essentialFields: string[];
+
+	/** Zuhandenheit indicators */
+	zuhandenheit: {
+		/** Estimated time to first outcome (minutes) */
+		timeToValue: number;
+		/** Does it work with just essential fields? */
+		worksOutOfBox: boolean;
+		/** Does it handle missing optional integrations gracefully? */
+		gracefulDegradation: boolean;
+		/** Is the trigger automatic (webhook) or manual? */
+		automaticTrigger: boolean;
+	};
+}
+
+// ============================================================================
 // MARKETPLACE TYPES
 // ============================================================================
 
 /**
  * Workflow listing in marketplace
  * (What users see when browsing)
+ *
+ * @deprecated Prefer PathwayMetadata for the pathway model.
+ * Traditional marketplace browsing is being phased out.
  */
 export interface WorkflowListing {
 	/** From WorkflowDefinition */
@@ -463,7 +819,7 @@ export interface WorkflowListing {
 
 	/** Publishing info */
 	publishing: {
-		status: 'draft' | 'published' | 'unlisted' | 'deprecated';
+		status: 'draft' | 'published' | 'needs_work' | 'dormant' | 'deprecated';
 		publishedAt?: number;
 		lastUpdatedAt: number;
 	};

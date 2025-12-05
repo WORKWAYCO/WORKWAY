@@ -16,6 +16,57 @@ export default defineWorkflow({
 	description: 'AI categorizes support tickets and routes them automatically',
 	version: '1.0.0',
 
+	// Pathway metadata for Heideggerian discovery model
+	pathway: {
+		outcomeFrame: 'when_tickets_arrive',
+
+		outcomeStatement: {
+			suggestion: 'Route support tickets automatically?',
+			explanation: 'When messages arrive in your support channel, AI categorizes them and routes to the right team.',
+			outcome: 'Tickets routed to the right team',
+		},
+
+		primaryPair: {
+			from: 'slack',
+			to: 'slack',
+			workflowId: 'support-ticket-router',
+			outcome: 'Support tickets that route themselves',
+		},
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['slack'],
+				workflowId: 'support-ticket-router',
+				priority: 60, // Lower priority - requires specific use case
+			},
+			{
+				trigger: 'pattern_detected',
+				integrations: ['slack'],
+				workflowId: 'support-ticket-router',
+				priority: 90,
+				pattern: {
+					action: 'manual_message_forwarding',
+					threshold: 5,
+					period: 'week',
+				},
+			},
+		],
+
+		smartDefaults: {
+			urgencyThreshold: { value: 'critical' },
+		},
+
+		essentialFields: ['supportChannel'],
+
+		zuhandenheit: {
+			timeToValue: 3,
+			worksOutOfBox: false, // Requires routing channel setup
+			gracefulDegradation: false,
+			automaticTrigger: true,
+		},
+	},
+
 	pricing: {
 		model: 'paid',
 		pricePerMonth: 19,

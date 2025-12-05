@@ -100,13 +100,27 @@ export type {
 	WorkflowResult,
 	WorkflowStorage,
 	ActionHelpers,
-	// Marketplace types
+	// Marketplace types (legacy)
 	WorkflowListing,
 	WorkflowInstallation,
 	WorkflowEarnings,
+	// Pathway model types (Heideggerian discovery)
+	OutcomeFrame,
+	OutcomeStatement,
+	DiscoveryMoment,
+	WorkflowSuggestion,
+	IntegrationPair,
+	PathwayMetadata,
 } from './workflow-sdk';
 
 export { WorkflowRegistry, defineWorkflow, defineConfigField } from './workflow-sdk';
+
+// ============================================================================
+// DISCOVERY SERVICE (Pathway Model)
+// ============================================================================
+
+export type { DiscoveryContext } from './discovery-service';
+export { DiscoveryService, createDiscoveryService } from './discovery-service';
 
 // ============================================================================
 // TRIGGER HELPERS

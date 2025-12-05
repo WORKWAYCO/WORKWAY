@@ -1,14 +1,24 @@
 /**
  * Marketplace Browse Command
  *
- * Browse workflows by category in the WORKWAY marketplace.
- * Zuhandenheit: Navigate the ecosystem without leaving the terminal.
+ * @deprecated Use `workway needs` instead for outcome-based discovery.
+ *
+ * This command uses the legacy category-based browsing model.
+ * The pathway model (workway needs) provides better discovery by
+ * surfacing ONE workflow at moments of relevance, rather than
+ * forcing users to browse and compare.
+ *
+ * See: docs/MARKETPLACE_CURATION.md (The Pathway Model)
  *
  * @example
  * ```bash
+ * # New way (recommended):
+ * workway needs --from zoom --to notion
+ * workway needs --after meetings
+ *
+ * # Old way (deprecated):
  * workway marketplace browse
  * workway marketplace browse --category=productivity
- * workway marketplace browse --featured
  * ```
  */
 
@@ -111,9 +121,16 @@ function displayWorkflows(workflows: WorkflowSummary[]): void {
 
 /**
  * Marketplace browse command
+ * @deprecated Use marketplaceNeedsCommand instead
  */
 export async function marketplaceBrowseCommand(options: BrowseOptions = {}): Promise<void> {
 	Logger.header('Marketplace Browse');
+	Logger.blank();
+
+	// Deprecation notice
+	Logger.warn('This command is deprecated. Use "workway needs" instead.');
+	Logger.log('  workway needs --from zoom --to notion');
+	Logger.log('  workway needs --after meetings');
 	Logger.blank();
 
 	// If featured flag, show featured workflows
