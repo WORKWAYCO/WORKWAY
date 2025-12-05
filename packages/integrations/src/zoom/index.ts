@@ -353,7 +353,7 @@ export class Zoom extends BaseAPIClient {
 					},
 				})),
 				metadata: {
-					total: data.total_records,
+					total: data.total_records ?? 0,
 					hasMore: !!data.next_page_token,
 					cursor: data.next_page_token,
 				},
@@ -797,7 +797,7 @@ export class Zoom extends BaseAPIClient {
 					},
 				})),
 				metadata: {
-					total: data.total_records,
+					total: data.total_records ?? 0,
 					hasMore: !!data.next_page_token,
 					cursor: data.next_page_token,
 				},
@@ -880,8 +880,11 @@ export class Zoom extends BaseAPIClient {
 			const meetingsResult = await this.getMeetings(meetingsOptions);
 
 			if (!meetingsResult.success) {
+				const errorMessage = typeof meetingsResult.error === 'string'
+					? meetingsResult.error
+					: meetingsResult.error?.message || 'Failed to fetch meetings';
 				return ActionResult.error(
-					meetingsResult.error || 'Failed to fetch meetings',
+					errorMessage,
 					ErrorCode.API_ERROR,
 					{ integration: 'zoom', action: 'get-meetings-with-transcripts' }
 				);

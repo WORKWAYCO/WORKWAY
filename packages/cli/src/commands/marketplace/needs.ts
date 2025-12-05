@@ -24,13 +24,27 @@
 
 import inquirer from 'inquirer';
 import { Logger } from '../../utils/logger.js';
-import {
-	integrationPairs,
-	outcomeFrames,
-	getWorkflowForPair,
-	getPairsForOutcome,
-	type IntegrationPairKey,
-} from '@workwayco/workflows';
+
+// Try to import workflows package - may not be available
+let integrationPairs: Record<string, any> = {};
+let outcomeFrames: Record<string, { label: string; description: string }> = {};
+let getWorkflowForPair: (from: string, to: string) => any = () => null;
+let getPairsForOutcome: (frameId: string) => any[] = () => [];
+let workflowsAvailable = false;
+
+try {
+	// @ts-expect-error - Optional dependency, may not exist
+	const workflows = await import('@workwayco/workflows');
+	integrationPairs = workflows.integrationPairs || {};
+	outcomeFrames = workflows.outcomeFrames || {};
+	getWorkflowForPair = workflows.getWorkflowForPair || (() => null);
+	getPairsForOutcome = workflows.getPairsForOutcome || (() => []);
+	workflowsAvailable = true;
+} catch {
+	// Workflows package not available - commands will show appropriate message
+}
+
+type IntegrationPairKey = string;
 
 // ============================================================================
 // TYPES
@@ -193,6 +207,13 @@ async function getSuggestionsForFrame(frameId: string): Promise<PathwaySuggestio
  */
 export async function marketplaceNeedsCommand(options: NeedsOptions = {}): Promise<void> {
 	Logger.header('What do you need?');
+
+	if (!workflowsAvailable) {
+		Logger.blank();
+		Logger.info('Pathway discovery requires the workflows package.');
+		Logger.log('  This feature is being updated. Try: workway marketplace browse');
+		return;
+	}
 
 	// Option 1: Integration pair specified (--from, --to)
 	if (options.from && options.to) {

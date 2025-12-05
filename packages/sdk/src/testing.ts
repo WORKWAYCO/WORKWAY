@@ -103,7 +103,6 @@ export class MockOAuthManager {
 
 export class MockStorage {
 	private data = new Map<string, any>();
-	private alarms = new Map<number, () => void>();
 
 	async get<T = any>(key: string): Promise<T | undefined>;
 	async get<T = any>(keys: string[]): Promise<Map<string, T>>;
@@ -146,7 +145,8 @@ export class MockStorage {
 		return this.data.delete(keyOrKeys);
 	}
 
-	async list(options?: any): Promise<Map<string, any>> {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	async list(_options?: any): Promise<Map<string, any>> {
 		return new Map(this.data);
 	}
 
@@ -154,7 +154,8 @@ export class MockStorage {
 		this.data.clear();
 	}
 
-	async setAlarm(timestamp: number): Promise<void> {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	async setAlarm(_timestamp: number): Promise<void> {
 		// Mock alarm (no-op in tests)
 	}
 
@@ -229,10 +230,12 @@ export function createMockContext(options: MockContextOptions = {}): ActionConte
 		storage = new MockStorage(),
 	} = options;
 
+	// Cast storage to any to satisfy ActionContext.storage type
+	// MockStorage implements the commonly used subset of DurableObjectStorage
 	return {
 		userId,
 		oauth: new MockOAuthManager(oauth),
-		storage,
+		storage: storage as any,
 		triggerData,
 		stepResults,
 		env,
@@ -268,7 +271,8 @@ export interface MockFetchResponse {
 export function createMockFetch(
 	responses: Record<string, MockFetchResponse>
 ): (url: string, options?: any) => Promise<Response> {
-	return async (url: string, options?: any) => {
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	return async (url: string, _options?: any) => {
 		const response = responses[url];
 		if (!response) {
 			throw new Error(`No mock response configured for ${url}`);

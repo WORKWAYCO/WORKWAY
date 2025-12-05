@@ -86,6 +86,11 @@ export enum ErrorCode {
 
 	// Unknown
 	UNKNOWN = 'unknown', // Fallback for unexpected errors
+
+	// Aliases for backwards compatibility
+	RATE_LIMIT = 'rate_limited', // Alias for RATE_LIMITED
+	UNKNOWN_ERROR = 'unknown', // Alias for UNKNOWN
+	EXTERNAL_SERVICE_ERROR = 'provider_down', // Alias for PROVIDER_DOWN
 }
 
 // ============================================================================
@@ -376,6 +381,85 @@ export class IntegrationError extends Error {
 		};
 	}
 
+	// =========================================================================
+	// UNIFIED ERROR HELPERS (Weniger, aber besser)
+	// =========================================================================
+	// These helpers unify CLI's APIError pattern with SDK's IntegrationError.
+	// One interface for all error type checks across CLI, SDK, and integrations.
+
+	/**
+	 * Is this an authentication error (401)?
+	 */
+	isUnauthorized(): boolean {
+		return this.context.statusCode === 401 || this.code === ErrorCode.AUTH_EXPIRED;
+	}
+
+	/**
+	 * Is this a permission error (403)?
+	 */
+	isForbidden(): boolean {
+		return this.context.statusCode === 403 || this.code === ErrorCode.PERMISSION_DENIED;
+	}
+
+	/**
+	 * Is this a not found error (404)?
+	 */
+	isNotFound(): boolean {
+		return this.context.statusCode === 404 || this.code === ErrorCode.NOT_FOUND;
+	}
+
+	/**
+	 * Is this a conflict error (409)?
+	 */
+	isConflict(): boolean {
+		return this.context.statusCode === 409 || this.code === ErrorCode.CONFLICT;
+	}
+
+	/**
+	 * Is this a rate limit error (429)?
+	 */
+	isRateLimited(): boolean {
+		return this.context.statusCode === 429 || this.code === ErrorCode.RATE_LIMITED;
+	}
+
+	/**
+	 * Is this a validation/input error (422)?
+	 */
+	isValidationError(): boolean {
+		return (
+			this.context.statusCode === 422 ||
+			this.code === ErrorCode.VALIDATION_ERROR ||
+			this.code === ErrorCode.INVALID_INPUT ||
+			this.code === ErrorCode.MISSING_REQUIRED_FIELD
+		);
+	}
+
+	/**
+	 * Is this a network/connectivity error?
+	 */
+	isNetworkError(): boolean {
+		return this.code === ErrorCode.NETWORK_ERROR || this.code === ErrorCode.PROVIDER_DOWN;
+	}
+
+	/**
+	 * Is this a server error (5xx)?
+	 */
+	isServerError(): boolean {
+		const status = this.context.statusCode;
+		return (status !== undefined && status >= 500) || this.code === ErrorCode.PROVIDER_DOWN;
+	}
+
+	/**
+	 * Is this an authentication-related error that requires user action?
+	 */
+	requiresReauth(): boolean {
+		return [
+			ErrorCode.AUTH_MISSING,
+			ErrorCode.AUTH_INVALID,
+			ErrorCode.AUTH_INSUFFICIENT_SCOPE,
+		].includes(this.code);
+	}
+
 	/**
 	 * Create user-friendly error message
 	 */
@@ -526,4 +610,79 @@ export function toIntegrationError(error: unknown, context: Partial<ErrorContext
 	}
 
 	return new IntegrationError(ErrorCode.UNKNOWN, String(error), context);
+}
+
+// ============================================================================
+// BREAKDOWN SEVERITY BRIDGE (Heideggerian Visibility)
+// ============================================================================
+
+/**
+ * BreakdownSeverity - When Zuhandenheit fails
+ *
+ * Heideggerian principle: Tools become visible (Vorhandenheit) when they break.
+ * We minimize visibility and provide paths back to invisibility.
+ *
+ * Imported here for unified error handling - errors map to breakdown severity
+ * to determine user-facing visibility.
+ */
+export enum BreakdownSeverity {
+	/** Auto-recover, user never knows */
+	SILENT = 'silent',
+
+	/** Subtle indicator, no action required */
+	AMBIENT = 'ambient',
+
+	/** User informed, action optional */
+	NOTIFICATION = 'notification',
+
+	/** User must act to proceed */
+	BLOCKING = 'blocking',
+}
+
+/**
+ * Map ErrorCode to BreakdownSeverity
+ *
+ * Weniger, aber besser: One mapping function for all error → visibility decisions.
+ * Used by both SDK and CLI for consistent user experience.
+ */
+export function getBreakdownSeverity(error: IntegrationError): BreakdownSeverity {
+	// Silent: Auto-recoverable, user never knows
+	if (error.isRetryable() && error.code === ErrorCode.TIMEOUT) {
+		return BreakdownSeverity.SILENT;
+	}
+
+	// Ambient: Subtle indicator, no action needed
+	if (error.isRateLimited() || error.code === ErrorCode.NETWORK_ERROR) {
+		return BreakdownSeverity.AMBIENT;
+	}
+
+	// Notification: User informed, action optional
+	if (error.code === ErrorCode.AUTH_EXPIRED || error.code === ErrorCode.PROVIDER_DOWN) {
+		return BreakdownSeverity.NOTIFICATION;
+	}
+
+	// Blocking: User must act
+	if (error.requiresReauth() || error.code === ErrorCode.INVALID_CONFIG) {
+		return BreakdownSeverity.BLOCKING;
+	}
+
+	// Default to notification for unknown errors
+	return BreakdownSeverity.NOTIFICATION;
+}
+
+/**
+ * Unified error type guard that works with any error-like object
+ *
+ * Checks if the object has the unified error interface (isUnauthorized, etc.)
+ */
+export function hasUnifiedErrorInterface(
+	error: unknown
+): error is { isUnauthorized: () => boolean; isForbidden: () => boolean; isRetryable: () => boolean } {
+	return (
+		error !== null &&
+		typeof error === 'object' &&
+		'isUnauthorized' in error &&
+		'isForbidden' in error &&
+		typeof (error as any).isUnauthorized === 'function'
+	);
 }

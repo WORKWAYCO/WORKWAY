@@ -8,7 +8,7 @@ export default defineConfig({
     'src/testing.ts',
   ],
   format: ['cjs', 'esm'],
-  dts: false, // Disabled due to namespace hoisting issues - will use tsc for types
+  dts: true, // Generate .d.ts files
   sourcemap: true,
   clean: true,
   minify: false,

@@ -23,6 +23,8 @@
  * Pattern Reference: OAuth.ts (lines 82-129) - single interface for all providers
  */
 
+import { ErrorCode } from './integration-error';
+
 // ============================================================================
 // STANDARD DATA TYPES
 // ============================================================================
@@ -103,22 +105,37 @@ export interface StandardEvent {
 }
 
 /**
- * Standard List - List of items (channels, users, files, etc.)
+ * Default list item type for StandardList
  */
-export interface StandardList {
-	type: 'list';
-	items: Array<{
-		id: string;
-		title: string;
-		description?: string;
-		url?: string;
-		metadata?: Record<string, unknown>;
-	}>;
-	metadata: {
-		total: number;
+export interface StandardListItem {
+	id: string;
+	title: string;
+	description?: string;
+	url?: string;
+	metadata?: Record<string, unknown>;
+}
+
+/**
+ * Standard List - List of items (channels, users, files, etc.)
+ * Generic type parameter allows typed items while maintaining StandardData compatibility
+ *
+ * Supports two formats:
+ * 1. Full format with metadata: { type: 'list', items, metadata: { total, hasMore, cursor } }
+ * 2. Simple format: { type?: 'list', items, hasMore?, cursor?, total? }
+ */
+export interface StandardList<T = StandardListItem> {
+	type?: 'list';
+	items: T[];
+	// Full metadata format
+	metadata?: {
+		total?: number;
 		hasMore?: boolean;
 		cursor?: string;
 	};
+	// Simple flat format (for convenience)
+	total?: number;
+	hasMore?: boolean;
+	cursor?: string;
 }
 
 /**
@@ -349,6 +366,19 @@ export const ActionResult = {
  * });
  * ```
  */
+// Overload: Simplified success result
+export function createActionResult<T>(params: {
+	success: true;
+	data: T;
+}): ActionResult<T>;
+
+// Overload: Simplified failure result
+export function createActionResult<T>(params: {
+	success: false;
+	error: { message: string; code: string | ErrorCode };
+}): ActionResult<T>;
+
+// Overload: Full result with metadata
 export function createActionResult<T>(params: {
 	data: T;
 	integration: string;
@@ -358,7 +388,21 @@ export function createActionResult<T>(params: {
 	standard?: StandardData;
 	rateLimit?: ActionResult<T>['metadata']['rateLimit'];
 	cost?: ActionResult<T>['metadata']['cost'];
-}): ActionResult<T> {
+}): ActionResult<T>;
+
+// Implementation
+export function createActionResult<T>(params: any): ActionResult<T> {
+	// Simplified success pattern: { success: true, data }
+	if (params.success === true && 'data' in params && !('integration' in params)) {
+		return ActionResult.success(params.data);
+	}
+
+	// Simplified failure pattern: { success: false, error }
+	if (params.success === false && 'error' in params) {
+		return ActionResult.error(params.error.message, params.error.code);
+	}
+
+	// Full pattern with all metadata
 	return {
 		success: true,
 		data: params.data,

@@ -952,8 +952,9 @@ export class Linear {
  */
 export function toStandardTask(issue: LinearIssue): StandardTask {
 	// Map Linear priority (1-4) to StandardTask priority
-	const priorityMap: Record<number, 'urgent' | 'high' | 'medium' | 'low' | 'none'> = {
-		0: 'none',
+	// Priority 0 means "no priority" which maps to undefined
+	const priorityMap: Record<number, 'urgent' | 'high' | 'medium' | 'low' | undefined> = {
+		0: undefined, // No priority
 		1: 'urgent',
 		2: 'high',
 		3: 'medium',
@@ -961,35 +962,33 @@ export function toStandardTask(issue: LinearIssue): StandardTask {
 	};
 
 	// Map Linear state type to StandardTask status
-	const statusMap: Record<string, 'todo' | 'in_progress' | 'done' | 'canceled'> = {
+	const statusMap: Record<string, 'todo' | 'in_progress' | 'done' | 'cancelled'> = {
 		backlog: 'todo',
 		unstarted: 'todo',
 		started: 'in_progress',
 		completed: 'done',
-		canceled: 'canceled',
+		canceled: 'cancelled', // British spelling for StandardTask
 	};
 
 	return {
+		type: 'task' as const,
 		id: issue.id,
 		title: issue.title,
 		description: issue.description,
 		status: statusMap[issue.state.type] || 'todo',
-		priority: priorityMap[issue.priority] || 'none',
-		assignee: issue.assignee ? {
-			id: issue.assignee.id,
-			name: issue.assignee.name,
-			email: issue.assignee.email,
-		} : undefined,
+		priority: priorityMap[issue.priority] || undefined, // 'none' not allowed, use undefined
+		assignee: issue.assignee?.name, // StandardTask expects string, not object
 		labels: issue.labels.nodes.map((l) => l.name),
-		url: issue.url,
-		createdAt: issue.createdAt,
-		updatedAt: issue.updatedAt,
+		timestamp: Date.now(),
 		metadata: {
 			identifier: issue.identifier,
 			team: issue.team.name,
 			project: issue.project?.name,
 			cycle: issue.cycle?.name,
 			estimate: issue.estimate,
+			url: issue.url,
+			createdAt: issue.createdAt,
+			updatedAt: issue.updatedAt,
 		},
 	};
 }

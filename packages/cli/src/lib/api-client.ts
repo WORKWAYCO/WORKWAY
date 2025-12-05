@@ -17,71 +17,117 @@
 /**
  * WORKWAY API Client
  *
- * Handles all HTTP communication with the WORKWAY platform API
+ * Weniger, aber besser: Unified HTTP foundation from @workwayco/sdk
+ * Eliminates ~150 lines of duplicate Axios code by extending BaseHTTPClient.
+ *
+ * Handles all HTTP communication with the WORKWAY platform API.
  */
 
-import axios, { type AxiosInstance, type AxiosError } from 'axios';
+import {
+	BaseHTTPClient,
+	IntegrationError,
+	ErrorCode,
+	createErrorFromResponse,
+	type HTTPClientConfig,
+	type RequestOptions,
+	type RequestWithBodyOptions,
+} from '@workwayco/sdk';
 import type {
 	APIResponse,
 	AuthResponse,
 	DeveloperProfile,
+	DeveloperWaitlistStatus,
 	WorkflowListing,
 	Earnings,
 } from '../types/index.js';
 
-export class WorkwayAPIClient {
-	private client: AxiosInstance;
-	private apiUrl: string;
+// ============================================================================
+// WORKWAY API CLIENT
+// ============================================================================
+
+/**
+ * WorkwayAPIClient - CLI HTTP client extending SDK's BaseHTTPClient
+ *
+ * Preserves the existing API surface while using unified HTTP foundation.
+ * Token is mutable via setToken() for post-construction auth.
+ */
+export class WorkwayAPIClient extends BaseHTTPClient {
 	private token: string | null;
+	private readonly apiUrl: string;
 
 	constructor(apiUrl: string, token: string | null = null) {
+		super({
+			baseUrl: apiUrl,
+			timeout: 30000,
+			errorContext: {
+				integration: 'workway-api',
+			},
+		});
+
 		this.apiUrl = apiUrl;
 		this.token = token;
-
-		this.client = axios.create({
-			baseURL: apiUrl,
-			headers: {
-				'Content-Type': 'application/json',
-			},
-			timeout: 30000,
-		});
-
-		// Add auth token to requests if available
-		this.client.interceptors.request.use((config) => {
-			if (this.token) {
-				config.headers.Authorization = `Bearer ${this.token}`;
-			}
-			return config;
-		});
-
-		// Handle errors
-		this.client.interceptors.response.use(
-			(response) => response,
-			(error: AxiosError) => {
-				if (error.response) {
-					// Server responded with error status
-					const data: any = error.response.data;
-					throw new APIError(
-						data.message || data.error || 'API request failed',
-						error.response.status,
-						data.code
-					);
-				} else if (error.request) {
-					// Request made but no response
-					throw new APIError('No response from server', 0, 'NETWORK_ERROR');
-				} else {
-					// Something else happened
-					throw new APIError(error.message, 0, 'UNKNOWN_ERROR');
-				}
-			}
-		);
 	}
 
 	/**
-	 * Set auth token
+	 * Override request to inject auth header dynamically
+	 */
+	protected async request(
+		method: string,
+		path: string,
+		options: RequestWithBodyOptions = {}
+	): Promise<Response> {
+		// Inject auth header if token exists
+		if (this.token) {
+			options.headers = {
+				...options.headers,
+				Authorization: `Bearer ${this.token}`,
+			};
+		}
+
+		return super.request(method, path, options);
+	}
+
+	/**
+	 * Set auth token (for post-construction auth)
 	 */
 	setToken(token: string): void {
 		this.token = token;
+	}
+
+	// ============================================================================
+	// JSON RESPONSE HELPERS (unwrap APIResponse wrapper)
+	// ============================================================================
+
+	/**
+	 * GET request expecting APIResponse wrapper, returns unwrapped data
+	 */
+	private async getWrapped<T>(path: string, options: RequestOptions = {}): Promise<T> {
+		const response = await this.getJson<APIResponse<T>>(path, options);
+		return response.data!;
+	}
+
+	/**
+	 * POST request expecting APIResponse wrapper, returns unwrapped data
+	 */
+	private async postWrapped<T>(
+		path: string,
+		body?: unknown,
+		options: RequestOptions = {}
+	): Promise<T> {
+		const response = await this.postJson<APIResponse<T>>(path, { ...options, body });
+		return response.data!;
+	}
+
+	/**
+	 * PATCH request expecting APIResponse wrapper, returns unwrapped data
+	 */
+	private async patchWrapped<T>(
+		path: string,
+		body?: unknown,
+		options: RequestOptions = {}
+	): Promise<T> {
+		const response = await this.patchJson<APIResponse<T>>(path, { ...options, body });
+		return response.data!;
 	}
 
 	// ============================================================================
@@ -92,11 +138,7 @@ export class WorkwayAPIClient {
 	 * Login with email and password
 	 */
 	async login(email: string, password: string): Promise<AuthResponse> {
-		const response = await this.client.post<APIResponse<AuthResponse>>('/auth/login', {
-			email,
-			password,
-		});
-		return response.data.data!;
+		return this.postWrapped<AuthResponse>('/auth/login', { email, password });
 	}
 
 	/**
@@ -109,16 +151,14 @@ export class WorkwayAPIClient {
 		bio?: string;
 		websiteUrl?: string;
 	}): Promise<AuthResponse> {
-		const response = await this.client.post<APIResponse<AuthResponse>>('/developers/register', data);
-		return response.data.data!;
+		return this.postWrapped<AuthResponse>('/developers/register', data);
 	}
 
 	/**
 	 * Get current user info
 	 */
 	async whoami(): Promise<AuthResponse> {
-		const response = await this.client.get<APIResponse<AuthResponse>>('/auth/me');
-		return response.data.data!;
+		return this.getWrapped<AuthResponse>('/auth/me');
 	}
 
 	// ============================================================================
@@ -129,25 +169,53 @@ export class WorkwayAPIClient {
 	 * Get developer profile
 	 */
 	async getDeveloperProfile(): Promise<DeveloperProfile> {
-		const response = await this.client.get<APIResponse<DeveloperProfile>>('/developers/me');
-		return response.data.data!;
+		return this.getWrapped<DeveloperProfile>('/developers/me');
 	}
 
 	/**
 	 * Update developer profile
 	 */
 	async updateDeveloperProfile(updates: Partial<DeveloperProfile>): Promise<DeveloperProfile> {
-		const response = await this.client.patch<APIResponse<DeveloperProfile>>('/developers/me', updates);
-		return response.data.data!;
+		return this.patchWrapped<DeveloperProfile>('/developers/me', updates);
 	}
 
 	/**
 	 * Get developer earnings
 	 */
 	async getEarnings(period?: 'week' | 'month' | 'year'): Promise<Earnings[]> {
-		const params = period ? `?period=${period}` : '';
-		const response = await this.client.get<APIResponse<Earnings[]>>(`/developers/me/earnings${params}`);
-		return response.data.data!;
+		const query = period ? { period } : undefined;
+		return this.getWrapped<Earnings[]>('/developers/me/earnings', { query });
+	}
+
+	// ============================================================================
+	// DEVELOPER WAITLIST
+	// ============================================================================
+
+	/**
+	 * Submit developer application to the waitlist
+	 */
+	async submitDeveloperApplication(application: {
+		name: string;
+		email: string;
+		companyName?: string;
+		technicalBackground: string;
+		githubUrl?: string;
+		portfolioUrl?: string;
+		targetIntegrations: string[];
+		workflowIdeas: string;
+		whyWorkway: string;
+	}): Promise<{ applicationId: string; status: string }> {
+		return this.postWrapped<{ applicationId: string; status: string }>(
+			'/developers/waitlist/apply',
+			application
+		);
+	}
+
+	/**
+	 * Get developer waitlist status
+	 */
+	async getDeveloperWaitlistStatus(): Promise<DeveloperWaitlistStatus> {
+		return this.getWrapped<DeveloperWaitlistStatus>('/developers/waitlist/status');
 	}
 
 	// ============================================================================
@@ -158,16 +226,14 @@ export class WorkwayAPIClient {
 	 * Publish a workflow
 	 */
 	async publishWorkflow(workflow: any): Promise<WorkflowListing> {
-		const response = await this.client.post<APIResponse<WorkflowListing>>('/workflows/publish', workflow);
-		return response.data.data!;
+		return this.postWrapped<WorkflowListing>('/workflows/publish', workflow);
 	}
 
 	/**
 	 * Create an integration
 	 */
 	async createIntegration(integrationData: any): Promise<any> {
-		const response = await this.client.post<any>('/integrations', integrationData);
-		return response.data;
+		return this.postJson<any>('/integrations', { body: integrationData });
 	}
 
 	/**
@@ -197,52 +263,46 @@ export class WorkwayAPIClient {
 		}>;
 		message: string;
 	}> {
-		const response = await this.client.post<any>('/integrations/check-similarity', data);
-		return response.data;
+		return this.postJson('/integrations/check-similarity', { body: data });
 	}
 
 	/**
 	 * Update a workflow
 	 */
 	async updateWorkflow(workflowId: string, updates: any): Promise<WorkflowListing> {
-		const response = await this.client.patch<APIResponse<WorkflowListing>>(
-			`/workflows/${workflowId}`,
-			updates
-		);
-		return response.data.data!;
+		return this.patchWrapped<WorkflowListing>(`/workflows/${workflowId}`, updates);
 	}
 
 	/**
 	 * Unpublish a workflow
 	 */
 	async unpublishWorkflow(workflowId: string): Promise<void> {
-		await this.client.post(`/workflows/${workflowId}/unpublish`);
+		await this.post(`/workflows/${workflowId}/unpublish`);
 	}
 
 	/**
 	 * Get workflow details
 	 */
 	async getWorkflow(workflowId: string): Promise<WorkflowListing> {
-		const response = await this.client.get<WorkflowListing>(`/marketplace/${workflowId}`);
-		return response.data;
+		return this.getJson<WorkflowListing>(`/marketplace/${workflowId}`);
 	}
 
 	/**
 	 * List workflows by developer
 	 */
 	async listMyWorkflows(): Promise<WorkflowListing[]> {
-		const response = await this.client.get<{ workflows: WorkflowListing[] }>('/workflows/me');
-		return response.data.workflows;
+		const response = await this.getJson<{ workflows: WorkflowListing[] }>('/workflows/me');
+		return response.workflows;
 	}
 
 	/**
 	 * Search workflows
 	 */
 	async searchWorkflows(query: string, filters?: any): Promise<WorkflowListing[]> {
-		const response = await this.client.get<{ workflows: WorkflowListing[] }>('/marketplace', {
-			params: { q: query, ...filters },
+		const response = await this.getJson<{ workflows: WorkflowListing[] }>('/marketplace', {
+			query: { q: query, ...filters },
 		});
-		return response.data.workflows;
+		return response.workflows;
 	}
 
 	// ============================================================================
@@ -269,38 +329,36 @@ export class WorkwayAPIClient {
 	 * Exchange OAuth code for tokens
 	 */
 	async exchangeOAuthCode(provider: string, code: string, callbackUrl: string): Promise<any> {
-		const response = await this.client.post<APIResponse<any>>(`/oauth/${provider}/callback`, {
+		return this.postWrapped(`/oauth/${provider}/callback`, {
 			code,
 			redirectUri: callbackUrl,
 		});
-		return response.data.data!;
 	}
 
 	/**
 	 * List connected OAuth accounts
 	 */
 	async listOAuthConnections(): Promise<any[]> {
-		const response = await this.client.get<APIResponse<any[]>>('/oauth/connections');
-		return response.data.data!;
+		return this.getWrapped<any[]>('/oauth/connections');
 	}
 
 	/**
 	 * Disconnect OAuth account
 	 */
 	async disconnectOAuth(provider: string): Promise<void> {
-		await this.client.delete(`/oauth/${provider}`);
+		await this.delete(`/oauth/${provider}`);
 	}
 
 	/**
 	 * List available OAuth providers
 	 */
 	async listOAuthProviders(): Promise<OAuthProvider[]> {
-		const response = await this.client.get<{
+		const response = await this.getJson<{
 			providers: OAuthProvider[];
 			total: number;
 			configured: number;
 		}>('/oauth/providers');
-		return response.data.providers;
+		return response.providers;
 	}
 
 	// ============================================================================
@@ -311,34 +369,33 @@ export class WorkwayAPIClient {
 	 * List all integrations
 	 */
 	async listIntegrations(): Promise<any[]> {
-		const response = await this.client.get<{ integrations: any[] }>('/registry/integrations');
-		return response.data.integrations;
+		const response = await this.getJson<{ integrations: any[] }>('/registry/integrations');
+		return response.integrations;
 	}
 
 	/**
 	 * Get integration details
 	 */
 	async getIntegration(integrationId: string): Promise<any> {
-		const response = await this.client.get(`/registry/integrations/${integrationId}`);
-		return response.data;
+		return this.getJson(`/registry/integrations/${integrationId}`);
 	}
 
 	/**
 	 * List all actions
 	 */
 	async listActions(): Promise<any[]> {
-		const response = await this.client.get<{ actions: any[] }>('/registry/actions');
-		return response.data.actions;
+		const response = await this.getJson<{ actions: any[] }>('/registry/actions');
+		return response.actions;
 	}
 
 	/**
 	 * Hot reload integration (dev mode only)
 	 */
 	async reloadIntegration(integrationId: string): Promise<any> {
-		const response = await this.client.post(`/registry/reload/${integrationId}`, null, {
+		return this.postJson(`/registry/reload/${integrationId}`, {
+			body: null,
 			headers: { 'x-dev-mode': 'true' },
 		});
-		return response.data;
 	}
 
 	// ============================================================================
@@ -357,25 +414,21 @@ export class WorkwayAPIClient {
 		logs: WorkflowLog[];
 		pagination: { page: number; limit: number; total: number; totalPages: number };
 	}> {
-		const params = new URLSearchParams();
-		if (options.limit) params.append('limit', String(options.limit));
-		if (options.page) params.append('page', String(options.page));
-		if (options.status) params.append('status', options.status);
-		if (options.integrationId) params.append('integrationId', options.integrationId);
-
-		const response = await this.client.get<{
-			logs: WorkflowLog[];
-			pagination: { page: number; limit: number; total: number; totalPages: number };
-		}>(`/developers/me/logs?${params.toString()}`);
-		return response.data;
+		return this.getJson('/developers/me/logs', {
+			query: {
+				limit: options.limit,
+				page: options.page,
+				status: options.status,
+				integrationId: options.integrationId,
+			},
+		});
 	}
 
 	/**
 	 * Get developer analytics
 	 */
 	async getAnalytics(): Promise<any> {
-		const response = await this.client.get<any>('/developers/me/analytics');
-		return response.data;
+		return this.getJson('/developers/me/analytics');
 	}
 
 	// ============================================================================
@@ -391,8 +444,7 @@ export class WorkwayAPIClient {
 		maxTokens?: number;
 		temperature?: number;
 	}): Promise<AIGenerateResponse> {
-		const response = await this.client.post<APIResponse<AIGenerateResponse>>('/ai/generate', options);
-		return response.data.data!;
+		return this.postWrapped<AIGenerateResponse>('/ai/generate', options);
 	}
 
 	/**
@@ -402,16 +454,17 @@ export class WorkwayAPIClient {
 		text: string;
 		model?: string;
 	}): Promise<AIEmbeddingsResponse> {
-		const response = await this.client.post<APIResponse<AIEmbeddingsResponse>>('/ai/embeddings', options);
-		return response.data.data!;
+		return this.postWrapped<AIEmbeddingsResponse>('/ai/embeddings', options);
 	}
 
 	/**
 	 * List available AI models
 	 */
 	async aiModels(): Promise<AIModel[]> {
-		const response = await this.client.get<{ success: boolean; data: { models: AIModel[] } }>('/ai/models');
-		return response.data.data.models;
+		const response = await this.getJson<{ success: boolean; data: { models: AIModel[] } }>(
+			'/ai/models'
+		);
+		return response.data.models;
 	}
 
 	// ============================================================================
@@ -422,32 +475,32 @@ export class WorkwayAPIClient {
 	 * Start Stripe Connect onboarding
 	 */
 	async startStripeOnboarding(developerId: string): Promise<StripeOnboardingResponse> {
-		const response = await this.client.post<StripeOnboardingResponse>(`/developers/${developerId}/onboard`);
-		return response.data;
+		return this.postJson<StripeOnboardingResponse>(`/developers/${developerId}/onboard`);
 	}
 
 	/**
 	 * Get Stripe Connect account status
 	 */
 	async getStripeStatus(developerId: string): Promise<StripeStatusResponse> {
-		const response = await this.client.get<StripeStatusResponse>(`/developers/${developerId}/stripe-status`);
-		return response.data;
+		return this.getJson<StripeStatusResponse>(`/developers/${developerId}/stripe-status`);
 	}
 
 	/**
 	 * Complete Stripe Connect onboarding (verify status after returning from Stripe)
 	 */
 	async completeStripeOnboarding(developerId: string): Promise<StripeCompleteResponse> {
-		const response = await this.client.post<StripeCompleteResponse>(`/developers/${developerId}/onboarding/complete`);
-		return response.data;
+		return this.postJson<StripeCompleteResponse>(
+			`/developers/${developerId}/onboarding/complete`
+		);
 	}
 
 	/**
 	 * Refresh expired Stripe Connect onboarding link
 	 */
 	async refreshStripeOnboarding(developerId: string): Promise<StripeOnboardingResponse> {
-		const response = await this.client.post<StripeOnboardingResponse>(`/developers/${developerId}/onboarding/refresh`);
-		return response.data;
+		return this.postJson<StripeOnboardingResponse>(
+			`/developers/${developerId}/onboarding/refresh`
+		);
 	}
 }
 
@@ -538,19 +591,63 @@ export interface StripeCompleteResponse {
 }
 
 // ============================================================================
-// API ERROR
+// API ERROR (Backwards Compatibility Bridge)
 // ============================================================================
 
+/**
+ * APIError - Backwards compatibility with IntegrationError
+ *
+ * CLI commands may still use `APIError`. This class bridges to `IntegrationError`
+ * while preserving the existing API surface.
+ */
 export class APIError extends Error {
-	constructor(
-		message: string,
-		public statusCode: number,
-		public code?: string
-	) {
+	public readonly statusCode: number;
+	public readonly code?: string;
+	public readonly integrationError: IntegrationError;
+
+	constructor(message: string, statusCode: number, code?: string) {
 		super(message);
 		this.name = 'APIError';
+		this.statusCode = statusCode;
+		this.code = code;
+
+		// Map to IntegrationError for unified handling
+		const errorCode = this.mapToErrorCode(statusCode, code);
+		this.integrationError = new IntegrationError(errorCode, message, {
+			statusCode,
+			providerCode: code,
+			retryable: this.isRetryableStatus(statusCode),
+		});
 	}
 
+	private mapToErrorCode(statusCode: number, code?: string): ErrorCode {
+		if (code === 'NETWORK_ERROR') return ErrorCode.NETWORK_ERROR;
+		if (code === 'VALIDATION_ERROR') return ErrorCode.VALIDATION_ERROR;
+
+		switch (statusCode) {
+			case 401:
+				return ErrorCode.AUTH_EXPIRED;
+			case 403:
+				return ErrorCode.PERMISSION_DENIED;
+			case 404:
+				return ErrorCode.NOT_FOUND;
+			case 409:
+				return ErrorCode.CONFLICT;
+			case 422:
+				return ErrorCode.VALIDATION_ERROR;
+			case 429:
+				return ErrorCode.RATE_LIMITED;
+			default:
+				if (statusCode >= 500) return ErrorCode.PROVIDER_DOWN;
+				return ErrorCode.API_ERROR;
+		}
+	}
+
+	private isRetryableStatus(statusCode: number): boolean {
+		return statusCode === 429 || statusCode >= 500;
+	}
+
+	// Unified error interface (mirrors IntegrationError)
 	isUnauthorized(): boolean {
 		return this.statusCode === 401;
 	}
@@ -563,6 +660,10 @@ export class APIError extends Error {
 		return this.statusCode === 404;
 	}
 
+	isConflict(): boolean {
+		return this.statusCode === 409;
+	}
+
 	isValidationError(): boolean {
 		return this.code === 'VALIDATION_ERROR' || this.statusCode === 422;
 	}
@@ -570,11 +671,26 @@ export class APIError extends Error {
 	isNetworkError(): boolean {
 		return this.code === 'NETWORK_ERROR';
 	}
+
+	isRateLimited(): boolean {
+		return this.statusCode === 429;
+	}
+
+	isServerError(): boolean {
+		return this.statusCode >= 500;
+	}
+
+	isRetryable(): boolean {
+		return this.integrationError.isRetryable();
+	}
 }
 
 /**
  * Create API client with config
  */
 export function createAPIClient(apiUrl: string, token?: string | null): WorkwayAPIClient {
-	return new WorkwayAPIClient(apiUrl, token);
+	return new WorkwayAPIClient(apiUrl, token ?? null);
 }
+
+// Re-export IntegrationError for direct access
+export { IntegrationError, ErrorCode } from '@workwayco/sdk';

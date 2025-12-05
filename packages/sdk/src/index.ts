@@ -248,7 +248,16 @@ export { WorkersAI, AIModels, createAIClient } from './workers-ai';
 // ACTION RESULT (Shared utilities)
 // ============================================================================
 
-export type { ActionCapabilities, StandardData } from './action-result';
+export type {
+	ActionCapabilities,
+	StandardData,
+	StandardList,
+	StandardListItem,
+	StandardMessage,
+	StandardDocument,
+	StandardTask,
+	StandardEvent,
+} from './action-result';
 export {
 	ActionResult,
 	createActionResult,
@@ -270,11 +279,68 @@ export {
 	IntegrationError,
 	ErrorCode,
 	ErrorCategory,
+	BreakdownSeverity,
 	createErrorFromResponse,
 	isIntegrationError,
 	toIntegrationError,
+	getBreakdownSeverity,
+	hasUnifiedErrorInterface,
 	type ErrorContext,
 } from './integration-error';
+
+// ============================================================================
+// BASE HTTP CLIENT (Unified HTTP Foundation)
+// ============================================================================
+
+export {
+	BaseHTTPClient,
+	AuthenticatedHTTPClient,
+	createHTTPClient,
+	createAuthenticatedHTTPClient,
+	buildQueryString,
+	type HTTPClientConfig,
+	type AuthenticatedHTTPClientConfig,
+	type RequestOptions,
+	type RequestWithBodyOptions,
+} from './base-http-client';
+
+// ============================================================================
+// RESPONSE UTILITIES (Weniger, aber besser)
+// ============================================================================
+
+export {
+	buildStandardList,
+	extractPaginationMetadata,
+	extractRateLimitInfo,
+	CommonCapabilities,
+	safeGet,
+	extractFirstString,
+	toCamelCase,
+	type StandardListOptions,
+	type PaginationMetadata,
+	type RateLimitInfo,
+} from './response-utils';
+
+// ============================================================================
+// DATE UTILITIES
+// ============================================================================
+
+export {
+	parseDurationMs,
+	parseSinceToUnixSeconds,
+	parseSinceToDate,
+	formatDateYMD,
+	formatDateISO,
+	formatDateUnix,
+	getRelativeDate,
+	createDateRange,
+	getUserTimezone,
+	getTimezoneOffset,
+	formatLocalDate,
+	isValidDuration,
+	isValidDate,
+	type DurationUnit,
+} from './date-utils';
 
 // ============================================================================
 // TEMPLATE REGISTRY (Marketplace Templates)
@@ -288,6 +354,40 @@ export {
 	TemplateRegistry,
 	templateRegistry,
 } from './template-registry';
+
+// ============================================================================
+// D1 HELPERS (Drizzle + D1 Utilities)
+// ============================================================================
+
+export {
+	jsonField,
+	parseJsonField,
+	isJsonObject,
+	safeJsonStringify,
+	D1SchemaChecker,
+	createSchemaChecker,
+	type TableColumnInfo,
+	type SchemaDiff,
+} from './d1-helpers';
+
+// ============================================================================
+// CONFIG UTILITIES (Installation Configuration)
+// ============================================================================
+
+export {
+	parseConfig,
+	getByPath,
+	getConfigValue,
+	extractResourceId,
+	extractResourceName,
+	extractResourceSelection,
+	isStepConfigured,
+	getConfiguredSteps,
+	mergeConfigs,
+	ConfigBuilder,
+	createConfigBuilder,
+	type ResourceSelection,
+} from './config-utils';
 
 // ============================================================================
 // RE-EXPORTS

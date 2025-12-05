@@ -808,9 +808,11 @@ describe('Airtable StandardTask Transformation', () => {
 		expect(result.success).toBe(true);
 		expect(result.standard).toBeDefined();
 		expect(result.standard?.type).toBe('task');
-		expect(result.standard?.title).toBe('Test Task');
-		expect(result.standard?.status).toBe('in_progress');
-		expect(result.standard?.priority).toBe('high');
+		// Type narrowing for StandardTask
+		const task = result.standard as import('@workwayco/sdk').StandardTask | undefined;
+		expect(task?.title).toBe('Test Task');
+		expect(task?.status).toBe('in_progress');
+		expect(task?.priority).toBe('high');
 	});
 
 	it('should map done status correctly', async () => {
@@ -829,7 +831,8 @@ describe('Airtable StandardTask Transformation', () => {
 
 		const result = await airtable.getTask('Tasks', 'recXXX');
 
-		expect(result.standard?.status).toBe('done');
+		const task = result.standard as import('@workwayco/sdk').StandardTask | undefined;
+		expect(task?.status).toBe('done');
 	});
 
 	it('should handle missing optional fields', async () => {
@@ -848,8 +851,9 @@ describe('Airtable StandardTask Transformation', () => {
 		const result = await airtable.getTask('Tasks', 'recXXX');
 
 		expect(result.success).toBe(true);
-		expect(result.standard?.title).toBe('Simple Task');
-		expect(result.standard?.status).toBe('todo');
+		const task = result.standard as import('@workwayco/sdk').StandardTask | undefined;
+		expect(task?.title).toBe('Simple Task');
+		expect(task?.status).toBe('todo');
 	});
 });
 

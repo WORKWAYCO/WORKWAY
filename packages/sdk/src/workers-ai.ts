@@ -602,7 +602,6 @@ export interface StructuredSchema {
  */
 export class FluentAI extends WorkersAI {
   private selectedModel: string = AIModels.LLAMA_3_8B;
-  private selectedTemperature: number = 0.5;
 
   /**
    * Intent-based model selection
@@ -624,14 +623,8 @@ export class FluentAI extends WorkersAI {
       this.selectedModel = mapping[depth];
     }
 
-    // Adjust temperature based on intent
-    if (intent === 'generation' && depth === 'creative') {
-      this.selectedTemperature = 0.8;
-    } else if (intent === 'extraction' || intent === 'analysis') {
-      this.selectedTemperature = 0.3;
-    } else {
-      this.selectedTemperature = 0.5;
-    }
+    // Note: Temperature is set per-method based on the operation type
+    // Future: could store temperature preference here for use in methods
 
     return this;
   }
@@ -685,7 +678,11 @@ If a field cannot be determined, use null for optional fields or empty array [] 
     }
 
     // Parse the response with fallback handling
-    const parsed = this.parseStructuredResponse<T>(result.data?.response || result.data, schema);
+    const responseData = result.data as { response?: string } | string;
+    const textContent: string = typeof responseData === 'object'
+      ? (responseData.response || '')
+      : (responseData || '');
+    const parsed = this.parseStructuredResponse<T>(textContent, schema);
 
     return ActionResult.success(parsed, {
       metadata: {
@@ -764,7 +761,11 @@ If a field cannot be determined, use null for optional fields or empty array [] 
       max_tokens: lengthTokens[options.length || 'standard'],
     });
 
-    return ActionResult.success(result.data?.response || result.data, {
+    const textData = result.data as { response?: string } | string;
+    const responseText: string = typeof textData === 'object'
+      ? (textData.response || '')
+      : (textData || '');
+    return ActionResult.success(responseText, {
       metadata: { tone: options.tone, length: options.length },
     });
   }
@@ -923,7 +924,10 @@ Target word count: ${options.wordCount || 1200} words.`,
       max_tokens: Math.min((options.wordCount || 800) * 2, 4000),
     });
 
-    const content = result.data?.response || result.data || '';
+    const contentData = result.data as { response?: string } | string;
+    const content: string = typeof contentData === 'object'
+      ? (contentData.response || '')
+      : (contentData || '');
     const words = content.split(/\s+/).length;
 
     return ActionResult.success({
@@ -1037,8 +1041,9 @@ Target word count: ${options.wordCount || 1200} words.`,
         target,
       });
 
+      const translatedData = contentResult.data as { text?: string } | undefined;
       translations[target] = {
-        content: contentResult.data?.text || '',
+        content: translatedData?.text || '',
       };
 
       // Translate SEO if provided
@@ -1048,7 +1053,8 @@ Target word count: ${options.wordCount || 1200} words.`,
           source: options.source,
           target,
         });
-        const [title, description] = (seoResult.data?.text || '').split('\n---\n');
+        const seoData = seoResult.data as { text?: string } | undefined;
+        const [title, description] = (seoData?.text || '').split('\n---\n');
         translations[target].seo = { title: title || '', description: description || '' };
       }
     }

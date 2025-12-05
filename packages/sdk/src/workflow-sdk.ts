@@ -51,8 +51,7 @@
  * ```
  */
 
-import { z, ZodSchema } from 'zod';
-import type { ActionDefinition, ActionContext } from './integration-sdk';
+import type { ZodSchema } from 'zod';
 
 // ============================================================================
 // WORKFLOW METADATA
@@ -481,6 +480,19 @@ export interface WorkflowDefinition<TConfig = any> {
 	 * Optional: Cleanup hook (called when workflow is disabled)
 	 */
 	onDisable?(context: WorkflowContext): Promise<void>;
+
+	/**
+	 * Optional: Final cleanup hook (called when workflow is permanently deleted)
+	 *
+	 * Use this for irreversible cleanup:
+	 * - Removing external webhooks
+	 * - Deleting external resources
+	 * - Cleaning up third-party subscriptions
+	 *
+	 * Heideggerian note: Deletion is the ultimate tool recession.
+	 * The workflow disappears entirely from the user's world.
+	 */
+	onDelete?(context: WorkflowContext): Promise<void>;
 
 	/**
 	 * Optional: Error handler
