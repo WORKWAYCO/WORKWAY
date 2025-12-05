@@ -1,6 +1,6 @@
 {
 	"name": "@workwayco/integrations",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Official WORKWAY integrations - concrete implementations of the SDK patterns",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -9,10 +9,6 @@
 		".": {
 			"types": "./dist/index.d.ts",
 			"import": "./dist/index.js"
-		},
-		"./gmail": {
-			"types": "./dist/gmail/index.d.ts",
-			"import": "./dist/gmail/index.js"
 		},
 		"./slack": {
 			"types": "./dist/slack/index.d.ts",

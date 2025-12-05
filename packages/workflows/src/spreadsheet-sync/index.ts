@@ -174,7 +174,7 @@ export default defineWorkflow({
 
 		// 2. Get last sync state from storage
 		const lastSyncKey = `sync:${inputs.spreadsheetId}:${inputs.airtableTableId}`;
-		const lastSync = await storage.get<SyncState>(lastSyncKey);
+		const lastSync = (await storage.get(lastSyncKey)) as SyncState | null;
 		const lastSyncedRowCount = lastSync?.rowCount || 0;
 		const lastSyncedHash = lastSync?.dataHash || '';
 

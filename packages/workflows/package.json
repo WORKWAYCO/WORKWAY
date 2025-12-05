@@ -1,6 +1,6 @@
 {
 	"name": "@workwayco/workflows",
-	"version": "0.1.0",
+	"version": "0.2.0",
 	"description": "Official WORKWAY marketplace workflow templates",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -26,30 +26,15 @@
 			"import": "./dist/team-digest/index.js",
 			"default": "./dist/team-digest/index.js"
 		},
-		"./ai-newsletter": {
-			"types": "./dist/ai-newsletter/index.d.ts",
-			"import": "./dist/ai-newsletter/index.js",
-			"default": "./dist/ai-newsletter/index.js"
-		},
 		"./meeting-summarizer": {
 			"types": "./dist/meeting-summarizer/index.d.ts",
 			"import": "./dist/meeting-summarizer/index.js",
 			"default": "./dist/meeting-summarizer/index.js"
 		},
-		"./feedback-analyzer": {
-			"types": "./dist/feedback-analyzer/index.d.ts",
-			"import": "./dist/feedback-analyzer/index.js",
-			"default": "./dist/feedback-analyzer/index.js"
-		},
 		"./invoice-generator": {
 			"types": "./dist/invoice-generator/index.d.ts",
 			"import": "./dist/invoice-generator/index.js",
 			"default": "./dist/invoice-generator/index.js"
-		},
-		"./payment-reminders": {
-			"types": "./dist/payment-reminders/index.d.ts",
-			"import": "./dist/payment-reminders/index.js",
-			"default": "./dist/payment-reminders/index.js"
 		},
 		"./onboarding": {
 			"types": "./dist/onboarding/index.d.ts",
