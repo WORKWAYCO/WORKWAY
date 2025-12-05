@@ -1,12 +1,12 @@
 /**
  * Content Calendar Automation
  *
- * Compound workflow: Airtable → Slack + Gmail
+ * Compound workflow: Airtable → Slack
  *
  * Automates content publishing reminders:
  * 1. Monitors Airtable content calendar
  * 2. Posts daily publishing schedule to Slack
- * 3. Sends reminder emails to content owners
+ * 3. Posts @mentions for content owners in Slack
  * 4. AI generates content briefs for upcoming pieces
  *
  * Zuhandenheit: "Content reminders appear automatically"
@@ -37,9 +37,7 @@ export default defineWorkflow({
 			outcome: 'Content schedule in Slack every morning',
 		},
 
-		additionalPairs: [
-			{ from: 'airtable', to: 'gmail', workflowId: 'content-calendar', outcome: 'Owner reminders via email' },
-		],
+		additionalPairs: [],
 
 		discoveryMoments: [
 			{
@@ -52,7 +50,6 @@ export default defineWorkflow({
 
 		smartDefaults: {
 			scheduleHour: { value: 8 },
-			sendOwnerReminders: { value: true },
 			lookAheadDays: { value: 1 },
 		},
 
@@ -76,7 +73,6 @@ export default defineWorkflow({
 	integrations: [
 		{ service: 'airtable', scopes: ['data.records:read'] },
 		{ service: 'slack', scopes: ['chat:write', 'channels:read'] },
-		{ service: 'gmail', scopes: ['gmail.compose'], optional: true },
 	],
 
 	inputs: {
@@ -141,12 +137,6 @@ export default defineWorkflow({
 			min: 1,
 			max: 7,
 			description: 'How many days ahead to include',
-		},
-		sendOwnerReminders: {
-			type: 'boolean',
-			label: 'Email Owner Reminders',
-			default: true,
-			description: 'Send email reminders to content owners',
 		},
 		enableAIBriefs: {
 			type: 'boolean',
@@ -225,34 +215,6 @@ export default defineWorkflow({
 			text: `Content Calendar: ${records.length} items scheduled`,
 		});
 
-		// 4. Send owner reminders (optional)
-		let emailsSent = 0;
-		if (inputs.sendOwnerReminders && integrations.gmail && contentByDate[todayKey]) {
-			const ownerContent: Record<string, ContentItem[]> = {};
-
-			for (const item of contentByDate[todayKey]) {
-				if (item.owner && item.owner.includes('@')) {
-					if (!ownerContent[item.owner]) {
-						ownerContent[item.owner] = [];
-					}
-					ownerContent[item.owner].push(item);
-				}
-			}
-
-			for (const [owner, items] of Object.entries(ownerContent)) {
-				const emailBody = buildReminderEmail(items, aiBriefs);
-				const result = await integrations.gmail.messages.send({
-					to: owner,
-					subject: `📅 Content Due Today: ${items.map(i => i.title).join(', ')}`,
-					body: emailBody,
-				});
-
-				if (result.success) {
-					emailsSent++;
-				}
-			}
-		}
-
 		return {
 			success: true,
 			content: {
@@ -264,7 +226,6 @@ export default defineWorkflow({
 			},
 			notifications: {
 				slack: true,
-				emailsSent,
 			},
 			aiBriefs: Object.keys(aiBriefs).length,
 		};
@@ -419,23 +380,6 @@ function getStatusEmoji(status: string): string {
 	if (lower.includes('publish')) return '🚀';
 	if (lower.includes('late') || lower.includes('overdue')) return '🔴';
 	return '📋';
-}
-
-function buildReminderEmail(items: ContentItem[], aiBriefs: Record<string, string>): string {
-	let body = `Hi,\n\nThis is a reminder that you have content scheduled for today:\n\n`;
-
-	for (const item of items) {
-		body += `📝 ${item.title}\n`;
-		body += `   Status: ${item.status}\n`;
-		if (aiBriefs[item.id]) {
-			body += `   Brief: ${aiBriefs[item.id]}\n`;
-		}
-		body += '\n';
-	}
-
-	body += `\nPlease make sure to complete and publish your content today.\n\nBest,\nContent Calendar Bot`;
-
-	return body;
 }
 
 export const metadata = {

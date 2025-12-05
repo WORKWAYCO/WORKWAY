@@ -1,15 +1,14 @@
 /**
  * Client Onboarding Pipeline
  *
- * Compound workflow: Stripe payment → Notion client hub + Todoist tasks + Slack alert + Welcome email
+ * Compound workflow: Stripe payment → Notion client hub + Todoist tasks + Slack alert
  *
  * The complete client onboarding automation:
  * 1. Stripe successful payment triggers workflow
  * 2. Creates Notion client page with all details
  * 3. Generates onboarding task checklist in Todoist
  * 4. Notifies team on Slack with client context
- * 5. Sends personalized welcome email via Gmail
- * 6. AI generates custom onboarding recommendations
+ * 5. AI generates custom onboarding recommendations
  *
  * Zuhandenheit: Team thinks "new clients automatically get set up"
  * not "manually create 15 tasks and send welcome emails"
@@ -20,7 +19,7 @@ import { defineWorkflow, webhook } from '@workwayco/sdk';
 export default defineWorkflow({
 	name: 'Client Onboarding Pipeline',
 	description:
-		'Automatically set up new clients in Notion, create onboarding tasks, notify your team, and send welcome emails when payments complete',
+		'Automatically set up new clients in Notion, create onboarding tasks, and notify your team when payments complete',
 	version: '1.0.0',
 
 	// Pathway metadata for Heideggerian discovery model
@@ -29,7 +28,7 @@ export default defineWorkflow({
 
 		outcomeStatement: {
 			suggestion: 'Automate client onboarding?',
-			explanation: 'When payments complete, we\'ll set up the client in Notion, create onboarding tasks, and send welcome emails.',
+			explanation: 'When payments complete, we\'ll set up the client in Notion, create onboarding tasks, and notify your team.',
 			outcome: 'New clients onboarded automatically',
 		},
 
@@ -63,7 +62,6 @@ export default defineWorkflow({
 
 		smartDefaults: {
 			onboardingTemplate: { value: 'standard' },
-			sendWelcomeEmail: { value: true },
 			enableAIRecommendations: { value: true },
 		},
 
@@ -89,7 +87,6 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['write_pages', 'read_databases'] },
 		{ service: 'todoist', scopes: ['data:read_write'] },
 		{ service: 'slack', scopes: ['chat:write', 'channels:read'] },
-		{ service: 'gmail', scopes: ['gmail.compose'], optional: true },
 	],
 
 	inputs: {
@@ -122,12 +119,6 @@ export default defineWorkflow({
 			],
 			default: 'standard',
 			description: 'Task template to use for new clients',
-		},
-		sendWelcomeEmail: {
-			type: 'boolean',
-			label: 'Send Welcome Email',
-			default: true,
-			description: 'Automatically send a personalized welcome email',
 		},
 		enableAIRecommendations: {
 			type: 'boolean',
@@ -307,12 +298,6 @@ export default defineWorkflow({
 			text: `New client: ${customer.name || customer.email} - ${customer.productName}`,
 		});
 
-		// 5. Send welcome email (optional)
-		let emailSent = false;
-		if (inputs.sendWelcomeEmail && integrations.gmail && env.AI) {
-			emailSent = await sendWelcomeEmail(env.AI, integrations.gmail, customer, aiRecommendations);
-		}
-
 		return {
 			success: true,
 			client: {
@@ -327,7 +312,6 @@ export default defineWorkflow({
 			},
 			notifications: {
 				slack: true,
-				welcomeEmail: emailSent,
 			},
 			aiRecommendations: aiRecommendations.length,
 		};
@@ -542,48 +526,6 @@ Format: Return only a JSON array of strings, like ["task 1", "task 2", "task 3"]
 		// Graceful degradation
 	}
 	return [];
-}
-
-async function sendWelcomeEmail(
-	ai: any,
-	gmail: any,
-	customer: CustomerInfo,
-	recommendations: string[]
-): Promise<boolean> {
-	try {
-		const prompt = `Write a warm, professional welcome email for a new client.
-
-Client: ${customer.name || 'there'}
-Product: ${customer.productName}
-${recommendations.length > 0 ? `Onboarding focus areas: ${recommendations.join(', ')}` : ''}
-
-Guidelines:
-- Keep it under 150 words
-- Be warm and enthusiastic but professional
-- Mention next steps (they'll receive onboarding info)
-- Include a clear call to action
-- Don't be salesy
-
-Output just the email body, no subject line.`;
-
-		const result = await ai.run('@cf/meta/llama-3.1-8b-instruct', {
-			messages: [{ role: 'user', content: prompt }],
-			max_tokens: 250,
-		});
-
-		const emailBody = result.response || '';
-		if (!emailBody || emailBody.length < 50) return false;
-
-		const draft = await gmail.drafts.create({
-			to: customer.email,
-			subject: `Welcome to ${customer.productName}! Let's get you started`,
-			body: emailBody,
-		});
-
-		return draft.success;
-	} catch (e) {
-		return false;
-	}
 }
 
 function getNotionPageUrl(pageId: string): string {

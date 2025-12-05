@@ -1,14 +1,13 @@
 /**
  * Meeting Follow-up Engine
  *
- * Compound workflow: Calendly booking → Todoist tasks + Gmail draft + Notion log + Slack alert
+ * Compound workflow: Calendly booking → Todoist tasks + Notion log + Slack alert
  *
  * The complete meeting automation:
  * 1. Calendly event triggers workflow (scheduled or completed)
  * 2. Creates pre-meeting prep tasks in Todoist
  * 3. Logs meeting in Notion CRM
- * 4. Drafts follow-up email template
- * 5. Notifies team on Slack
+ * 4. Notifies team on Slack
  * 6. AI generates meeting agenda/talking points
  *
  * Zuhandenheit: Meetings follow up on themselves
@@ -42,7 +41,6 @@ export default defineWorkflow({
 
 		additionalPairs: [
 			{ from: 'calendly', to: 'notion', workflowId: 'meeting-followup-engine', outcome: 'Meetings logged automatically' },
-			{ from: 'calendly', to: 'gmail', workflowId: 'meeting-followup-engine', outcome: 'Follow-up emails drafted' },
 		],
 
 		discoveryMoments: [
@@ -88,7 +86,6 @@ export default defineWorkflow({
 		{ service: 'calendly', scopes: ['scheduling:read', 'webhooks:write'] },
 		{ service: 'todoist', scopes: ['data:read_write'] },
 		{ service: 'notion', scopes: ['write_pages', 'read_databases'], optional: true },
-		{ service: 'gmail', scopes: ['gmail.compose'], optional: true },
 		{ service: 'slack', scopes: ['chat:write', 'channels:read'], optional: true },
 	],
 
@@ -135,12 +132,6 @@ export default defineWorkflow({
 			default: true,
 			description: 'Create follow-up tasks after meeting',
 		},
-		draftFollowUpEmail: {
-			type: 'boolean',
-			label: 'Draft Follow-up Email',
-			default: true,
-			description: 'Create a draft follow-up email after meeting',
-		},
 		enableAIAgenda: {
 			type: 'boolean',
 			label: 'AI Meeting Agenda',
@@ -178,7 +169,6 @@ export default defineWorkflow({
 		// Determine what actions to take based on trigger settings
 		const shouldCreatePrep = isScheduled && inputs.createPrepTasks;
 		const shouldCreateFollowUp = !isScheduled && inputs.createFollowUpTasks;
-		const shouldDraftEmail = !isScheduled && inputs.draftFollowUpEmail;
 
 		// Skip if trigger doesn't match settings
 		if (inputs.triggerOn === 'scheduled' && !isScheduled) {
@@ -287,13 +277,7 @@ export default defineWorkflow({
 			}
 		}
 
-		// 4. Draft follow-up email (optional)
-		let emailDraftId: string | null = null;
-		if (shouldDraftEmail && integrations.gmail && env.AI) {
-			emailDraftId = await draftFollowUpEmail(env.AI, integrations.gmail, meeting);
-		}
-
-		// 5. Post to Slack (optional)
+		// 4. Post to Slack (optional)
 		if (inputs.slackChannel && integrations.slack) {
 			const emoji = isScheduled ? '📅' : '✅';
 			const action = isScheduled ? 'scheduled' : 'completed';
@@ -364,7 +348,6 @@ export default defineWorkflow({
 			created: {
 				todoistTasks: createdTasks,
 				notionPageId,
-				emailDraftId,
 			},
 			notifications: {
 				slack: !!inputs.slackChannel,
@@ -505,47 +488,6 @@ Format: Return only a JSON array of strings, like ["item 1", "item 2", "item 3"]
 		// Graceful degradation
 	}
 	return [];
-}
-
-async function draftFollowUpEmail(
-	ai: any,
-	gmail: any,
-	meeting: MeetingInfo
-): Promise<string | null> {
-	try {
-		const prompt = `Write a brief follow-up email after this meeting.
-
-Meeting: ${meeting.eventType}
-With: ${meeting.inviteeName}
-Duration: ${meeting.duration} minutes
-
-Guidelines:
-- Keep it under 100 words
-- Thank them for their time
-- Reference the meeting type
-- Mention next steps placeholder
-- Be professional and warm
-
-Output just the email body, no subject line.`;
-
-		const result = await ai.run('@cf/meta/llama-3.1-8b-instruct', {
-			messages: [{ role: 'user', content: prompt }],
-			max_tokens: 200,
-		});
-
-		const emailBody = result.response || '';
-		if (!emailBody || emailBody.length < 50) return null;
-
-		const draft = await gmail.drafts.create({
-			to: meeting.inviteeEmail,
-			subject: `Following up on our ${meeting.eventType}`,
-			body: emailBody,
-		});
-
-		return draft.success ? draft.data.id : null;
-	} catch (e) {
-		return null;
-	}
 }
 
 async function handleCancellation(

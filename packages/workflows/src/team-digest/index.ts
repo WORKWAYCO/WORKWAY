@@ -2,9 +2,9 @@
  * Team Digest Generator
  *
  * Daily digest of team activity across all tools.
- * Aggregates Slack, Gmail, and Notion activity.
+ * Aggregates Slack and Notion activity.
  *
- * Integrations: Slack, Gmail, Notion
+ * Integrations: Slack, Notion
  * Trigger: Scheduled (daily)
  */
 
@@ -21,7 +21,7 @@ export default defineWorkflow({
 
 		outcomeStatement: {
 			suggestion: 'Want a daily team activity digest?',
-			explanation: 'Every morning, we\'ll summarize your team\'s Slack, email, and Notion activity.',
+			explanation: 'Every morning, we\'ll summarize your team\'s Slack and Notion activity.',
 			outcome: 'Daily team digest in Slack',
 		},
 
@@ -54,7 +54,6 @@ export default defineWorkflow({
 		smartDefaults: {
 			digestTime: { value: '09:00' },
 			timezone: { inferFrom: 'user_timezone' },
-			includeEmailSummary: { value: true },
 		},
 
 		essentialFields: ['digestChannel'],
@@ -76,7 +75,6 @@ export default defineWorkflow({
 
 	integrations: [
 		{ service: 'slack', scopes: ['read_messages', 'send_messages'] },
-		{ service: 'gmail', scopes: ['read_emails'] },
 		{ service: 'notion', scopes: ['read_pages', 'read_databases'] },
 	],
 
@@ -108,11 +106,6 @@ export default defineWorkflow({
 			type: 'notion_database_picker',
 			label: 'Notion Tasks Database',
 			description: 'Track task updates from this database',
-		},
-		includeEmailSummary: {
-			type: 'boolean',
-			label: 'Include Email Summary',
-			default: true,
 		},
 	},
 
@@ -171,16 +164,6 @@ export default defineWorkflow({
 			}
 		}
 
-		// Gather email summary
-		let emailSummary = { received: 0, sent: 0 };
-		if (inputs.includeEmailSummary) {
-			const receivedEmails = await integrations.gmail.messages.list({
-				q: `after:${yesterdayStr}`,
-				maxResults: 100,
-			});
-			emailSummary.received = receivedEmails.data?.length || 0;
-		}
-
 		// Build digest message
 		const digestBlocks = [
 			{
@@ -223,17 +206,6 @@ export default defineWorkflow({
 			});
 		}
 
-		// Email section
-		if (inputs.includeEmailSummary) {
-			digestBlocks.push({
-				type: 'section',
-				text: {
-					type: 'mrkdwn',
-					text: `*📧 Email Activity*\n${emailSummary.received} emails received`,
-				},
-			});
-		}
-
 		// Post digest
 		const posted = await integrations.slack.chat.postMessage({
 			channel: inputs.digestChannel,
@@ -247,7 +219,6 @@ export default defineWorkflow({
 			stats: {
 				slackChannels: slackActivity.length,
 				notionUpdates: notionUpdates.length,
-				emailsReceived: emailSummary.received,
 			},
 		};
 	},

@@ -2,9 +2,9 @@
  * Onboarding Automation
  *
  * Automate new team member onboarding process.
- * Creates tasks, sends welcome emails, and notifies the team.
+ * Creates tasks and notifies the team.
  *
- * Integrations: Notion, Slack, Gmail
+ * Integrations: Notion, Slack
  * Trigger: New page in team members database
  */
 
@@ -21,7 +21,7 @@ export default defineWorkflow({
 
 		outcomeStatement: {
 			suggestion: 'Automate team member onboarding?',
-			explanation: 'When you add someone to your team database, we\'ll create tasks, send welcome emails, and notify the team.',
+			explanation: 'When you add someone to your team database, we\'ll create tasks and notify the team on Slack.',
 			outcome: 'New hires onboarded automatically',
 		},
 
@@ -32,14 +32,12 @@ export default defineWorkflow({
 			outcome: 'Team members that onboard themselves',
 		},
 
-		additionalPairs: [
-			{ from: 'notion', to: 'gmail', workflowId: 'onboarding', outcome: 'Welcome emails sent automatically' },
-		],
+		additionalPairs: [],
 
 		discoveryMoments: [
 			{
 				trigger: 'integration_connected',
-				integrations: ['notion', 'slack', 'gmail'],
+				integrations: ['notion', 'slack'],
 				workflowId: 'onboarding',
 				priority: 60,
 			},
@@ -82,7 +80,6 @@ export default defineWorkflow({
 	integrations: [
 		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
 		{ service: 'slack', scopes: ['send_messages', 'invite_users'] },
-		{ service: 'gmail', scopes: ['send_emails'] },
 	],
 
 	inputs: {
@@ -189,71 +186,7 @@ export default defineWorkflow({
 			},
 		});
 
-		// 3. Send welcome email
-		if (email) {
-			const welcomeEmail = `
-<!DOCTYPE html>
-<html>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px 8px 0 0; padding: 40px; text-align: center;">
-    <h1 style="color: white; margin: 0;">Welcome to ${inputs.companyName}! 🎉</h1>
-  </div>
-
-  <div style="background: #f8f9fa; border-radius: 0 0 8px 8px; padding: 30px;">
-    <p style="font-size: 18px;">Hi ${name.split(' ')[0]},</p>
-
-    <p>We're thrilled to have you join us as our new <strong>${role}</strong>! Your start date is <strong>${new Date(startDate).toLocaleDateString()}</strong>.</p>
-
-    <h3>What to Expect</h3>
-    <ul>
-      <li>You'll receive access to your accounts and tools on your first day</li>
-      <li>Your onboarding tasks have been created - you'll find them in Notion</li>
-      <li>Your team will be notified and ready to welcome you</li>
-    </ul>
-
-    <h3>Before You Start</h3>
-    <p>Please have the following ready:</p>
-    <ul>
-      <li>Government-issued ID</li>
-      <li>Banking information for payroll</li>
-      <li>Emergency contact information</li>
-    </ul>
-
-    <p>If you have any questions before your start date, don't hesitate to reach out to us at ${inputs.hrEmail}.</p>
-
-    <p>See you soon!</p>
-
-    <p style="color: #666;">The ${inputs.companyName} Team</p>
-  </div>
-</body>
-</html>`;
-
-			await integrations.gmail.messages.send({
-				to: email,
-				subject: `Welcome to ${inputs.companyName}, ${name.split(' ')[0]}! 🎉`,
-				html: welcomeEmail,
-			});
-		}
-
-		// 4. Notify HR
-		await integrations.gmail.messages.send({
-			to: inputs.hrEmail,
-			subject: `New Hire Starting: ${name} - ${role}`,
-			body: `
-A new team member has been added and onboarding has begun:
-
-Name: ${name}
-Role: ${role}
-Department: ${department}
-Start Date: ${new Date(startDate).toLocaleDateString()}
-Email: ${email || 'Not provided'}
-
-Onboarding tasks have been created automatically.
-View in Notion: ${newMember.url}
-			`,
-		});
-
-		// 5. Announce in Slack
+		// 3. Announce in Slack
 		await integrations.slack.chat.postMessage({
 			channel: inputs.announcementChannel,
 			text: `🎉 Please welcome our newest team member!`,
@@ -298,7 +231,6 @@ View in Notion: ${newMember.url}
 				startDate,
 			},
 			tasksCreated: inputs.defaultOnboardingTasks.length,
-			welcomeEmailSent: !!email,
 			teamNotified: true,
 		};
 	},

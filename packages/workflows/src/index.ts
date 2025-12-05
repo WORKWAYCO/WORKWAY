@@ -28,7 +28,7 @@
 
 // Finance & Payments
 export { default as stripeToNotion } from './stripe-to-notion/index.js';
-export { default as paymentReminders } from './payment-reminders/index.js';
+// paymentReminders - DEPRECATED: Requires Gmail (app verification not completed)
 export { default as invoiceGenerator } from './invoice-generator/index.js';
 
 // Meetings & Productivity
@@ -48,8 +48,8 @@ export { default as clientOnboarding } from './client-onboarding/index.js';
 export { default as onboardingAutomation } from './onboarding/index.js';
 
 // Content & Analytics
-export { default as aiNewsletter } from './ai-newsletter/index.js';
-export { default as feedbackAnalyzer } from './feedback-analyzer/index.js';
+// aiNewsletter - DEPRECATED: Requires Gmail (app verification not completed)
+// feedbackAnalyzer - DEPRECATED: Requires Gmail (app verification not completed)
 
 // Dev Team & Data
 export { default as sprintProgressTracker } from './sprint-progress-tracker/index.js';
@@ -98,11 +98,6 @@ export const integrationPairs = {
 		outcome: 'Payments tracked automatically',
 		outcomeFrame: 'when_payments_arrive',
 	},
-	'stripe:gmail': {
-		workflowId: 'payment-reminders',
-		outcome: 'Payment reminders that send themselves',
-		outcomeFrame: 'when_payments_arrive',
-	},
 	'notion:stripe': {
 		workflowId: 'invoice-generator',
 		outcome: 'Projects that invoice themselves',
@@ -125,11 +120,6 @@ export const integrationPairs = {
 	'slack:slack': {
 		workflowId: 'support-ticket-router',
 		outcome: 'Tickets routed to the right team',
-		outcomeFrame: 'when_tickets_arrive',
-	},
-	'gmail:notion': {
-		workflowId: 'feedback-analyzer',
-		outcome: 'Feedback analyzed with AI',
 		outcomeFrame: 'when_tickets_arrive',
 	},
 
@@ -170,11 +160,6 @@ export const integrationPairs = {
 	'airtable:slack': {
 		workflowId: 'content-calendar',
 		outcome: 'Content reminders in Slack',
-		outcomeFrame: 'every_morning',
-	},
-	'airtable:gmail': {
-		workflowId: 'content-calendar',
-		outcome: 'Owner reminders via email',
 		outcomeFrame: 'every_morning',
 	},
 } as const;
@@ -292,11 +277,11 @@ export const workflows = {
 	'stripe-to-notion': { id: 'stripe-to-notion', outcomeFrame: 'when_payments_arrive' },
 	'support-ticket-router': { id: 'support-ticket-router', outcomeFrame: 'when_tickets_arrive' },
 	'team-digest': { id: 'team-digest', outcomeFrame: 'every_morning' },
-	'ai-newsletter': { id: 'ai-newsletter', outcomeFrame: 'every_morning' },
+	// 'ai-newsletter' - DEPRECATED: Requires Gmail
 	'meeting-summarizer': { id: 'meeting-summarizer', outcomeFrame: 'after_meetings' },
-	'feedback-analyzer': { id: 'feedback-analyzer', outcomeFrame: 'when_tickets_arrive' },
+	// 'feedback-analyzer' - DEPRECATED: Requires Gmail
 	'invoice-generator': { id: 'invoice-generator', outcomeFrame: 'when_payments_arrive' },
-	'payment-reminders': { id: 'payment-reminders', outcomeFrame: 'when_payments_arrive' },
+	// 'payment-reminders' - DEPRECATED: Requires Gmail
 	'onboarding': { id: 'onboarding', outcomeFrame: 'when_clients_onboard' },
 	'standup-bot': { id: 'standup-bot', outcomeFrame: 'every_morning' },
 	'meeting-intelligence': { id: 'meeting-intelligence', outcomeFrame: 'after_meetings' },

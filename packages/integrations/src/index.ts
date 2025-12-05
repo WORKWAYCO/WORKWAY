@@ -11,31 +11,20 @@
  *
  * @example
  * ```typescript
- * import { Gmail } from '@workwayco/integrations/gmail';
+ * import { Slack } from '@workwayco/integrations/slack';
  *
- * const gmail = new Gmail({ accessToken: tokens.gmail.access_token });
- * const emails = await gmail.listEmails({ maxResults: 10 });
+ * const slack = new Slack({ accessToken: tokens.slack.access_token });
+ * const channels = await slack.listChannels({ limit: 10 });
  *
- * if (emails.success) {
- *   for (const email of emails.data) {
- *     console.log(email.payload.headers);
+ * if (channels.success) {
+ *   for (const channel of channels.data) {
+ *     console.log(channel.name);
  *   }
  * }
  * ```
  */
 
 // Re-export all integrations
-export { Gmail } from './gmail/index.js';
-export type {
-	GmailConfig,
-	GmailMessage,
-	GmailDraft,
-	ListEmailsOptions,
-	GetEmailOptions,
-	SendEmailOptions,
-	CreateDraftOptions,
-} from './gmail/index.js';
-
 export { Slack } from './slack/index.js';
 export type {
 	SlackConfig,

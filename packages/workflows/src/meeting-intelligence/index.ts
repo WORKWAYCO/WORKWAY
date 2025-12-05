@@ -3,12 +3,12 @@
  *
  * Full compound workflow for Zoom meeting follow-up automation.
  * Syncs meetings and clips to Notion with transcripts, extracts action items,
- * posts summaries to Slack, and optionally drafts follow-up emails.
+ * and posts summaries to Slack.
  *
  * ZUHANDENHEIT: The tool recedes, the outcome remains.
  * User thinks: "My meetings are documented and follow-up is automatic"
  *
- * Integrations: Zoom, Notion, Slack, Gmail (optional), HubSpot (optional)
+ * Integrations: Zoom, Notion, Slack, HubSpot (optional)
  * Trigger: Daily cron (7 AM) OR Zoom webhook (recording.completed)
  */
 
@@ -76,7 +76,6 @@ export default defineWorkflow({
 			enableAI: { value: true },
 			analysisDepth: { value: 'standard' },
 			postToSlack: { value: true },
-			draftFollowupEmail: { value: false },
 			updateCRM: { value: false },
 		},
 
@@ -102,7 +101,6 @@ export default defineWorkflow({
 		{ service: 'zoom', scopes: ['meeting:read', 'recording:read', 'clip:read'] },
 		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
 		{ service: 'slack', scopes: ['send_messages', 'read_channels'] },
-		{ service: 'gmail', scopes: ['compose'], optional: true },
 		{ service: 'hubspot', scopes: ['crm.objects.deals.read', 'crm.objects.deals.write', 'crm.objects.contacts.read'], optional: true },
 	],
 
@@ -171,13 +169,6 @@ export default defineWorkflow({
 			label: 'Post Slack Summary',
 			default: true,
 		},
-		draftFollowupEmail: {
-			type: 'boolean',
-			label: 'Draft Follow-up Email',
-			default: false,
-			description: 'Create a Gmail draft with action items for external attendees',
-		},
-
 		// CRM settings
 		updateCRM: {
 			type: 'boolean',
@@ -224,7 +215,6 @@ export default defineWorkflow({
 			meeting: { id: string; topic: string; date: string };
 			notionPageUrl?: string;
 			slackPosted: boolean;
-			emailDrafted: boolean;
 			crmUpdated: boolean;
 			actionItemCount: number;
 		}> = [];
@@ -416,18 +406,7 @@ async function processMeeting(params: ProcessMeetingParams) {
 		});
 	}
 
-	// 5. Draft follow-up email (if enabled)
-	let emailDrafted = false;
-	if (inputs.draftFollowupEmail && analysis?.actionItems?.length && integrations.gmail) {
-		emailDrafted = await draftFollowupEmail({
-			topic,
-			actionItems: analysis.actionItems,
-			notionUrl: notionPage?.url,
-			integrations,
-		});
-	}
-
-	// 6. Update CRM (HubSpot - if enabled)
+	// 5. Update CRM (HubSpot - if enabled)
 	let crmUpdated = false;
 	if (inputs.updateCRM && integrations.hubspot) {
 		crmUpdated = await updateCRM({
@@ -445,7 +424,6 @@ async function processMeeting(params: ProcessMeetingParams) {
 		meeting: { id: meetingId, topic, date: startTime },
 		notionPageUrl: notionPage?.url,
 		slackPosted,
-		emailDrafted,
 		crmUpdated,
 		actionItemCount: analysis?.actionItems?.length || 0,
 	};
@@ -514,7 +492,6 @@ async function processClip(params: ProcessClipParams) {
 		meeting: { id: clipId, topic: title, date: createdAt },
 		notionPageUrl: notionPage?.url,
 		slackPosted,
-		emailDrafted: false,
 		crmUpdated: false, // Clips typically don't need CRM updates
 		actionItemCount: analysis?.actionItems?.length || 0,
 	};
@@ -874,44 +851,6 @@ async function postSlackSummary(params: PostSlackSummaryParams): Promise<boolean
 			channel,
 			text: `Meeting synced: ${topic}`,
 			blocks,
-		});
-		return true;
-	} catch {
-		return false;
-	}
-}
-
-interface DraftEmailParams {
-	topic: string;
-	actionItems: Array<{ task: string; assignee?: string }>;
-	notionUrl?: string;
-	integrations: any;
-}
-
-async function draftFollowupEmail(params: DraftEmailParams): Promise<boolean> {
-	const { topic, actionItems, notionUrl, integrations } = params;
-
-	const actionItemsList = actionItems
-		.map((a) => `- ${a.task}${a.assignee ? ` (${a.assignee})` : ''}`)
-		.join('\n');
-
-	const body = `Hi,
-
-Following up on our meeting: ${topic}
-
-Action items:
-${actionItemsList}
-
-${notionUrl ? `Full notes: ${notionUrl}` : ''}
-
-Best regards`;
-
-	try {
-		await integrations.gmail.drafts.create({
-			message: {
-				subject: `Follow-up: ${topic}`,
-				body,
-			},
 		});
 		return true;
 	} catch {

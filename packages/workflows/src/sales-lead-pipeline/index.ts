@@ -70,7 +70,6 @@ export default defineWorkflow({
 
 		smartDefaults: {
 			enableCRM: { value: true },
-			enableEmailDraft: { value: false },
 			enableAIScoring: { value: true },
 			followUpDays: { value: 1 },
 		},
@@ -98,7 +97,6 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['chat:write', 'channels:read'] },
 		{ service: 'todoist', scopes: ['data:read_write'] },
 		{ service: 'notion', scopes: ['write_pages', 'read_databases'], optional: true },
-		{ service: 'gmail', scopes: ['gmail.compose'], optional: true },
 	],
 
 	inputs: {
@@ -131,12 +129,6 @@ export default defineWorkflow({
 			label: 'Create HubSpot Contacts',
 			default: true,
 			description: 'Automatically create contacts in HubSpot',
-		},
-		enableEmailDraft: {
-			type: 'boolean',
-			label: 'Draft Outreach Email',
-			default: false,
-			description: 'Create a draft email for personalized follow-up',
 		},
 		enableAIScoring: {
 			type: 'boolean',
@@ -292,13 +284,6 @@ export default defineWorkflow({
 			}
 		}
 
-		// 7. Draft outreach email (optional)
-		let emailDraftId: string | null = null;
-		if (inputs.enableEmailDraft && integrations.gmail && env.AI) {
-			const emailDraft = await draftOutreachEmail(env.AI, integrations.gmail, answers, leadScore);
-			emailDraftId = emailDraft?.draftId || null;
-		}
-
 		return {
 			success: true,
 			lead: {
@@ -312,7 +297,6 @@ export default defineWorkflow({
 				todoistTaskId: task.success ? task.data.id : null,
 				hubspotContactId,
 				notionPageId,
-				emailDraftId,
 			},
 			notifications: {
 				slack: true,
@@ -458,49 +442,6 @@ function leadScoreToHubSpot(score: string): string {
 			return 'IN_PROGRESS';
 		default:
 			return 'NEW';
-	}
-}
-
-async function draftOutreachEmail(
-	ai: any,
-	gmail: any,
-	answers: FormAnswers,
-	leadScore: string
-): Promise<{ draftId: string } | null> {
-	try {
-		const prompt = `Write a brief, personalized sales follow-up email for this lead.
-
-Lead: ${answers.name || 'there'}
-Company: ${answers.company || 'your company'}
-Their message: ${answers.message || 'They expressed interest in our services'}
-Lead score: ${leadScore}
-
-Guidelines:
-- Keep it under 100 words
-- Be warm but professional
-- Reference their specific inquiry if provided
-- Include a clear call to action (schedule a call)
-- Don't be pushy
-
-Output just the email body, no subject line.`;
-
-		const result = await ai.run('@cf/meta/llama-3.1-8b-instruct', {
-			messages: [{ role: 'user', content: prompt }],
-			max_tokens: 200,
-		});
-
-		const emailBody = result.response || '';
-		if (!emailBody || emailBody.length < 50) return null;
-
-		const draft = await gmail.drafts.create({
-			to: answers.email,
-			subject: `Following up on your inquiry${answers.company ? ` from ${answers.company}` : ''}`,
-			body: emailBody,
-		});
-
-		return draft.success ? { draftId: draft.data.id } : null;
-	} catch (e) {
-		return null;
 	}
 }
 

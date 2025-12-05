@@ -2,9 +2,9 @@
  * Invoice Generator
  *
  * Create and send invoices from project completion.
- * Tracks projects in Notion and sends invoices via Stripe/Gmail.
+ * Tracks projects in Notion and creates invoices via Stripe.
  *
- * Integrations: Stripe, Gmail, Notion
+ * Integrations: Stripe, Notion
  * Trigger: Notion page status change to "Completed"
  */
 
@@ -32,9 +32,7 @@ export default defineWorkflow({
 			outcome: 'Projects that invoice themselves',
 		},
 
-		additionalPairs: [
-			{ from: 'notion', to: 'gmail', workflowId: 'invoice-generator', outcome: 'Invoice emails sent automatically' },
-		],
+		additionalPairs: [],
 
 		discoveryMoments: [
 			{
@@ -76,7 +74,6 @@ export default defineWorkflow({
 
 	integrations: [
 		{ service: 'stripe', scopes: ['create_invoices', 'read_customers'] },
-		{ service: 'gmail', scopes: ['send_emails'] },
 		{ service: 'notion', scopes: ['read_pages', 'write_pages'] },
 	],
 
@@ -118,12 +115,7 @@ export default defineWorkflow({
 			type: 'boolean',
 			label: 'Create Stripe Invoice',
 			default: true,
-			description: 'Create official invoice in Stripe',
-		},
-		sendEmailNotification: {
-			type: 'boolean',
-			label: 'Send Email Notification',
-			default: true,
+			description: 'Create official invoice in Stripe (Stripe sends the invoice email)',
 		},
 	},
 
@@ -236,59 +228,7 @@ export default defineWorkflow({
 			}
 		}
 
-		// Send email notification
-		if (inputs.sendEmailNotification) {
-			const currencySymbol = { usd: '$', eur: '€', gbp: '£' }[inputs.currency] || '$';
-			const dueDate = new Date();
-			dueDate.setDate(dueDate.getDate() + inputs.defaultDueDays);
-
-			const emailHtml = `
-<!DOCTYPE html>
-<html>
-<body style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-  <div style="background: #f8f9fa; border-radius: 8px; padding: 30px;">
-    <h1 style="color: #333; margin-top: 0;">Invoice from ${inputs.companyName}</h1>
-
-    <p>Hi ${clientName},</p>
-
-    <p>Thank you for your business! Here are the details for your invoice:</p>
-
-    <div style="background: white; border-radius: 4px; padding: 20px; margin: 20px 0;">
-      <table style="width: 100%; border-collapse: collapse;">
-        <tr>
-          <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Project:</strong></td>
-          <td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right;">${projectName}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Description:</strong></td>
-          <td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right;">${description}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px 0; border-bottom: 1px solid #eee;"><strong>Amount:</strong></td>
-          <td style="padding: 10px 0; border-bottom: 1px solid #eee; text-align: right; font-size: 1.2em; color: #2563eb;">${currencySymbol}${amount.toFixed(2)}</td>
-        </tr>
-        <tr>
-          <td style="padding: 10px 0;"><strong>Due Date:</strong></td>
-          <td style="padding: 10px 0; text-align: right;">${dueDate.toLocaleDateString()}</td>
-        </tr>
-      </table>
-    </div>
-
-    ${stripeInvoiceUrl ? `<p><a href="${stripeInvoiceUrl}" style="display: inline-block; background: #2563eb; color: white; padding: 12px 24px; border-radius: 4px; text-decoration: none;">Pay Invoice</a></p>` : ''}
-
-    <p>If you have any questions, please don't hesitate to reach out.</p>
-
-    <p>Best regards,<br>${inputs.companyName}</p>
-  </div>
-</body>
-</html>`;
-
-			await integrations.gmail.messages.send({
-				to: clientEmail,
-				subject: `Invoice for ${projectName} - ${currencySymbol}${amount.toFixed(2)}`,
-				html: emailHtml,
-			});
-		}
+		// Note: Stripe sends invoice email automatically when invoices.send() is called
 
 		// Update Notion page
 		const updateProperties: Record<string, any> = {
