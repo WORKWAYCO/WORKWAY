@@ -24,6 +24,12 @@ export { default as onboardingAutomation, metadata as onboardingMetadata } from 
 export { default as standupBot, standupSummary, metadata as standupMetadata } from './standup-bot/index.js';
 export { default as meetingIntelligence, metadata as meetingIntelligenceMetadata } from './meeting-intelligence/index.js';
 
+// Compound Workflows - Multi-integration automations
+export { default as salesLeadPipeline, metadata as salesLeadPipelineMetadata } from './sales-lead-pipeline/index.js';
+export { default as clientOnboarding, metadata as clientOnboardingMetadata } from './client-onboarding/index.js';
+export { default as meetingFollowupEngine, metadata as meetingFollowupEngineMetadata } from './meeting-followup-engine/index.js';
+export { default as weeklyProductivityDigest, metadata as weeklyProductivityDigestMetadata } from './weekly-productivity-digest/index.js';
+
 /**
  * All available workflows with their metadata
  */
@@ -80,6 +86,27 @@ export const workflows = {
 	},
 	'meeting-intelligence': {
 		id: 'meeting-intelligence',
+		category: 'productivity',
+		featured: true,
+	},
+	// Compound Workflows
+	'sales-lead-pipeline': {
+		id: 'sales-lead-pipeline',
+		category: 'sales',
+		featured: true,
+	},
+	'client-onboarding-pipeline': {
+		id: 'client-onboarding-pipeline',
+		category: 'sales',
+		featured: true,
+	},
+	'meeting-followup-engine': {
+		id: 'meeting-followup-engine',
+		category: 'productivity',
+		featured: true,
+	},
+	'weekly-productivity-digest': {
+		id: 'weekly-productivity-digest',
 		category: 'productivity',
 		featured: true,
 	},
