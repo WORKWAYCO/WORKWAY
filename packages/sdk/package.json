@@ -1,6 +1,6 @@
 {
   "name": "@workwayco/sdk",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "WORKWAY SDK for building workflow integrations",
   "main": "dist/index.js",
   "module": "dist/index.mjs",

@@ -346,9 +346,12 @@ export {
 // TEMPLATE REGISTRY (Marketplace Templates)
 // ============================================================================
 
-export type { MarketplaceTemplate, TemplateCategoryId } from './template-registry';
+export type { MarketplaceTemplate, TemplateCategoryId, OutcomeFrameId } from './template-registry';
 
 export {
+	// Heideggerian pathway model (preferred)
+	OUTCOME_FRAMES,
+	// Legacy categories (deprecated)
 	TEMPLATE_CATEGORIES,
 	SEED_TEMPLATES,
 	TemplateRegistry,
