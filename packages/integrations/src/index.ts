@@ -151,5 +151,60 @@ export type {
 	LogMeetingActivityOptions,
 } from './hubspot/index.js';
 
+export { Typeform } from './typeform/index.js';
+export type {
+	TypeformConfig,
+	TypeformForm,
+	TypeformField,
+	TypeformFieldType,
+	TypeformResponse,
+	TypeformAnswer,
+	TypeformAnswerType,
+	TypeformWebhook,
+	TypeformWebhookEvent,
+	TypeformWorkspace,
+	TypeformResponsesResult,
+	ListFormsOptions,
+	GetResponsesOptions,
+	CreateWebhookOptions,
+} from './typeform/index.js';
+
+export { Calendly } from './calendly/index.js';
+export type {
+	CalendlyConfig,
+	CalendlyUser,
+	CalendlyEventType,
+	CalendlyScheduledEvent,
+	CalendlyInvitee,
+	CalendlyWebhook,
+	CalendlyWebhookEvent,
+	CalendlyAvailableTime,
+	ListEventTypesOptions,
+	ListScheduledEventsOptions,
+	ListInviteesOptions,
+	GetAvailableTimesOptions,
+	CreateWebhookOptions as CalendlyCreateWebhookOptions,
+} from './calendly/index.js';
+
+export { Todoist } from './todoist/index.js';
+export type {
+	TodoistConfig,
+	TodoistTask,
+	TodoistProject,
+	TodoistSection,
+	TodoistLabel,
+	TodoistComment,
+	TodoistDue,
+	CreateTaskOptions,
+	UpdateTaskOptions,
+	ListTasksOptions,
+	CreateProjectOptions,
+	UpdateProjectOptions,
+	CreateSectionOptions,
+	CreateLabelOptions,
+	UpdateLabelOptions,
+	CreateCommentOptions,
+} from './todoist/index.js';
+
 // Future integrations
 // export { WorkersAI } from './workers-ai/index.js';
