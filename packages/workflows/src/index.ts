@@ -51,6 +51,11 @@ export { default as onboardingAutomation } from './onboarding/index.js';
 export { default as aiNewsletter } from './ai-newsletter/index.js';
 export { default as feedbackAnalyzer } from './feedback-analyzer/index.js';
 
+// Dev Team & Data
+export { default as sprintProgressTracker } from './sprint-progress-tracker/index.js';
+export { default as spreadsheetSync } from './spreadsheet-sync/index.js';
+export { default as contentCalendar } from './content-calendar/index.js';
+
 // ============================================================================
 // INTEGRATION PAIR REGISTRY
 // ============================================================================
@@ -140,6 +145,37 @@ export const integrationPairs = {
 		workflowId: 'weekly-productivity-digest',
 		outcome: 'Productivity insights weekly',
 		outcomeFrame: 'weekly_automatically',
+	},
+
+	// Dev Team
+	'linear:slack': {
+		workflowId: 'sprint-progress-tracker',
+		outcome: 'Sprint updates every morning',
+		outcomeFrame: 'every_morning',
+	},
+	'linear:notion': {
+		workflowId: 'sprint-progress-tracker',
+		outcome: 'Sprint history in Notion',
+		outcomeFrame: 'every_morning',
+	},
+
+	// Data Sync
+	'google-sheets:airtable': {
+		workflowId: 'spreadsheet-sync',
+		outcome: 'Spreadsheets synced to Airtable',
+		outcomeFrame: 'when_data_changes',
+	},
+
+	// Content
+	'airtable:slack': {
+		workflowId: 'content-calendar',
+		outcome: 'Content reminders in Slack',
+		outcomeFrame: 'every_morning',
+	},
+	'airtable:gmail': {
+		workflowId: 'content-calendar',
+		outcome: 'Owner reminders via email',
+		outcomeFrame: 'every_morning',
 	},
 } as const;
 
@@ -236,6 +272,10 @@ export const outcomeFrames = {
 		label: 'After calls...',
 		description: 'Follow-ups and task creation',
 	},
+	when_data_changes: {
+		label: 'When data changes...',
+		description: 'Sync and transform data automatically',
+	},
 } as const;
 
 export type OutcomeFrameId = keyof typeof outcomeFrames;
@@ -264,6 +304,9 @@ export const workflows = {
 	'client-onboarding': { id: 'client-onboarding', outcomeFrame: 'when_clients_onboard' },
 	'meeting-followup-engine': { id: 'meeting-followup-engine', outcomeFrame: 'after_calls' },
 	'weekly-productivity-digest': { id: 'weekly-productivity-digest', outcomeFrame: 'weekly_automatically' },
+	'sprint-progress-tracker': { id: 'sprint-progress-tracker', outcomeFrame: 'every_morning' },
+	'spreadsheet-sync': { id: 'spreadsheet-sync', outcomeFrame: 'when_data_changes' },
+	'content-calendar': { id: 'content-calendar', outcomeFrame: 'every_morning' },
 } as const;
 
 export type WorkflowId = keyof typeof workflows;
