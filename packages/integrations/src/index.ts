@@ -195,5 +195,21 @@ export type {
 	CreateCommentOptions,
 } from './todoist/index.js';
 
+export { Dribbble } from './dribbble/index.js';
+export type {
+	DribbbleConfig,
+	DribbbleUser,
+	DribbbleShot,
+	DribbbleTeam,
+	DribbbleProject,
+	DribbbleImages,
+	DribbbleAttachment,
+	DribbbleVideo,
+	DribbbleLinks,
+	CreateShotData,
+	UpdateShotData,
+	ListShotsOptions,
+} from './dribbble/index.js';
+
 // Future integrations
 // export { WorkersAI } from './workers-ai/index.js';

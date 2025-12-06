@@ -23,11 +23,50 @@
 import fs from 'fs-extra';
 import path from 'path';
 import os from 'os';
-import type { CLIConfig, ProjectConfig } from '../types/index.js';
+import crypto from 'crypto';
+import type { CLIConfig, ProjectConfig, DeveloperWaitlistProfile } from '../types/index.js';
 
 const CONFIG_DIR = path.join(os.homedir(), '.workway');
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 const OAUTH_TOKENS_FILE = path.join(CONFIG_DIR, 'oauth-tokens.json');
+const DEVELOPER_PROFILE_FILE = path.join(CONFIG_DIR, 'developer-profile.json');
+const ENCRYPTION_KEY_FILE = path.join(CONFIG_DIR, '.key');
+
+// SECURITY: Whitelist of allowed API URLs to prevent MITM attacks
+const ALLOWED_API_DOMAINS = [
+	'marketplace-api.half-dozen.workers.dev',
+	'api.workway.co',
+	'localhost',
+	'127.0.0.1',
+];
+
+/**
+ * Validate API URL against whitelist
+ * SECURITY: Prevents environment variable injection attacks
+ */
+function validateApiUrl(url: string): string {
+	try {
+		const parsed = new URL(url);
+
+		// Must be HTTPS in production (allow HTTP for localhost dev)
+		const isLocalhost = parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1';
+		if (!isLocalhost && parsed.protocol !== 'https:') {
+			console.warn('Warning: API URL must use HTTPS. Falling back to default.');
+			return 'https://marketplace-api.half-dozen.workers.dev';
+		}
+
+		// Check domain whitelist
+		if (!ALLOWED_API_DOMAINS.includes(parsed.hostname)) {
+			console.warn(`Warning: API domain "${parsed.hostname}" not in whitelist. Falling back to default.`);
+			return 'https://marketplace-api.half-dozen.workers.dev';
+		}
+
+		return url;
+	} catch {
+		console.warn('Warning: Invalid API URL. Falling back to default.');
+		return 'https://marketplace-api.half-dozen.workers.dev';
+	}
+}
 
 // ============================================================================
 // GLOBAL CONFIG
@@ -77,8 +116,13 @@ export async function saveConfig(config: CLIConfig): Promise<void> {
  * Get default config
  */
 export function getDefaultConfig(): CLIConfig {
+	// SECURITY: Validate API URL from environment variable
+	const apiUrl = process.env.WORKWAY_API_URL
+		? validateApiUrl(process.env.WORKWAY_API_URL)
+		: 'https://marketplace-api.half-dozen.workers.dev';
+
 	return {
-		apiUrl: process.env.WORKWAY_API_URL || 'https://marketplace-api.half-dozen.workers.dev',
+		apiUrl,
 		oauth: {
 			callbackPort: 3456,
 		},
@@ -118,11 +162,72 @@ export async function getAuthToken(): Promise<string | null> {
 }
 
 // ============================================================================
-// OAUTH TOKENS
+// OAUTH TOKENS (with encryption)
 // ============================================================================
 
+const ENCRYPTION_ALGORITHM = 'aes-256-gcm';
+const IV_LENGTH = 16;
+const AUTH_TAG_LENGTH = 16;
+
 /**
- * Load OAuth tokens
+ * Get or create encryption key for token storage
+ * SECURITY: Key is stored separately and with restricted permissions
+ */
+async function getOrCreateEncryptionKey(): Promise<Buffer> {
+	await ensureConfigDir();
+
+	if (await fs.pathExists(ENCRYPTION_KEY_FILE)) {
+		const keyHex = await fs.readFile(ENCRYPTION_KEY_FILE, 'utf-8');
+		return Buffer.from(keyHex.trim(), 'hex');
+	}
+
+	// Generate new key
+	const key = crypto.randomBytes(32);
+	await fs.writeFile(ENCRYPTION_KEY_FILE, key.toString('hex'), { mode: 0o600 });
+
+	return key;
+}
+
+/**
+ * Encrypt data for storage
+ */
+function encryptData(data: string, key: Buffer): string {
+	const iv = crypto.randomBytes(IV_LENGTH);
+	const cipher = crypto.createCipheriv(ENCRYPTION_ALGORITHM, key, iv);
+
+	let encrypted = cipher.update(data, 'utf8', 'hex');
+	encrypted += cipher.final('hex');
+
+	const authTag = cipher.getAuthTag();
+
+	// Format: iv:authTag:encryptedData
+	return `${iv.toString('hex')}:${authTag.toString('hex')}:${encrypted}`;
+}
+
+/**
+ * Decrypt data from storage
+ */
+function decryptData(encryptedData: string, key: Buffer): string {
+	const parts = encryptedData.split(':');
+	if (parts.length !== 3) {
+		throw new Error('Invalid encrypted data format');
+	}
+
+	const [ivHex, authTagHex, encrypted] = parts;
+	const iv = Buffer.from(ivHex, 'hex');
+	const authTag = Buffer.from(authTagHex, 'hex');
+
+	const decipher = crypto.createDecipheriv(ENCRYPTION_ALGORITHM, key, iv);
+	decipher.setAuthTag(authTag);
+
+	let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+	decrypted += decipher.final('utf8');
+
+	return decrypted;
+}
+
+/**
+ * Load OAuth tokens (decrypts from disk)
  */
 export async function loadOAuthTokens(): Promise<Record<string, any>> {
 	await ensureConfigDir();
@@ -132,18 +237,35 @@ export async function loadOAuthTokens(): Promise<Record<string, any>> {
 	}
 
 	try {
-		return await fs.readJson(OAUTH_TOKENS_FILE);
+		const fileContent = await fs.readFile(OAUTH_TOKENS_FILE, 'utf-8');
+
+		// Check if it's encrypted (contains colons for iv:authTag:data format)
+		if (fileContent.includes(':') && !fileContent.startsWith('{')) {
+			const key = await getOrCreateEncryptionKey();
+			const decrypted = decryptData(fileContent.trim(), key);
+			return JSON.parse(decrypted);
+		}
+
+		// Legacy: unencrypted JSON (migrate on next save)
+		return JSON.parse(fileContent);
 	} catch (error) {
+		console.warn('Warning: Could not load OAuth tokens');
 		return {};
 	}
 }
 
 /**
- * Save OAuth tokens
+ * Save OAuth tokens (encrypts to disk)
+ * SECURITY: Tokens are encrypted at rest with AES-256-GCM
  */
 export async function saveOAuthTokens(tokens: Record<string, any>): Promise<void> {
 	await ensureConfigDir();
-	await fs.writeJson(OAUTH_TOKENS_FILE, tokens, { spaces: 2 });
+
+	const key = await getOrCreateEncryptionKey();
+	const encrypted = encryptData(JSON.stringify(tokens), key);
+
+	// Write encrypted data with restricted permissions (owner read/write only)
+	await fs.writeFile(OAUTH_TOKENS_FILE, encrypted, { mode: 0o600 });
 }
 
 /**
@@ -243,4 +365,56 @@ export function getDefaultProjectConfig(): ProjectConfig {
 			minify: false,
 		},
 	};
+}
+
+// ============================================================================
+// DEVELOPER WAITLIST PROFILE
+// ============================================================================
+
+/**
+ * Load developer waitlist profile (stored locally)
+ */
+export async function loadDeveloperProfile(): Promise<DeveloperWaitlistProfile | null> {
+	await ensureConfigDir();
+
+	if (!(await fs.pathExists(DEVELOPER_PROFILE_FILE))) {
+		return null;
+	}
+
+	try {
+		return await fs.readJson(DEVELOPER_PROFILE_FILE);
+	} catch (error) {
+		return null;
+	}
+}
+
+/**
+ * Save developer waitlist profile
+ */
+export async function saveDeveloperProfile(profile: DeveloperWaitlistProfile): Promise<void> {
+	await ensureConfigDir();
+	await fs.writeJson(DEVELOPER_PROFILE_FILE, profile, { spaces: 2 });
+}
+
+/**
+ * Check if developer profile exists
+ */
+export async function hasDeveloperProfile(): Promise<boolean> {
+	return fs.pathExists(DEVELOPER_PROFILE_FILE);
+}
+
+/**
+ * Delete developer profile
+ */
+export async function deleteDeveloperProfile(): Promise<void> {
+	if (await fs.pathExists(DEVELOPER_PROFILE_FILE)) {
+		await fs.remove(DEVELOPER_PROFILE_FILE);
+	}
+}
+
+/**
+ * Get developer profile file path (for display purposes)
+ */
+export function getDeveloperProfilePath(): string {
+	return DEVELOPER_PROFILE_FILE;
 }

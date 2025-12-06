@@ -1,4 +1,5 @@
 name = "zoom-scraper"
+account_id = "5c3e9cf4d55ce171b844fad0931607f9"  # Half Dozen
 main = "src/index.ts"
 compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]

@@ -907,3 +907,444 @@ describe('DiscoveryService Config Inference', () => {
 		expect(suggestion?.inferredConfig.enableAI).toBe(true);
 	});
 });
+
+// ============================================================================
+// VORHANDENHEIT (BREAKDOWN) TESTS
+// ============================================================================
+
+describe('DiscoveryService Vorhandenheit (Breakdown)', () => {
+	let service: DiscoveryService;
+
+	beforeEach(() => {
+		service = createDiscoveryService();
+	});
+
+	describe('reportBreakdown', () => {
+		it('should report a breakdown and transition to Vorhandenheit', () => {
+			const error = new Error('Token expired');
+			const breakdown = service.reportBreakdown('test-workflow', error);
+
+			expect(breakdown.workflowId).toBe('test-workflow');
+			expect(breakdown.type).toBe('integration_disconnected');
+			expect(service.isZuhandenheit('test-workflow')).toBe(false);
+		});
+
+		it('should classify timeout errors as SILENT severity', () => {
+			const error = new Error('Request timeout');
+			const breakdown = service.reportBreakdown('test-workflow', error);
+
+			expect(breakdown.severity).toBe('silent');
+		});
+
+		it('should classify rate limit errors as AMBIENT severity', () => {
+			const error = new Error('Rate limit exceeded');
+			const breakdown = service.reportBreakdown('test-workflow', error);
+
+			expect(breakdown.severity).toBe('ambient');
+		});
+
+		it('should classify auth errors as NOTIFICATION severity', () => {
+			const error = new Error('Unauthorized: token expired');
+			const breakdown = service.reportBreakdown('test-workflow', error);
+
+			expect(breakdown.severity).toBe('notification');
+		});
+
+		it('should classify config errors as BLOCKING severity', () => {
+			const error = new Error('Missing configuration: notionDatabaseId');
+			const breakdown = service.reportBreakdown('test-workflow', error);
+
+			expect(breakdown.severity).toBe('blocking');
+		});
+
+		it('should provide recovery steps for auth errors', () => {
+			const error = new Error('Token expired');
+			const breakdown = service.reportBreakdown('test-workflow', error);
+
+			expect(breakdown.recovery.steps).toContain('Reconnect your integration');
+		});
+
+		it('should update visibility state with breakdown history', () => {
+			const error1 = new Error('First error');
+			const error2 = new Error('Second error');
+
+			service.reportBreakdown('test-workflow', error1);
+			service.reportBreakdown('test-workflow', error2);
+
+			const state = service.getVisibilityState('test-workflow');
+			expect(state?.breakdownHistory.length).toBe(2);
+		});
+	});
+
+	describe('resolveBreakdown', () => {
+		it('should resolve breakdown and return to Zuhandenheit', () => {
+			const error = new Error('Token expired');
+			service.reportBreakdown('test-workflow', error);
+			expect(service.isZuhandenheit('test-workflow')).toBe(false);
+
+			service.resolveBreakdown('test-workflow', 'manual');
+			expect(service.isZuhandenheit('test-workflow')).toBe(true);
+		});
+
+		it('should record resolution method in history', () => {
+			const error = new Error('Token expired');
+			service.reportBreakdown('test-workflow', error);
+			service.resolveBreakdown('test-workflow', 'automatic');
+
+			const state = service.getVisibilityState('test-workflow');
+			expect(state?.breakdownHistory[0].resolutionMethod).toBe('automatic');
+		});
+	});
+
+	describe('getBreakdowns', () => {
+		it('should return all current breakdowns', () => {
+			service.reportBreakdown('workflow-1', new Error('Error 1'));
+			service.reportBreakdown('workflow-2', new Error('Error 2'));
+
+			const breakdowns = service.getBreakdowns();
+			expect(breakdowns.length).toBe(2);
+		});
+
+		it('should not include resolved breakdowns', () => {
+			service.reportBreakdown('workflow-1', new Error('Error 1'));
+			service.reportBreakdown('workflow-2', new Error('Error 2'));
+			service.resolveBreakdown('workflow-1');
+
+			const breakdowns = service.getBreakdowns();
+			expect(breakdowns.length).toBe(1);
+			expect(breakdowns[0].workflowId).toBe('workflow-2');
+		});
+	});
+
+	describe('getBlockingBreakdowns', () => {
+		it('should only return BLOCKING severity breakdowns', () => {
+			service.reportBreakdown('workflow-1', new Error('Missing configuration'));
+			service.reportBreakdown('workflow-2', new Error('Rate limit exceeded'));
+
+			const blocking = service.getBlockingBreakdowns();
+			expect(blocking.length).toBe(1);
+			expect(blocking[0].workflowId).toBe('workflow-1');
+		});
+	});
+
+	describe('disappearance score', () => {
+		it('should start with perfect score for new workflows', () => {
+			const error = new Error('First error');
+			service.reportBreakdown('test-workflow', error);
+			service.resolveBreakdown('test-workflow');
+
+			const state = service.getVisibilityState('test-workflow');
+			// Score should be reduced from 100 due to the breakdown
+			expect(state?.disappearanceScore).toBeLessThan(100);
+		});
+
+		it('should penalize more severe breakdowns more heavily', () => {
+			// Create two separate services to test independently
+			const service1 = createDiscoveryService();
+			const service2 = createDiscoveryService();
+
+			// Silent error (less severe)
+			service1.reportBreakdown('workflow', new Error('timeout'));
+			service1.resolveBreakdown('workflow');
+			const score1 = service1.getVisibilityState('workflow')?.disappearanceScore ?? 0;
+
+			// Blocking error (more severe)
+			service2.reportBreakdown('workflow', new Error('Missing configuration'));
+			service2.resolveBreakdown('workflow');
+			const score2 = service2.getVisibilityState('workflow')?.disappearanceScore ?? 0;
+
+			expect(score1).toBeGreaterThan(score2);
+		});
+	});
+});
+
+// ============================================================================
+// TEMPORAL ECSTASES TESTS
+// ============================================================================
+
+describe('DiscoveryService Temporal Context', () => {
+	let service: DiscoveryService;
+
+	beforeEach(() => {
+		service = createDiscoveryService();
+
+		// Register a test workflow
+		const workflow = createMockWorkflow({
+			metadata: {
+				id: 'meeting-notes',
+				version: '1.0.0',
+				name: 'Meeting Notes',
+				description: 'Creates meeting notes',
+				category: 'productivity',
+				icon: '📝',
+				author: { name: 'Test' },
+				pathway: {
+					outcomeFrame: 'after_meetings',
+					outcomeStatement: {
+						suggestion: 'Want meeting notes?',
+						explanation: 'After meetings, we create notes.',
+						outcome: 'Meeting notes',
+					},
+					primaryPair: { from: 'zoom', to: 'notion', workflowId: 'meeting-notes', outcome: 'Notes' },
+					discoveryMoments: [
+						{
+							trigger: 'event_received',
+							integrations: ['zoom', 'notion'],
+							workflowId: 'meeting-notes',
+							priority: 90,
+							eventType: 'zoom.meeting.ended',
+						},
+					],
+					smartDefaults: {},
+					essentialFields: [],
+					zuhandenheit: {
+						timeToValue: 3,
+						worksOutOfBox: true,
+						gracefulDegradation: true,
+						automaticTrigger: true,
+					},
+				},
+			},
+		});
+
+		service.registerWorkflows([workflow]);
+	});
+
+	describe('getSuggestionWithTemporalContext', () => {
+		it('should prioritize having-been (recent events) over other ecstases', async () => {
+			const context = createMockContext({
+				temporal: {
+					havingBeen: {
+						recentEvents: [
+							{
+								type: 'zoom.meeting.ended',
+								service: 'zoom',
+								timestamp: Date.now() - 5 * 60 * 1000, // 5 minutes ago
+							},
+						],
+						horizon: 60 * 60 * 1000,
+					},
+					makingPresent: {
+						connectedIntegrations: ['zoom', 'notion'],
+						currentTime: new Date(),
+						timezone: 'America/Los_Angeles',
+						dayOfWeek: 3, // Wednesday
+						hourOfDay: 14, // 2 PM
+						isWorkday: true,
+					},
+					comingToward: {
+						scheduledEvents: [],
+						horizon: 24 * 60 * 60 * 1000,
+					},
+				},
+			});
+
+			const suggestion = await service.getSuggestionWithTemporalContext(context as any);
+
+			expect(suggestion).not.toBeNull();
+			expect(suggestion?.workflowId).toBe('meeting-notes');
+		});
+
+		it('should consider making-present for time-based suggestions', async () => {
+			// Register a time-based workflow
+			const digestWorkflow = createMockWorkflow({
+				metadata: {
+					id: 'weekly-digest',
+					version: '1.0.0',
+					name: 'Weekly Digest',
+					description: 'Weekly team digest',
+					category: 'productivity',
+					icon: '📊',
+					author: { name: 'Test' },
+					pathway: {
+						outcomeFrame: 'weekly_automatically',
+						outcomeStatement: {
+							suggestion: 'Want a weekly digest?',
+							explanation: 'Every Monday, we compile a digest.',
+							outcome: 'Weekly digest',
+						},
+						primaryPair: { from: 'slack', to: 'notion', workflowId: 'weekly-digest', outcome: 'Digest' },
+						discoveryMoments: [
+							{
+								trigger: 'time_based',
+								integrations: ['slack', 'notion'],
+								workflowId: 'weekly-digest',
+								priority: 70,
+							},
+						],
+						smartDefaults: {},
+						essentialFields: [],
+						zuhandenheit: {
+							timeToValue: 5,
+							worksOutOfBox: true,
+							gracefulDegradation: true,
+							automaticTrigger: true,
+						},
+					},
+				},
+			});
+
+			service.registerWorkflows([digestWorkflow]);
+
+			// Monday morning context
+			const context = createMockContext({
+				connectedIntegrations: ['slack', 'notion'],
+				temporal: {
+					havingBeen: {
+						recentEvents: [],
+						horizon: 60 * 60 * 1000,
+					},
+					makingPresent: {
+						connectedIntegrations: ['slack', 'notion'],
+						currentTime: new Date(),
+						timezone: 'America/Los_Angeles',
+						dayOfWeek: 1, // Monday
+						hourOfDay: 9, // 9 AM
+						isWorkday: true,
+					},
+					comingToward: {
+						scheduledEvents: [],
+						horizon: 24 * 60 * 60 * 1000,
+					},
+				},
+			});
+
+			const suggestion = await service.getSuggestionWithTemporalContext(context as any);
+
+			expect(suggestion).not.toBeNull();
+			expect(suggestion?.workflowId).toBe('weekly-digest');
+		});
+	});
+});
+
+// ============================================================================
+// HEIDEGGERIAN PHILOSOPHY INTEGRATION TESTS
+// ============================================================================
+
+describe('Heideggerian Philosophy Integration', () => {
+	let service: DiscoveryService;
+
+	beforeEach(() => {
+		service = createDiscoveryService();
+	});
+
+	describe('Zuhandenheit (Ready-to-hand)', () => {
+		it('should default to invisible state (Zuhandenheit)', () => {
+			expect(service.isZuhandenheit('any-workflow')).toBe(true);
+		});
+
+		it('should score workflows with high Zuhandenheit indicators higher', async () => {
+			const highZuhandenheit = createMockWorkflow({
+				metadata: {
+					id: 'high-z',
+					version: '1.0.0',
+					name: 'High Z',
+					description: 'High Zuhandenheit',
+					category: 'productivity',
+					icon: '✨',
+					author: { name: 'Test' },
+					pathway: {
+						outcomeFrame: 'after_meetings',
+						outcomeStatement: {
+							suggestion: 'High Z',
+							explanation: 'Works out of box',
+							outcome: 'Auto magic',
+						},
+						primaryPair: { from: 'zoom', to: 'notion', workflowId: 'high-z', outcome: 'Magic' },
+						discoveryMoments: [
+							{ trigger: 'integration_connected', integrations: ['zoom', 'notion'], workflowId: 'high-z', priority: 50 },
+						],
+						smartDefaults: {},
+						essentialFields: [], // No config needed - one-click
+						zuhandenheit: {
+							timeToValue: 1, // Fast
+							worksOutOfBox: true,
+							gracefulDegradation: true,
+							automaticTrigger: true,
+						},
+					},
+				},
+			});
+
+			const lowZuhandenheit = createMockWorkflow({
+				metadata: {
+					id: 'low-z',
+					version: '1.0.0',
+					name: 'Low Z',
+					description: 'Low Zuhandenheit',
+					category: 'productivity',
+					icon: '⚙️',
+					author: { name: 'Test' },
+					pathway: {
+						outcomeFrame: 'after_meetings',
+						outcomeStatement: {
+							suggestion: 'Low Z',
+							explanation: 'Needs config',
+							outcome: 'Manual magic',
+						},
+						primaryPair: { from: 'zoom', to: 'slack', workflowId: 'low-z', outcome: 'Config needed' },
+						discoveryMoments: [
+							{ trigger: 'integration_connected', integrations: ['zoom', 'slack'], workflowId: 'low-z', priority: 50 },
+						],
+						smartDefaults: {},
+						essentialFields: ['field1', 'field2', 'field3', 'field4'], // Many fields
+						zuhandenheit: {
+							timeToValue: 60, // Slow
+							worksOutOfBox: false,
+							gracefulDegradation: false,
+							automaticTrigger: false,
+						},
+					},
+				},
+			});
+
+			service.registerWorkflows([lowZuhandenheit, highZuhandenheit]);
+
+			const context = createMockContext({
+				connectedIntegrations: ['zoom', 'notion', 'slack'],
+			});
+
+			const suggestion = await service.getSuggestion(context);
+
+			// High Zuhandenheit should win due to better indicators
+			expect(suggestion?.workflowId).toBe('high-z');
+		});
+	});
+
+	describe('Vorhandenheit (Present-at-hand)', () => {
+		it('should transition to Vorhandenheit on breakdown', () => {
+			expect(service.isZuhandenheit('test')).toBe(true); // Starts invisible
+
+			service.reportBreakdown('test', new Error('Failed'));
+
+			expect(service.isZuhandenheit('test')).toBe(false); // Now visible
+		});
+
+		it('should return to Zuhandenheit when breakdown resolves', () => {
+			service.reportBreakdown('test', new Error('Failed'));
+			expect(service.isZuhandenheit('test')).toBe(false);
+
+			service.resolveBreakdown('test');
+
+			expect(service.isZuhandenheit('test')).toBe(true); // Back to invisible
+		});
+	});
+
+	describe('Sorge (Care) - Outcome-focused language', () => {
+		it('should provide outcome-focused breakdown messages', () => {
+			const authError = new Error('Unauthorized: OAuth token expired');
+			const breakdown = service.reportBreakdown('test', authError);
+
+			// Message should focus on resolution, not technical details
+			expect(breakdown.message).toBe('Reconnection needed to continue');
+			expect(breakdown.message).not.toContain('OAuth');
+		});
+
+		it('should provide user-friendly recovery steps', () => {
+			const authError = new Error('Token expired');
+			const breakdown = service.reportBreakdown('test', authError);
+
+			expect(breakdown.recovery.steps?.[0]).toBe('Reconnect your integration');
+		});
+	});
+});

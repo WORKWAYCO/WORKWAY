@@ -11,6 +11,91 @@
 			"import": "./dist/index.js",
 			"default": "./dist/index.js"
 		},
+		"./client-onboarding": {
+			"types": "./dist/client-onboarding/index.d.ts",
+			"import": "./dist/client-onboarding/index.js",
+			"default": "./dist/client-onboarding/index.js"
+		},
+		"./content-calendar": {
+			"types": "./dist/content-calendar/index.d.ts",
+			"import": "./dist/content-calendar/index.js",
+			"default": "./dist/content-calendar/index.js"
+		},
+		"./deal-tracker": {
+			"types": "./dist/deal-tracker/index.d.ts",
+			"import": "./dist/deal-tracker/index.js",
+			"default": "./dist/deal-tracker/index.js"
+		},
+		"./design-portfolio-sync": {
+			"types": "./dist/design-portfolio-sync/index.d.ts",
+			"import": "./dist/design-portfolio-sync/index.js",
+			"default": "./dist/design-portfolio-sync/index.js"
+		},
+		"./error-incident-manager": {
+			"types": "./dist/error-incident-manager/index.d.ts",
+			"import": "./dist/error-incident-manager/index.js",
+			"default": "./dist/error-incident-manager/index.js"
+		},
+		"./form-response-hub": {
+			"types": "./dist/form-response-hub/index.d.ts",
+			"import": "./dist/form-response-hub/index.js",
+			"default": "./dist/form-response-hub/index.js"
+		},
+		"./invoice-generator": {
+			"types": "./dist/invoice-generator/index.d.ts",
+			"import": "./dist/invoice-generator/index.js",
+			"default": "./dist/invoice-generator/index.js"
+		},
+		"./meeting-followup-engine": {
+			"types": "./dist/meeting-followup-engine/index.d.ts",
+			"import": "./dist/meeting-followup-engine/index.js",
+			"default": "./dist/meeting-followup-engine/index.js"
+		},
+		"./meeting-intelligence": {
+			"types": "./dist/meeting-intelligence/index.d.ts",
+			"import": "./dist/meeting-intelligence/index.js",
+			"default": "./dist/meeting-intelligence/index.js"
+		},
+		"./meeting-summarizer": {
+			"types": "./dist/meeting-summarizer/index.d.ts",
+			"import": "./dist/meeting-summarizer/index.js",
+			"default": "./dist/meeting-summarizer/index.js"
+		},
+		"./onboarding": {
+			"types": "./dist/onboarding/index.d.ts",
+			"import": "./dist/onboarding/index.js",
+			"default": "./dist/onboarding/index.js"
+		},
+		"./revenue-radar": {
+			"types": "./dist/revenue-radar/index.d.ts",
+			"import": "./dist/revenue-radar/index.js",
+			"default": "./dist/revenue-radar/index.js"
+		},
+		"./sales-lead-pipeline": {
+			"types": "./dist/sales-lead-pipeline/index.d.ts",
+			"import": "./dist/sales-lead-pipeline/index.js",
+			"default": "./dist/sales-lead-pipeline/index.js"
+		},
+		"./scheduling-autopilot": {
+			"types": "./dist/scheduling-autopilot/index.d.ts",
+			"import": "./dist/scheduling-autopilot/index.js",
+			"default": "./dist/scheduling-autopilot/index.js"
+		},
+		"./spreadsheet-sync": {
+			"types": "./dist/spreadsheet-sync/index.d.ts",
+			"import": "./dist/spreadsheet-sync/index.js",
+			"default": "./dist/spreadsheet-sync/index.js"
+		},
+		"./sprint-progress-tracker": {
+			"types": "./dist/sprint-progress-tracker/index.d.ts",
+			"import": "./dist/sprint-progress-tracker/index.js",
+			"default": "./dist/sprint-progress-tracker/index.js"
+		},
+		"./standup-bot": {
+			"types": "./dist/standup-bot/index.d.ts",
+			"import": "./dist/standup-bot/index.js",
+			"default": "./dist/standup-bot/index.js"
+		},
 		"./stripe-to-notion": {
 			"types": "./dist/stripe-to-notion/index.d.ts",
 			"import": "./dist/stripe-to-notion/index.js",
@@ -21,35 +106,20 @@
 			"import": "./dist/support-ticket-router/index.js",
 			"default": "./dist/support-ticket-router/index.js"
 		},
+		"./task-sync-bridge": {
+			"types": "./dist/task-sync-bridge/index.d.ts",
+			"import": "./dist/task-sync-bridge/index.js",
+			"default": "./dist/task-sync-bridge/index.js"
+		},
 		"./team-digest": {
 			"types": "./dist/team-digest/index.d.ts",
 			"import": "./dist/team-digest/index.js",
 			"default": "./dist/team-digest/index.js"
 		},
-		"./meeting-summarizer": {
-			"types": "./dist/meeting-summarizer/index.d.ts",
-			"import": "./dist/meeting-summarizer/index.js",
-			"default": "./dist/meeting-summarizer/index.js"
-		},
-		"./invoice-generator": {
-			"types": "./dist/invoice-generator/index.d.ts",
-			"import": "./dist/invoice-generator/index.js",
-			"default": "./dist/invoice-generator/index.js"
-		},
-		"./onboarding": {
-			"types": "./dist/onboarding/index.d.ts",
-			"import": "./dist/onboarding/index.js",
-			"default": "./dist/onboarding/index.js"
-		},
-		"./standup-bot": {
-			"types": "./dist/standup-bot/index.d.ts",
-			"import": "./dist/standup-bot/index.js",
-			"default": "./dist/standup-bot/index.js"
-		},
-		"./meeting-intelligence": {
-			"types": "./dist/meeting-intelligence/index.d.ts",
-			"import": "./dist/meeting-intelligence/index.js",
-			"default": "./dist/meeting-intelligence/index.js"
+		"./weekly-productivity-digest": {
+			"types": "./dist/weekly-productivity-digest/index.d.ts",
+			"import": "./dist/weekly-productivity-digest/index.js",
+			"default": "./dist/weekly-productivity-digest/index.js"
 		}
 	},
 	"files": [

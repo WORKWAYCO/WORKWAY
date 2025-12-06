@@ -56,6 +56,27 @@ export { default as sprintProgressTracker } from './sprint-progress-tracker/inde
 export { default as spreadsheetSync } from './spreadsheet-sync/index.js';
 export { default as contentCalendar } from './content-calendar/index.js';
 
+// Error Tracking & Incidents (WORKWAY Dogfooding!)
+export { default as errorIncidentManager } from './error-incident-manager/index.js';
+
+// Design & Creative
+export { default as designPortfolioSync } from './design-portfolio-sync/index.js';
+
+// Scheduling & Meetings
+export { default as schedulingAutopilot } from './scheduling-autopilot/index.js';
+
+// Revenue & Payments
+export { default as revenueRadar } from './revenue-radar/index.js';
+
+// Forms & Responses
+export { default as formResponseHub } from './form-response-hub/index.js';
+
+// Sales & Deals
+export { default as dealTracker } from './deal-tracker/index.js';
+
+// Task Management
+export { default as taskSyncBridge } from './task-sync-bridge/index.js';
+
 // ============================================================================
 // INTEGRATION PAIR REGISTRY
 // ============================================================================
@@ -162,6 +183,85 @@ export const integrationPairs = {
 		outcome: 'Content reminders in Slack',
 		outcomeFrame: 'every_morning',
 	},
+
+	// Design & Creative
+	'dribbble:notion': {
+		workflowId: 'design-portfolio-sync',
+		outcome: 'Portfolio that updates itself',
+		outcomeFrame: 'after_publishing',
+	},
+	'dribbble:slack': {
+		workflowId: 'design-portfolio-sync',
+		outcome: 'New work announced in Slack',
+		outcomeFrame: 'after_publishing',
+	},
+
+	// Scheduling
+	'calendly:notion': {
+		workflowId: 'scheduling-autopilot',
+		outcome: 'Meetings logged automatically',
+		outcomeFrame: 'when_meetings_booked',
+	},
+	'calendly:slack': {
+		workflowId: 'scheduling-autopilot',
+		outcome: 'Booking alerts in Slack',
+		outcomeFrame: 'when_meetings_booked',
+	},
+
+	// Revenue
+	'stripe:slack': {
+		workflowId: 'revenue-radar',
+		outcome: 'Payment alerts in Slack',
+		outcomeFrame: 'when_payments_arrive',
+	},
+	'stripe:hubspot': {
+		workflowId: 'revenue-radar',
+		outcome: 'Deals update on payment',
+		outcomeFrame: 'when_payments_arrive',
+	},
+
+	// Forms
+	'typeform:notion': {
+		workflowId: 'form-response-hub',
+		outcome: 'Responses logged to Notion',
+		outcomeFrame: 'when_forms_submitted',
+	},
+	'typeform:airtable': {
+		workflowId: 'form-response-hub',
+		outcome: 'Responses in Airtable',
+		outcomeFrame: 'when_forms_submitted',
+	},
+
+	// CRM
+	'hubspot:slack': {
+		workflowId: 'deal-tracker',
+		outcome: 'Deal alerts in Slack',
+		outcomeFrame: 'when_deals_progress',
+	},
+	'hubspot:notion': {
+		workflowId: 'deal-tracker',
+		outcome: 'Deal history in Notion',
+		outcomeFrame: 'when_deals_progress',
+	},
+
+	// Tasks
+	'todoist:notion': {
+		workflowId: 'task-sync-bridge',
+		outcome: 'Completed tasks logged to Notion',
+		outcomeFrame: 'when_tasks_complete',
+	},
+
+	// Error Tracking & Incidents (WORKWAY Dogfooding!)
+	'sentry:notion': {
+		workflowId: 'error-incident-manager',
+		outcome: 'Errors that document themselves',
+		outcomeFrame: 'when_errors_happen',
+	},
+	'sentry:slack': {
+		workflowId: 'error-incident-manager',
+		outcome: 'Error alerts in Slack',
+		outcomeFrame: 'when_errors_happen',
+	},
 } as const;
 
 export type IntegrationPairKey = keyof typeof integrationPairs;
@@ -261,6 +361,30 @@ export const outcomeFrames = {
 		label: 'When data changes...',
 		description: 'Sync and transform data automatically',
 	},
+	after_publishing: {
+		label: 'After publishing...',
+		description: 'Sync creative work across platforms',
+	},
+	when_meetings_booked: {
+		label: 'When meetings are booked...',
+		description: 'Log bookings and notify your team',
+	},
+	when_forms_submitted: {
+		label: 'When forms are submitted...',
+		description: 'Route responses to your databases',
+	},
+	when_deals_progress: {
+		label: 'When deals progress...',
+		description: 'Track deal movement and celebrate wins',
+	},
+	when_tasks_complete: {
+		label: 'When tasks complete...',
+		description: 'Build a productivity journal automatically',
+	},
+	when_errors_happen: {
+		label: 'When errors happen...',
+		description: 'Document incidents and alert your team',
+	},
 } as const;
 
 export type OutcomeFrameId = keyof typeof outcomeFrames;
@@ -292,6 +416,13 @@ export const workflows = {
 	'sprint-progress-tracker': { id: 'sprint-progress-tracker', outcomeFrame: 'every_morning' },
 	'spreadsheet-sync': { id: 'spreadsheet-sync', outcomeFrame: 'when_data_changes' },
 	'content-calendar': { id: 'content-calendar', outcomeFrame: 'every_morning' },
+	'design-portfolio-sync': { id: 'design-portfolio-sync', outcomeFrame: 'after_publishing' },
+	'scheduling-autopilot': { id: 'scheduling-autopilot', outcomeFrame: 'when_meetings_booked' },
+	'revenue-radar': { id: 'revenue-radar', outcomeFrame: 'when_payments_arrive' },
+	'form-response-hub': { id: 'form-response-hub', outcomeFrame: 'when_forms_submitted' },
+	'deal-tracker': { id: 'deal-tracker', outcomeFrame: 'when_deals_progress' },
+	'task-sync-bridge': { id: 'task-sync-bridge', outcomeFrame: 'when_tasks_complete' },
+	'error-incident-manager': { id: 'error-incident-manager', outcomeFrame: 'when_errors_happen' },
 } as const;
 
 export type WorkflowId = keyof typeof workflows;

@@ -32,6 +32,8 @@ export interface WorkflowDefinition {
 	onEnable?: (context: WorkflowContext) => Promise<void>;
 	/** Called when workflow is disabled/uninstalled */
 	onDisable?: (context: WorkflowContext) => Promise<void>;
+	/** Called when workflow is permanently deleted - for final cleanup */
+	onDelete?: (context: WorkflowContext) => Promise<void>;
 	/** Called when an error occurs during execution */
 	onError?: (error: Error, context: WorkflowContext) => Promise<void>;
 	/** Validate configuration before enabling */
@@ -252,6 +254,65 @@ export class WorkflowRuntime {
 		}
 
 		return { success: true };
+	}
+
+	/**
+	 * Delete a workflow permanently - calls onDelete hook for final cleanup
+	 *
+	 * This should only be called on inactive/uninstalled workflows.
+	 * Performs final cleanup like removing stored data, webhooks, etc.
+	 *
+	 * Heideggerian note: Deletion is the ultimate tool recession.
+	 * The workflow disappears entirely from the user's world.
+	 */
+	async delete(
+		workflow: WorkflowDefinition,
+		config: Record<string, any> = {},
+		options: { force?: boolean } = {}
+	): Promise<{ success: boolean; error?: string; cleanedUp?: string[] }> {
+		const cleanedUp: string[] = [];
+
+		// Create context for hooks
+		const context = this.createContext(workflow, { config }, config);
+
+		// Call onDisable first if not already disabled (safety measure)
+		if (workflow.onDisable) {
+			try {
+				await workflow.onDisable(context);
+				cleanedUp.push('onDisable hook');
+			} catch (error: any) {
+				if (!options.force) {
+					return { success: false, error: `Disable failed: ${error.message}` };
+				}
+				Logger.warn(`onDisable hook failed (continuing with force): ${error.message}`);
+			}
+		}
+
+		// Call onDelete hook for final cleanup
+		if (workflow.onDelete) {
+			try {
+				await workflow.onDelete(context);
+				cleanedUp.push('onDelete hook');
+			} catch (error: any) {
+				if (!options.force) {
+					return { success: false, error: `Delete cleanup failed: ${error.message}` };
+				}
+				Logger.warn(`onDelete hook failed (continuing with force): ${error.message}`);
+			}
+		}
+
+		// Clear any stored data for this workflow
+		const storageKeys = await context.storage.keys();
+		for (const key of storageKeys) {
+			try {
+				await context.storage.delete(key);
+				cleanedUp.push(`storage:${key}`);
+			} catch (error: any) {
+				Logger.debug(`Failed to delete storage key ${key}: ${error.message}`);
+			}
+		}
+
+		return { success: true, cleanedUp };
 	}
 
 	/**

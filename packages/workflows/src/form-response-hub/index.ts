@@ -1,0 +1,456 @@
+/**
+ * Form Response Hub
+ *
+ * Compound workflow: Typeform → Notion + Airtable + Slack
+ *
+ * Centralizes form responses:
+ * 1. Form submitted on Typeform
+ * 2. Creates Notion page with responses
+ * 3. Adds row to Airtable for analytics
+ * 4. Notifies team in Slack
+ *
+ * Zuhandenheit: "Responses organize themselves"
+ * not "manually export and import form data"
+ */
+
+import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { Typeform } from '@workwayco/integrations';
+
+export default defineWorkflow({
+	name: 'Form Response Hub',
+	description:
+		'When Typeform responses arrive, automatically create Notion pages, add Airtable rows, and notify your team',
+	version: '1.0.0',
+
+	pathway: {
+		outcomeFrame: 'when_forms_submitted',
+
+		outcomeStatement: {
+			suggestion: 'Want form responses to organize themselves?',
+			explanation:
+				'When someone submits a form, we\'ll log it to Notion, add it to Airtable, and notify you in Slack.',
+			outcome: 'Responses on autopilot',
+		},
+
+		primaryPair: {
+			from: 'typeform',
+			to: 'notion',
+			workflowId: 'form-response-hub',
+			outcome: 'Responses logged to Notion',
+		},
+
+		additionalPairs: [
+			{
+				from: 'typeform',
+				to: 'airtable',
+				workflowId: 'form-response-hub',
+				outcome: 'Responses in Airtable',
+			},
+		],
+
+		discoveryMoments: [
+			{
+				trigger: 'integration_connected',
+				integrations: ['typeform', 'notion'],
+				workflowId: 'form-response-hub',
+				priority: 90,
+			},
+			{
+				trigger: 'integration_connected',
+				integrations: ['typeform', 'airtable'],
+				workflowId: 'form-response-hub',
+				priority: 85,
+			},
+		],
+
+		smartDefaults: {
+			notifyOnResponse: { value: true },
+		},
+
+		essentialFields: ['typeformFormId'],
+
+		zuhandenheit: {
+			timeToValue: 1,
+			worksOutOfBox: true,
+			gracefulDegradation: true,
+			automaticTrigger: true,
+		},
+	},
+
+	pricing: {
+		model: 'freemium',
+		pricePerMonth: 12,
+		trialDays: 14,
+		description: 'Free for 50 responses/month, $12/month unlimited',
+	},
+
+	integrations: [
+		{ service: 'typeform', scopes: ['responses:read', 'webhooks:write'] },
+		{ service: 'notion', scopes: ['insert_content'], optional: true },
+		{ service: 'airtable', scopes: ['data.records:write'], optional: true },
+		{ service: 'slack', scopes: ['chat:write'], optional: true },
+	],
+
+	inputs: {
+		typeformFormId: {
+			type: 'text',
+			label: 'Typeform Form ID',
+			required: true,
+			description: 'The Typeform form to monitor',
+		},
+		notionDatabaseId: {
+			type: 'notion_database_picker',
+			label: 'Notion Database',
+			required: false,
+			description: 'Database to store responses',
+		},
+		airtableBaseId: {
+			type: 'airtable_base_picker',
+			label: 'Airtable Base',
+			required: false,
+			description: 'Base to store responses',
+		},
+		airtableTableId: {
+			type: 'airtable_table_picker',
+			label: 'Airtable Table',
+			required: false,
+			description: 'Table to store responses',
+		},
+		slackChannel: {
+			type: 'slack_channel_picker',
+			label: 'Notification Channel',
+			required: false,
+			description: 'Channel for response notifications',
+		},
+		includeAllFields: {
+			type: 'boolean',
+			label: 'Include All Fields',
+			default: true,
+			description: 'Include all form fields in the response',
+		},
+	},
+
+	trigger: webhook({
+		path: '/typeform',
+		events: ['form_response'],
+	}),
+
+	async execute({ trigger, inputs, integrations, storage }) {
+		const event = trigger.payload as any;
+		const formResponse = event.form_response;
+
+		if (!formResponse) {
+			return { success: false, error: 'Invalid Typeform webhook payload' };
+		}
+
+		// Extract response ID for idempotency check
+		// Typeform uses `token` as the unique response identifier
+		const responseId = formResponse.token || formResponse.response_id;
+		if (!responseId) {
+			return { success: false, error: 'Missing response ID in webhook payload' };
+		}
+
+		// Idempotency check: verify this response hasn't already been processed
+		// This prevents duplicate entries when Typeform retries webhook delivery
+		const processedKey = `processed:${inputs.typeformFormId}:${responseId}`;
+		const alreadyProcessed = await storage.get(processedKey);
+
+		if (alreadyProcessed) {
+			return {
+				success: true,
+				skipped: true,
+				reason: 'Response already processed (idempotency check)',
+				responseId,
+			};
+		}
+
+		// Extract answers
+		const answers = Typeform.extractAnswers(formResponse);
+		const submittedAt = new Date(formResponse.submitted_at);
+
+		// Build a summary of the response
+		const responseSummary = buildResponseSummary(answers, formResponse.definition?.fields || []);
+
+		let notionCreated = false;
+		let airtableCreated = false;
+		let slackSent = false;
+
+		// 1. Create Notion page
+		if (inputs.notionDatabaseId && integrations.notion) {
+			const properties = buildNotionProperties(answers, responseSummary, submittedAt);
+			const content = buildNotionContent(answers, formResponse);
+
+			await integrations.notion.pages.create({
+				parent: { database_id: inputs.notionDatabaseId },
+				properties,
+				children: content,
+			});
+			notionCreated = true;
+		}
+
+		// 2. Create Airtable record
+		if (inputs.airtableBaseId && inputs.airtableTableId && integrations.airtable) {
+			const fields = buildAirtableFields(answers, responseSummary, submittedAt);
+
+			await integrations.airtable.records.create({
+				baseId: inputs.airtableBaseId,
+				tableId: inputs.airtableTableId,
+				fields,
+			});
+			airtableCreated = true;
+		}
+
+		// 3. Send Slack notification
+		if (inputs.slackChannel && integrations.slack) {
+			await integrations.slack.chat.postMessage({
+				channel: inputs.slackChannel,
+				blocks: buildSlackBlocks(answers, responseSummary, formResponse),
+				text: `New form response: ${responseSummary.title}`,
+			});
+			slackSent = true;
+		}
+
+		// Mark response as processed for idempotency
+		// Store with 30-day TTL to prevent unbounded storage growth
+		await storage.set(processedKey, {
+			processedAt: new Date().toISOString(),
+			destinations: { notion: notionCreated, airtable: airtableCreated, slack: slackSent },
+		});
+
+		return {
+			success: true,
+			responseId,
+			response: {
+				submittedAt: submittedAt.toISOString(),
+				answersCount: Object.keys(answers).length,
+				summary: responseSummary.title,
+			},
+			destinations: {
+				notion: notionCreated,
+				airtable: airtableCreated,
+				slack: slackSent,
+			},
+		};
+	},
+
+	onError: async ({ error, inputs, integrations }) => {
+		if (integrations.slack && inputs.slackChannel) {
+			await integrations.slack.chat.postMessage({
+				channel: inputs.slackChannel,
+				text: `:warning: Form Response Hub Error: ${error.message}`,
+			});
+		}
+	},
+});
+
+// =============================================================================
+// TYPES
+// =============================================================================
+
+interface ResponseSummary {
+	title: string;
+	email: string | null;
+	name: string | null;
+	highlights: Array<{ label: string; value: string }>;
+}
+
+// =============================================================================
+// HELPER FUNCTIONS
+// =============================================================================
+
+function buildResponseSummary(answers: Record<string, any>, fields: any[]): ResponseSummary {
+	// Try to find email and name
+	let email: string | null = null;
+	let name: string | null = null;
+	const highlights: Array<{ label: string; value: string }> = [];
+
+	for (const [fieldId, answer] of Object.entries(answers)) {
+		const field = fields.find((f: any) => f.id === fieldId);
+		const fieldTitle = field?.title || fieldId;
+
+		// Detect email
+		if (
+			!email &&
+			(field?.type === 'email' ||
+				fieldTitle.toLowerCase().includes('email') ||
+				(typeof answer === 'string' && answer.includes('@')))
+		) {
+			email = String(answer);
+		}
+
+		// Detect name
+		if (
+			!name &&
+			(fieldTitle.toLowerCase().includes('name') ||
+				fieldTitle.toLowerCase() === 'your name' ||
+				fieldTitle.toLowerCase() === 'full name')
+		) {
+			name = String(answer);
+		}
+
+		// Add to highlights (first 5 non-empty answers)
+		if (highlights.length < 5 && answer !== null && answer !== undefined && answer !== '') {
+			highlights.push({
+				label: fieldTitle,
+				value: typeof answer === 'object' ? JSON.stringify(answer) : String(answer),
+			});
+		}
+	}
+
+	// Build title
+	let title = 'Form Response';
+	if (name) {
+		title = `Response from ${name}`;
+	} else if (email) {
+		title = `Response from ${email}`;
+	}
+
+	return { title, email, name, highlights };
+}
+
+function buildNotionProperties(
+	answers: Record<string, any>,
+	summary: ResponseSummary,
+	submittedAt: Date
+): Record<string, any> {
+	const properties: Record<string, any> = {
+		Name: {
+			title: [{ text: { content: summary.title } }],
+		},
+		'Submitted At': {
+			date: { start: submittedAt.toISOString() },
+		},
+	};
+
+	if (summary.email) {
+		properties['Email'] = { email: summary.email };
+	}
+
+	if (summary.name) {
+		properties['Respondent Name'] = {
+			rich_text: [{ text: { content: summary.name } }],
+		};
+	}
+
+	return properties;
+}
+
+function buildNotionContent(answers: Record<string, any>, formResponse: any): any[] {
+	const blocks: any[] = [];
+	const fields = formResponse.definition?.fields || [];
+
+	blocks.push({
+		type: 'callout',
+		callout: {
+			icon: { emoji: '📝' },
+			rich_text: [
+				{
+					type: 'text',
+					text: { content: `Submitted on ${new Date(formResponse.submitted_at).toLocaleString()}` },
+				},
+			],
+		},
+	});
+
+	blocks.push({
+		type: 'heading_2',
+		heading_2: {
+			rich_text: [{ type: 'text', text: { content: 'Responses' } }],
+		},
+	});
+
+	for (const [fieldId, answer] of Object.entries(answers)) {
+		const field = fields.find((f: any) => f.id === fieldId);
+		const fieldTitle = field?.title || fieldId;
+		const answerText = typeof answer === 'object' ? JSON.stringify(answer, null, 2) : String(answer);
+
+		blocks.push({
+			type: 'paragraph',
+			paragraph: {
+				rich_text: [
+					{ type: 'text', text: { content: `${fieldTitle}: ` }, annotations: { bold: true } },
+					{ type: 'text', text: { content: answerText } },
+				],
+			},
+		});
+	}
+
+	return blocks;
+}
+
+function buildAirtableFields(
+	answers: Record<string, any>,
+	summary: ResponseSummary,
+	submittedAt: Date
+): Record<string, any> {
+	const fields: Record<string, any> = {
+		'Submitted At': submittedAt.toISOString(),
+	};
+
+	if (summary.name) {
+		fields['Name'] = summary.name;
+	}
+
+	if (summary.email) {
+		fields['Email'] = summary.email;
+	}
+
+	// Add first 10 answers as fields
+	let count = 0;
+	for (const [fieldId, answer] of Object.entries(answers)) {
+		if (count >= 10) break;
+		const value = typeof answer === 'object' ? JSON.stringify(answer) : String(answer);
+		fields[`Answer ${count + 1}`] = value.slice(0, 1000); // Airtable field limit
+		count++;
+	}
+
+	return fields;
+}
+
+function buildSlackBlocks(
+	answers: Record<string, any>,
+	summary: ResponseSummary,
+	formResponse: any
+): any[] {
+	const blocks: any[] = [
+		{
+			type: 'section',
+			text: {
+				type: 'mrkdwn',
+				text: `:incoming_envelope: *New Form Response*\n${summary.title}`,
+			},
+		},
+	];
+
+	// Add highlights
+	if (summary.highlights.length > 0) {
+		const fields = summary.highlights.slice(0, 4).map((h) => ({
+			type: 'mrkdwn',
+			text: `*${h.label}:*\n${h.value.slice(0, 100)}${h.value.length > 100 ? '...' : ''}`,
+		}));
+
+		blocks.push({
+			type: 'section',
+			fields,
+		});
+	}
+
+	blocks.push({
+		type: 'context',
+		elements: [
+			{
+				type: 'mrkdwn',
+				text: `Submitted ${new Date(formResponse.submitted_at).toLocaleString()} • ${Object.keys(answers).length} answers`,
+			},
+		],
+	});
+
+	return blocks;
+}
+
+export const metadata = {
+	id: 'form-response-hub',
+	category: 'marketing-social',
+	featured: true,
+	stats: { rating: 0, users: 0, reviews: 0 },
+};

@@ -32,5 +32,8 @@
     "turbo": "latest",
     "typescript": "^5.0.0"
   },
-  "packageManager": "pnpm@9.14.2"
+  "packageManager": "pnpm@9.14.2",
+  "dependencies": {
+    "@sentry/cloudflare": "^10.29.0"
+  }
 }

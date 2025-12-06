@@ -21,6 +21,11 @@
  */
 
 /**
+ * API Base URL for WORKWAY platform
+ */
+export const API_BASE_URL = process.env.WORKWAY_API_URL || 'https://api.workway.co';
+
+/**
  * Valid workflow categories for the WORKWAY marketplace
  */
 export const WORKFLOW_CATEGORIES = [

@@ -18,6 +18,7 @@ import { workflowPublishCommand } from './commands/workflow/publish.js';
 import { workflowValidateCommand } from './commands/workflow/validate.js';
 import { workflowForkCommand } from './commands/workflow/fork.js';
 import { workflowLineageCommand } from './commands/workflow/lineage.js';
+import { workflowDeleteCommand } from './commands/workflow/delete.js';
 import { oauthConnectCommand } from './commands/oauth/connect.js';
 import { oauthListCommand } from './commands/oauth/list.js';
 import { oauthDisconnectCommand } from './commands/oauth/disconnect.js';
@@ -27,6 +28,9 @@ import { developerRegisterCommand } from './commands/developer/register.js';
 import { developerProfileCommand } from './commands/developer/profile.js';
 import { developerEarningsCommand } from './commands/developer/earnings.js';
 import { developerStripeCommand } from './commands/developer/stripe.js';
+import { developerInitCommand } from './commands/developer/init.js';
+import { developerSubmitCommand } from './commands/developer/submit.js';
+import { developerStatusCommand } from './commands/developer/status.js';
 import { aiModelsCommand } from './commands/ai/models.js';
 import { aiTestCommand } from './commands/ai/test.js';
 import { aiEstimateCommand } from './commands/ai/estimate.js';
@@ -34,6 +38,7 @@ import { createCommand } from './commands/agentic/create.js';
 import { explainCommand } from './commands/agentic/explain.js';
 import { modifyCommand } from './commands/agentic/modify.js';
 import { marketplaceNeedsCommand, marketplaceSearchCommand, marketplaceBrowseCommand, marketplaceInfoCommand } from './commands/marketplace/index.js';
+import { dbCheckCommand } from './commands/db/check.js';
 import { Logger } from './utils/logger.js';
 import { handleCommand, handleCommandError } from './utils/command-handler.js';
 
@@ -43,7 +48,7 @@ const program = new Command();
 program
 	.name('workway')
 	.description('WORKWAY CLI - Build, test, and publish workflows and integrations')
-	.version('0.3.0');
+	.version('0.3.5');
 
 // ============================================================================
 // AUTHENTICATION COMMANDS
@@ -139,6 +144,16 @@ workflowCommand
 	.command('lineage [workflow]')
 	.description('View fork lineage and ancestry')
 	.action(handleCommand(workflowLineageCommand));
+
+workflowCommand
+	.command('delete [workflow-id]')
+	.description('Permanently delete an inactive workflow')
+	.option('--force', 'Skip confirmation prompt')
+	.option('--path <path>', 'Path to workflow file')
+	.option('--keep-data', 'Keep stored data (only remove workflow)')
+	.action(handleCommand(async (workflowId: string, options: any) => {
+		await workflowDeleteCommand(workflowId, options);
+	}));
 
 // ============================================================================
 // MARKETPLACE COMMANDS
@@ -300,16 +315,33 @@ program
 // DEVELOPER COMMANDS
 // ============================================================================
 
-const developerCommand = program.command('developer').description('Developer profile management');
+const developerCommand = program.command('developer').description('System Architect profile and marketplace access');
+
+// Waitlist flow commands
+developerCommand
+	.command('init')
+	.description('Create your System Architect profile')
+	.action(handleCommand(developerInitCommand));
 
 developerCommand
+	.command('submit')
+	.description('Submit profile for marketplace review')
+	.action(handleCommand(developerSubmitCommand));
+
+developerCommand
+	.command('status')
+	.description('Check application status')
+	.action(handleCommand(developerStatusCommand));
+
+// Legacy/approved developer commands
+developerCommand
 	.command('register')
-	.description('Register as a workflow developer')
+	.description('Register as a workflow developer (legacy)')
 	.action(handleCommand(developerRegisterCommand));
 
 developerCommand
 	.command('profile')
-	.description('View/edit developer profile')
+	.description('View/edit developer profile (requires approval)')
 	.option('--edit', 'Edit profile interactively')
 	.action(handleCommand(developerProfileCommand));
 
@@ -338,6 +370,28 @@ developerCommand
 			process.exit(1);
 		}
 	});
+
+// ============================================================================
+// DATABASE COMMANDS
+// ============================================================================
+
+const dbCommand = program.command('db').description('Database management and debugging tools');
+
+dbCommand
+	.command('check')
+	.description('Check D1 schema against Drizzle definitions')
+	.option('--table <table>', 'Check specific table only')
+	.option('--generate-migration', 'Generate SQL to fix drift')
+	.option('--local', 'Check local database instead of remote')
+	.option('--config <path>', 'Path to wrangler config file')
+	.action(handleCommand(async (options: any) => {
+		await dbCheckCommand({
+			table: options.table,
+			generateMigration: options.generateMigration,
+			remote: !options.local,
+			config: options.config,
+		});
+	}));
 
 // ============================================================================
 // AGENTIC COMMANDS - AI-Assisted Workflow Creation

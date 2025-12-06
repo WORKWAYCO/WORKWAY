@@ -160,6 +160,48 @@ export interface DeveloperProfile {
 	stripeConnectAccountId?: string;
 }
 
+// ============================================================================
+// DEVELOPER WAITLIST TYPES
+// ============================================================================
+
+/**
+ * Developer waitlist profile - stored locally until submitted
+ */
+export interface DeveloperWaitlistProfile {
+	// Identity
+	name: string;
+	email: string;
+	companyName?: string;
+
+	// Technical background
+	technicalBackground: string;
+	githubUrl?: string;
+	portfolioUrl?: string;
+
+	// Workflow ideas
+	workflowIdeas: string;
+	targetIntegrations: string[];
+
+	// Why WORKWAY
+	whyWorkway: string;
+
+	// Metadata
+	createdAt: string;
+	updatedAt: string;
+	submittedAt?: string;
+}
+
+/**
+ * Developer waitlist status from API
+ */
+export interface DeveloperWaitlistStatus {
+	status: 'not_submitted' | 'pending_review' | 'approved' | 'rejected';
+	submittedAt?: string;
+	reviewedAt?: string;
+	feedback?: string;
+	nextSteps?: string[];
+}
+
 export interface WorkflowListing {
 	id: string;
 	name: string;
