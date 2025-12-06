@@ -29,6 +29,36 @@ import {
 } from './workflow-sdk';
 
 // ============================================================================
+// WORKFLOW ACCESSORS (Handle both shorthand and metadata patterns)
+// ============================================================================
+
+/**
+ * Get workflow ID from a WorkflowDefinition
+ * Handles both shorthand (at root) and metadata patterns
+ */
+function getWorkflowId(workflow: WorkflowDefinition): string {
+	// Try metadata first (legacy pattern)
+	if (workflow.metadata?.id) {
+		return workflow.metadata.id;
+	}
+	// Try pathway (Heideggerian discovery pattern)
+	if (workflow.pathway?.primaryPair?.workflowId) {
+		return workflow.pathway.primaryPair.workflowId;
+	}
+	// Fallback: derive from name
+	const name = workflow.metadata?.name || workflow.name || 'unknown';
+	return name.toLowerCase().replace(/\s+/g, '-');
+}
+
+/**
+ * Get workflow pathway metadata
+ * Handles both root-level and metadata-nested patterns
+ */
+function getWorkflowPathway(workflow: WorkflowDefinition) {
+	return workflow.pathway || workflow.metadata?.pathway;
+}
+
+// ============================================================================
 // TEMPORAL ECSTASES (Heideggerian Time Structures)
 // ============================================================================
 
@@ -169,26 +199,26 @@ export class DiscoveryService {
 	 */
 	registerWorkflows(workflows: WorkflowDefinition[]): void {
 		for (const workflow of workflows) {
-			this.workflows.set(workflow.metadata.id, workflow);
+			const workflowId = getWorkflowId(workflow);
+			this.workflows.set(workflowId, workflow);
 
 			// Index by integration pairs for fast lookup
-			if (workflow.metadata.pathway) {
-				const pathway = workflow.metadata.pathway;
-
+			const pathway = getWorkflowPathway(workflow);
+			if (pathway) {
 				// Index primary pair
 				const pairKey = this.pairKey(pathway.primaryPair.from, pathway.primaryPair.to);
-				this.addToIndex(this.integrationPairIndex, pairKey, workflow.metadata.id);
+				this.addToIndex(this.integrationPairIndex, pairKey, workflowId);
 
 				// Index additional pairs
 				for (const pair of pathway.additionalPairs || []) {
 					const additionalKey = this.pairKey(pair.from, pair.to);
-					this.addToIndex(this.integrationPairIndex, additionalKey, workflow.metadata.id);
+					this.addToIndex(this.integrationPairIndex, additionalKey, workflowId);
 				}
 
 				// Index by event types
 				for (const moment of pathway.discoveryMoments) {
 					if (moment.eventType) {
-						this.addToIndex(this.eventTypeIndex, moment.eventType, workflow.metadata.id);
+						this.addToIndex(this.eventTypeIndex, moment.eventType, workflowId);
 					}
 				}
 			}
@@ -216,10 +246,10 @@ export class DiscoveryService {
 			return null;
 		}
 
-		const pathway = best.workflow.metadata.pathway!;
+		const pathway = getWorkflowPathway(best.workflow)!;
 
 		return {
-			workflowId: best.workflow.metadata.id,
+			workflowId: getWorkflowId(best.workflow),
 			outcomeStatement: pathway.outcomeStatement,
 			inferredConfig: this.inferConfig(best.workflow, context),
 			triggerContext: {
@@ -257,10 +287,10 @@ export class DiscoveryService {
 		const best = this.selectBest(candidates, context);
 		if (!best) return null;
 
-		const pathway = best.workflow.metadata.pathway!;
+		const pathway = getWorkflowPathway(best.workflow)!;
 
 		return {
-			workflowId: best.workflow.metadata.id,
+			workflowId: getWorkflowId(best.workflow),
 			outcomeStatement: pathway.outcomeStatement,
 			inferredConfig: this.inferConfig(best.workflow, context),
 			triggerContext: {
@@ -297,26 +327,31 @@ export class DiscoveryService {
 		const candidates = workflowIds
 			.map((id) => this.workflows.get(id))
 			.filter((w): w is WorkflowDefinition => {
-				if (!w || !w.metadata.pathway) return false;
-				if (context.installedWorkflows.includes(w.metadata.id)) return false;
-				if (context.dismissedWorkflows.includes(w.metadata.id)) return false;
+				const wPathway = w ? getWorkflowPathway(w) : undefined;
+				if (!w || !wPathway) return false;
+				const wId = getWorkflowId(w);
+				if (context.installedWorkflows.includes(wId)) return false;
+				if (context.dismissedWorkflows.includes(wId)) return false;
 				return true;
 			})
-			.map((workflow) => ({
-				workflow,
-				moment: workflow.metadata.pathway!.discoveryMoments[0],
-				score: this.calculateFitScore(workflow, workflow.metadata.pathway!.discoveryMoments[0], context),
-			}));
+			.map((workflow) => {
+				const wPathway = getWorkflowPathway(workflow)!;
+				return {
+					workflow,
+					moment: wPathway.discoveryMoments[0],
+					score: this.calculateFitScore(workflow, wPathway.discoveryMoments[0], context),
+				};
+			});
 
 		if (candidates.length === 0) return null;
 
 		// Sort by score and return best
 		candidates.sort((a, b) => b.score - a.score);
 		const best = candidates[0];
-		const pathway = best.workflow.metadata.pathway!;
+		const pathway = getWorkflowPathway(best.workflow)!;
 
 		return {
-			workflowId: best.workflow.metadata.id,
+			workflowId: getWorkflowId(best.workflow),
 			outcomeStatement: pathway.outcomeStatement,
 			inferredConfig: this.inferConfig(best.workflow, context),
 			triggerContext: {
@@ -339,9 +374,8 @@ export class DiscoveryService {
 		const frames = new Set<OutcomeFrame>();
 
 		for (const [, workflow] of this.workflows) {
-			if (!workflow.metadata.pathway) continue;
-
-			const pathway = workflow.metadata.pathway;
+			const pathway = getWorkflowPathway(workflow);
+			if (!pathway) continue;
 
 			// Check if user has required integrations
 			const hasRequiredIntegrations = pathway.discoveryMoments.some((moment) =>
@@ -371,13 +405,16 @@ export class DiscoveryService {
 
 		// Get workflows for this frame
 		const frameWorkflows = Array.from(this.workflows.values())
-			.filter((w) => w.metadata.pathway?.outcomeFrame === frame)
-			.filter((w) => !context.installedWorkflows.includes(w.metadata.id))
-			.filter((w) => !context.dismissedWorkflows.includes(w.metadata.id));
+			.filter((w) => {
+				const wPathway = getWorkflowPathway(w);
+				return wPathway?.outcomeFrame === frame;
+			})
+			.filter((w) => !context.installedWorkflows.includes(getWorkflowId(w)))
+			.filter((w) => !context.dismissedWorkflows.includes(getWorkflowId(w)));
 
 		// Group by primary pair and select best for each
 		for (const workflow of frameWorkflows) {
-			const pathway = workflow.metadata.pathway!;
+			const pathway = getWorkflowPathway(workflow)!;
 			const pairKey = this.pairKey(pathway.primaryPair.from, pathway.primaryPair.to);
 
 			// Check if user has required integrations
@@ -392,7 +429,7 @@ export class DiscoveryService {
 			seenPairs.add(pairKey);
 
 			suggestions.push({
-				workflowId: workflow.metadata.id,
+				workflowId: getWorkflowId(workflow),
 				outcomeStatement: pathway.outcomeStatement,
 				inferredConfig: this.inferConfig(workflow, context),
 				triggerContext: {
@@ -418,13 +455,13 @@ export class DiscoveryService {
 		const candidates: Array<{ workflow: WorkflowDefinition; moment: DiscoveryMoment; score: number }> = [];
 
 		for (const [, workflow] of this.workflows) {
-			if (!workflow.metadata.pathway) continue;
+			const pathway = getWorkflowPathway(workflow);
+			if (!pathway) continue;
 
 			// Skip already installed or dismissed
-			if (context.installedWorkflows.includes(workflow.metadata.id)) continue;
-			if (context.dismissedWorkflows.includes(workflow.metadata.id)) continue;
-
-			const pathway = workflow.metadata.pathway;
+			const workflowId = getWorkflowId(workflow);
+			if (context.installedWorkflows.includes(workflowId)) continue;
+			if (context.dismissedWorkflows.includes(workflowId)) continue;
 
 			for (const moment of pathway.discoveryMoments) {
 				// Check if moment matches context
@@ -499,7 +536,7 @@ export class DiscoveryService {
 		moment: DiscoveryMoment,
 		context: DiscoveryContext
 	): number {
-		const pathway = workflow.metadata.pathway!;
+		const pathway = getWorkflowPathway(workflow)!;
 		let score = 0;
 
 		// Priority from discovery moment (0-100, author-declared)
@@ -539,7 +576,7 @@ export class DiscoveryService {
 		context: DiscoveryContext
 	): Record<string, unknown> {
 		const config: Record<string, unknown> = {};
-		const pathway = workflow.metadata.pathway;
+		const pathway = getWorkflowPathway(workflow);
 
 		if (!pathway) return config;
 
@@ -558,7 +595,7 @@ export class DiscoveryService {
 	}
 
 	private isOneClickReady(workflow: WorkflowDefinition, _context: DiscoveryContext): boolean {
-		const pathway = workflow.metadata.pathway;
+		const pathway = getWorkflowPathway(workflow);
 		if (!pathway) return false;
 
 		// One-click ready if no essential fields OR all essential fields can be inferred
@@ -569,7 +606,7 @@ export class DiscoveryService {
 		workflow: WorkflowDefinition,
 		_context: DiscoveryContext
 	): WorkflowSuggestion['requiredFields'] {
-		const pathway = workflow.metadata.pathway;
+		const pathway = getWorkflowPathway(workflow);
 		if (!pathway) return [];
 
 		// Map essential fields to UI field definitions

@@ -139,9 +139,29 @@ export default defineWorkflow({
 		events: ['checkout.session.completed', 'payment_intent.succeeded'],
 	}),
 
-	async execute({ trigger, inputs, integrations, env }) {
+	async execute({ trigger, inputs, integrations, env, storage }) {
 		const event = trigger.data;
 		const eventType = event.type;
+
+		// Extract unique identifier for idempotency check
+		const eventId = event.id; // Stripe provides a unique event ID
+		if (!eventId) {
+			return { success: false, error: 'Missing event ID in Stripe webhook' };
+		}
+
+		// Idempotency check: verify this event hasn't already been processed
+		// This prevents duplicate client onboarding when Stripe retries webhook delivery
+		const processedKey = `processed:stripe:${eventId}`;
+		const alreadyProcessed = await storage.get(processedKey);
+
+		if (alreadyProcessed) {
+			return {
+				success: true,
+				skipped: true,
+				reason: 'Event already processed (idempotency check)',
+				eventId,
+			};
+		}
 
 		// Extract customer info based on event type
 		let customer: CustomerInfo;
@@ -296,6 +316,13 @@ export default defineWorkflow({
 			channel: inputs.slackChannel,
 			blocks: slackBlocks,
 			text: `New client: ${customer.name || customer.email} - ${customer.productName}`,
+		});
+
+		// Mark event as processed for idempotency
+		// Store with 30-day TTL to prevent unbounded storage growth
+		await storage.set(processedKey, {
+			processedAt: new Date().toISOString(),
+			clientEmail: customer.email,
 		});
 
 		return {

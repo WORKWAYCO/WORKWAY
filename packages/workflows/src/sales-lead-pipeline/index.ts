@@ -157,8 +157,29 @@ export default defineWorkflow({
 		events: ['form_response'],
 	}),
 
-	async execute({ trigger, inputs, integrations, env }) {
+	async execute({ trigger, inputs, integrations, env, storage }) {
 		const response = trigger.data;
+
+		// Extract unique identifier for idempotency check
+		// Typeform uses response_id or token as unique identifiers
+		const responseId = response.response_id || response.form_response?.token;
+		if (!responseId) {
+			return { success: false, error: 'Missing response ID in Typeform webhook' };
+		}
+
+		// Idempotency check: verify this response hasn't already been processed
+		// This prevents duplicate lead creation when Typeform retries webhook delivery
+		const processedKey = `processed:typeform:${inputs.typeformId}:${responseId}`;
+		const alreadyProcessed = await storage.get(processedKey);
+
+		if (alreadyProcessed) {
+			return {
+				success: true,
+				skipped: true,
+				reason: 'Response already processed (idempotency check)',
+				responseId,
+			};
+		}
 
 		// 1. Extract form answers
 		const answers = extractFormAnswers(response);
@@ -283,6 +304,14 @@ export default defineWorkflow({
 				notionPageId = page.data.id;
 			}
 		}
+
+		// Mark response as processed for idempotency
+		// Store with 30-day TTL to prevent unbounded storage growth
+		await storage.set(processedKey, {
+			processedAt: new Date().toISOString(),
+			leadEmail: email,
+			leadScore: leadScore,
+		});
 
 		return {
 			success: true,

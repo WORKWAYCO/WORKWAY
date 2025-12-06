@@ -122,8 +122,9 @@ export class OAuthCallbackServer {
 				res.json({ status: 'ok', provider });
 			});
 
-			// Start server
-			this.server = this.app.listen(this.port, () => {
+			// Start server - SECURITY: bind to localhost only to prevent OAuth hijacking
+			// on shared networks. Never bind to 0.0.0.0 for OAuth callbacks.
+			this.server = this.app.listen(this.port, '127.0.0.1', () => {
 				Logger.success(`Local server started on http://localhost:${this.port}`);
 				Logger.info('Opening browser for authorization...');
 				Logger.blank();

@@ -100,6 +100,10 @@ export type {
 	WorkflowResult,
 	WorkflowStorage,
 	ActionHelpers,
+	// Extended context types (for workflow execute/hooks)
+	IntegrationRequirement,
+	ExtendedWorkflowContext,
+	WorkflowErrorContext,
 	// Marketplace types (legacy)
 	WorkflowListing,
 	WorkflowInstallation,
@@ -113,7 +117,15 @@ export type {
 	PathwayMetadata,
 } from './workflow-sdk';
 
-export { WorkflowRegistry, defineWorkflow, defineConfigField } from './workflow-sdk';
+export {
+	WorkflowRegistry,
+	defineWorkflow,
+	defineConfigField,
+	// Workflow accessors (handle both patterns)
+	getWorkflowId,
+	getWorkflowName,
+	getWorkflowDescription,
+} from './workflow-sdk';
 
 // ============================================================================
 // DISCOVERY SERVICE (Pathway Model)
@@ -133,11 +145,15 @@ export type {
 	ManualTriggerConfig,
 	PollTriggerConfig,
 	Trigger,
+	// New flexible option types
+	WebhookOptions,
+	ScheduleOptions,
 } from './triggers';
 
 export {
 	webhook,
 	schedule,
+	cron, // Alias for schedule
 	manual,
 	poll,
 	isWebhookTrigger,

@@ -109,12 +109,33 @@ export default defineWorkflow({
 		filter: { channel: '{{inputs.supportChannel}}' },
 	}),
 
-	async execute({ trigger, inputs, integrations, env }) {
+	async execute({ trigger, inputs, integrations, env, storage }) {
 		const message = trigger.data;
 
 		// Skip bot messages and thread replies
 		if (message.bot_id || message.thread_ts) {
 			return { success: true, skipped: true, reason: 'Bot or thread message' };
+		}
+
+		// Extract unique identifier for idempotency check
+		// Slack uses a combination of channel + timestamp as unique identifier
+		const messageId = `${message.channel}:${message.ts}`;
+		if (!message.ts) {
+			return { success: false, error: 'Missing message timestamp in Slack event' };
+		}
+
+		// Idempotency check: verify this message hasn't already been processed
+		// This prevents duplicate ticket routing when Slack retries webhook delivery
+		const processedKey = `processed:slack:${messageId}`;
+		const alreadyProcessed = await storage.get(processedKey);
+
+		if (alreadyProcessed) {
+			return {
+				success: true,
+				skipped: true,
+				reason: 'Message already processed (idempotency check)',
+				messageId,
+			};
 		}
 
 		// AI Classification
@@ -220,6 +241,14 @@ export default defineWorkflow({
 				text: `⚠️ *AUTO-ESCALATED* - This ticket requires immediate attention!`,
 			});
 		}
+
+		// Mark message as processed for idempotency
+		// Store with 30-day TTL to prevent unbounded storage growth
+		await storage.set(processedKey, {
+			processedAt: new Date().toISOString(),
+			category,
+			urgency,
+		});
 
 		return {
 			success: true,

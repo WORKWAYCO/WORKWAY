@@ -148,6 +148,30 @@ export default defineWorkflow({
 			}
 		}
 
+		// Idempotency check: verify this payment hasn't already been logged
+		// This prevents duplicate entries when Stripe retries webhook delivery
+		const existingCheck = await integrations.notion.databases.query({
+			database_id: inputs.notionDatabaseId,
+			filter: {
+				property: 'Payment ID',
+				rich_text: {
+					equals: paymentData.id,
+				},
+			},
+			page_size: 1,
+		});
+
+		if (existingCheck.success && existingCheck.data?.results?.length > 0) {
+			const existingPage = existingCheck.data.results[0];
+			return {
+				success: true,
+				skipped: true,
+				reason: 'Payment already logged (idempotency check)',
+				existingPageId: existingPage.id,
+				paymentId: paymentData.id,
+			};
+		}
+
 		// Create Notion page
 		const notionPage = await integrations.notion.pages.create({
 			parent: { database_id: inputs.notionDatabaseId },

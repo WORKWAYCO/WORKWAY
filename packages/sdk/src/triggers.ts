@@ -57,12 +57,25 @@ export interface TriggerConfig {
 
 /**
  * Webhook trigger configuration
+ *
+ * Supports three patterns:
+ * 1. Service + single event: { service: 'stripe', event: 'payment.succeeded' }
+ * 2. Service + multiple events: { service: 'stripe', events: ['event1', 'event2'] }
+ * 3. Path-based webhook: { path: '/typeform', events: ['form_response'] }
  */
 export interface WebhookTriggerConfig extends TriggerConfig {
 	type: 'webhook';
-	service: string;
-	event: string;
+	/** Service name (e.g., 'stripe', 'github') */
+	service?: string;
+	/** Webhook path (alternative to service) */
+	path?: string;
+	/** Single event type (use event OR events, not both) */
+	event?: string;
+	/** Multiple event types */
+	events?: string[];
+	/** Filter conditions */
 	filter?: Record<string, unknown>;
+	/** Webhook secret for verification */
 	secret?: string;
 }
 
@@ -88,9 +101,9 @@ export interface ManualTriggerConfig extends TriggerConfig {
  */
 export interface PollTriggerConfig extends TriggerConfig {
 	type: 'poll';
-	service: string;
-	endpoint: string;
-	interval: number; // seconds
+	service?: string;
+	endpoint?: string;
+	interval: number | string; // seconds (string for template interpolation)
 	filter?: Record<string, unknown>;
 }
 
@@ -108,49 +121,110 @@ export type Trigger =
 // ============================================================================
 
 /**
+ * Webhook trigger options - supports multiple patterns
+ */
+export type WebhookOptions =
+	| {
+			/** Service name */
+			service: string;
+			/** Single event type */
+			event: string;
+			/** Multiple event types (alternative to event) */
+			events?: never;
+			/** Path (not used with service) */
+			path?: never;
+			filter?: Record<string, unknown>;
+			secret?: string;
+	  }
+	| {
+			/** Service name */
+			service: string;
+			/** Single event type (alternative to events) */
+			event?: never;
+			/** Multiple event types */
+			events: string[];
+			/** Path (not used with service) */
+			path?: never;
+			filter?: Record<string, unknown>;
+			secret?: string;
+	  }
+	| {
+			/** Path-based webhook (alternative to service) */
+			path: string;
+			/** Service (not used with path) */
+			service?: never;
+			/** Single event type (alternative to events) */
+			event?: string;
+			/** Multiple event types */
+			events?: string[];
+			filter?: Record<string, unknown>;
+			secret?: string;
+	  };
+
+/**
  * Create a webhook trigger
  *
  * Webhooks are the most common trigger type - they're activated when
  * an external service sends an HTTP request to WORKWAY.
+ *
+ * Supports three patterns:
+ * 1. Service + single event: `webhook({ service: 'stripe', event: 'payment.succeeded' })`
+ * 2. Service + multiple events: `webhook({ service: 'stripe', events: ['event1', 'event2'] })`
+ * 3. Path-based: `webhook({ path: '/typeform', events: ['form_response'] })`
  *
  * @param options - Webhook configuration
  * @returns Webhook trigger configuration
  *
  * @example
  * ```typescript
- * // Stripe payment received
+ * // Stripe payment received (single event)
  * trigger: webhook({
  *   service: 'stripe',
  *   event: 'payment_intent.succeeded'
  * })
  *
- * // GitHub PR opened
+ * // Stripe multiple events
+ * trigger: webhook({
+ *   service: 'stripe',
+ *   events: ['payment_intent.succeeded', 'charge.refunded']
+ * })
+ *
+ * // Path-based webhook (e.g., Typeform)
+ * trigger: webhook({
+ *   path: '/typeform',
+ *   events: ['form_response']
+ * })
+ *
+ * // GitHub PR opened with filter
  * trigger: webhook({
  *   service: 'github',
  *   event: 'pull_request.opened',
  *   filter: { base: 'main' }
  * })
- *
- * // Zendesk ticket created
- * trigger: webhook({
- *   service: 'zendesk',
- *   event: 'ticket.created'
- * })
  * ```
  */
-export function webhook(options: {
-	service: string;
-	event: string;
-	filter?: Record<string, unknown>;
-	secret?: string;
-}): WebhookTriggerConfig {
+export function webhook(options: WebhookOptions): WebhookTriggerConfig {
 	return {
 		type: 'webhook',
 		service: options.service,
+		path: options.path,
 		event: options.event,
+		events: options.events,
 		filter: options.filter,
 		secret: options.secret,
 	};
+}
+
+/**
+ * Schedule trigger options
+ */
+export interface ScheduleOptions {
+	/** Cron expression (5-part: minute hour day month weekday) */
+	cron?: string;
+	/** Alias for cron */
+	schedule?: string;
+	/** Timezone (e.g., 'America/New_York', 'UTC') */
+	timezone?: string;
 }
 
 /**
@@ -159,43 +233,87 @@ export function webhook(options: {
  * Schedule triggers run workflows on a time-based schedule using cron syntax.
  * Powered by Cloudflare Workers Cron Triggers.
  *
- * @param cron - Cron expression (5-part: minute hour day month weekday)
- * @param options - Optional timezone configuration
+ * Supports two patterns:
+ * 1. Positional: `schedule('0 9 * * *', { timezone: 'UTC' })`
+ * 2. Object-based: `schedule({ cron: '0 9 * * *', timezone: 'UTC' })`
+ *
+ * @param cronOrOptions - Cron expression string OR options object
+ * @param options - Optional timezone configuration (only for positional pattern)
  * @returns Schedule trigger configuration
  *
  * @example
  * ```typescript
- * // Every day at 9am UTC
+ * // Positional pattern - every day at 9am UTC
  * trigger: schedule('0 9 * * *')
  *
- * // Every Monday at 9am Eastern
+ * // Positional pattern with timezone
  * trigger: schedule('0 9 * * 1', { timezone: 'America/New_York' })
  *
- * // Every 15 minutes
- * trigger: schedule('*\/15 * * * *')
+ * // Object pattern (preferred for workflows)
+ * trigger: schedule({
+ *   cron: '0 9 * * 1-5', // Weekdays at 9am
+ *   timezone: 'America/New_York'
+ * })
  *
- * // First day of every month at midnight
- * trigger: schedule('0 0 1 * *')
+ * // Dynamic cron with template interpolation
+ * trigger: schedule({
+ *   cron: '0 {{inputs.hour}} * * *',
+ *   timezone: '{{inputs.timezone}}'
+ * })
  * ```
  */
 export function schedule(
-	cron: string,
+	cronOrOptions: string | ScheduleOptions,
 	options?: { timezone?: string }
 ): ScheduleTriggerConfig {
-	// Validate cron expression
-	const parts = cron.trim().split(/\s+/);
-	if (parts.length !== 5) {
-		throw new Error(
-			`Invalid cron expression: "${cron}". Expected 5 parts (minute hour day month weekday), got ${parts.length}.`
-		);
+	// Handle object-based pattern
+	if (typeof cronOrOptions === 'object') {
+		// Support both `cron` and `schedule` property names
+		const cronExpr = cronOrOptions.cron || cronOrOptions.schedule;
+		if (!cronExpr) {
+			throw new Error('Schedule trigger requires either "cron" or "schedule" property');
+		}
+		validateCron(cronExpr);
+		return {
+			type: 'schedule',
+			cron: cronExpr,
+			timezone: cronOrOptions.timezone,
+		};
 	}
 
+	// Handle positional pattern
+	const cron = cronOrOptions;
+	validateCron(cron);
 	return {
 		type: 'schedule',
 		cron,
 		timezone: options?.timezone,
 	};
 }
+
+/**
+ * Validate cron expression (allows template variables)
+ */
+function validateCron(cron: string): void {
+	// Skip validation if cron contains template variables
+	if (cron.includes('{{')) {
+		return;
+	}
+
+	const parts = cron.trim().split(/\s+/);
+	if (parts.length !== 5) {
+		throw new Error(
+			`Invalid cron expression: "${cron}". Expected 5 parts (minute hour day month weekday), got ${parts.length}.`
+		);
+	}
+}
+
+/**
+ * Alias for schedule() - create a cron-based trigger
+ *
+ * @deprecated Use schedule() instead
+ */
+export const cron = schedule;
 
 /**
  * Create a manual trigger
@@ -250,12 +368,13 @@ export function manual(options?: { description?: string }): ManualTriggerConfig 
  * ```
  */
 export function poll(options: {
-	service: string;
-	endpoint: string;
-	interval: number;
+	service?: string;
+	endpoint?: string;
+	interval: number | string;
 	filter?: Record<string, unknown>;
 }): PollTriggerConfig {
-	if (options.interval < 60) {
+	// Skip validation if interval is a template string
+	if (typeof options.interval === 'number' && options.interval < 60) {
 		throw new Error(
 			`Poll interval must be at least 60 seconds, got ${options.interval}.`
 		);
@@ -307,8 +426,14 @@ export function isPollTrigger(trigger: Trigger): trigger is PollTriggerConfig {
  */
 export function describeTrigger(trigger: Trigger): string {
 	switch (trigger.type) {
-		case 'webhook':
-			return `Webhook: ${trigger.service}.${trigger.event}`;
+		case 'webhook': {
+			// Handle different webhook patterns
+			const source = trigger.service || trigger.path || 'custom';
+			const eventInfo = trigger.event
+				? trigger.event
+				: trigger.events?.join(', ') || 'all events';
+			return `Webhook: ${source} → ${eventInfo}`;
+		}
 		case 'schedule':
 			return `Schedule: ${trigger.cron}${trigger.timezone ? ` (${trigger.timezone})` : ''}`;
 		case 'manual':

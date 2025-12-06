@@ -52,6 +52,7 @@
  */
 
 import type { ZodSchema } from 'zod';
+import type { Trigger } from './triggers';
 
 // ============================================================================
 // WORKFLOW METADATA
@@ -133,10 +134,19 @@ export interface WorkflowMetadata {
  */
 export interface WorkflowPricing {
 	/** Pricing model */
-	model: 'free' | 'freemium' | 'subscription' | 'usage' | 'one-time';
+	model: 'free' | 'freemium' | 'subscription' | 'usage' | 'one-time' | 'paid';
 
-	/** Base price (USD, monthly for subscription) */
-	price: number;
+	/** Base price (USD) - use 'price' or 'pricePerMonth' */
+	price?: number;
+
+	/** Monthly price (USD) - alias for price in subscription model */
+	pricePerMonth?: number;
+
+	/** Price per execution (USD) - shorthand for usage model */
+	pricePerExecution?: number;
+
+	/** Number of free executions included */
+	freeExecutions?: number;
 
 	/** Free tier limits (for freemium) */
 	freeTier?: {
@@ -151,6 +161,9 @@ export interface WorkflowPricing {
 
 	/** Trial period (days) */
 	trialDays?: number;
+
+	/** Human-readable description */
+	description?: string;
 }
 
 // ============================================================================
@@ -216,6 +229,8 @@ export interface WorkflowContext {
 	trigger: {
 		type: string;
 		data: any;
+		/** Alias for data - webhook payload */
+		payload?: any;
 		timestamp: number;
 	};
 
@@ -252,6 +267,9 @@ export interface WorkflowStorage {
 
 	/** Set value in storage */
 	set(key: string, value: any): Promise<void>;
+
+	/** Put value in storage (alias for set) */
+	put(key: string, value: any): Promise<void>;
 
 	/** Delete value from storage */
 	delete(key: string): Promise<void>;
@@ -431,40 +449,111 @@ export function classifyBreakdown(error: Error): BreakdownSeverity {
 // ============================================================================
 
 /**
+ * Integration requirement - supports both simple and extended format
+ */
+export type IntegrationRequirement =
+	| string // Simple: 'stripe'
+	| {
+			service: string;
+			scopes?: string[];
+			optional?: boolean;
+	  }; // Extended: { service: 'stripe', scopes: ['read_payments'] }
+
+/**
+ * Extended workflow context with inputs and typed integrations
+ */
+export interface ExtendedWorkflowContext<TInputs = Record<string, any>, TIntegrations = Record<string, any>>
+	extends Omit<WorkflowContext, 'config'> {
+	/** User-configured inputs */
+	inputs: TInputs;
+
+	/** Connected integration clients */
+	integrations: TIntegrations;
+
+	/** Legacy: alias for inputs */
+	config: TInputs;
+}
+
+/**
+ * Error context for onError handler
+ */
+export interface WorkflowErrorContext<TInputs = Record<string, any>, TIntegrations = Record<string, any>> {
+	error: Error & { message: string };
+	trigger: WorkflowContext['trigger'];
+	inputs: TInputs;
+	integrations: TIntegrations;
+}
+
+/**
  * Complete workflow definition
  *
  * This is what marketplace developers create and publish
  */
-export interface WorkflowDefinition<TConfig = any> {
+export interface WorkflowDefinition<TConfig = any, TInputs = Record<string, any>, TIntegrations = Record<string, any>> {
+	/** Workflow name (shorthand - used if metadata not provided) */
+	name?: string;
+
+	/** Workflow description (shorthand) */
+	description?: string;
+
+	/** Workflow version (shorthand) */
+	version?: string;
+
 	/** Metadata for marketplace */
-	metadata: WorkflowMetadata;
+	metadata?: WorkflowMetadata;
+
+	/** Pathway metadata for discovery */
+	pathway?: PathwayMetadata;
 
 	/** Pricing information */
-	pricing: WorkflowPricing;
+	pricing?: WorkflowPricing;
 
-	/** Required integrations */
-	integrations: string[];
+	/** Required integrations - supports string[] or extended format */
+	integrations: IntegrationRequirement[];
 
-	/** Trigger configuration */
-	trigger: {
-		/** Trigger ID (e.g., 'stripe.payment-succeeded') */
-		type: string;
+	/** User-configurable inputs (for UI generation) */
+	inputs?: Record<
+		string,
+		{
+			type: string;
+			label: string;
+			required?: boolean;
+			default?: any;
+			description?: string;
+			options?: string[] | Array<{ label: string; value: string }>;
+			// Extended input properties for complex field types
+			/** Items for array/list inputs */
+			items?: { type: string };
+			/** Minimum value for number inputs */
+			min?: number;
+			/** Maximum value for number inputs */
+			max?: number;
+			/** Allow multiple selections */
+			multiple?: boolean;
+			/** Nested properties for object inputs */
+			properties?: Record<string, { type: string; label?: string; default?: any }>;
+			/** Placeholder text */
+			placeholder?: string;
+		}
+	>;
 
-		/** Trigger-specific config */
-		config?: any;
-	};
+	/** Trigger configuration - use webhook(), schedule(), manual(), or poll() helpers */
+	trigger: Trigger;
+
+	/** Additional webhook triggers (for multi-trigger workflows) */
+	webhooks?: Trigger[];
 
 	/** User configuration schema */
 	configSchema?: ZodSchema<TConfig>;
 
-	/** Configuration fields (for UI generation) */
+	/** Configuration fields (for UI generation) - legacy, prefer inputs */
 	configFields?: WorkflowConfigField[];
 
 	/**
 	 * Main workflow execution function
 	 * This is where the workflow logic lives
 	 */
-	execute(context: WorkflowContext): Promise<WorkflowResult>;
+	execute(context: ExtendedWorkflowContext<TInputs, TIntegrations>): Promise<WorkflowResult | any>;
 
 	/**
 	 * Optional: Validate configuration before enabling
@@ -474,12 +563,12 @@ export interface WorkflowDefinition<TConfig = any> {
 	/**
 	 * Optional: Setup hook (called when workflow is enabled)
 	 */
-	onEnable?(context: WorkflowContext): Promise<void>;
+	onEnable?(context: ExtendedWorkflowContext<TInputs, TIntegrations>): Promise<void>;
 
 	/**
 	 * Optional: Cleanup hook (called when workflow is disabled)
 	 */
-	onDisable?(context: WorkflowContext): Promise<void>;
+	onDisable?(context: ExtendedWorkflowContext<TInputs, TIntegrations>): Promise<void>;
 
 	/**
 	 * Optional: Final cleanup hook (called when workflow is permanently deleted)
@@ -492,12 +581,12 @@ export interface WorkflowDefinition<TConfig = any> {
 	 * Heideggerian note: Deletion is the ultimate tool recession.
 	 * The workflow disappears entirely from the user's world.
 	 */
-	onDelete?(context: WorkflowContext): Promise<void>;
+	onDelete?(context: ExtendedWorkflowContext<TInputs, TIntegrations>): Promise<void>;
 
 	/**
 	 * Optional: Error handler
 	 */
-	onError?(error: Error, context: WorkflowContext): Promise<void>;
+	onError?(context: WorkflowErrorContext<TInputs, TIntegrations>): Promise<void>;
 }
 
 /**
@@ -530,6 +619,42 @@ export interface WorkflowResult {
  *
  * Similar to ActionRegistry, but for complete workflow products
  */
+// ============================================================================
+// WORKFLOW ACCESSORS (Handle both shorthand and metadata patterns)
+// ============================================================================
+
+/**
+ * Get workflow ID from a WorkflowDefinition
+ * Handles both shorthand (pathway.primaryPair.workflowId) and metadata patterns
+ */
+export function getWorkflowId(workflow: WorkflowDefinition): string {
+	// Try metadata first (legacy pattern)
+	if (workflow.metadata?.id) {
+		return workflow.metadata.id;
+	}
+	// Try pathway (Heideggerian discovery pattern)
+	if (workflow.pathway?.primaryPair?.workflowId) {
+		return workflow.pathway.primaryPair.workflowId;
+	}
+	// Fallback: derive from name
+	const name = workflow.metadata?.name || workflow.name || 'unknown';
+	return name.toLowerCase().replace(/\s+/g, '-');
+}
+
+/**
+ * Get workflow name from a WorkflowDefinition
+ */
+export function getWorkflowName(workflow: WorkflowDefinition): string {
+	return workflow.metadata?.name || workflow.name || 'Unnamed Workflow';
+}
+
+/**
+ * Get workflow description from a WorkflowDefinition
+ */
+export function getWorkflowDescription(workflow: WorkflowDefinition): string {
+	return workflow.metadata?.description || workflow.description || '';
+}
+
 export class WorkflowRegistry {
 	private workflows = new Map<string, WorkflowDefinition>();
 
@@ -537,7 +662,7 @@ export class WorkflowRegistry {
 	 * Register a workflow
 	 */
 	register(workflow: WorkflowDefinition): void {
-		this.workflows.set(workflow.metadata.id, workflow);
+		this.workflows.set(getWorkflowId(workflow), workflow);
 	}
 
 	/**
@@ -559,33 +684,41 @@ export class WorkflowRegistry {
 	 */
 	search(query: string): WorkflowDefinition[] {
 		const lowerQuery = query.toLowerCase();
-		return this.getAll().filter(
-			(wf) =>
-				wf.metadata.name.toLowerCase().includes(lowerQuery) ||
-				wf.metadata.description.toLowerCase().includes(lowerQuery) ||
-				wf.metadata.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery))
-		);
+		return this.getAll().filter((wf) => {
+			const name = getWorkflowName(wf);
+			const description = getWorkflowDescription(wf);
+			return (
+				name.toLowerCase().includes(lowerQuery) ||
+				description.toLowerCase().includes(lowerQuery) ||
+				wf.metadata?.tags?.some((tag) => tag.toLowerCase().includes(lowerQuery))
+			);
+		});
 	}
 
 	/**
 	 * Get workflows by category
 	 */
 	getByCategory(category: string): WorkflowDefinition[] {
-		return this.getAll().filter((wf) => wf.metadata.category === category);
+		return this.getAll().filter((wf) => wf.metadata?.category === category);
 	}
 
 	/**
 	 * Get workflows by author
 	 */
 	getByAuthor(authorName: string): WorkflowDefinition[] {
-		return this.getAll().filter((wf) => wf.metadata.author.name === authorName);
+		return this.getAll().filter((wf) => wf.metadata?.author?.name === authorName);
 	}
 
 	/**
 	 * Get workflows using a specific integration
 	 */
 	getByIntegration(integrationId: string): WorkflowDefinition[] {
-		return this.getAll().filter((wf) => wf.integrations.includes(integrationId));
+		return this.getAll().filter((wf) =>
+			wf.integrations.some((i) => {
+				if (typeof i === 'string') return i === integrationId;
+				return i.service === integrationId;
+			})
+		);
 	}
 
 	/**
@@ -653,7 +786,16 @@ export type OutcomeFrame =
 	| 'when_tickets_arrive' // "When tickets arrive..." → Support Router
 	| 'every_morning' // "Every morning..." → Daily Standup
 	| 'when_clients_onboard' // "When clients onboard..." → Client Onboarding
-	| 'after_calls'; // "After calls..." → Call Followup
+	| 'after_calls' // "After calls..." → Call Followup
+	// Extended frames for additional workflow patterns
+	| 'when_deals_progress' // "When deals progress..." → Deal Tracker
+	| 'after_publishing' // "After publishing..." → Design Portfolio Sync
+	| 'when_errors_happen' // "When errors happen..." → Error Incident Manager
+	| 'when_forms_submitted' // "When forms submitted..." → Form Response Hub
+	| 'when_meetings_booked' // "When meetings booked..." → Scheduling Autopilot
+	| 'when_data_changes' // "When data changes..." → Spreadsheet Sync
+	| 'when_tasks_complete' // "When tasks complete..." → Task Sync Bridge
+	| string; // Allow custom frames for extensibility
 
 /**
  * Human-readable outcome statement

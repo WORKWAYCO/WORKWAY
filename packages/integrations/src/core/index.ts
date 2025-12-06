@@ -5,7 +5,7 @@
  */
 
 export { BaseAPIClient, buildQueryString } from './base-client.js';
-export type { BaseClientConfig } from './base-client.js';
+export type { BaseClientConfig, TokenRefreshHandler } from './base-client.js';
 
 export {
 	createErrorHandler,
