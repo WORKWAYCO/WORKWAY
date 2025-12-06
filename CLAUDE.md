@@ -11,6 +11,16 @@ When building WORKWAY integrations and workflows:
 - The tool should be invisible during use - it only becomes visible when it breaks (Vorhandenheit)
 - Every feature should ask: "Does this help the tool recede further?"
 
+### The Outcome Test
+
+> "Map your next project by what disappears from your to-do list, not what gets added to your tech stack."
+
+Two ways to describe a workflow:
+- **Wrong**: "It syncs my CRM with my email via REST API."
+- **Right**: "It handles my follow-ups after client calls."
+
+The test: Can you describe the workflow's value without mentioning a single piece of technology? If yes, you've found the outcome.
+
 ## Design Principles: Weniger, aber besser (Less, but better)
 
 From Dieter Rams' design philosophy:
