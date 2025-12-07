@@ -268,5 +268,38 @@ export type {
 	UpdateAppointmentOptions,
 } from './sikka/index.js';
 
+export {
+	Procore,
+	toStandardProject as procoreToStandardProject,
+	toStandardIssue as procoreToStandardIssue,
+	toStandardDailyLog as procoreToStandardDailyLog,
+} from './procore/index.js';
+export type {
+	ProcoreConfig,
+	ProcoreCompany,
+	ProcoreProject,
+	ProcoreUser,
+	ProcoreRFI,
+	ProcoreSubmittal,
+	ProcoreDailyLog,
+	ProcoreManpowerLog,
+	ProcoreEquipmentLog,
+	ProcoreNotesLog,
+	ProcoreChangeOrder,
+	ProcoreChangeOrderLineItem,
+	ProcoreBudgetLineItem,
+	ProcoreDrawing,
+	ProcoreWebhookEvent,
+	GetProjectsOptions,
+	GetRFIsOptions,
+	GetSubmittalsOptions,
+	GetDailyLogsOptions,
+	GetChangeOrdersOptions,
+	GetBudgetOptions,
+	CreateRFIOptions,
+	CreateDailyLogOptions,
+	AddManpowerLogOptions,
+} from './procore/index.js';
+
 // Future integrations
 // export { WorkersAI } from './workers-ai/index.js';
