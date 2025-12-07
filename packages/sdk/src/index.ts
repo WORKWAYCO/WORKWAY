@@ -412,5 +412,75 @@ export {
 // RE-EXPORTS
 // ============================================================================
 
+// ============================================================================
+// BYOO (Bring Your Own OAuth)
+// ============================================================================
+
+export type {
+	// Core types
+	CredentialSource,
+	CredentialMode,
+	OAuthAppStatus,
+	OAuthAppHealthStatus,
+	OAuthCredentials,
+	DeveloperOAuthApp,
+	CredentialResolverOptions,
+	OAuthProviderConfig,
+	// CRUD options
+	CreateOAuthAppOptions,
+	UpdateOAuthAppOptions,
+} from './byoo';
+
+export {
+	OAUTH_PROVIDERS,
+	CredentialError,
+	buildTokenKey,
+	parseTokenKey,
+	getProviderConfig,
+	getSupportedProviders,
+	providerSupportsByoo,
+	// SQL schemas
+	DEVELOPER_OAUTH_APPS_SCHEMA,
+	MARKETPLACE_INTEGRATIONS_CREDENTIAL_MODE,
+	USER_INSTALLATIONS_CREDENTIAL_SOURCE,
+} from './byoo';
+
+// ============================================================================
+// ENCRYPTION UTILITIES
+// ============================================================================
+
+export type { EncryptedPayload, EncryptionResult, KeyManagementConfig } from './encryption';
+
+export {
+	// Core encryption
+	encryptSecret,
+	decryptSecret,
+	getKeyIdFromPayload,
+	rotateEncryption,
+	// Key management
+	generateEncryptionKey,
+	getCurrentKeyId,
+	getKeyById,
+	storeKey,
+	initializeKeyManagement,
+	// Buffer utilities
+	hexToBuffer,
+	bufferToHex,
+	bufferToBase64,
+	base64ToBuffer,
+} from './encryption';
+
+// ============================================================================
+// CREDENTIAL RESOLVER
+// ============================================================================
+
+export type { CredentialResolverEnv } from './credential-resolver';
+
+export { CredentialResolver, DeveloperOAuthAppManager } from './credential-resolver';
+
+// ============================================================================
+// RE-EXPORTS
+// ============================================================================
+
 // Re-export commonly used third-party types
 export { z, type ZodSchema } from 'zod';
