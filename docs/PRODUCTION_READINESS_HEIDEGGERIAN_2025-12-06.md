@@ -346,7 +346,7 @@ This is fixable. The architecture is sound. The gaps are implementation details,
 | Token refresh | Integrations | 8 hrs | ✅ Fixed (BaseAPIClient) |
 | Idempotency (3 workflows) | Workflows | 4 hrs | ✅ Fixed |
 | OAuth token encryption | CLI | 4 hrs | ✅ Fixed (AES-256-GCM) |
-| Rate limit handling | Integrations | 4 hrs | ⏳ Future |
+| Rate limit handling | Integrations | 4 hrs | ✅ Fixed (DRY parsing) |
 | Slack tests | Integrations | 4 hrs | ✅ Added (38 tests) |
 | SDK core tests | SDK | 8 hrs | ✅ Added (247 tests) |
 | Storage atomicity | Workflows | 4 hrs | ⏳ Future |
@@ -370,8 +370,7 @@ Understanding these parts guided targeted fixes. The hermeneutic circle has comp
 **Current state**: All P0 and critical P1 issues resolved. Token refresh and idempotency added. **WORKWAY is production ready.**
 
 **Remaining work** (non-blocking):
-- Rate limit backoff improvements
-- Additional test coverage (SDK core)
+- Storage atomicity for multi-step workflows
 
 ---
 
