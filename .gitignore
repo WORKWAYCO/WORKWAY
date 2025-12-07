@@ -55,3 +55,7 @@ triad-audit-report.json
 
 # Generated OpenAPI types (regenerate with: pnpm generate:types)
 packages/integrations/openapi/generated/
+
+# Local config and archives
+.mcp.json
+.archive/
