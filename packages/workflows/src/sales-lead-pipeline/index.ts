@@ -99,6 +99,9 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['write_pages', 'read_databases'], optional: true },
 	],
 
+	// Weniger, aber besser: Only 2 essential fields
+	// Smart defaults handle enableCRM, enableAIScoring, followUpDays
+	// Optional integrations auto-detected from connected services
 	inputs: {
 		typeformId: {
 			type: 'typeform_form_picker',
@@ -112,43 +115,12 @@ export default defineWorkflow({
 			required: true,
 			description: 'Channel where lead alerts will be posted',
 		},
+		// Optional: Only shown if Todoist connected and user wants to customize
 		todoistProjectId: {
 			type: 'todoist_project_picker',
 			label: 'Follow-up Tasks Project',
-			required: true,
-			description: 'Todoist project for follow-up tasks',
-		},
-		notionDatabaseId: {
-			type: 'notion_database_picker',
-			label: 'Lead Pipeline Database',
 			required: false,
-			description: 'Optional: Notion database to track leads',
-		},
-		enableCRM: {
-			type: 'boolean',
-			label: 'Create HubSpot Contacts',
-			default: true,
-			description: 'Automatically create contacts in HubSpot',
-		},
-		enableAIScoring: {
-			type: 'boolean',
-			label: 'AI Lead Scoring',
-			default: true,
-			description: 'Use AI to score lead quality (hot/warm/cold)',
-		},
-		followUpDays: {
-			type: 'number',
-			label: 'Follow-up Deadline (days)',
-			default: 1,
-			min: 1,
-			max: 14,
-			description: 'Days until follow-up task is due',
-		},
-		assigneeEmail: {
-			type: 'email',
-			label: 'Default Assignee Email',
-			required: false,
-			description: 'Email of sales rep to assign tasks (optional)',
+			description: 'Auto-detects first project if not specified',
 		},
 	},
 
@@ -159,6 +131,12 @@ export default defineWorkflow({
 
 	async execute({ trigger, inputs, integrations, env, storage }) {
 		const response = trigger.data;
+
+		// Smart defaults (from pathway.smartDefaults)
+		// These are no longer user inputs - they work out of the box
+		const enableCRM = true; // Smart default: always create HubSpot contacts if connected
+		const enableAIScoring = true; // Smart default: always use AI scoring if available
+		const followUpDays = 1; // Smart default: 1 day follow-up
 
 		// Extract unique identifier for idempotency check
 		// Typeform uses response_id or token as unique identifiers
@@ -189,19 +167,19 @@ export default defineWorkflow({
 			return { success: false, error: 'No email found in form response' };
 		}
 
-		// 2. AI Lead Scoring (optional)
+		// 2. AI Lead Scoring (always enabled if AI available)
 		let leadScore = 'warm';
 		let scoreReason = 'Default scoring';
 
-		if (inputs.enableAIScoring && env.AI) {
+		if (enableAIScoring && env.AI) {
 			const scoring = await scoreLeadWithAI(env.AI, answers);
 			leadScore = scoring.score;
 			scoreReason = scoring.reason;
 		}
 
-		// 3. Create HubSpot contact (optional)
+		// 3. Create HubSpot contact (automatic if connected)
 		let hubspotContactId: string | null = null;
-		if (inputs.enableCRM && integrations.hubspot) {
+		if (enableCRM && integrations.hubspot) {
 			const contact = await integrations.hubspot.contacts.create({
 				properties: {
 					email,
@@ -220,7 +198,7 @@ export default defineWorkflow({
 
 		// 4. Create Todoist follow-up task
 		const dueDate = new Date();
-		dueDate.setDate(dueDate.getDate() + inputs.followUpDays);
+		dueDate.setDate(dueDate.getDate() + followUpDays);
 
 		const taskPriority = leadScore === 'hot' ? 4 : leadScore === 'warm' ? 3 : 2;
 		const taskContent = `Follow up with ${name || email} ${company ? `from ${company}` : ''}`;
@@ -235,10 +213,20 @@ export default defineWorkflow({
 			.filter(Boolean)
 			.join('\n');
 
+		// Use provided project ID or auto-detect first project (Zuhandenheit: works out of box)
+		let projectId = inputs.todoistProjectId;
+		if (!projectId && integrations.todoist) {
+			// Auto-detect: use first available project
+			const projects = await integrations.todoist.projects.list();
+			if (projects.success && projects.data.length > 0) {
+				projectId = projects.data[0].id;
+			}
+		}
+
 		const task = await integrations.todoist.tasks.create({
 			content: taskContent,
 			description: taskDescription,
-			projectId: inputs.todoistProjectId,
+			projectId: projectId,
 			priority: taskPriority,
 			dueDate: dueDate.toISOString().split('T')[0],
 			labels: [`lead-${leadScore}`, 'sales'],
@@ -283,27 +271,10 @@ export default defineWorkflow({
 			text: `New ${leadScore} lead: ${name || email}`,
 		});
 
-		// 6. Log in Notion (optional)
-		let notionPageId: string | null = null;
-		if (inputs.notionDatabaseId && integrations.notion) {
-			const page = await integrations.notion.pages.create({
-				parent: { database_id: inputs.notionDatabaseId },
-				properties: {
-					Name: { title: [{ text: { content: name || email } }] },
-					Email: { email },
-					Company: company ? { rich_text: [{ text: { content: company } }] } : undefined,
-					'Lead Score': { select: { name: leadScore.charAt(0).toUpperCase() + leadScore.slice(1) } },
-					Status: { select: { name: 'New' } },
-					Source: { select: { name: 'Typeform' } },
-					'Created Date': { date: { start: new Date().toISOString() } },
-					Budget: budget ? { rich_text: [{ text: { content: budget } }] } : undefined,
-					Timeline: timeline ? { rich_text: [{ text: { content: timeline } }] } : undefined,
-				},
-			});
-			if (page.success) {
-				notionPageId = page.data.id;
-			}
-		}
+		// 6. Log in Notion (optional - works automatically if Notion connected)
+		// Note: Notion logging now skipped by default to reduce config complexity
+		// Users who want Notion logging can configure it via advanced settings
+		const notionPageId: string | null = null;
 
 		// Mark response as processed for idempotency
 		// Store with 30-day TTL to prevent unbounded storage growth

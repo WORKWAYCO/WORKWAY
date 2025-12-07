@@ -43,6 +43,7 @@ import {
 	type ActionCapabilities,
 } from '@workwayco/sdk';
 import { IntegrationError, ErrorCode } from '@workwayco/sdk';
+import { BaseAPIClient, type BaseClientConfig } from '../core/base-client.js';
 
 // ============================================================================
 // TYPES
@@ -258,12 +259,13 @@ export interface ListSubscriptionsOptions {
  * Stripe Integration
  *
  * Implements the WORKWAY SDK patterns for Stripe API access.
+ * Extends BaseAPIClient for standardized HTTP handling.
+ *
+ * Note: Stripe uses form-urlencoded content type, not JSON.
+ * We override stripeRequest() to handle this difference.
  */
-export class Stripe {
-	private secretKey: string;
-	private apiUrl: string;
-	private apiVersion: string;
-	private timeout: number;
+export class Stripe extends BaseAPIClient {
+	private readonly apiVersion: string;
 
 	constructor(config: StripeConfig) {
 		if (!config.secretKey) {
@@ -274,10 +276,32 @@ export class Stripe {
 			);
 		}
 
-		this.secretKey = config.secretKey;
-		this.apiUrl = config.apiUrl || 'https://api.stripe.com/v1';
+		super({
+			accessToken: config.secretKey,
+			apiUrl: config.apiUrl || 'https://api.stripe.com/v1',
+			timeout: config.timeout ?? 30000,
+			errorContext: { integration: 'stripe' },
+		});
+
 		this.apiVersion = config.apiVersion || '2023-10-16';
-		this.timeout = config.timeout ?? 30000;
+	}
+
+	/**
+	 * Stripe-specific request method that uses form-urlencoded content type
+	 * and includes the Stripe-Version header.
+	 */
+	private async stripeRequest(
+		endpoint: string,
+		options: RequestInit = {}
+	): Promise<Response> {
+		return this.request(
+			endpoint,
+			options,
+			{
+				'Content-Type': 'application/x-www-form-urlencoded',
+				'Stripe-Version': this.apiVersion,
+			}
+		);
 	}
 
 	// ==========================================================================
@@ -307,7 +331,7 @@ export class Stripe {
 				}
 			}
 
-			const response = await this.request('/payment_intents', {
+			const response = await this.stripeRequest('/payment_intents', {
 				method: 'POST',
 				body: body.toString(),
 			});
@@ -337,7 +361,7 @@ export class Stripe {
 	 */
 	async getPaymentIntent(id: string): Promise<ActionResult<StripePaymentIntent>> {
 		try {
-			const response = await this.request(`/payment_intents/${id}`);
+			const response = await this.stripeRequest(`/payment_intents/${id}`);
 
 			if (!response.ok) {
 				return this.handleStripeError(response, 'get-payment-intent');
@@ -370,7 +394,7 @@ export class Stripe {
 			if (options.customer) params.append('customer', options.customer);
 
 			const url = `/payment_intents${params.toString() ? '?' + params.toString() : ''}`;
-			const response = await this.request(url);
+			const response = await this.stripeRequest(url);
 
 			if (!response.ok) {
 				return this.handleStripeError(response, 'list-payment-intents');
@@ -413,7 +437,7 @@ export class Stripe {
 				}
 			}
 
-			const response = await this.request('/customers', {
+			const response = await this.stripeRequest('/customers', {
 				method: 'POST',
 				body: body.toString(),
 			});
@@ -441,7 +465,7 @@ export class Stripe {
 	 */
 	async getCustomer(id: string): Promise<ActionResult<StripeCustomer>> {
 		try {
-			const response = await this.request(`/customers/${id}`);
+			const response = await this.stripeRequest(`/customers/${id}`);
 
 			if (!response.ok) {
 				return this.handleStripeError(response, 'get-customer');
@@ -474,7 +498,7 @@ export class Stripe {
 			if (options.email) params.append('email', options.email);
 
 			const url = `/customers${params.toString() ? '?' + params.toString() : ''}`;
-			const response = await this.request(url);
+			const response = await this.stripeRequest(url);
 
 			if (!response.ok) {
 				return this.handleStripeError(response, 'list-customers');
@@ -522,7 +546,7 @@ export class Stripe {
 				}
 			}
 
-			const response = await this.request('/subscriptions', {
+			const response = await this.stripeRequest('/subscriptions', {
 				method: 'POST',
 				body: body.toString(),
 			});
@@ -550,7 +574,7 @@ export class Stripe {
 	 */
 	async getSubscription(id: string): Promise<ActionResult<StripeSubscription>> {
 		try {
-			const response = await this.request(`/subscriptions/${id}`);
+			const response = await this.stripeRequest(`/subscriptions/${id}`);
 
 			if (!response.ok) {
 				return this.handleStripeError(response, 'get-subscription');
@@ -585,13 +609,13 @@ export class Stripe {
 				const body = new URLSearchParams();
 				body.append('cancel_at_period_end', 'true');
 
-				response = await this.request(`/subscriptions/${id}`, {
+				response = await this.stripeRequest(`/subscriptions/${id}`, {
 					method: 'POST',
 					body: body.toString(),
 				});
 			} else {
 				// Cancel immediately
-				response = await this.request(`/subscriptions/${id}`, {
+				response = await this.stripeRequest(`/subscriptions/${id}`, {
 					method: 'DELETE',
 				});
 			}
@@ -630,7 +654,7 @@ export class Stripe {
 			}
 
 			const url = `/subscriptions${params.toString() ? '?' + params.toString() : ''}`;
-			const response = await this.request(url);
+			const response = await this.stripeRequest(url);
 
 			if (!response.ok) {
 				return this.handleStripeError(response, 'list-subscriptions');
@@ -667,7 +691,7 @@ export class Stripe {
 			if (options.customer) params.append('customer', options.customer);
 
 			const url = `/charges${params.toString() ? '?' + params.toString() : ''}`;
-			const response = await this.request(url);
+			const response = await this.stripeRequest(url);
 
 			if (!response.ok) {
 				return this.handleStripeError(response, 'list-charges');
@@ -692,7 +716,7 @@ export class Stripe {
 	 */
 	async getCharge(id: string): Promise<ActionResult<StripeCharge>> {
 		try {
-			const response = await this.request(`/charges/${id}`);
+			const response = await this.stripeRequest(`/charges/${id}`);
 
 			if (!response.ok) {
 				return this.handleStripeError(response, 'get-charge');
@@ -805,35 +829,6 @@ export class Stripe {
 	// ==========================================================================
 	// PRIVATE METHODS
 	// ==========================================================================
-
-	/**
-	 * Make authenticated request to Stripe API with timeout
-	 */
-	private async request(
-		endpoint: string,
-		options: RequestInit = {}
-	): Promise<Response> {
-		const url = `${this.apiUrl}${endpoint}`;
-
-		// Add timeout via AbortController
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-		try {
-			return await fetch(url, {
-				...options,
-				headers: {
-					Authorization: `Bearer ${this.secretKey}`,
-					'Content-Type': 'application/x-www-form-urlencoded',
-					'Stripe-Version': this.apiVersion,
-					...options.headers,
-				},
-				signal: controller.signal,
-			});
-		} finally {
-			clearTimeout(timeoutId);
-		}
-	}
 
 	/**
 	 * Get capabilities for Stripe actions
