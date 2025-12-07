@@ -49,6 +49,8 @@ export async function oauthConnectCommand(provider?: string): Promise<void> {
 				{ id: 'dribbble', name: 'Dribbble', category: 'design', configured: false, scope: '' },
 				// Payments
 				{ id: 'stripe', name: 'Stripe', category: 'payments', configured: false, scope: '' },
+				// Construction
+				{ id: 'procore', name: 'Procore', category: 'construction', configured: false, scope: '' },
 			];
 		}
 

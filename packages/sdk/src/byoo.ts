@@ -392,6 +392,18 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
 		tokenAuthMethod: 'client_secret_post',
 		developerDocsUrl: 'https://developers.google.com/identity/protocols/oauth2',
 	},
+	// Construction
+	procore: {
+		id: 'procore',
+		name: 'Procore',
+		authorizationUrl: 'https://login.procore.com/oauth/authorize',
+		tokenUrl: 'https://login.procore.com/oauth/token',
+		redirectUri: 'https://api.workway.co/oauth/procore/callback',
+		scopes: [], // Procore uses tool-level permissions configured in app manifest
+		supportsPKCE: false,
+		tokenAuthMethod: 'client_secret_basic',
+		developerDocsUrl: 'https://developers.procore.com/documentation/oauth-choose-grant-type',
+	},
 };
 
 // ============================================================================
