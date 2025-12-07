@@ -333,18 +333,19 @@ This is fixable. The architecture is sound. The gaps are implementation details,
 
 | Issue | Package | Fix Time | Status |
 |-------|---------|----------|--------|
-| OAuth token encryption | CLI | 4 hrs | ⏳ Pending (P2) |
+| OAuth token encryption | CLI | 4 hrs | ✅ Fixed (AES-256-GCM) |
 | Express localhost binding | CLI | 15 min | ✅ Fixed |
 | Path traversal | CLI | 1 hr | ✅ Fixed |
 | Type definition drift | SDK | 4 hrs | ✅ Fixed |
 | API URL validation | CLI | 30 min | ✅ Fixed |
 
-### P2: Fix Before Scaling — ✅ CORE DONE
+### P2: Fix Before Scaling — ✅ COMPLETE
 
 | Issue | Package | Fix Time | Status |
 |-------|---------|----------|--------|
 | Token refresh | Integrations | 8 hrs | ✅ Fixed (BaseAPIClient) |
 | Idempotency (3 workflows) | Workflows | 4 hrs | ✅ Fixed |
+| OAuth token encryption | CLI | 4 hrs | ✅ Fixed (AES-256-GCM) |
 | Rate limit handling | Integrations | 4 hrs | ⏳ Future |
 | Slack tests | Integrations | 4 hrs | ⏳ Future |
 | SDK core tests | SDK | 8 hrs | ⏳ Future |
@@ -369,9 +370,8 @@ Understanding these parts guided targeted fixes. The hermeneutic circle has comp
 **Current state**: All P0 and critical P1 issues resolved. Token refresh and idempotency added. **WORKWAY is production ready.**
 
 **Remaining work** (non-blocking):
-- OAuth token encryption at rest (P2 security hardening)
 - Rate limit backoff improvements
-- Additional test coverage
+- Additional test coverage (Slack integration, SDK core)
 
 ---
 
