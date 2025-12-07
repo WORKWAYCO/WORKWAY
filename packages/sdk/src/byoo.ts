@@ -39,6 +39,16 @@ export type CredentialSource = 'system' | 'developer';
 export type CredentialMode = 'system' | 'developer' | 'hybrid';
 
 /**
+ * Visibility mode for marketplace integrations
+ */
+export type WorkflowVisibility = 'public' | 'private' | 'unlisted';
+
+/**
+ * Access grant types for private workflows
+ */
+export type AccessGrantType = 'user' | 'email_domain' | 'access_code';
+
+/**
  * Status lifecycle for developer OAuth apps
  */
 export type OAuthAppStatus =
@@ -95,6 +105,34 @@ export interface DeveloperOAuthApp {
 	lastError: string | null;
 	createdAt: string;
 	updatedAt: string;
+}
+
+/**
+ * Access grant for private workflows
+ */
+export interface WorkflowAccessGrant {
+	id: string;
+	integrationId: string;
+	grantType: AccessGrantType;
+	grantValue: string;
+	maxInstalls: number | null;
+	expiresAt: string | null;
+	grantedBy: string;
+	notes: string | null;
+	createdAt: string;
+	revokedAt: string | null;
+}
+
+/**
+ * Options for creating an access grant
+ */
+export interface CreateAccessGrantOptions {
+	integrationId: string;
+	grantType: AccessGrantType;
+	grantValue: string;
+	maxInstalls?: number;
+	expiresAt?: Date;
+	notes?: string;
 }
 
 /**
@@ -504,4 +542,73 @@ export const USER_INSTALLATIONS_CREDENTIAL_SOURCE = `
 ALTER TABLE user_installations ADD COLUMN
   credential_source TEXT DEFAULT 'system'
   CHECK (credential_source IN ('system', 'developer'));
+`;
+
+/**
+ * SQL to add visibility to marketplace_integrations
+ */
+export const MARKETPLACE_INTEGRATIONS_VISIBILITY = `
+ALTER TABLE marketplace_integrations ADD COLUMN
+  visibility TEXT DEFAULT 'public'
+  CHECK (visibility IN ('public', 'private', 'unlisted'));
+`;
+
+/**
+ * SQL schema for workflow_access_grants table
+ */
+export const WORKFLOW_ACCESS_GRANTS_SCHEMA = `
+CREATE TABLE IF NOT EXISTS workflow_access_grants (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+
+  -- Target workflow
+  integration_id TEXT NOT NULL,
+
+  -- Grant type and value
+  grant_type TEXT NOT NULL
+    CHECK (grant_type IN ('user', 'email_domain', 'access_code')),
+  grant_value TEXT NOT NULL,
+
+  -- Optional restrictions
+  max_installs INTEGER,
+  expires_at TEXT,
+
+  -- Metadata
+  granted_by TEXT NOT NULL,
+  notes TEXT,
+
+  -- Audit
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  revoked_at TEXT,
+
+  -- Constraints
+  FOREIGN KEY (integration_id) REFERENCES marketplace_integrations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_access_grants_integration ON workflow_access_grants(integration_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_access_grants_type_value ON workflow_access_grants(grant_type, grant_value);
+`;
+
+/**
+ * SQL schema for workflow_access_redemptions table
+ */
+export const WORKFLOW_ACCESS_REDEMPTIONS_SCHEMA = `
+CREATE TABLE IF NOT EXISTS workflow_access_redemptions (
+  id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+
+  -- Grant and user
+  grant_id TEXT NOT NULL,
+  user_id TEXT NOT NULL,
+  installation_id TEXT,
+
+  -- Audit
+  redeemed_at TEXT NOT NULL DEFAULT (datetime('now')),
+
+  -- Constraints
+  FOREIGN KEY (grant_id) REFERENCES workflow_access_grants(id),
+  FOREIGN KEY (user_id) REFERENCES users(id),
+  FOREIGN KEY (installation_id) REFERENCES user_installations(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_workflow_access_redemptions_grant ON workflow_access_redemptions(grant_id);
+CREATE INDEX IF NOT EXISTS idx_workflow_access_redemptions_user ON workflow_access_redemptions(user_id);
 `;

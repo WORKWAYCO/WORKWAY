@@ -429,6 +429,11 @@ export type {
 	// CRUD options
 	CreateOAuthAppOptions,
 	UpdateOAuthAppOptions,
+	// Private workflows
+	WorkflowVisibility,
+	AccessGrantType,
+	WorkflowAccessGrant,
+	CreateAccessGrantOptions,
 } from './byoo';
 
 export {
@@ -443,6 +448,9 @@ export {
 	DEVELOPER_OAUTH_APPS_SCHEMA,
 	MARKETPLACE_INTEGRATIONS_CREDENTIAL_MODE,
 	USER_INSTALLATIONS_CREDENTIAL_SOURCE,
+	MARKETPLACE_INTEGRATIONS_VISIBILITY,
+	WORKFLOW_ACCESS_GRANTS_SCHEMA,
+	WORKFLOW_ACCESS_REDEMPTIONS_SCHEMA,
 } from './byoo';
 
 // ============================================================================
