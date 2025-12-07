@@ -233,7 +233,7 @@ Heideggerian design is a **constraint system** producing consistent decisions. M
 Notion's integration deficiencies are real and documented. Compound workflow thesis differentiates from simple automation.
 
 ### 5. Developer Economics Model
-100% upfront revenue to developers + platform usage fee is a novel marketplace approach.
+Developers set one-time price and keep 100%. Platform charges 5¢/25¢ per execution after 20 free trials. Clean, aligned incentives.
 
 ---
 

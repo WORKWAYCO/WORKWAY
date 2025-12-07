@@ -101,9 +101,8 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 				choices: [
 					{ name: 'Free (no upfront cost)', value: 'free' },
 					{ name: 'One-time payment', value: 'one_time' },
-					{ name: 'Monthly subscription', value: 'subscription' },
 				],
-				default: 'subscription',
+				default: 'one_time',
 			},
 		]);
 
@@ -114,8 +113,8 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 				{
 					type: 'number',
 					name: 'price',
-					message: `${answers.pricingModel === 'subscription' ? 'Monthly' : 'One-time'} price (USD):`,
-					default: answers.pricingModel === 'subscription' ? 9 : 49,
+					message: 'One-time price (USD):',
+					default: 29,
 					validate: (input: number) => {
 						if (input < 1) {
 							return 'Price must be at least $1';
@@ -162,9 +161,7 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 		Logger.blank();
 		Logger.section('Pricing Summary');
 		if (upfrontPrice > 0) {
-			Logger.listItem(
-				`Upfront: $${(upfrontPrice / 100).toFixed(2)}${answers.pricingModel === 'subscription' ? '/month' : ' one-time'}`
-			);
+			Logger.listItem(`Upfront: $${(upfrontPrice / 100).toFixed(2)} one-time`);
 		} else {
 			Logger.listItem('Upfront: Free');
 		}

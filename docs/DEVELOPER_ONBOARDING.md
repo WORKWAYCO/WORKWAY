@@ -235,24 +235,31 @@ workway modify [file] [request]    # Modify workflow using natural language
 
 ### How You Earn
 
-You set your pricing model:
+You set your upfront pricing:
 
 | Model | Description | Example |
 |-------|-------------|---------|
-| **Free** | No charge | Community tools, loss leaders |
-| **One-Time** | Single payment | $49 lifetime access |
-| **Subscription** | Recurring | $9/month |
-| **Usage-Based** | Per execution | $0.10/run |
+| **Free** | No upfront charge | Community tools, loss leaders |
+| **One-Time** | Single payment | $29 or $49 one-time |
 
-### Revenue Share
+### Platform Usage Fees
 
-| Component | Your Share |
-|-----------|------------|
-| Upfront pricing (one-time, subscription) | 100% (minus payment processing) |
-| Usage-based fees | 88% |
-| Fork attribution (if your workflow is forked) | 12% of fork revenue |
+After 20 free trial executions, WORKWAY charges users per execution:
 
-WORKWAY takes 0% of upfront fees. You keep everything after Stripe's 2.9% + $0.30.
+| Workflow Type | Cost | Examples |
+|---------------|------|----------|
+| **Light** | 5¢/run | Simple integrations, data syncs, single API calls |
+| **Heavy** | 25¢/run | AI processing, multi-step automations, complex logic |
+
+### Revenue Split
+
+| Component | Your Share | Platform Share |
+|-----------|------------|----------------|
+| Upfront pricing (free or one-time) | **100%** (minus ~3% payment processing) | 0% |
+| Usage fees (after trial) | 0% | 100% |
+| Fork attribution (if your workflow is forked) | 12% of fork's upfront revenue | — |
+
+**The model is simple**: You set the upfront price and keep 100%. WORKWAY handles trials, billing, and infrastructure—charging 5¢ or 25¢ per run after the trial.
 
 ### Stripe Connect Setup
 
@@ -328,8 +335,9 @@ export default defineWorkflow({
   },
 
   pricing: {
-    model: 'usage-based',
-    price: 10, // $0.10 per execution (in cents)
+    model: 'one_time',
+    price: 2900, // $29 one-time (in cents)
+    complexityTier: 'heavy', // Platform charges 25¢/run after trial
   },
 
   integrations: ['zoom', 'notion'],
