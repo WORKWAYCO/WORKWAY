@@ -705,6 +705,72 @@ Stripe uses API keys instead of OAuth. This is simpler but requires secure key m
 
 ---
 
+### Procore (Construction Management)
+
+1. **Create a Procore App**: https://developers.procore.com/documentation/building-apps-create-new-app
+
+2. **Configure OAuth**:
+   - Authorization Code Grant (for user-level access)
+   - Redirect URL: `http://localhost:3456/callback` (for CLI)
+   - Redirect URL: `https://api.workway.co/oauth/callback/procore` (for production)
+
+3. **Required Scopes** (configured via Marketplace App Manifest):
+   - Procore uses tool-level permissions in the app manifest rather than OAuth scopes
+   - Required tools:
+     ```
+     Project Directory (read)
+     RFIs (read)
+     Submittals (read)
+     Daily Logs (read)
+     Budget (read)
+     Change Orders (read)
+     Drawings (read)
+     ```
+
+4. **Environment Variables**:
+   ```toml
+   [vars]
+   PROCORE_CLIENT_ID = "your-client-id"
+
+   # In secrets (wrangler secret put PROCORE_CLIENT_SECRET)
+   PROCORE_CLIENT_SECRET = "your-client-secret"
+   ```
+
+5. **OAuth URLs**:
+   - Authorize: `https://login.procore.com/oauth/authorize`
+   - Token: `https://login.procore.com/oauth/token`
+
+6. **Sandbox Environments**:
+   - Development Sandbox: `https://sandbox.procore.com`
+   - Monthly Sandbox: `https://sandbox-monthly.procore.com`
+   - Production: `https://api.procore.com`
+
+7. **Usage in Workflows**:
+   ```typescript
+   import { Procore } from '@workwayco/integrations/procore';
+
+   const procore = new Procore({
+     accessToken: tokens.procore.access_token,
+     companyId: '12345',
+   });
+
+   // Get open RFIs
+   const rfis = await procore.getOpenRFIs('project_123');
+
+   // Get daily logs
+   const logs = await procore.getDailyLogs({
+     projectId: 'project_123',
+     date: new Date(),
+   });
+
+   // Get project budget
+   const budget = await procore.getBudget('project_123');
+   ```
+
+8. **App Listing**: After development, submit your app for listing in the Procore Marketplace at https://marketplace.procore.com
+
+---
+
 ### Sentry (Webhook-based)
 
 > **⚠️ App Review Required**: Sentry OAuth apps require review before public use.
@@ -815,6 +881,13 @@ const OAUTH_PROVIDERS = {
     tokenUrl: 'https://api.typeform.com/oauth/token',
     scopes: ['accounts:read', 'forms:read', 'responses:read', 'webhooks:read', 'webhooks:write', 'workspaces:read', 'offline'],
   },
+  procore: {
+    clientId: env.PROCORE_CLIENT_ID,
+    clientSecret: env.PROCORE_CLIENT_SECRET,
+    authorizeUrl: 'https://login.procore.com/oauth/authorize',
+    tokenUrl: 'https://login.procore.com/oauth/token',
+    scopes: [], // Procore uses tool-level permissions in app manifest
+  },
 };
 ```
 
@@ -853,6 +926,9 @@ workway oauth connect hubspot
 
 # Design
 workway oauth connect dribbble
+
+# Construction
+workway oauth connect procore
 
 # List connected integrations
 workway oauth list
