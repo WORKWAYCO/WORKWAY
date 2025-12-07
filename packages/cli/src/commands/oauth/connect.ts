@@ -24,14 +24,31 @@ export async function oauthConnectCommand(provider?: string): Promise<void> {
 		} catch (error) {
 			// Fallback to basic list if API unavailable
 			availableProviders = [
-				{ id: 'gmail', name: 'Gmail', category: 'google', configured: false, scope: '' },
+				// Google
 				{ id: 'google-sheets', name: 'Google Sheets', category: 'google', configured: false, scope: '' },
+				{ id: 'google-calendar', name: 'Google Calendar', category: 'google', configured: false, scope: '' },
+				{ id: 'google-drive', name: 'Google Drive', category: 'google', configured: false, scope: '' },
+				// Communication
 				{ id: 'slack', name: 'Slack', category: 'communication', configured: false, scope: '' },
+				{ id: 'discord', name: 'Discord', category: 'communication', configured: false, scope: '' },
+				// Productivity
 				{ id: 'notion', name: 'Notion', category: 'productivity', configured: false, scope: '' },
-				{ id: 'zoom', name: 'Zoom', category: 'meetings', configured: false, scope: '' },
-				{ id: 'hubspot', name: 'HubSpot', category: 'crm', configured: false, scope: '' },
 				{ id: 'linear', name: 'Linear', category: 'productivity', configured: false, scope: '' },
 				{ id: 'airtable', name: 'Airtable', category: 'productivity', configured: false, scope: '' },
+				{ id: 'todoist', name: 'Todoist', category: 'productivity', configured: false, scope: '' },
+				// Meetings & Scheduling
+				{ id: 'zoom', name: 'Zoom', category: 'meetings', configured: false, scope: '' },
+				{ id: 'calendly', name: 'Calendly', category: 'meetings', configured: false, scope: '' },
+				// Developer
+				{ id: 'github', name: 'GitHub', category: 'developer', configured: false, scope: '' },
+				// CRM & Sales
+				{ id: 'hubspot', name: 'HubSpot', category: 'crm', configured: false, scope: '' },
+				// Forms
+				{ id: 'typeform', name: 'Typeform', category: 'forms', configured: false, scope: '' },
+				// Design
+				{ id: 'dribbble', name: 'Dribbble', category: 'design', configured: false, scope: '' },
+				// Payments
+				{ id: 'stripe', name: 'Stripe', category: 'payments', configured: false, scope: '' },
 			];
 		}
 

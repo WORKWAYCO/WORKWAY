@@ -36,6 +36,8 @@ export { default as meetingIntelligence } from './meeting-intelligence/index.js'
 export { default as meetingSummarizer } from './meeting-summarizer/index.js';
 export { default as meetingFollowupEngine } from './meeting-followup-engine/index.js';
 export { default as weeklyProductivityDigest } from './weekly-productivity-digest/index.js';
+export { default as calendarMeetingPrep } from './calendar-meeting-prep/index.js';
+export { default as meetingToAction } from './meeting-to-action/index.js';
 
 // Team & Communication
 export { default as teamDigest } from './team-digest/index.js';
@@ -77,6 +79,24 @@ export { default as dealTracker } from './deal-tracker/index.js';
 // Task Management
 export { default as taskSyncBridge } from './task-sync-bridge/index.js';
 
+// Developer Tools
+export { default as githubToLinear } from './github-to-linear/index.js';
+export { default as prReviewNotifier } from './pr-review-notifier/index.js';
+
+// Team Collaboration
+export { default as discordStandupBot } from './discord-standup-bot/index.js';
+
+// Google Drive
+export { default as driveDocumentHub } from './drive-document-hub/index.js';
+export { default as documentApprovalFlow } from './document-approval-flow/index.js';
+
+// Calendar & Status
+export { default as calendarAvailabilitySync } from './calendar-availability-sync/index.js';
+
+// Billing & Time Tracking
+export { default as meetingExpenseTracker } from './meeting-expense-tracker/index.js';
+export { default as projectTimeTracker } from './project-time-tracker/index.js';
+
 // ============================================================================
 // INTEGRATION PAIR REGISTRY
 // ============================================================================
@@ -111,6 +131,30 @@ export const integrationPairs = {
 		workflowId: 'meeting-followup-engine',
 		outcome: 'Meetings that create their own tasks',
 		outcomeFrame: 'after_calls',
+	},
+
+	// Calendar Prep (Google Calendar)
+	'google-calendar:notion': {
+		workflowId: 'calendar-meeting-prep',
+		outcome: 'Meetings that brief themselves',
+		outcomeFrame: 'before_meetings',
+	},
+	'google-calendar:slack': {
+		workflowId: 'calendar-meeting-prep',
+		outcome: 'Meeting briefs in Slack',
+		outcomeFrame: 'before_meetings',
+	},
+
+	// Meeting Action Items
+	'zoom:todoist': {
+		workflowId: 'meeting-to-action',
+		outcome: 'Meetings that assign themselves',
+		outcomeFrame: 'after_meetings',
+	},
+	'zoom:linear': {
+		workflowId: 'meeting-to-action',
+		outcome: 'Meeting action items in Linear',
+		outcomeFrame: 'after_meetings',
 	},
 
 	// Payments
@@ -262,6 +306,80 @@ export const integrationPairs = {
 		outcome: 'Error alerts in Slack',
 		outcomeFrame: 'when_errors_happen',
 	},
+
+	// Developer Tools
+	'github:linear': {
+		workflowId: 'github-to-linear',
+		outcome: 'Issues synced to Linear',
+		outcomeFrame: 'when_issues_arrive',
+	},
+	'github:slack': {
+		workflowId: 'pr-review-notifier',
+		outcome: 'PR alerts in Slack',
+		outcomeFrame: 'when_code_changes',
+	},
+	'github:discord': {
+		workflowId: 'pr-review-notifier',
+		outcome: 'PR alerts in Discord',
+		outcomeFrame: 'when_code_changes',
+	},
+
+	// Team Collaboration
+	'discord:notion': {
+		workflowId: 'discord-standup-bot',
+		outcome: 'Standups archived to Notion',
+		outcomeFrame: 'every_morning',
+	},
+
+	// Google Drive
+	'google-drive:notion': {
+		workflowId: 'drive-document-hub',
+		outcome: 'Documents that organize themselves',
+		outcomeFrame: 'when_files_change',
+	},
+	'google-drive:slack': {
+		workflowId: 'drive-document-hub',
+		outcome: 'File updates in Slack',
+		outcomeFrame: 'when_files_change',
+	},
+
+	// Document Approval
+	'google-drive:slack:approval': {
+		workflowId: 'document-approval-flow',
+		outcome: 'Documents that approve themselves',
+		outcomeFrame: 'when_approval_needed',
+	},
+
+	// Calendar Status Sync
+	'google-calendar:slack:status': {
+		workflowId: 'calendar-availability-sync',
+		outcome: 'Status that updates itself',
+		outcomeFrame: 'always_current',
+	},
+
+	// Meeting Billing
+	'zoom:stripe': {
+		workflowId: 'meeting-expense-tracker',
+		outcome: 'Meetings that invoice themselves',
+		outcomeFrame: 'after_meetings',
+	},
+	'zoom:notion:billing': {
+		workflowId: 'meeting-expense-tracker',
+		outcome: 'Meeting time logged to Notion',
+		outcomeFrame: 'after_meetings',
+	},
+
+	// Project Time Tracking
+	'linear:google-sheets': {
+		workflowId: 'project-time-tracker',
+		outcome: 'Time that tracks itself',
+		outcomeFrame: 'when_work_completes',
+	},
+	'linear:slack:time': {
+		workflowId: 'project-time-tracker',
+		outcome: 'Time reports in Slack',
+		outcomeFrame: 'when_work_completes',
+	},
 } as const;
 
 export type IntegrationPairKey = keyof typeof integrationPairs;
@@ -325,6 +443,10 @@ export function getPairsForIntegration(integration: string) {
  * They think in situations: "After meetings...", "When payments arrive..."
  */
 export const outcomeFrames = {
+	before_meetings: {
+		label: 'Before meetings...',
+		description: 'Prepare context and talking points automatically',
+	},
 	after_meetings: {
 		label: 'After meetings...',
 		description: 'Automate what happens when meetings end',
@@ -385,6 +507,30 @@ export const outcomeFrames = {
 		label: 'When errors happen...',
 		description: 'Document incidents and alert your team',
 	},
+	when_issues_arrive: {
+		label: 'When issues arrive...',
+		description: 'Sync issues across platforms automatically',
+	},
+	when_code_changes: {
+		label: 'When code changes...',
+		description: 'PR notifications and code review reminders',
+	},
+	when_files_change: {
+		label: 'When files change...',
+		description: 'Sync documents and notify your team',
+	},
+	when_approval_needed: {
+		label: 'When approval is needed...',
+		description: 'Request approvals and track decisions',
+	},
+	always_current: {
+		label: 'Always current...',
+		description: 'Keep status and availability in sync',
+	},
+	when_work_completes: {
+		label: 'When work completes...',
+		description: 'Track time and sync to reports',
+	},
 } as const;
 
 export type OutcomeFrameId = keyof typeof outcomeFrames;
@@ -423,6 +569,16 @@ export const workflows = {
 	'deal-tracker': { id: 'deal-tracker', outcomeFrame: 'when_deals_progress' },
 	'task-sync-bridge': { id: 'task-sync-bridge', outcomeFrame: 'when_tasks_complete' },
 	'error-incident-manager': { id: 'error-incident-manager', outcomeFrame: 'when_errors_happen' },
+	'github-to-linear': { id: 'github-to-linear', outcomeFrame: 'when_issues_arrive' },
+	'pr-review-notifier': { id: 'pr-review-notifier', outcomeFrame: 'when_code_changes' },
+	'discord-standup-bot': { id: 'discord-standup-bot', outcomeFrame: 'every_morning' },
+	'calendar-meeting-prep': { id: 'calendar-meeting-prep', outcomeFrame: 'before_meetings' },
+	'meeting-to-action': { id: 'meeting-to-action', outcomeFrame: 'after_meetings' },
+	'drive-document-hub': { id: 'drive-document-hub', outcomeFrame: 'when_files_change' },
+	'document-approval-flow': { id: 'document-approval-flow', outcomeFrame: 'when_approval_needed' },
+	'calendar-availability-sync': { id: 'calendar-availability-sync', outcomeFrame: 'always_current' },
+	'meeting-expense-tracker': { id: 'meeting-expense-tracker', outcomeFrame: 'after_meetings' },
+	'project-time-tracker': { id: 'project-time-tracker', outcomeFrame: 'when_work_completes' },
 } as const;
 
 export type WorkflowId = keyof typeof workflows;

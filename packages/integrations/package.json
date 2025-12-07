@@ -29,6 +29,42 @@
 		"./airtable": {
 			"types": "./dist/airtable/index.d.ts",
 			"import": "./dist/airtable/index.js"
+		},
+		"./linear": {
+			"types": "./dist/linear/index.d.ts",
+			"import": "./dist/linear/index.js"
+		},
+		"./zoom": {
+			"types": "./dist/zoom/index.d.ts",
+			"import": "./dist/zoom/index.js"
+		},
+		"./hubspot": {
+			"types": "./dist/hubspot/index.d.ts",
+			"import": "./dist/hubspot/index.js"
+		},
+		"./typeform": {
+			"types": "./dist/typeform/index.d.ts",
+			"import": "./dist/typeform/index.js"
+		},
+		"./calendly": {
+			"types": "./dist/calendly/index.d.ts",
+			"import": "./dist/calendly/index.js"
+		},
+		"./todoist": {
+			"types": "./dist/todoist/index.d.ts",
+			"import": "./dist/todoist/index.js"
+		},
+		"./dribbble": {
+			"types": "./dist/dribbble/index.d.ts",
+			"import": "./dist/dribbble/index.js"
+		},
+		"./github": {
+			"types": "./dist/github/index.d.ts",
+			"import": "./dist/github/index.js"
+		},
+		"./discord": {
+			"types": "./dist/discord/index.d.ts",
+			"import": "./dist/discord/index.js"
 		}
 	},
 	"scripts": {

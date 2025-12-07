@@ -277,7 +277,11 @@ export type BYOOProvider =
 	| 'linear'
 	| 'google-calendar'
 	| 'google-drive'
-	| 'stripe';
+	| 'stripe'
+	| 'github'
+	| 'discord'
+	| 'dribbble'
+	| 'hubspot';
 
 /**
  * Developer OAuth app status

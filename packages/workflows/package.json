@@ -120,6 +120,21 @@
 			"types": "./dist/weekly-productivity-digest/index.d.ts",
 			"import": "./dist/weekly-productivity-digest/index.js",
 			"default": "./dist/weekly-productivity-digest/index.js"
+		},
+		"./github-to-linear": {
+			"types": "./dist/github-to-linear/index.d.ts",
+			"import": "./dist/github-to-linear/index.js",
+			"default": "./dist/github-to-linear/index.js"
+		},
+		"./discord-standup-bot": {
+			"types": "./dist/discord-standup-bot/index.d.ts",
+			"import": "./dist/discord-standup-bot/index.js",
+			"default": "./dist/discord-standup-bot/index.js"
+		},
+		"./pr-review-notifier": {
+			"types": "./dist/pr-review-notifier/index.d.ts",
+			"import": "./dist/pr-review-notifier/index.js",
+			"default": "./dist/pr-review-notifier/index.js"
 		}
 	},
 	"files": [

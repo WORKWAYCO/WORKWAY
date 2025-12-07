@@ -12,16 +12,30 @@ import type { DeveloperOAuthApp } from '../../lib/api-client.js';
 
 // Supported OAuth providers for BYOO
 const SUPPORTED_PROVIDERS = [
+	// Meetings & Scheduling
 	{ name: 'Zoom', value: 'zoom', docUrl: 'https://developers.zoom.us/docs/integrations/create/' },
-	{ name: 'Notion', value: 'notion', docUrl: 'https://developers.notion.com/docs/create-a-notion-integration' },
-	{ name: 'Slack', value: 'slack', docUrl: 'https://api.slack.com/apps' },
-	{ name: 'Airtable', value: 'airtable', docUrl: 'https://airtable.com/create/oauth' },
-	{ name: 'Typeform', value: 'typeform', docUrl: 'https://developer.typeform.com/get-started/' },
 	{ name: 'Calendly', value: 'calendly', docUrl: 'https://developer.calendly.com/' },
+	// Productivity
+	{ name: 'Notion', value: 'notion', docUrl: 'https://developers.notion.com/docs/create-a-notion-integration' },
+	{ name: 'Airtable', value: 'airtable', docUrl: 'https://airtable.com/create/oauth' },
 	{ name: 'Todoist', value: 'todoist', docUrl: 'https://developer.todoist.com/appconsole.html' },
 	{ name: 'Linear', value: 'linear', docUrl: 'https://linear.app/settings/api' },
+	// Communication
+	{ name: 'Slack', value: 'slack', docUrl: 'https://api.slack.com/apps' },
+	{ name: 'Discord', value: 'discord', docUrl: 'https://discord.com/developers/applications' },
+	// Google
+	{ name: 'Google Sheets', value: 'google-sheets', docUrl: 'https://console.cloud.google.com/' },
 	{ name: 'Google Calendar', value: 'google-calendar', docUrl: 'https://console.cloud.google.com/' },
 	{ name: 'Google Drive', value: 'google-drive', docUrl: 'https://console.cloud.google.com/' },
+	// Developer
+	{ name: 'GitHub', value: 'github', docUrl: 'https://github.com/settings/developers' },
+	// Forms
+	{ name: 'Typeform', value: 'typeform', docUrl: 'https://developer.typeform.com/get-started/' },
+	// CRM & Sales
+	{ name: 'HubSpot', value: 'hubspot', docUrl: 'https://developers.hubspot.com/docs/api/creating-an-app' },
+	// Design
+	{ name: 'Dribbble', value: 'dribbble', docUrl: 'https://dribbble.com/account/applications/new' },
+	// Payments
 	{ name: 'Stripe', value: 'stripe', docUrl: 'https://dashboard.stripe.com/apikeys' },
 ];
 

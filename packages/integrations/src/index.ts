@@ -214,5 +214,35 @@ export type {
 	ListShotsOptions,
 } from './dribbble/index.js';
 
+export { GitHub, toStandardTask as githubToStandardTask } from './github/index.js';
+export type {
+	GitHubConfig,
+	GitHubUser,
+	GitHubRepository,
+	GitHubIssue,
+	GitHubPullRequest,
+	GitHubReview,
+	GitHubLabel,
+	GitHubComment,
+	GitHubCommit,
+} from './github/index.js';
+
+export {
+	Discord,
+	DiscordWebhook,
+	toStandardMessage as discordToStandardMessage,
+	ChannelType as DiscordChannelType,
+} from './discord/index.js';
+export type {
+	DiscordConfig,
+	DiscordUser,
+	DiscordGuild,
+	DiscordChannel,
+	DiscordMessage,
+	DiscordEmbed,
+	DiscordRole,
+	DiscordMember,
+} from './discord/index.js';
+
 // Future integrations
 // export { WorkersAI } from './workers-ai/index.js';

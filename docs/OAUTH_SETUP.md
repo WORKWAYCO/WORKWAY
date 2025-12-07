@@ -487,6 +487,224 @@ Stripe uses API keys instead of OAuth. This is simpler but requires secure key m
 
 ---
 
+### Airtable
+
+1. **Create an Airtable OAuth Integration**: https://airtable.com/create/oauth
+
+2. **Configure OAuth**:
+   - Redirect URL: `http://localhost:3456/callback` (for CLI)
+   - Redirect URL: `https://api.workway.co/oauth/callback/airtable` (for production)
+
+3. **Required Scopes**:
+   ```
+   data.records:read
+   data.records:write
+   schema.bases:read
+   ```
+
+4. **Environment Variables**:
+   ```toml
+   [vars]
+   AIRTABLE_CLIENT_ID = "your-client-id"
+
+   # In secrets (wrangler secret put AIRTABLE_CLIENT_SECRET)
+   AIRTABLE_CLIENT_SECRET = "your-client-secret"
+   ```
+
+5. **OAuth URLs**:
+   - Authorize: `https://airtable.com/oauth2/v1/authorize`
+   - Token: `https://airtable.com/oauth2/v1/token`
+
+6. **Note**: Airtable requires PKCE for OAuth. The SDK handles this automatically.
+
+---
+
+### Calendly
+
+1. **Create a Calendly App**: https://developer.calendly.com/
+
+2. **Configure OAuth**:
+   - Redirect URL: `http://localhost:3456/callback` (for CLI)
+   - Redirect URL: `https://api.workway.co/oauth/callback/calendly` (for production)
+
+3. **Required Scopes**:
+   ```
+   default
+   ```
+
+4. **Environment Variables**:
+   ```toml
+   [vars]
+   CALENDLY_CLIENT_ID = "your-client-id"
+
+   # In secrets (wrangler secret put CALENDLY_CLIENT_SECRET)
+   CALENDLY_CLIENT_SECRET = "your-client-secret"
+   ```
+
+5. **OAuth URLs**:
+   - Authorize: `https://auth.calendly.com/oauth/authorize`
+   - Token: `https://auth.calendly.com/oauth/token`
+
+---
+
+### Todoist
+
+1. **Create a Todoist App**: https://developer.todoist.com/appconsole.html
+
+2. **Configure OAuth**:
+   - Redirect URL: `http://localhost:3456/callback` (for CLI)
+   - Redirect URL: `https://api.workway.co/oauth/callback/todoist` (for production)
+
+3. **Required Scopes**:
+   ```
+   data:read_write
+   ```
+
+4. **Environment Variables**:
+   ```toml
+   [vars]
+   TODOIST_CLIENT_ID = "your-client-id"
+
+   # In secrets (wrangler secret put TODOIST_CLIENT_SECRET)
+   TODOIST_CLIENT_SECRET = "your-client-secret"
+   ```
+
+5. **OAuth URLs**:
+   - Authorize: `https://todoist.com/oauth/authorize`
+   - Token: `https://todoist.com/oauth/access_token`
+
+---
+
+### Linear
+
+1. **Create a Linear OAuth App**: https://linear.app/settings/api (OAuth Applications)
+
+2. **Configure OAuth**:
+   - Redirect URL: `http://localhost:3456/callback` (for CLI)
+   - Redirect URL: `https://api.workway.co/oauth/callback/linear` (for production)
+
+3. **Required Scopes**:
+   ```
+   read
+   write
+   issues:create
+   ```
+
+4. **Environment Variables**:
+   ```toml
+   [vars]
+   LINEAR_CLIENT_ID = "your-client-id"
+
+   # In secrets (wrangler secret put LINEAR_CLIENT_SECRET)
+   LINEAR_CLIENT_SECRET = "your-client-secret"
+   ```
+
+5. **OAuth URLs**:
+   - Authorize: `https://linear.app/oauth/authorize`
+   - Token: `https://api.linear.app/oauth/token`
+
+---
+
+### Discord
+
+1. **Create a Discord Application**: https://discord.com/developers/applications
+
+2. **Configure OAuth2**:
+   - Add Bot to your application
+   - Redirect URL: `http://localhost:3456/callback` (for CLI)
+   - Redirect URL: `https://api.workway.co/oauth/callback/discord` (for production)
+
+3. **Required Scopes** (Bot):
+   ```
+   bot
+   guilds
+   messages.read
+   ```
+
+4. **Required Bot Permissions**:
+   ```
+   Send Messages
+   Read Message History
+   Add Reactions
+   ```
+
+5. **Environment Variables**:
+   ```toml
+   [vars]
+   DISCORD_CLIENT_ID = "your-client-id"
+
+   # In secrets (wrangler secret put DISCORD_CLIENT_SECRET)
+   DISCORD_CLIENT_SECRET = "your-client-secret"
+   DISCORD_BOT_TOKEN = "your-bot-token"
+   ```
+
+6. **OAuth URLs**:
+   - Authorize: `https://discord.com/api/oauth2/authorize`
+   - Token: `https://discord.com/api/oauth2/token`
+
+---
+
+### GitHub
+
+1. **Create a GitHub OAuth App**: https://github.com/settings/developers (OAuth Apps)
+
+2. **Configure OAuth**:
+   - Authorization callback URL: `http://localhost:3456/callback` (for CLI)
+   - Authorization callback URL: `https://api.workway.co/oauth/callback/github` (for production)
+
+3. **Required Scopes**:
+   ```
+   repo
+   read:user
+   read:org
+   ```
+
+4. **Environment Variables**:
+   ```toml
+   [vars]
+   GITHUB_CLIENT_ID = "your-client-id"
+
+   # In secrets (wrangler secret put GITHUB_CLIENT_SECRET)
+   GITHUB_CLIENT_SECRET = "your-client-secret"
+   ```
+
+5. **OAuth URLs**:
+   - Authorize: `https://github.com/login/oauth/authorize`
+   - Token: `https://github.com/login/oauth/access_token`
+
+6. **Note**: GitHub returns tokens as form-urlencoded by default. Set `Accept: application/json` header for JSON response.
+
+---
+
+### Dribbble
+
+1. **Create a Dribbble Application**: https://dribbble.com/account/applications/new
+
+2. **Configure OAuth**:
+   - Redirect URL: `http://localhost:3456/callback` (for CLI)
+   - Redirect URL: `https://api.workway.co/oauth/callback/dribbble` (for production)
+
+3. **Required Scopes**:
+   ```
+   public
+   upload
+   ```
+
+4. **Environment Variables**:
+   ```toml
+   [vars]
+   DRIBBBLE_CLIENT_ID = "your-client-id"
+
+   # In secrets (wrangler secret put DRIBBBLE_CLIENT_SECRET)
+   DRIBBBLE_CLIENT_SECRET = "your-client-secret"
+   ```
+
+5. **OAuth URLs**:
+   - Authorize: `https://dribbble.com/oauth/authorize`
+   - Token: `https://dribbble.com/oauth/token`
+
+---
+
 ## Adding a New Provider
 
 1. **Add provider config** to API Worker environment
@@ -549,23 +767,36 @@ const OAUTH_PROVIDERS = {
 Connect an integration:
 
 ```bash
-# Connect Slack
-workway oauth connect slack
+# Meetings & Scheduling
+workway oauth connect zoom
+workway oauth connect calendly
 
-# Connect Gmail
-workway oauth connect gmail
-
-# Connect Notion
+# Productivity
 workway oauth connect notion
+workway oauth connect airtable
+workway oauth connect todoist
+workway oauth connect linear
 
-# Connect HubSpot
+# Communication
+workway oauth connect slack
+workway oauth connect discord
+
+# Google
+workway oauth connect google-sheets
+workway oauth connect google-calendar
+workway oauth connect google-drive
+
+# Developer
+workway oauth connect github
+
+# Forms
+workway oauth connect typeform
+
+# CRM & Sales
 workway oauth connect hubspot
 
-# Connect Zoom
-workway oauth connect zoom
-
-# Connect Typeform
-workway oauth connect typeform
+# Design
+workway oauth connect dribbble
 
 # List connected integrations
 workway oauth list

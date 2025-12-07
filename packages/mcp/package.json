@@ -1,0 +1,65 @@
+{
+  "name": "@workwayco/mcp",
+  "version": "1.0.0",
+  "description": "WORKWAY code execution library for debugging Cloudflare Workers workflows",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./servers/cloudflare": {
+      "types": "./dist/servers/cloudflare/index.d.ts",
+      "import": "./dist/servers/cloudflare/index.js"
+    },
+    "./servers/workway": {
+      "types": "./dist/servers/workway/index.d.ts",
+      "import": "./dist/servers/workway/index.js"
+    },
+    "./skills": {
+      "types": "./dist/skills/index.d.ts",
+      "import": "./dist/skills/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "bin": {
+    "workway-mcp": "./dist/server.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/server.ts src/servers/cloudflare/index.ts src/servers/workway/index.ts src/skills/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts src/server.ts --format esm --dts --watch",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "workway",
+    "mcp",
+    "model-context-protocol",
+    "cloudflare",
+    "workers",
+    "debugging",
+    "code-execution"
+  ],
+  "author": "WORKWAY",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.22.4"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
