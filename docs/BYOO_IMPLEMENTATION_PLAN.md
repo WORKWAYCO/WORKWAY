@@ -1,6 +1,6 @@
 # BYOO: Bring Your Own OAuth Implementation Plan
 
-**Status**: Proposed
+**Status**: In Progress (Phase 1 SDK complete)
 **Author**: Claude Code
 **Date**: 2025-12-06
 **Philosophy**: Zuhandenheit - the tool recedes, the developer builds
@@ -659,10 +659,12 @@ async function checkOAuthAppHealth(env: Env) {
 ## Implementation Phases
 
 ### Phase 1: Foundation (Week 1)
-- [ ] Database schema migration
-- [ ] Encryption service
-- [ ] Developer OAuth apps CRUD API
-- [ ] Basic credential resolution
+- [ ] Database schema migration (requires API deployment)
+- [x] Encryption service (`packages/sdk/src/encryption.ts`)
+- [x] Developer OAuth apps CRUD API (`packages/sdk/src/credential-resolver.ts` - DeveloperOAuthAppManager)
+- [x] Basic credential resolution (`packages/sdk/src/credential-resolver.ts` - CredentialResolver)
+- [x] BYOO types and provider configs (`packages/sdk/src/byoo.ts`)
+- [x] Unit tests (`packages/sdk/src/encryption.test.ts`)
 
 ### Phase 2: OAuth Integration (Week 2)
 - [ ] Modify authorize/callback flows
