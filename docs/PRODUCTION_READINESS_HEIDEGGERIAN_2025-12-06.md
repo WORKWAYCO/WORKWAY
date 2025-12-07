@@ -347,7 +347,7 @@ This is fixable. The architecture is sound. The gaps are implementation details,
 | Idempotency (3 workflows) | Workflows | 4 hrs | ✅ Fixed |
 | OAuth token encryption | CLI | 4 hrs | ✅ Fixed (AES-256-GCM) |
 | Rate limit handling | Integrations | 4 hrs | ⏳ Future |
-| Slack tests | Integrations | 4 hrs | ⏳ Future |
+| Slack tests | Integrations | 4 hrs | ✅ Added (38 tests) |
 | SDK core tests | SDK | 8 hrs | ⏳ Future |
 | Storage atomicity | Workflows | 4 hrs | ⏳ Future |
 
@@ -371,7 +371,7 @@ Understanding these parts guided targeted fixes. The hermeneutic circle has comp
 
 **Remaining work** (non-blocking):
 - Rate limit backoff improvements
-- Additional test coverage (Slack integration, SDK core)
+- Additional test coverage (SDK core)
 
 ---
 
