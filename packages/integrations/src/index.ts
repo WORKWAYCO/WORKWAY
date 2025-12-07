@@ -244,5 +244,29 @@ export type {
 	DiscordMember,
 } from './discord/index.js';
 
+export {
+	Sikka,
+	toStandardContact as sikkaToStandardContact,
+	toStandardEvent as sikkaToStandardEvent,
+} from './sikka/index.js';
+export type {
+	SikkaConfig,
+	SikkaPractice,
+	SikkaPatient,
+	SikkaAppointment,
+	SikkaProvider,
+	SikkaTreatment,
+	SikkaClaim,
+	SikkaTransaction,
+	SikkaWebhookEvent,
+	GetPatientsOptions,
+	GetAppointmentsOptions,
+	GetTreatmentsOptions,
+	GetClaimsOptions,
+	GetTransactionsOptions,
+	CreateAppointmentOptions,
+	UpdateAppointmentOptions,
+} from './sikka/index.js';
+
 // Future integrations
 // export { WorkersAI } from './workers-ai/index.js';

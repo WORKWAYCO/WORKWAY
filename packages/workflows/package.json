@@ -135,6 +135,16 @@
 			"types": "./dist/pr-review-notifier/index.d.ts",
 			"import": "./dist/pr-review-notifier/index.js",
 			"default": "./dist/pr-review-notifier/index.js"
+		},
+		"./dental-appointment-autopilot": {
+			"types": "./dist/dental-appointment-autopilot/index.d.ts",
+			"import": "./dist/dental-appointment-autopilot/index.js",
+			"default": "./dist/dental-appointment-autopilot/index.js"
+		},
+		"./dental-review-booster": {
+			"types": "./dist/dental-review-booster/index.d.ts",
+			"import": "./dist/dental-review-booster/index.js",
+			"default": "./dist/dental-review-booster/index.js"
 		}
 	},
 	"files": [

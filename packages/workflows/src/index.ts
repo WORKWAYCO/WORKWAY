@@ -99,6 +99,10 @@ export { default as calendarAvailabilitySync } from './calendar-availability-syn
 export { default as meetingExpenseTracker } from './meeting-expense-tracker/index.js';
 export { default as projectTimeTracker } from './project-time-tracker/index.js';
 
+// Dental / Healthcare
+export { default as dentalAppointmentAutopilot } from './dental-appointment-autopilot/index.js';
+export { default as dentalReviewBooster } from './dental-review-booster/index.js';
+
 // ============================================================================
 // INTEGRATION PAIR REGISTRY
 // ============================================================================
@@ -382,6 +386,28 @@ export const integrationPairs = {
 		outcome: 'Time reports in Slack',
 		outcomeFrame: 'when_work_completes',
 	},
+
+	// Dental / Healthcare
+	'sikka:slack': {
+		workflowId: 'dental-appointment-autopilot',
+		outcome: 'No-shows that prevent themselves',
+		outcomeFrame: 'when_appointments_scheduled',
+	},
+	'sikka:twilio': {
+		workflowId: 'dental-appointment-autopilot',
+		outcome: 'Smart appointment reminders',
+		outcomeFrame: 'when_appointments_scheduled',
+	},
+	'sikka:google-business': {
+		workflowId: 'dental-review-booster',
+		outcome: 'Visits become Google reviews',
+		outcomeFrame: 'after_appointments',
+	},
+	'sikka:yelp': {
+		workflowId: 'dental-review-booster',
+		outcome: 'Visits become Yelp reviews',
+		outcomeFrame: 'after_appointments',
+	},
 } as const;
 
 export type IntegrationPairKey = keyof typeof integrationPairs;
@@ -533,6 +559,16 @@ export const outcomeFrames = {
 		label: 'When work completes...',
 		description: 'Track time and sync to reports',
 	},
+
+	// Dental / Healthcare
+	when_appointments_scheduled: {
+		label: 'When appointments are scheduled...',
+		description: 'Reduce no-shows with smart reminders',
+	},
+	after_appointments: {
+		label: 'After patient visits...',
+		description: 'Turn happy patients into reviews',
+	},
 } as const;
 
 export type OutcomeFrameId = keyof typeof outcomeFrames;
@@ -581,6 +617,9 @@ export const workflows = {
 	'calendar-availability-sync': { id: 'calendar-availability-sync', outcomeFrame: 'always_current' },
 	'meeting-expense-tracker': { id: 'meeting-expense-tracker', outcomeFrame: 'after_meetings' },
 	'project-time-tracker': { id: 'project-time-tracker', outcomeFrame: 'when_work_completes' },
+	// Dental / Healthcare
+	'dental-appointment-autopilot': { id: 'dental-appointment-autopilot', outcomeFrame: 'when_appointments_scheduled' },
+	'dental-review-booster': { id: 'dental-review-booster', outcomeFrame: 'after_appointments' },
 } as const;
 
 export type WorkflowId = keyof typeof workflows;

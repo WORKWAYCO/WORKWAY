@@ -46,6 +46,7 @@ import { explainCommand } from './commands/agentic/explain.js';
 import { modifyCommand } from './commands/agentic/modify.js';
 import { marketplaceNeedsCommand, marketplaceSearchCommand, marketplaceBrowseCommand, marketplaceInfoCommand } from './commands/marketplace/index.js';
 import { dbCheckCommand } from './commands/db/check.js';
+import { dbSyncWorkflowsCommand } from './commands/db/sync-workflows.js';
 import { Logger } from './utils/logger.js';
 import { handleCommand, handleCommandError } from './utils/command-handler.js';
 
@@ -434,6 +435,20 @@ dbCommand
 			table: options.table,
 			generateMigration: options.generateMigration,
 			remote: !options.local,
+			config: options.config,
+		});
+	}));
+
+dbCommand
+	.command('sync-workflows')
+	.description('Sync workflows from @workwayco/workflows to D1 database')
+	.option('--dry-run', 'Show what would be synced without making changes')
+	.option('--local', 'Sync to local database instead of remote')
+	.option('--config <path>', 'Path to wrangler config file')
+	.action(handleCommand(async (options: any) => {
+		await dbSyncWorkflowsCommand({
+			dryRun: options.dryRun,
+			local: options.local,
 			config: options.config,
 		});
 	}));

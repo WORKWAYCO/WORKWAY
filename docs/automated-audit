@@ -1,0 +1,2615 @@
+# Subtractive Triad Audit: Cloudflare
+
+**Date:** 11/28/2025
+**Overall Score:** 3.8/10
+
+## Score Summary
+
+| Level | Score | Status |
+|-------|-------|--------|
+| DRY (Implementation) | 10/10 | Excellent |
+| Rams (Artifact) | 1/10 | Critical |
+| Heidegger (System) | 1.3/10 | Critical |
+
+## Violation Summary
+
+- **Critical:** 0
+- **High:** 17
+- **Medium:** 239
+- **Low:** 64
+
+## DRY Violations
+
+*"Have I built this before?" → Unify*
+
+### Medium Priority
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/anymatch/index.js`, `workway-public/node_modules/@typescript-eslint/scope-manager/dist/analyze.js`, `workway-public/node_modules/eslint/lib/rules/no-sequences.js`, `workway-public/node_modules/eslint/lib/rules/require-jsdoc.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "DEFAULT_OPTIONS" defined in 10 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/anymatch/index.js`, `workway-public/node_modules/readdirp/index.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`
+
+Constant "BANG" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/ansi-escapes/index.js`, `workway-public/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "ESC" defined in 9 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/ansi-escapes/index.js`, `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "OSC" defined in 5 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/ansi-escapes/index.js`, `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "BEL" defined in 5 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/ansi-escapes/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`
+
+Constant "SEP" defined in 8 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/chokidar/index.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/tsup/node_modules/chokidar/index.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tsup/node_modules/chokidar/esm/index.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "STAT_METHOD_F" defined in 9 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/chokidar/index.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/tsup/node_modules/chokidar/index.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tsup/node_modules/chokidar/esm/index.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "STAT_METHOD_L" defined in 9 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/ignore/index.js`, `workway-public/node_modules/@ungap/structured-clone/cjs/serialize.js`, `workway-public/node_modules/@ungap/structured-clone/esm/serialize.js`
+
+Constant "EMPTY" defined in 3 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/ignore/index.js`, `workway-public/node_modules/postcss/lib/tokenize.js`, `workway-public/node_modules/pretty-format/build/plugins/AsymmetricMatcher.js`, `workway-public/node_modules/pretty-format/build/plugins/DOMCollection.js`, `workway-public/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/cli/node_modules/pretty-format/build/plugins/AsymmetricMatcher.js`, `packages/cli/node_modules/pretty-format/build/plugins/DOMCollection.js`, `packages/cli/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/sdk/node_modules/pretty-format/build/plugins/AsymmetricMatcher.js`, `packages/sdk/node_modules/pretty-format/build/plugins/DOMCollection.js`, `packages/sdk/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/AsymmetricMatcher.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/DOMCollection.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/Immutable.js`
+
+Constant "SPACE" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/ignore/index.js`, `workway-public/node_modules/postcss/lib/tokenize.js`, `workway-public/node_modules/tsup/node_modules/chokidar/index.js`, `workway-public/node_modules/tsup/node_modules/chokidar/esm/index.js`
+
+Constant "SLASH" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/readdirp/index.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/tsup/node_modules/readdirp/index.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tsup/node_modules/readdirp/esm/index.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ALL_TYPES" defined in 9 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/readdirp/index.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/tsup/node_modules/readdirp/index.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tsup/node_modules/readdirp/esm/index.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "RECURSIVE_ERROR_CODE" defined in 9 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/readdirp/index.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "FILE_TYPE" defined in 7 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/readdirp/index.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "DIR_TYPE" defined in 7 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/readdirp/index.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "FILE_DIR_TYPE" defined in 7 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/readdirp/index.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "EVERYTHING_TYPE" defined in 7 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/wrap-ansi-cjs/index.js`, `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `workway-public/node_modules/@isaacs/cliui/node_modules/wrap-ansi/index.js`
+
+Constant "ANSI_ESCAPE_BELL" defined in 6 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/wrap-ansi-cjs/index.js`, `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `workway-public/node_modules/@isaacs/cliui/node_modules/wrap-ansi/index.js`
+
+Constant "ANSI_CSI" defined in 6 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/wrap-ansi-cjs/index.js`, `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `workway-public/node_modules/@isaacs/cliui/node_modules/wrap-ansi/index.js`
+
+Constant "ANSI_OSC" defined in 6 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/wrap-ansi-cjs/index.js`, `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `workway-public/node_modules/@isaacs/cliui/node_modules/wrap-ansi/index.js`
+
+Constant "ANSI_SGR_TERMINATOR" defined in 6 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/wrap-ansi-cjs/index.js`, `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `workway-public/node_modules/@isaacs/cliui/node_modules/wrap-ansi/index.js`
+
+Constant "ANSI_ESCAPE_LINK" defined in 6 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/chokidar/lib/nodefs-handler.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/tsup/node_modules/chokidar/handler.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tsup/node_modules/chokidar/esm/handler.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "THROTTLE_MODE_WATCH" defined in 9 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "POSIX_CHARS" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "WINDOWS_CHARS" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`
+
+Constant "POSIX_REGEX_SOURCE" defined in 6 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "WIN_SLASH" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "WIN_NO_SLASH" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "DOT_LITERAL" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "PLUS_LITERAL" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "QMARK_LITERAL" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "SLASH_LITERAL" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ONE_CHAR" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "QMARK" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "END_ANCHOR" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "START_ANCHOR" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "DOTS_SLASH" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "NO_DOT" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "NO_DOTS" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "NO_DOT_SLASH" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "NO_DOTS_SLASH" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "QMARK_NO_DOT" defined in 14 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/picomatch/lib/constants.js`, `workway-public/node_modules/rollup/dist/shared/index.js`, `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/cli/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.xL8XjTLv.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`, `workway-public/node_modules/rollup/dist/es/shared/watch.js`, `workway-public/node_modules/tinyglobby/node_modules/picomatch/lib/constants.js`
+
+Constant "STAR" defined in 10 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/pretty-format/build/index.js`, `packages/cli/node_modules/pretty-format/build/index.js`, `packages/sdk/node_modules/pretty-format/build/index.js`, `packages/workflow-engine/node_modules/pretty-format/build/index.js`
+
+Constant "DEFAULT_THEME" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/sucrase/dist/HelperManager.js`, `workway-public/node_modules/sucrase/dist/esm/HelperManager.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "HELPERS" defined in 6 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite-node/dist/utils.d.ts`, `packages/cli/node_modules/vite-node/dist/utils.d.ts`, `packages/sdk/node_modules/vite-node/dist/utils.d.ts`, `packages/workflow-engine/node_modules/vite-node/dist/utils.d.ts`, `workway-public/node_modules/vite/dist/node/runtime.js`, `packages/cli/node_modules/vite/dist/node/runtime.js`, `packages/sdk/node_modules/vite/dist/node/runtime.js`, `packages/workflow-engine/node_modules/vite/dist/node/runtime.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "VALID_ID_PREFIX" defined in 12 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/cli-wrapper.js`, `packages/cli/node_modules/vitest/dist/cli-wrapper.js`, `packages/sdk/node_modules/vitest/dist/cli-wrapper.js`, `packages/workflow-engine/node_modules/vitest/dist/cli-wrapper.js`
+
+Constant "NODE_ARGS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/coverage.js`, `packages/cli/node_modules/vitest/dist/coverage.js`, `packages/sdk/node_modules/vitest/dist/coverage.js`, `packages/workflow-engine/node_modules/vitest/dist/coverage.js`
+
+Constant "THRESHOLD_KEYS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/coverage.js`, `packages/cli/node_modules/vitest/dist/coverage.js`, `packages/sdk/node_modules/vitest/dist/coverage.js`, `packages/workflow-engine/node_modules/vitest/dist/coverage.js`
+
+Constant "GLOBAL_THRESHOLDS_KEY" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `packages/cli/dist/commands/workflow/init.js`, `packages/cli/dist/commands/workflow/publish.js`, `packages/cli/src/commands/workflow/init.ts`, `packages/cli/src/commands/workflow/publish.ts`, `workway-public/packages/cli/dist/commands/workflow/init.js`, `workway-public/packages/cli/dist/commands/workflow/publish.js`, `workway-public/packages/cli/src/commands/workflow/init.ts`, `workway-public/packages/cli/src/commands/workflow/publish.ts`, `workway-public/node_modules/@workwayco/cli/dist/commands/workflow/init.js`, `workway-public/node_modules/@workwayco/cli/dist/commands/workflow/publish.js`, `workway-public/node_modules/@workwayco/cli/src/commands/workflow/init.ts`, `workway-public/node_modules/@workwayco/cli/src/commands/workflow/publish.ts`
+
+Constant "CATEGORIES" defined in 12 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `packages/cli/src/commands/ai/models.ts`, `workway-public/packages/cli/dist/commands/ai/models.js`, `workway-public/packages/cli/src/commands/ai/models.ts`, `workway-public/node_modules/@workwayco/cli/dist/commands/ai/models.js`, `workway-public/node_modules/@workwayco/cli/src/commands/ai/models.ts`
+
+Constant "AI_MODELS" defined in 5 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/packages/cli/dist/lib/workflow-validator.js`, `workway-public/packages/cli/src/lib/workflow-validator.ts`, `workway-public/node_modules/@workwayco/cli/dist/lib/workflow-validator.js`, `workway-public/node_modules/@workwayco/cli/src/lib/workflow-validator.ts`
+
+Constant "KNOWN_INTEGRATIONS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@jridgewell/trace-mapping/src/trace-mapping.ts`, `workway-public/node_modules/@vitest/snapshot/dist/index.js`, `workway-public/node_modules/@vitest/utils/dist/source-map.js`, `workway-public/node_modules/vite/dist/node/runtime.js`, `packages/cli/node_modules/@vitest/snapshot/dist/index.js`, `packages/cli/node_modules/@vitest/utils/dist/source-map.js`, `packages/cli/node_modules/vite/dist/node/runtime.js`, `packages/sdk/node_modules/@vitest/snapshot/dist/index.js`, `packages/sdk/node_modules/@vitest/utils/dist/source-map.js`, `packages/sdk/node_modules/vite/dist/node/runtime.js`, `packages/workflow-engine/node_modules/@vitest/snapshot/dist/index.js`, `packages/workflow-engine/node_modules/@vitest/utils/dist/source-map.js`, `packages/workflow-engine/node_modules/vite/dist/node/runtime.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "LINE_GTR_ZERO" defined in 17 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@jridgewell/trace-mapping/src/trace-mapping.ts`, `workway-public/node_modules/@vitest/snapshot/dist/index.js`, `workway-public/node_modules/@vitest/utils/dist/source-map.js`, `packages/cli/node_modules/@vitest/snapshot/dist/index.js`, `packages/cli/node_modules/@vitest/utils/dist/source-map.js`, `packages/sdk/node_modules/@vitest/snapshot/dist/index.js`, `packages/sdk/node_modules/@vitest/utils/dist/source-map.js`, `packages/workflow-engine/node_modules/@vitest/snapshot/dist/index.js`, `packages/workflow-engine/node_modules/@vitest/utils/dist/source-map.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "COL_GTR_EQ_ZERO" defined in 13 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@vitest/expect/dist/index.js`, `packages/cli/node_modules/@vitest/expect/dist/index.js`, `packages/sdk/node_modules/@vitest/expect/dist/index.js`, `packages/workflow-engine/node_modules/@vitest/expect/dist/index.js`
+
+Constant "SPACE_SYMBOL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@vitest/expect/dist/index.js`, `workway-public/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/cli/node_modules/@vitest/expect/dist/index.js`, `packages/cli/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/sdk/node_modules/@vitest/expect/dist/index.js`, `packages/sdk/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/workflow-engine/node_modules/@vitest/expect/dist/index.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/Immutable.js`
+
+Constant "IS_KEYED_SENTINEL" defined in 8 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@vitest/expect/dist/index.js`, `workway-public/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/cli/node_modules/@vitest/expect/dist/index.js`, `packages/cli/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/sdk/node_modules/@vitest/expect/dist/index.js`, `packages/sdk/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/workflow-engine/node_modules/@vitest/expect/dist/index.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/Immutable.js`
+
+Constant "IS_SET_SENTINEL" defined in 8 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@vitest/expect/dist/index.js`, `workway-public/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/cli/node_modules/@vitest/expect/dist/index.js`, `packages/cli/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/sdk/node_modules/@vitest/expect/dist/index.js`, `packages/sdk/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/workflow-engine/node_modules/@vitest/expect/dist/index.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/Immutable.js`
+
+Constant "IS_ORDERED_SENTINEL" defined in 8 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@vitest/utils/dist/chunk-display.js`, `workway-public/node_modules/@vitest/utils/dist/diff.js`, `packages/cli/node_modules/@vitest/utils/dist/chunk-display.js`, `packages/cli/node_modules/@vitest/utils/dist/diff.js`, `packages/sdk/node_modules/@vitest/utils/dist/chunk-display.js`, `packages/sdk/node_modules/@vitest/utils/dist/diff.js`, `packages/workflow-engine/node_modules/@vitest/utils/dist/chunk-display.js`, `packages/workflow-engine/node_modules/@vitest/utils/dist/diff.js`
+
+Constant "PLUGINS" defined in 8 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@vitest/utils/dist/diff.js`, `packages/cli/node_modules/@vitest/utils/dist/diff.js`, `packages/sdk/node_modules/@vitest/utils/dist/diff.js`, `packages/workflow-engine/node_modules/@vitest/utils/dist/diff.js`
+
+Constant "FORMAT_OPTIONS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@vitest/utils/dist/diff.js`, `packages/cli/node_modules/@vitest/utils/dist/diff.js`, `packages/sdk/node_modules/@vitest/utils/dist/diff.js`, `packages/workflow-engine/node_modules/@vitest/utils/dist/diff.js`
+
+Constant "FALLBACK_FORMAT_OPTIONS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@vitest/utils/dist/diff.js`, `packages/cli/node_modules/@vitest/utils/dist/diff.js`, `packages/sdk/node_modules/@vitest/utils/dist/diff.js`, `packages/workflow-engine/node_modules/@vitest/utils/dist/diff.js`
+
+Constant "NO_DIFF_MESSAGE" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@vitest/utils/dist/diff.js`, `packages/cli/node_modules/@vitest/utils/dist/diff.js`, `packages/sdk/node_modules/@vitest/utils/dist/diff.js`, `packages/workflow-engine/node_modules/@vitest/utils/dist/diff.js`
+
+Constant "SIMILAR_MESSAGE" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@vitest/utils/dist/error.js`, `packages/cli/node_modules/@vitest/utils/dist/error.js`, `packages/sdk/node_modules/@vitest/utils/dist/error.js`, `packages/workflow-engine/node_modules/@vitest/utils/dist/error.js`
+
+Constant "IS_RECORD_SYMBOL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/@vitest/utils/dist/error.js`, `packages/cli/node_modules/@vitest/utils/dist/error.js`, `packages/sdk/node_modules/@vitest/utils/dist/error.js`, `packages/workflow-engine/node_modules/@vitest/utils/dist/error.js`
+
+Constant "IS_COLLECTION_SYMBOL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/eslint/lib/linter/source-code-fixer.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "BOM" defined in 5 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/eslint/lib/rules/init-declarations.js`, `workway-public/node_modules/eslint/lib/rules/one-var.js`, `workway-public/node_modules/eslint/lib/rules/radix.js`
+
+Constant "MODE_ALWAYS" defined in 3 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/fast-glob/out/utils/pattern.js`, `workway-public/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/cli/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/sdk/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`
+
+Constant "GLOBSTAR" defined in 5 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/fast-glob/out/utils/pattern.js`, `workway-public/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/cli/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/sdk/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ESCAPE_SYMBOL" defined in 9 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/human-signals/build/src/core.js`, `packages/cli/node_modules/human-signals/build/src/core.js`, `packages/sdk/node_modules/human-signals/build/src/core.js`, `packages/workflow-engine/node_modules/human-signals/build/src/core.js`, `workway-public/node_modules/run-applescript/node_modules/human-signals/build/src/core.js`, `workway-public/node_modules/vitest/node_modules/human-signals/build/src/core.js`
+
+Constant "SIGNALS" defined in 6 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/pretty-format/build/plugins/DOMCollection.js`, `packages/cli/node_modules/pretty-format/build/plugins/DOMCollection.js`, `packages/sdk/node_modules/pretty-format/build/plugins/DOMCollection.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/DOMCollection.js`
+
+Constant "OBJECT_NAMES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/cli/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/sdk/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/Immutable.js`
+
+Constant "IS_ITERABLE_SENTINEL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/cli/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/sdk/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/Immutable.js`
+
+Constant "IS_LIST_SENTINEL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/cli/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/sdk/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/Immutable.js`
+
+Constant "IS_MAP_SENTINEL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/cli/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/sdk/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/Immutable.js`
+
+Constant "IS_RECORD_SENTINEL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/cli/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/sdk/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/Immutable.js`
+
+Constant "IS_SEQ_SENTINEL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/cli/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/sdk/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/Immutable.js`
+
+Constant "IS_STACK_SENTINEL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/cli/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/sdk/node_modules/pretty-format/build/plugins/Immutable.js`, `packages/workflow-engine/node_modules/pretty-format/build/plugins/Immutable.js`
+
+Constant "LAZY" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/rollup/dist/shared/rollup.js`, `workway-public/node_modules/zod/v3/helpers/parseUtil.js`, `packages/cli/node_modules/zod/v3/helpers/parseUtil.js`, `packages/sdk/node_modules/zod/v3/helpers/parseUtil.js`, `packages/workflow-engine/node_modules/zod/v3/helpers/parseUtil.js`, `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`
+
+Constant "EMPTY_PATH" defined in 6 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/rollup/dist/shared/watch-cli.js`, `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "CLEAR_SCREEN" defined in 5 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/tsup/node_modules/chokidar/handler.d.ts`, `workway-public/node_modules/tsup/node_modules/chokidar/esm/handler.d.ts`, `workway-public/node_modules/tsup/node_modules/chokidar/esm/handler.js`
+
+Constant "STR_DATA" defined in 3 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/tsup/node_modules/chokidar/handler.d.ts`, `workway-public/node_modules/tsup/node_modules/chokidar/esm/handler.d.ts`, `workway-public/node_modules/tsup/node_modules/chokidar/esm/handler.js`
+
+Constant "STR_END" defined in 3 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/tsup/node_modules/chokidar/handler.d.ts`, `workway-public/node_modules/tsup/node_modules/chokidar/esm/handler.d.ts`, `workway-public/node_modules/tsup/node_modules/chokidar/esm/handler.js`
+
+Constant "STR_CLOSE" defined in 3 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/constants.js`, `packages/cli/node_modules/vite/dist/node/constants.js`, `packages/sdk/node_modules/vite/dist/node/constants.js`, `packages/workflow-engine/node_modules/vite/dist/node/constants.js`
+
+Constant "DEFAULT_MAIN_FIELDS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/constants.js`, `packages/cli/node_modules/vite/dist/node/constants.js`, `packages/sdk/node_modules/vite/dist/node/constants.js`, `packages/workflow-engine/node_modules/vite/dist/node/constants.js`
+
+Constant "ESBUILD_MODULES_TARGET" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/constants.js`, `packages/cli/node_modules/vite/dist/node/constants.js`, `packages/sdk/node_modules/vite/dist/node/constants.js`, `packages/workflow-engine/node_modules/vite/dist/node/constants.js`
+
+Constant "DEFAULT_EXTENSIONS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/constants.js`, `packages/cli/node_modules/vite/dist/node/constants.js`, `packages/sdk/node_modules/vite/dist/node/constants.js`, `packages/workflow-engine/node_modules/vite/dist/node/constants.js`
+
+Constant "DEFAULT_CONFIG_FILES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/constants.js`, `packages/cli/node_modules/vite/dist/node/constants.js`, `packages/sdk/node_modules/vite/dist/node/constants.js`, `packages/workflow-engine/node_modules/vite/dist/node/constants.js`
+
+Constant "KNOWN_ASSET_TYPES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/constants.js`, `packages/cli/node_modules/vite/dist/node/constants.js`, `packages/sdk/node_modules/vite/dist/node/constants.js`, `packages/workflow-engine/node_modules/vite/dist/node/constants.js`
+
+Constant "FS_PREFIX" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/constants.js`, `packages/cli/node_modules/vite/dist/node/constants.js`, `packages/sdk/node_modules/vite/dist/node/constants.js`, `packages/workflow-engine/node_modules/vite/dist/node/constants.js`
+
+Constant "CLIENT_PUBLIC_PATH" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/constants.js`, `packages/cli/node_modules/vite/dist/node/constants.js`, `packages/sdk/node_modules/vite/dist/node/constants.js`, `packages/workflow-engine/node_modules/vite/dist/node/constants.js`
+
+Constant "ENV_PUBLIC_PATH" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/constants.js`, `packages/cli/node_modules/vite/dist/node/constants.js`, `packages/sdk/node_modules/vite/dist/node/constants.js`, `packages/workflow-engine/node_modules/vite/dist/node/constants.js`
+
+Constant "METADATA_FILENAME" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/chunks/runtime-console.EO5ha7qv.js`, `packages/cli/node_modules/vitest/dist/chunks/runtime-console.EO5ha7qv.js`, `packages/sdk/node_modules/vitest/dist/chunks/runtime-console.EO5ha7qv.js`, `packages/workflow-engine/node_modules/vitest/dist/chunks/runtime-console.EO5ha7qv.js`
+
+Constant "UNKNOWN_TEST_ID" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/cli/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/sdk/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`
+
+Constant "API_NOT_FOUND_ERROR" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/cli/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/sdk/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`
+
+Constant "API_NOT_FOUND_CHECK" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/cli/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/sdk/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`
+
+Constant "CSI" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/cli/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/sdk/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/constants.5J7I254_.js`
+
+Constant "CONFIG_NAMES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/cli/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/sdk/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/constants.5J7I254_.js`
+
+Constant "WORKSPACES_NAMES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/cli/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/sdk/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/constants.5J7I254_.js`
+
+Constant "CONFIG_EXTENSIONS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/cli/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/sdk/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/constants.5J7I254_.js`
+
+Constant "WORKSPACES_EXTENSIONS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/cli/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/sdk/node_modules/vitest/dist/vendor/constants.5J7I254_.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/constants.5J7I254_.js`
+
+Constant "API_PATH" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "LAST_RUN_TEXTS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `workway-public/node_modules/vitest/dist/vendor/utils.0uYuCbzo.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/utils.0uYuCbzo.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/utils.0uYuCbzo.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/utils.0uYuCbzo.js`
+
+Constant "REGEXP_WRAP_PREFIX" defined in 8 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "BADGE_PADDING" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "HELP_HINT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "HELP_QUITE" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "WAIT_FOR_CHANGE_PASS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "WAIT_FOR_CHANGE_FAIL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "WAIT_FOR_CHANGE_CANCELLED" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "LAST_RUN_TEXT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "ERASE_DOWN" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "ERASE_SCROLLBACK" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/cli/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.-xs08BYx.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.-xs08BYx.js`
+
+Constant "CURSOR_TO_START" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.GVFv9dZ0.js`, `packages/cli/node_modules/vitest/dist/vendor/index.GVFv9dZ0.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.GVFv9dZ0.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.GVFv9dZ0.js`
+
+Constant "LIVING_KEYS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/index.GVFv9dZ0.js`, `packages/cli/node_modules/vitest/dist/vendor/index.GVFv9dZ0.js`, `packages/sdk/node_modules/vitest/dist/vendor/index.GVFv9dZ0.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/index.GVFv9dZ0.js`
+
+Constant "OTHER_KEYS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/cli/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/sdk/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`
+
+Constant "F_RIGHT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/cli/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/sdk/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`
+
+Constant "F_DOWN" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/cli/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/sdk/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`
+
+Constant "F_DOWN_RIGHT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/cli/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/sdk/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`
+
+Constant "F_POINTER" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/cli/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/sdk/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`
+
+Constant "F_DOT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/cli/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/sdk/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`
+
+Constant "F_CHECK" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/cli/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/sdk/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`
+
+Constant "F_CROSS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/cli/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/sdk/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/utils.dEtNIEgr.js`
+
+Constant "F_LONG_DASH" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vitest/dist/vendor/vm.QEE48c0T.js`, `packages/cli/node_modules/vitest/dist/vendor/vm.QEE48c0T.js`, `packages/sdk/node_modules/vitest/dist/vendor/vm.QEE48c0T.js`, `packages/workflow-engine/node_modules/vitest/dist/vendor/vm.QEE48c0T.js`
+
+Constant "CLIENT_ID" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/zod/v4/core/util.js`, `packages/cli/node_modules/zod/v4/core/util.js`, `packages/sdk/node_modules/zod/v4/core/util.js`, `packages/workflow-engine/node_modules/zod/v4/core/util.js`
+
+Constant "NUMBER_FORMAT_RANGES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/zod/v4/core/util.js`, `packages/cli/node_modules/zod/v4/core/util.js`, `packages/sdk/node_modules/zod/v4/core/util.js`, `packages/workflow-engine/node_modules/zod/v4/core/util.js`
+
+Constant "BIGINT_FORMAT_RANGES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/zod/v4/mini/external.js`, `packages/cli/node_modules/zod/v4/mini/external.js`, `packages/sdk/node_modules/zod/v4/mini/external.js`, `packages/workflow-engine/node_modules/zod/v4/mini/external.js`, `workway-public/node_modules/zod/src/v4/mini/external.ts`, `packages/cli/node_modules/zod/src/v4/mini/external.ts`, `packages/sdk/node_modules/zod/src/v4/mini/external.ts`, `packages/workflow-engine/node_modules/zod/src/v4/mini/external.ts`
+
+Constant "NEVER" defined in 8 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "EMPTY_SOURCES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "TS_EXTENSIONS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "JS_EXTENSIONS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "EXTENDABLE_KEYS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "REBASE_KEYS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "BASE_DEV_SHORTCUTS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "BASE_PREVIEW_SHORTCUTS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ROOT_FILES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "DEFAULT_JSCONFIG_COMPILER_OPTIONS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "CN" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ENCODING" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "FILES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "NULL_BYTE_PLACEHOLDER" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "VITE_RUNTIME_SOURCEMAPPING_SOURCE" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "FAILED_REQUIRE_ERROR" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "COMMONJS_REQUIRE_EXPORT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "CREATE_COMMONJS_REQUIRE_EXPORT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "PROXY_SUFFIX" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "WRAPPED_SUFFIX" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "EXTERNAL_SUFFIX" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "EXPORTS_SUFFIX" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "MODULE_SUFFIX" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ENTRY_SUFFIX" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ES_IMPORT_SUFFIX" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "DYNAMIC_MODULES_ID" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "HELPERS_ID" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "IS_WRAPPED_COMMONJS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "KEY_COMPILED_ESM" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `workway-public/node_modules/vite/dist/node/chunks/dep-Dnp7gl8U.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-Dnp7gl8U.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-Dnp7gl8U.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-Dnp7gl8U.js`
+
+Constant "PLUGIN_NAME" defined in 8 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "NODE_BUILTIN_NAMESPACE" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "NPM_BUILTIN_NAMESPACE" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "BUN_BUILTIN_NAMESPACE" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ERR_SYMLINK_IN_RECURSIVE_READDIR" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "GLOB_ALL_PATTERN" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "TS_EXTENSIONS_RE_GROUP" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "TSJS_EXTENSIONS_RE_GROUP" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "FOLD_FLOW" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "FOLD_BLOCK" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "FOLD_QUOTED" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "MERGE_KEY" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "DOCUMENT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "FLOW_END" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "SCALAR" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "FILL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "FILL_COMMENT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ERR_RESOLVE_PACKAGE_ENTRY_FAIL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ERR_OPTIMIZE_DEPS_PROCESSING_ERROR" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ERR_OUTDATED_OPTIMIZED_DEP" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ERR_FILE_NOT_FOUND_IN_OPTIMIZED_DEP_DIR" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "WORKER_FILE_ID" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ERR_CLOSED_SERVER" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ERR_DENIED_FILE" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ERR_LOAD_URL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ERR_LOAD_PUBLIC_URL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "ERR_DENIED_ID" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+Constant "HMR_HEADER" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "NAMED_HEADERS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "TABLE_ROW_CONTEXT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "TABLE_BODY_CONTEXT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "TABLE_CONTEXT" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "TABLE_CELLS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "QUIRKS_MODE_PUBLIC_ID_PREFIXES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "QUIRKS_MODE_NO_SYSTEM_ID_PUBLIC_ID_PREFIXES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "LIMITED_QUIRKS_PUBLIC_ID_PREFIXES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "LIMITED_QUIRKS_WITH_SYSTEM_ID_PUBLIC_ID_PREFIXES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "SEQUENCES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "SPECIAL_ELEMENTS" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "MARKER" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "MIME_TYPES" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "BASE_LOC" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "REPLACEMENT_CHARACTER" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "VALID_DOCTYPE_NAME" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "VALID_SYSTEM_ID" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "QUIRKS_MODE_SYSTEM_ID" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "DEFINITION_URL_ATTR" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "ADJUSTED_DEFINITION_URL_ATTR" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/cli/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/sdk/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`, `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-D-7KCb9p.js`
+
+Constant "HIDDEN_INPUT_TYPE" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/zod/src/v3/benchmarks/datetime.ts`, `workway-public/node_modules/zod/src/v3/benchmarks/ipv4.ts`, `packages/cli/node_modules/zod/src/v3/benchmarks/datetime.ts`, `packages/cli/node_modules/zod/src/v3/benchmarks/ipv4.ts`, `packages/sdk/node_modules/zod/src/v3/benchmarks/datetime.ts`, `packages/sdk/node_modules/zod/src/v3/benchmarks/ipv4.ts`, `packages/workflow-engine/node_modules/zod/src/v3/benchmarks/datetime.ts`, `packages/workflow-engine/node_modules/zod/src/v3/benchmarks/ipv4.ts`, `workway-public/node_modules/zod/src/v4/classic/tests/nested-refine.test.ts`, `packages/cli/node_modules/zod/src/v4/classic/tests/nested-refine.test.ts`, `packages/sdk/node_modules/zod/src/v4/classic/tests/nested-refine.test.ts`, `packages/workflow-engine/node_modules/zod/src/v4/classic/tests/nested-refine.test.ts`
+
+Constant "DATA" defined in 12 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/zod/src/v3/benchmarks/string.ts`, `packages/cli/node_modules/zod/src/v3/benchmarks/string.ts`, `packages/sdk/node_modules/zod/src/v3/benchmarks/string.ts`, `packages/workflow-engine/node_modules/zod/src/v3/benchmarks/string.ts`
+
+Constant "SUITE_NAME" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/zod/src/v3/tests/enum.test.ts`, `packages/cli/node_modules/zod/src/v3/tests/enum.test.ts`, `packages/sdk/node_modules/zod/src/v3/tests/enum.test.ts`, `packages/workflow-engine/node_modules/zod/src/v3/tests/enum.test.ts`, `workway-public/node_modules/zod/src/v4/classic/tests/enum.test.ts`, `packages/cli/node_modules/zod/src/v4/classic/tests/enum.test.ts`, `packages/sdk/node_modules/zod/src/v4/classic/tests/enum.test.ts`, `packages/workflow-engine/node_modules/zod/src/v4/classic/tests/enum.test.ts`
+
+Constant "HTTP_SUCCESS" defined in 8 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `workway-public/node_modules/zod/src/v4/mini/tests/string.test.ts`, `packages/cli/node_modules/zod/src/v4/mini/tests/string.test.ts`, `packages/sdk/node_modules/zod/src/v4/mini/tests/string.test.ts`, `packages/workflow-engine/node_modules/zod/src/v4/mini/tests/string.test.ts`
+
+Constant "FAIL" defined in 4 locations
+
+> **Suggestion:** Move to a shared constants file
+
+#### Duplicate Constant
+
+**Files:** `packages/cli/node_modules/zod/src/v4/core/tests/locales/be.test.ts`, `packages/cli/node_modules/zod/src/v4/core/tests/locales/ru.test.ts`, `workway-public/node_modules/zod/src/v4/core/tests/locales/be.test.ts`, `workway-public/node_modules/zod/src/v4/core/tests/locales/ru.test.ts`, `packages/sdk/node_modules/zod/src/v4/core/tests/locales/be.test.ts`, `packages/sdk/node_modules/zod/src/v4/core/tests/locales/ru.test.ts`, `packages/workflow-engine/node_modules/zod/src/v4/core/tests/locales/be.test.ts`, `packages/workflow-engine/node_modules/zod/src/v4/core/tests/locales/ru.test.ts`
+
+Constant "TEST_CASES" defined in 8 locations
+
+> **Suggestion:** Move to a shared constants file
+
+## Rams Violations
+
+*"Does this earn its existence?" → Remove*
+
+### High Priority
+
+#### Large File
+
+**File:** `workway-public/node_modules/typescript/lib/typescript.js`
+
+File has 200277 lines
+
+> **Suggestion:** Consider splitting into multiple modules
+
+#### Large File
+
+**File:** `workway-public/node_modules/typescript/lib/_tsc.js`
+
+File has 133819 lines
+
+> **Suggestion:** Consider splitting into multiple modules
+
+#### Large File
+
+**File:** `workway-public/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+File has 67049 lines
+
+> **Suggestion:** Consider splitting into multiple modules
+
+#### Large File
+
+**File:** `packages/cli/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+File has 67049 lines
+
+> **Suggestion:** Consider splitting into multiple modules
+
+#### Large File
+
+**File:** `packages/sdk/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+File has 67049 lines
+
+> **Suggestion:** Consider splitting into multiple modules
+
+#### Large File
+
+**File:** `packages/workflow-engine/node_modules/vite/dist/node/chunks/dep-BK3b2jBa.js`
+
+File has 67049 lines
+
+> **Suggestion:** Consider splitting into multiple modules
+
+#### Large File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.dom.d.ts`
+
+File has 39430 lines
+
+> **Suggestion:** Consider splitting into multiple modules
+
+#### Large File
+
+**File:** `workway-public/node_modules/rollup/dist/es/shared/node-entry.js`
+
+File has 23934 lines
+
+> **Suggestion:** Consider splitting into multiple modules
+
+#### Large File
+
+**File:** `workway-public/node_modules/rollup/dist/shared/rollup.js`
+
+File has 23856 lines
+
+> **Suggestion:** Consider splitting into multiple modules
+
+#### Large File
+
+**File:** `workway-public/node_modules/vitest/dist/vendor/cli-api.OdDWuB7Y.js`
+
+File has 18384 lines
+
+> **Suggestion:** Consider splitting into multiple modules
+
+### Medium Priority
+
+#### Dead Export
+
+**File:** `packages/sdk/src/action-result.ts`
+
+Export "StandardMessage" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/action-result.ts`
+
+Export "StandardTask" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/action-result.ts`
+
+Export "StandardDocument" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/action-result.ts`
+
+Export "StandardEvent" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/action-result.ts`
+
+Export "StandardList" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/action-result.ts`
+
+Export "createActionResult" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/action-result.ts`
+
+Export "isActionResult" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/action-result.ts`
+
+Export "unwrapResult" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/action-result.ts`
+
+Export "areResultsCompatible" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/integration-error.ts`
+
+Export "ErrorCategory" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/integration-error.ts`
+
+Export "isIntegrationError" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/integration-error.ts`
+
+Export "toIntegrationError" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/integration-sdk.ts`
+
+Export "sendEmailAction" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/integration-sdk.ts`
+
+Export "ActionContext" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/integration-sdk.ts`
+
+Export "OAuthManager" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/integration-sdk.ts`
+
+Export "OAuthTokens" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/integration-sdk.ts`
+
+Export "ActionDefinition" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/integration-sdk.ts`
+
+Export "TriggerDefinition" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/integration-sdk.ts`
+
+Export "gmailIntegration" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+#### Dead Export
+
+**File:** `packages/sdk/src/integration-sdk.ts`
+
+Export "IntegrationDefinition" is never imported
+
+> **Suggestion:** Remove unused export or verify it's needed externally
+
+### Low Priority
+
+#### Empty File
+
+**File:** `workway-public/node_modules/vitest/import-meta.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/cli/node_modules/vitest/import-meta.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/sdk/node_modules/vitest/import-meta.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/workflow-engine/node_modules/vitest/import-meta.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/@types/node/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2015.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2016.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2016.full.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2017.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2017.full.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2018.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2018.full.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2019.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2019.full.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2020.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2020.full.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2021.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2021.full.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2022.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2022.full.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2023.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2023.full.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2024.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es2024.full.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.es6.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.esnext.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/typescript/lib/lib.esnext.full.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/vite/types/import-meta.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/cli/node_modules/@types/node/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/cli/node_modules/vite/types/import-meta.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/sdk/node_modules/@types/node/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/sdk/node_modules/vite/types/import-meta.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/workflow-engine/node_modules/@types/node/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/workflow-engine/node_modules/vite/types/import-meta.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/@types/node/compatibility/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/@types/node/ts5.6/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/@vitest/runner/dist/types.js`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/@vitest/utils/dist/types.js`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/tinypool/dist/entry/process.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `workway-public/node_modules/tinypool/dist/entry/worker.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/cli/node_modules/@types/node/compatibility/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/cli/node_modules/@types/node/ts5.6/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/cli/node_modules/@vitest/runner/dist/types.js`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/cli/node_modules/@vitest/utils/dist/types.js`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/cli/node_modules/tinypool/dist/entry/process.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/cli/node_modules/tinypool/dist/entry/worker.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/sdk/node_modules/@types/node/compatibility/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/sdk/node_modules/@types/node/ts5.6/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/sdk/node_modules/@vitest/runner/dist/types.js`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/sdk/node_modules/@vitest/utils/dist/types.js`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/sdk/node_modules/tinypool/dist/entry/process.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/sdk/node_modules/tinypool/dist/entry/worker.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/workflow-engine/node_modules/@types/node/compatibility/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/workflow-engine/node_modules/@types/node/ts5.6/index.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/workflow-engine/node_modules/@vitest/runner/dist/types.js`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/workflow-engine/node_modules/@vitest/utils/dist/types.js`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/workflow-engine/node_modules/tinypool/dist/entry/process.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+#### Empty File
+
+**File:** `packages/workflow-engine/node_modules/tinypool/dist/entry/worker.d.ts`
+
+File is empty or contains only whitespace/comments
+
+> **Suggestion:** Remove empty file or add implementation
+
+## Heidegger Violations
+
+*"Does this serve the whole?" → Reconnect*
+
+### High Priority
+
+#### Incomplete Package
+
+**File:** `integrations`
+
+Package "integrations" is 40% complete
+
+> **Suggestion:** Add missing: package.json, README.md, tests
+
+#### Incomplete Package
+
+**File:** `workflow-engine`
+
+Package "workflow-engine" is 10% complete
+
+> **Suggestion:** Add missing: src/ directory, package.json, README.md
+
+#### Circular Dependency
+
+**Files:** `workway-public/node_modules/cac/deno/CAC`, `workway-public/node_modules/cac/deno/Command`, `workway-public/node_modules/cac/deno/CAC`
+
+Circular dependency: workway-public/node_modules/cac/deno/CAC → workway-public/node_modules/cac/deno/Command → workway-public/node_modules/cac/deno/CAC
+
+> **Suggestion:** Break the cycle by extracting shared code or restructuring
+
+#### Circular Dependency
+
+**Files:** `workway-public/node_modules/cac/deno/Option`, `workway-public/node_modules/cac/deno/utils`, `workway-public/node_modules/cac/deno/Option`
+
+Circular dependency: workway-public/node_modules/cac/deno/Option → workway-public/node_modules/cac/deno/utils → workway-public/node_modules/cac/deno/Option
+
+> **Suggestion:** Break the cycle by extracting shared code or restructuring
+
+#### Circular Dependency
+
+**Files:** `packages/cli/node_modules/zod/src/v3/external`, `packages/cli/node_modules/zod/src/v3/errors`, `packages/cli/node_modules/zod/src/v3/ZodError`, `packages/cli/node_modules/zod/src/v3/index`, `packages/cli/node_modules/zod/src/v3/external`
+
+Circular dependency: packages/cli/node_modules/zod/src/v3/external → packages/cli/node_modules/zod/src/v3/errors → packages/cli/node_modules/zod/src/v3/ZodError → packages/cli/node_modules/zod/src/v3/index → packages/cli/node_modules/zod/src/v3/external
+
+> **Suggestion:** Break the cycle by extracting shared code or restructuring
+
+#### Circular Dependency
+
+**Files:** `packages/cli/node_modules/zod/src/v3/types`, `packages/cli/node_modules/zod/src/v3/helpers/partialUtil`, `packages/cli/node_modules/zod/src/v3/types`
+
+Circular dependency: packages/cli/node_modules/zod/src/v3/types → packages/cli/node_modules/zod/src/v3/helpers/partialUtil → packages/cli/node_modules/zod/src/v3/types
+
+> **Suggestion:** Break the cycle by extracting shared code or restructuring
+
+#### Circular Dependency
+
+**Files:** `packages/cli/node_modules/zod/v4/core/schemas`, `packages/cli/node_modules/zod/v4/core/checks`, `packages/cli/node_modules/zod/v4/core/schemas`
+
+Circular dependency: packages/cli/node_modules/zod/v4/core/schemas → packages/cli/node_modules/zod/v4/core/checks → packages/cli/node_modules/zod/v4/core/schemas
+
+> **Suggestion:** Break the cycle by extracting shared code or restructuring
+
+### Medium Priority
+
+#### Orphaned File
+
+**File:** `packages/sdk/tsup.config.ts`
+
+File is not imported by any other file
+
+> **Suggestion:** Import this file somewhere or remove it
+
+#### Orphaned File
+
+**File:** `examples/ai-email-assistant/workflow.ts`
+
+File is not imported by any other file
+
+> **Suggestion:** Import this file somewhere or remove it
+
+#### Orphaned File
+
+**File:** `examples/ai-support-agent/workflow.ts`
+
+File is not imported by any other file
+
+> **Suggestion:** Import this file somewhere or remove it
+
+#### Orphaned File
+
+**File:** `examples/smart-content-pipeline/workflow.ts`
+
+File is not imported by any other file
+
+> **Suggestion:** Import this file somewhere or remove it
+
+#### Orphaned File
+
+**File:** `packages/cli/bin/workway.js`
+
+File is not imported by any other file
+
+> **Suggestion:** Import this file somewhere or remove it
+
+#### Orphaned File
+
+**File:** `packages/sdk/src/testing.ts`
+
+File is not imported by any other file
+
+> **Suggestion:** Import this file somewhere or remove it
+
+#### Orphaned File
+
+**File:** `packages/sdk/src/transform-utils.ts`
+
+File is not imported by any other file
+
+> **Suggestion:** Import this file somewhere or remove it
+
+#### Orphaned File
+
+**File:** `packages/sdk/src/vectorize.ts`
+
+File is not imported by any other file
+
+> **Suggestion:** Import this file somewhere or remove it
+
+#### Orphaned File
+
+**File:** `packages/sdk/src/workflow-sdk.ts`
+
+File is not imported by any other file
+
+> **Suggestion:** Import this file somewhere or remove it
+
+#### Orphaned File
+
+**File:** `workway-private/apps/api/test-trigger-workflow.ts`
+
+File is not imported by any other file
+
+> **Suggestion:** Import this file somewhere or remove it
+
+### Low Priority
+
+#### Missing Documentation
+
+**File:** `packages/cli/src/index.ts`
+
+Public exports lack JSDoc documentation
+
+> **Suggestion:** Add JSDoc comments to exported functions and types
+
+#### Missing Documentation
+
+**File:** `packages/cli/node_modules/execa/index.d.ts`
+
+Public exports lack JSDoc documentation
+
+> **Suggestion:** Add JSDoc comments to exported functions and types
+
+#### Missing Documentation
+
+**File:** `packages/cli/src/commands/logs.ts`
+
+Public exports lack JSDoc documentation
+
+> **Suggestion:** Add JSDoc comments to exported functions and types
+
+#### Missing Documentation
+
+**File:** `packages/cli/src/commands/status.ts`
+
+Public exports lack JSDoc documentation
+
+> **Suggestion:** Add JSDoc comments to exported functions and types
+
+#### Missing Documentation
+
+**File:** `packages/workflow-engine/node_modules/execa/index.d.ts`
+
+Public exports lack JSDoc documentation
+
+> **Suggestion:** Add JSDoc comments to exported functions and types
+
+## Commendations
+
+- **Codebase** (dry): Minimal code duplication detected
+- **Dependencies** (rams): No unused dependencies detected
+
+---
+
+*Audit conducted using the Subtractive Triad methodology.*
+*Reference: createsomething.ltd/ethos*
