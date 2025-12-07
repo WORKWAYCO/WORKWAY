@@ -60,6 +60,8 @@ export { default as contentCalendar } from './content-calendar/index.js';
 
 // Error Tracking & Incidents (WORKWAY Dogfooding!)
 export { default as errorIncidentManager } from './error-incident-manager/index.js';
+// sentry-performance-monitor - ON HOLD: Sentry app requires review before public use
+// sentry-alert-digest - ON HOLD: Sentry app requires review before public use
 
 // Design & Creative
 export { default as designPortfolioSync } from './design-portfolio-sync/index.js';

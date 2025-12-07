@@ -705,6 +705,62 @@ Stripe uses API keys instead of OAuth. This is simpler but requires secure key m
 
 ---
 
+### Sentry (Webhook-based)
+
+> **⚠️ App Review Required**: Sentry OAuth apps require review before public use.
+> Currently using **webhook-only** integration (no OAuth required).
+> See: https://sentry.io/settings/developer-settings/
+
+Sentry integration uses webhooks rather than OAuth for most use cases.
+
+1. **Create Internal Integration**: https://sentry.io/settings/{org}/developer-settings/
+
+2. **Configure Webhooks**:
+   - Webhook URL: `https://api.workway.co/webhooks/sentry`
+   - Events to subscribe:
+     ```
+     issue (created, resolved, assigned, ignored)
+     error (created)
+     comment (created)
+     ```
+
+3. **Environment Variables**:
+   ```toml
+   # In secrets (wrangler secret put)
+   SENTRY_WEBHOOK_SECRET = "your-webhook-secret"
+   SENTRY_DSN = "your-sentry-dsn"  # For WORKWAY's own error tracking
+   ```
+
+4. **Usage in Workflows**:
+   ```typescript
+   // Webhook handler receives Sentry events
+   // No client instantiation needed - events come via webhook
+
+   // Example webhook payload:
+   {
+     action: 'created',
+     data: {
+       issue: {
+         id: '123',
+         title: 'TypeError: Cannot read property...',
+         culprit: 'app/api/users.ts',
+         level: 'error',
+         firstSeen: '2024-01-01T00:00:00Z',
+         permalink: 'https://sentry.io/issues/123/'
+       }
+     }
+   }
+   ```
+
+5. **Future OAuth Support**: When Sentry app is approved for public use, OAuth scopes will include:
+   ```
+   project:read
+   event:read
+   org:read
+   ```
+
+---
+
 ## Adding a New Provider
 
 1. **Add provider config** to API Worker environment
