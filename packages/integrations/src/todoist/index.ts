@@ -189,6 +189,61 @@ export interface ListTasksOptions {
 	ids?: string[];
 }
 
+/**
+ * Options for getting completed tasks
+ *
+ * Uses the Sync API which requires a separate endpoint.
+ * See: https://developer.todoist.com/sync/v9/#get-all-completed-items
+ */
+export interface GetCompletedTasksOptions {
+	/** Filter by project ID */
+	projectId?: string;
+	/** Filter by section ID */
+	sectionId?: string;
+	/** Completed after this date (ISO 8601) */
+	since?: string;
+	/** Completed before this date (ISO 8601) */
+	until?: string;
+	/** Limit number of results (default: 30, max: 200) */
+	limit?: number;
+	/** Offset for pagination */
+	offset?: number;
+}
+
+/**
+ * Completed task from Sync API
+ */
+export interface TodoistCompletedTask {
+	/** Completed item ID */
+	id: string;
+	/** Original task ID */
+	task_id: string;
+	/** Task content */
+	content: string;
+	/** User ID who completed the task */
+	user_id: string;
+	/** Project ID */
+	project_id: string;
+	/** Section ID (if any) */
+	section_id: string | null;
+	/** Completion time (ISO 8601) */
+	completed_at: string;
+	/** Task metadata (if included) */
+	meta_data?: string;
+	/** Note content */
+	note_count?: number;
+}
+
+/**
+ * Response from completed tasks API
+ */
+export interface CompletedTasksResponse {
+	/** List of completed tasks */
+	items: TodoistCompletedTask[];
+	/** Total count of completed tasks matching filters */
+	total?: number;
+}
+
 // ============================================================================
 // PROJECT TYPES
 // ============================================================================
@@ -605,6 +660,79 @@ export class Todoist extends BaseAPIClient {
 			});
 		} catch (error) {
 			return handleError(error, 'delete-task');
+		}
+	}
+
+	/**
+	 * Get completed tasks
+	 *
+	 * Uses the Sync API to retrieve completed tasks (not available in REST API).
+	 * This is essential for workflows that track productivity (task-sync-bridge,
+	 * weekly-productivity-digest).
+	 *
+	 * @example
+	 * ```typescript
+	 * // Get tasks completed this week
+	 * const weekAgo = new Date();
+	 * weekAgo.setDate(weekAgo.getDate() - 7);
+	 *
+	 * const completed = await todoist.getCompletedTasks({
+	 *   since: weekAgo.toISOString(),
+	 *   limit: 100,
+	 * });
+	 * ```
+	 */
+	async getCompletedTasks(
+		options: GetCompletedTasksOptions = {}
+	): Promise<ActionResult<CompletedTasksResponse>> {
+		try {
+			// Build query params for Sync API
+			const params: Record<string, string> = {};
+
+			if (options.projectId) {
+				params.project_id = options.projectId;
+			}
+			if (options.since) {
+				params.since = options.since;
+			}
+			if (options.until) {
+				params.until = options.until;
+			}
+			if (options.limit !== undefined) {
+				params.limit = String(Math.min(options.limit, 200)); // Max 200
+			}
+			if (options.offset !== undefined) {
+				params.offset = String(options.offset);
+			}
+
+			// Sync API uses different base URL
+			const syncApiUrl = 'https://api.todoist.com/sync/v9/completed/get_all';
+			const queryString = buildQueryString(params);
+
+			const response = await fetch(`${syncApiUrl}${queryString}`, {
+				method: 'GET',
+				headers: {
+					Authorization: `Bearer ${this.accessToken}`,
+					'Content-Type': 'application/json',
+				},
+			});
+
+			await assertResponseOk(response, {
+				integration: 'todoist',
+				action: 'get-completed-tasks',
+			});
+
+			const data = (await response.json()) as CompletedTasksResponse;
+
+			return createActionResult({
+				data,
+				integration: 'todoist',
+				action: 'get-completed-tasks',
+				schema: 'todoist.completed-tasks.v1',
+				capabilities: this.getCapabilities(),
+			});
+		} catch (error) {
+			return handleError(error, 'get-completed-tasks');
 		}
 	}
 
