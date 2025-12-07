@@ -23,6 +23,8 @@
  * Pattern Reference: OAuth.ts - single interface abstracts provider differences
  */
 
+import { parseRetryAfter as parseRetryAfterHeader } from './retry.js';
+
 // ============================================================================
 // ERROR CODES (The Narrow Waist)
 // ============================================================================
@@ -478,6 +480,10 @@ export class IntegrationError extends Error {
 				return `Additional permissions are required. Please reconnect your ${this.context.integration || 'account'}.`;
 
 			case ErrorCode.RATE_LIMITED:
+				if (this.context.retryAfterMs) {
+					const seconds = Math.ceil(this.context.retryAfterMs / 1000);
+					return `We're hitting rate limits. Your workflow will retry in ${seconds} seconds.`;
+				}
 				return `We're hitting rate limits. Your workflow will retry automatically.`;
 
 			case ErrorCode.QUOTA_EXCEEDED:
@@ -555,10 +561,9 @@ export async function createErrorFromResponse(
 		case 429:
 			code = ErrorCode.RATE_LIMITED;
 			message = 'Rate limit exceeded';
-			// Try to get Retry-After header
-			const retryAfter = response.headers.get('Retry-After');
-			if (retryAfter) {
-				const retryAfterMs = parseInt(retryAfter) * 1000;
+			// Parse Retry-After header using shared utility (DRY)
+			const retryAfterMs = parseRetryAfterHeader(response);
+			if (retryAfterMs !== null) {
 				context.retryAfterMs = retryAfterMs;
 			}
 			break;

@@ -280,6 +280,21 @@ describe('Helper methods', () => {
 			expect(error.getUserMessage()).toContain('retry');
 		});
 
+		it('should include wait time in RATE_LIMITED message when retryAfterMs is set', () => {
+			const error = new IntegrationError(ErrorCode.RATE_LIMITED, 'test', {
+				retryAfterMs: 30000, // 30 seconds
+			});
+			expect(error.getUserMessage()).toContain('rate limits');
+			expect(error.getUserMessage()).toContain('30 seconds');
+		});
+
+		it('should round up fractional seconds in RATE_LIMITED message', () => {
+			const error = new IntegrationError(ErrorCode.RATE_LIMITED, 'test', {
+				retryAfterMs: 1500, // 1.5 seconds
+			});
+			expect(error.getUserMessage()).toContain('2 seconds');
+		});
+
 		it('should return original message for unknown errors', () => {
 			const error = new IntegrationError(ErrorCode.UNKNOWN, 'Custom error message');
 			expect(error.getUserMessage()).toBe('Custom error message');
@@ -431,6 +446,32 @@ describe('createErrorFromResponse', () => {
 
 		expect(error.code).toBe(ErrorCode.RATE_LIMITED);
 		expect(error.context.retryAfterMs).toBe(60000);
+	});
+
+	it('should create error from 429 response with HTTP date Retry-After header', async () => {
+		const futureDate = new Date(Date.now() + 120000); // 2 minutes from now
+		const response = new Response(null, {
+			status: 429,
+			statusText: 'Too Many Requests',
+			headers: { 'Retry-After': futureDate.toUTCString() },
+		});
+		const error = await createErrorFromResponse(response);
+
+		expect(error.code).toBe(ErrorCode.RATE_LIMITED);
+		// Allow 10 second tolerance for timing
+		expect(error.context.retryAfterMs).toBeGreaterThan(100000);
+		expect(error.context.retryAfterMs).toBeLessThan(130000);
+	});
+
+	it('should create error from 429 response without Retry-After header', async () => {
+		const response = new Response(null, {
+			status: 429,
+			statusText: 'Too Many Requests',
+		});
+		const error = await createErrorFromResponse(response);
+
+		expect(error.code).toBe(ErrorCode.RATE_LIMITED);
+		expect(error.context.retryAfterMs).toBeUndefined();
 	});
 
 	it('should create error from 500 response', async () => {
