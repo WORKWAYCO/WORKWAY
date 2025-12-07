@@ -502,6 +502,55 @@ export class WorkwayAPIClient extends BaseHTTPClient {
 			`/developers/${developerId}/onboarding/refresh`
 		);
 	}
+
+	// ============================================================================
+	// DEVELOPER OAUTH APPS (BYOO - Bring Your Own OAuth)
+	// ============================================================================
+
+	/**
+	 * List developer's OAuth apps
+	 */
+	async listOAuthApps(): Promise<DeveloperOAuthApp[]> {
+		const response = await this.getJson<{ oauth_apps: DeveloperOAuthApp[] }>(
+			'/developers/me/oauth-apps'
+		);
+		return response.oauth_apps;
+	}
+
+	/**
+	 * Create a new OAuth app
+	 */
+	async createOAuthApp(data: CreateOAuthAppInput): Promise<DeveloperOAuthApp> {
+		return this.postWrapped<DeveloperOAuthApp>('/developers/me/oauth-apps', data);
+	}
+
+	/**
+	 * Update an OAuth app
+	 */
+	async updateOAuthApp(provider: string, data: UpdateOAuthAppInput): Promise<DeveloperOAuthApp> {
+		return this.patchWrapped<DeveloperOAuthApp>(`/developers/me/oauth-apps/${provider}`, data);
+	}
+
+	/**
+	 * Delete an OAuth app
+	 */
+	async deleteOAuthApp(provider: string): Promise<void> {
+		await this.delete(`/developers/me/oauth-apps/${provider}`);
+	}
+
+	/**
+	 * Test OAuth app credentials
+	 */
+	async testOAuthApp(provider: string): Promise<OAuthAppTestResult> {
+		return this.postWrapped<OAuthAppTestResult>(`/developers/me/oauth-apps/${provider}/test`);
+	}
+
+	/**
+	 * Promote OAuth app to production
+	 */
+	async promoteOAuthApp(provider: string): Promise<DeveloperOAuthApp> {
+		return this.postWrapped<DeveloperOAuthApp>(`/developers/me/oauth-apps/${provider}/promote`);
+	}
 }
 
 // ============================================================================
@@ -588,6 +637,43 @@ export interface StripeCompleteResponse {
 		detailsSubmitted: boolean;
 		requiresAction: boolean;
 	};
+}
+
+// Developer OAuth Apps (BYOO)
+export interface DeveloperOAuthApp {
+	id: string;
+	provider: string;
+	clientId: string;
+	clientSecretMasked: string;
+	redirectUri?: string;
+	scopes: string[];
+	status: 'development' | 'pending_review' | 'production' | 'suspended';
+	healthStatus: 'unknown' | 'healthy' | 'unhealthy';
+	lastHealthCheck?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+export interface CreateOAuthAppInput {
+	provider: string;
+	clientId: string;
+	clientSecret: string;
+	redirectUri?: string;
+	scopes?: string[];
+}
+
+export interface UpdateOAuthAppInput {
+	clientId?: string;
+	clientSecret?: string;
+	redirectUri?: string;
+	scopes?: string[];
+}
+
+export interface OAuthAppTestResult {
+	success: boolean;
+	latencyMs: number;
+	error?: string;
+	scopes?: string[];
 }
 
 // ============================================================================

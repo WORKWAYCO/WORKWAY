@@ -31,6 +31,13 @@ import { developerStripeCommand } from './commands/developer/stripe.js';
 import { developerInitCommand } from './commands/developer/init.js';
 import { developerSubmitCommand } from './commands/developer/submit.js';
 import { developerStatusCommand } from './commands/developer/status.js';
+import {
+	developerOAuthListCommand,
+	developerOAuthAddCommand,
+	developerOAuthRemoveCommand,
+	developerOAuthTestCommand,
+	developerOAuthPromoteCommand,
+} from './commands/developer/oauth.js';
 import { aiModelsCommand } from './commands/ai/models.js';
 import { aiTestCommand } from './commands/ai/test.js';
 import { aiEstimateCommand } from './commands/ai/estimate.js';
@@ -370,6 +377,44 @@ developerCommand
 			process.exit(1);
 		}
 	});
+
+// OAuth Apps subcommand (BYOO - Bring Your Own OAuth)
+const developerOAuthCommand = developerCommand.command('oauth').description('Manage your OAuth apps (BYOO)');
+
+developerOAuthCommand
+	.command('list')
+	.description('List your OAuth apps')
+	.action(handleCommand(developerOAuthListCommand));
+
+developerOAuthCommand
+	.command('add [provider]')
+	.description('Add OAuth app credentials')
+	.option('--force', 'Overwrite existing app')
+	.action(handleCommand(async (provider: string | undefined, options: any) => {
+		await developerOAuthAddCommand({ provider, force: options.force });
+	}));
+
+developerOAuthCommand
+	.command('remove [provider]')
+	.description('Remove OAuth app')
+	.option('--force', 'Skip confirmation')
+	.action(handleCommand(async (provider: string | undefined, options: any) => {
+		await developerOAuthRemoveCommand({ provider, force: options.force });
+	}));
+
+developerOAuthCommand
+	.command('test [provider]')
+	.description('Test OAuth app credentials')
+	.action(handleCommand(async (provider: string | undefined) => {
+		await developerOAuthTestCommand({ provider });
+	}));
+
+developerOAuthCommand
+	.command('promote [provider]')
+	.description('Promote OAuth app to production')
+	.action(handleCommand(async (provider: string | undefined) => {
+		await developerOAuthPromoteCommand({ provider });
+	}));
 
 // ============================================================================
 // DATABASE COMMANDS

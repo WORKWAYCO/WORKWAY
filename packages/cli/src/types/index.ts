@@ -258,3 +258,81 @@ export interface CommandContext {
 	projectConfig?: ProjectConfig;
 	apiClient: any; // Will be typed when we create the API client
 }
+
+// ============================================================================
+// DEVELOPER OAUTH APPS (BYOO - Bring Your Own OAuth)
+// ============================================================================
+
+/**
+ * Supported OAuth providers for developer BYOO
+ */
+export type BYOOProvider =
+	| 'zoom'
+	| 'notion'
+	| 'slack'
+	| 'airtable'
+	| 'typeform'
+	| 'calendly'
+	| 'todoist'
+	| 'linear'
+	| 'google-calendar'
+	| 'google-drive'
+	| 'stripe';
+
+/**
+ * Developer OAuth app status
+ */
+export type OAuthAppStatus = 'development' | 'pending_review' | 'production' | 'suspended';
+
+/**
+ * Developer OAuth app health status
+ */
+export type OAuthAppHealth = 'unknown' | 'healthy' | 'unhealthy';
+
+/**
+ * Developer OAuth app stored in the system
+ */
+export interface DeveloperOAuthApp {
+	id: string;
+	provider: BYOOProvider;
+	clientId: string;
+	clientSecretMasked: string;
+	redirectUri?: string;
+	scopes: string[];
+	status: OAuthAppStatus;
+	healthStatus: OAuthAppHealth;
+	lastHealthCheck?: string;
+	createdAt: string;
+	updatedAt: string;
+}
+
+/**
+ * Data for creating a new OAuth app
+ */
+export interface CreateOAuthAppData {
+	provider: BYOOProvider;
+	clientId: string;
+	clientSecret: string;
+	redirectUri?: string;
+	scopes?: string[];
+}
+
+/**
+ * Data for updating an OAuth app
+ */
+export interface UpdateOAuthAppData {
+	clientId?: string;
+	clientSecret?: string;
+	redirectUri?: string;
+	scopes?: string[];
+}
+
+/**
+ * OAuth app test result
+ */
+export interface OAuthAppTestResult {
+	success: boolean;
+	latencyMs: number;
+	error?: string;
+	scopes?: string[];
+}
