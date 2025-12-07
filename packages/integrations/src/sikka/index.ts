@@ -13,24 +13,29 @@
  * ```typescript
  * import { Sikka } from '@workwayco/integrations/sikka';
  *
+ * // Initialize with App ID and App Key from Sikka portal
  * const sikka = new Sikka({
  *   appId: process.env.SIKKA_APP_ID,
  *   appKey: process.env.SIKKA_APP_KEY,
  * });
  *
- * // Get practices you have access to
+ * // Step 1: Get authorized practices (uses App-Id/App-Key auth)
  * const practices = await sikka.getAuthorizedPractices();
+ * console.log(`Found ${practices.data.length} practices`);
  *
- * // Get today's appointments
+ * // Step 2: Connect to a practice (obtains temporary request_key)
+ * await sikka.connectToPractice(practices.data[0].office_id);
+ *
+ * // Step 3: Now you can access data (uses request-key auth)
  * const appointments = await sikka.getAppointments({
- *   practiceId: 'xxx',
+ *   practiceId: practices.data[0].office_id,
  *   startDate: new Date(),
  *   endDate: new Date(),
  * });
  *
- * // Find patients needing follow-up
+ * // Find patients modified in last 7 days (for incremental sync)
  * const patients = await sikka.getPatients({
- *   practiceId: 'xxx',
+ *   practiceId: practices.data[0].office_id,
  *   modifiedSince: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
  * });
  * ```
@@ -51,16 +56,51 @@ import { BaseAPIClient, buildQueryString } from '../core/index.js';
 
 /**
  * Sikka integration configuration
+ *
+ * Authentication Model (3-step flow):
+ * 1. Use `appId` + `appKey` to call /authorized_practices
+ * 2. Exchange `officeId` + `secretKey` for a temporary `requestKey` (24h expiration)
+ * 3. Use `requestKey` for all data access
+ *
+ * You can either:
+ * - Provide appId + appKey (will fetch practices and request keys automatically)
+ * - Provide a pre-fetched requestKey directly (for cached/stored keys)
  */
 export interface SikkaConfig {
 	/** Application ID from Sikka portal */
 	appId: string;
 	/** Application secret key from Sikka portal */
 	appKey: string;
+	/** Optional: Pre-fetched request key (skips auth flow if provided) */
+	requestKey?: string;
 	/** Optional: Override API endpoint (for testing) */
 	apiUrl?: string;
 	/** Request timeout in milliseconds (default: 30000) */
 	timeout?: number;
+}
+
+/**
+ * Practice authorization info returned from /authorized_practices
+ */
+export interface SikkaAuthorizedPractice {
+	office_id: string;
+	secret_key: string;
+	practice_name?: string;
+	pms_type?: string;
+	data_insert_date?: string;
+}
+
+/**
+ * Request key response from POST /request_key
+ */
+export interface SikkaRequestKeyInfo {
+	request_key: string;
+	expires_in: string;
+	status: string;
+	scope?: string;
+	issued_to?: string;
+	start_time?: string;
+	end_time?: string;
 }
 
 /**
@@ -297,30 +337,38 @@ export interface UpdateAppointmentOptions {
  *
  * Weniger, aber besser: One integration for 400+ dental PMS systems.
  *
- * Authentication uses app_id and app_key in request headers rather than
- * OAuth Bearer tokens, so we override the base request method.
+ * Authentication flow:
+ * 1. App-Id + App-Key → /authorized_practices → office_id + secret_key
+ * 2. POST /request_key → temporary request_key (24h)
+ * 3. request-key header → all data endpoints
  */
 export class Sikka extends BaseAPIClient {
 	private readonly appId: string;
 	private readonly appKey: string;
+	private requestKey?: string;
+	private requestKeyExpiry?: Date;
+
+	// Cache for authorized practices
+	private authorizedPracticesCache?: SikkaAuthorizedPractice[];
+	private currentPractice?: SikkaAuthorizedPractice;
 
 	constructor(config: SikkaConfig) {
 		if (!config.appId) {
 			throw new IntegrationError(
 				ErrorCode.MISSING_REQUIRED_FIELD,
-				'Sikka app ID is required',
+				'Sikka App ID is required',
 				{ integration: 'sikka' }
 			);
 		}
 		if (!config.appKey) {
 			throw new IntegrationError(
 				ErrorCode.MISSING_REQUIRED_FIELD,
-				'Sikka app key is required',
+				'Sikka App Key is required',
 				{ integration: 'sikka' }
 			);
 		}
 
-		// Pass empty accessToken since we use app_id/app_key auth
+		// Pass empty accessToken since we use custom auth
 		super({
 			accessToken: '',
 			apiUrl: config.apiUrl || 'https://api.sikkasoft.com/v4',
@@ -330,10 +378,117 @@ export class Sikka extends BaseAPIClient {
 
 		this.appId = config.appId;
 		this.appKey = config.appKey;
+		this.requestKey = config.requestKey;
 	}
 
 	/**
-	 * Override request to use Sikka's app_id/app_key authentication
+	 * Make authenticated request using App-Id/App-Key headers
+	 * Used for /authorized_practices endpoint
+	 */
+	private async requestWithAppAuth(path: string): Promise<Response> {
+		const url = `${this['apiUrl']}${path}`;
+		const headers = new Headers({
+			'App-Id': this.appId,
+			'App-Key': this.appKey,
+			'Content-Type': 'application/json',
+			'Accept': 'application/json',
+		});
+
+		const controller = new AbortController();
+		const timeoutId = setTimeout(() => controller.abort(), this['timeout']);
+
+		try {
+			const response = await fetch(url, {
+				method: 'GET',
+				headers,
+				signal: controller.signal,
+			});
+			return response;
+		} catch (error) {
+			if (error instanceof Error && error.name === 'AbortError') {
+				throw new IntegrationError(
+					ErrorCode.TIMEOUT,
+					`Request timed out after ${this['timeout']}ms`,
+					{ integration: 'sikka', retryable: true }
+				);
+			}
+			throw new IntegrationError(
+				ErrorCode.NETWORK_ERROR,
+				`Network request failed: ${error}`,
+				{ integration: 'sikka', retryable: true }
+			);
+		} finally {
+			clearTimeout(timeoutId);
+		}
+	}
+
+	/**
+	 * Obtain a request_key for a specific practice
+	 */
+	async obtainRequestKey(practice: SikkaAuthorizedPractice): Promise<ActionResult<SikkaRequestKeyInfo>> {
+		try {
+			const url = `${this['apiUrl']}/request_key`;
+			const response = await fetch(url, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'Accept': 'application/json',
+				},
+				body: JSON.stringify({
+					grant_type: 'request_key',
+					office_id: practice.office_id,
+					secret_key: practice.secret_key,
+					app_id: this.appId,
+					app_key: this.appKey,
+				}),
+			});
+
+			if (!response.ok) {
+				const errorBody = await response.text();
+				return ActionResult.error(
+					`Failed to obtain request key: ${errorBody}`,
+					ErrorCode.AUTH_EXPIRED,
+					{ integration: 'sikka', action: 'obtain-request-key' }
+				);
+			}
+
+			const data = (await response.json()) as SikkaRequestKeyInfo;
+
+			// Cache the request key and set expiry
+			this.requestKey = data.request_key;
+			this.currentPractice = practice;
+
+			// Parse expires_in (e.g., "86400 second(s)")
+			const expiresMatch = data.expires_in.match(/(\d+)/);
+			if (expiresMatch) {
+				const expiresInSeconds = parseInt(expiresMatch[1], 10);
+				this.requestKeyExpiry = new Date(Date.now() + expiresInSeconds * 1000);
+			}
+
+			return createActionResult({
+				data,
+				integration: 'sikka',
+				action: 'obtain-request-key',
+				schema: 'sikka.request-key.v1',
+				capabilities: this.getCapabilities(),
+			});
+		} catch (error) {
+			return this.handleError(error, 'obtain-request-key');
+		}
+	}
+
+	/**
+	 * Check if current request key is valid
+	 */
+	hasValidRequestKey(): boolean {
+		if (!this.requestKey) return false;
+		if (!this.requestKeyExpiry) return true; // Assume valid if no expiry set
+		return new Date() < this.requestKeyExpiry;
+	}
+
+	/**
+	 * Override request to use Sikka's request-key authentication
+	 * Requires a valid request_key to be set (call obtainRequestKey first)
 	 */
 	protected override async request(
 		path: string,
@@ -341,13 +496,23 @@ export class Sikka extends BaseAPIClient {
 		additionalHeaders: Record<string, string> = {},
 		isRetry = false
 	): Promise<Response> {
+		if (!this.requestKey) {
+			throw new IntegrationError(
+				ErrorCode.AUTH_EXPIRED,
+				'No request key available. Call obtainRequestKey() first.',
+				{ integration: 'sikka' }
+			);
+		}
+
 		const url = `${this['apiUrl']}${path}`;
 		const headers = new Headers(options.headers);
 
-		// Sikka uses app_id and app_key headers instead of Bearer token
-		headers.set('app_id', this.appId);
-		headers.set('app_key', this.appKey);
+		// Sikka uses request-key header for data access
+		headers.set('request-key', this.requestKey);
 		headers.set('Content-Type', 'application/json');
+		headers.set('Accept', 'application/json');
+		// Enable gzip compression as recommended by Sikka docs
+		headers.set('Accept-Encoding', 'gzip,compress');
 
 		for (const [key, value] of Object.entries(additionalHeaders)) {
 			headers.set(key, value);
@@ -388,24 +553,86 @@ export class Sikka extends BaseAPIClient {
 	/**
 	 * Get all practices you have authorization to access
 	 *
-	 * This should be called first to get practice_ids for other API calls.
+	 * Uses App-Id/App-Key authentication (not request-key).
+	 * Returns office_id and secret_key which are needed to obtain request_keys.
+	 *
+	 * @example
+	 * ```typescript
+	 * const sikka = new Sikka({ appId: '...', appKey: '...' });
+	 * const practices = await sikka.getAuthorizedPractices();
+	 *
+	 * // Get request key for first practice
+	 * await sikka.obtainRequestKey(practices.data[0]);
+	 *
+	 * // Now you can access data
+	 * const patients = await sikka.getPatients({ practiceId: practices.data[0].office_id });
+	 * ```
 	 */
-	async getAuthorizedPractices(): Promise<ActionResult<SikkaPractice[]>> {
+	async getAuthorizedPractices(): Promise<ActionResult<SikkaAuthorizedPractice[]>> {
 		try {
-			const practices = await this.getJson<{ data: SikkaPractice[] }>(
-				'/authorized_practices'
-			);
+			const response = await this.requestWithAppAuth('/authorized_practices');
+
+			if (!response.ok) {
+				const errorBody = await response.text();
+				return ActionResult.error(
+					`Failed to get authorized practices: ${errorBody}`,
+					ErrorCode.API_ERROR,
+					{ integration: 'sikka', action: 'get-authorized-practices' }
+				);
+			}
+
+			const data = (await response.json()) as { items?: SikkaAuthorizedPractice[]; data?: SikkaAuthorizedPractice[] };
+			const practices: SikkaAuthorizedPractice[] = data.items || data.data || [];
+
+			// Cache the practices
+			this.authorizedPracticesCache = practices;
 
 			return createActionResult({
-				data: practices.data || [],
+				data: practices,
 				integration: 'sikka',
 				action: 'get-authorized-practices',
-				schema: 'sikka.practices.v1',
+				schema: 'sikka.authorized-practices.v1',
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
 			return this.handleError(error, 'get-authorized-practices');
 		}
+	}
+
+	/**
+	 * Connect to a practice (get request key and prepare for data access)
+	 *
+	 * Convenience method that combines getAuthorizedPractices + obtainRequestKey
+	 */
+	async connectToPractice(officeId?: string): Promise<ActionResult<SikkaRequestKeyInfo>> {
+		// Get authorized practices if not cached
+		if (!this.authorizedPracticesCache) {
+			const practicesResult = await this.getAuthorizedPractices();
+			if (!practicesResult.success) {
+				return ActionResult.error(
+					practicesResult.error?.message || 'Failed to get practices',
+					practicesResult.error?.code || ErrorCode.API_ERROR,
+					{ integration: 'sikka', action: 'connect-to-practice' }
+				);
+			}
+		}
+
+		// Find the practice
+		const practices = this.authorizedPracticesCache!;
+		const practice = officeId
+			? practices.find(p => p.office_id === officeId)
+			: practices[0];
+
+		if (!practice) {
+			return ActionResult.error(
+				officeId ? `Practice ${officeId} not found` : 'No practices available',
+				ErrorCode.NOT_FOUND,
+				{ integration: 'sikka', action: 'connect-to-practice' }
+			);
+		}
+
+		// Obtain request key
+		return this.obtainRequestKey(practice);
 	}
 
 	/**

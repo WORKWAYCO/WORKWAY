@@ -12,12 +12,12 @@ const mockFetch = vi.fn();
 global.fetch = mockFetch;
 
 describe('Sikka Constructor', () => {
-	it('should require app ID', () => {
-		expect(() => new Sikka({ appId: '', appKey: 'test-key' })).toThrow('Sikka app ID is required');
+	it('should require App ID', () => {
+		expect(() => new Sikka({ appId: '', appKey: 'test-key' })).toThrow('Sikka App ID is required');
 	});
 
-	it('should require app key', () => {
-		expect(() => new Sikka({ appId: 'test-id', appKey: '' })).toThrow('Sikka app key is required');
+	it('should require App Key', () => {
+		expect(() => new Sikka({ appId: 'test-id', appKey: '' })).toThrow('Sikka App Key is required');
 	});
 
 	it('should create instance with valid credentials', () => {
@@ -33,21 +33,31 @@ describe('Sikka Constructor', () => {
 		});
 		expect(sikka).toBeInstanceOf(Sikka);
 	});
+
+	it('should accept optional pre-fetched request key', () => {
+		const sikka = new Sikka({
+			appId: 'test-id',
+			appKey: 'test-key',
+			requestKey: 'd7ab733c766917fa5ef8ae3a54100620',
+		});
+		expect(sikka).toBeInstanceOf(Sikka);
+		expect(sikka.hasValidRequestKey()).toBe(true);
+	});
 });
 
 describe('Sikka Authentication', () => {
 	let sikka: Sikka;
 
 	beforeEach(() => {
-		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key' });
+		sikka = new Sikka({ appId: 'test-app-id', appKey: 'test-app-key' });
 		mockFetch.mockReset();
 	});
 
-	it('should use app_id and app_key headers instead of Bearer token', async () => {
+	it('should use App-Id and App-Key headers for getAuthorizedPractices', async () => {
 		mockFetch.mockResolvedValueOnce({
 			ok: true,
 			status: 200,
-			json: async () => ({ data: [] }),
+			json: async () => ({ items: [] }),
 		});
 
 		await sikka.getAuthorizedPractices();
@@ -61,9 +71,50 @@ describe('Sikka Authentication', () => {
 
 		const [, requestOptions] = mockFetch.mock.calls[0];
 		const headers = requestOptions.headers;
-		expect(headers.get('app_id')).toBe('test-id');
-		expect(headers.get('app_key')).toBe('test-key');
-		expect(headers.get('Authorization')).toBeNull();
+		expect(headers.get('App-Id')).toBe('test-app-id');
+		expect(headers.get('App-Key')).toBe('test-app-key');
+	});
+
+	it('should use request-key header for data endpoints', async () => {
+		// Create sikka with pre-fetched request key
+		const sikkaWithKey = new Sikka({
+			appId: 'test-app-id',
+			appKey: 'test-app-key',
+			requestKey: 'd7ab733c766917fa5ef8ae3a54100620',
+		});
+
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			status: 200,
+			json: async () => ({ items: [] }),
+		});
+
+		await sikkaWithKey.getPatients({ practiceId: 'test-practice' });
+
+		const [, requestOptions] = mockFetch.mock.calls[0];
+		const headers = requestOptions.headers;
+		expect(headers.get('request-key')).toBe('d7ab733c766917fa5ef8ae3a54100620');
+	});
+
+	it('should obtain request key from practice credentials', async () => {
+		mockFetch.mockResolvedValueOnce({
+			ok: true,
+			status: 200,
+			json: async () => ({
+				request_key: 'new-request-key-12345',
+				expires_in: '86400 second(s)',
+				status: 'active',
+			}),
+		});
+
+		const result = await sikka.obtainRequestKey({
+			office_id: 'D12345',
+			secret_key: 'secret123',
+		});
+
+		expect(result.success).toBe(true);
+		expect(result.data.request_key).toBe('new-request-key-12345');
+		expect(sikka.hasValidRequestKey()).toBe(true);
 	});
 });
 
@@ -71,7 +122,7 @@ describe('Sikka Practices', () => {
 	let sikka: Sikka;
 
 	beforeEach(() => {
-		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key' });
+		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key', requestKey: 'test-request-key' });
 		mockFetch.mockReset();
 	});
 
@@ -131,7 +182,7 @@ describe('Sikka Patients', () => {
 	let sikka: Sikka;
 
 	beforeEach(() => {
-		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key' });
+		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key', requestKey: 'test-request-key' });
 		mockFetch.mockReset();
 	});
 
@@ -243,7 +294,7 @@ describe('Sikka Appointments', () => {
 	let sikka: Sikka;
 
 	beforeEach(() => {
-		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key' });
+		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key', requestKey: 'test-request-key' });
 		mockFetch.mockReset();
 	});
 
@@ -336,7 +387,7 @@ describe('Sikka Providers', () => {
 	let sikka: Sikka;
 
 	beforeEach(() => {
-		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key' });
+		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key', requestKey: 'test-request-key' });
 		mockFetch.mockReset();
 	});
 
@@ -370,7 +421,7 @@ describe('Sikka Treatments', () => {
 	let sikka: Sikka;
 
 	beforeEach(() => {
-		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key' });
+		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key', requestKey: 'test-request-key' });
 		mockFetch.mockReset();
 	});
 
@@ -424,7 +475,7 @@ describe('Sikka Claims', () => {
 	let sikka: Sikka;
 
 	beforeEach(() => {
-		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key' });
+		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key', requestKey: 'test-request-key' });
 		mockFetch.mockReset();
 	});
 
@@ -458,7 +509,7 @@ describe('Sikka Transactions', () => {
 	let sikka: Sikka;
 
 	beforeEach(() => {
-		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key' });
+		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key', requestKey: 'test-request-key' });
 		mockFetch.mockReset();
 	});
 
@@ -495,7 +546,7 @@ describe('Sikka Write Operations', () => {
 	let sikka: Sikka;
 
 	beforeEach(() => {
-		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key' });
+		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key', requestKey: 'test-request-key' });
 		mockFetch.mockReset();
 	});
 
@@ -558,7 +609,7 @@ describe('Sikka Error Handling', () => {
 	let sikka: Sikka;
 
 	beforeEach(() => {
-		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key' });
+		sikka = new Sikka({ appId: 'test-id', appKey: 'test-key', requestKey: 'test-request-key' });
 		mockFetch.mockReset();
 	});
 
@@ -567,13 +618,13 @@ describe('Sikka Error Handling', () => {
 			ok: false,
 			status: 401,
 			statusText: 'Unauthorized',
-			json: async () => ({ message: 'Invalid API credentials' }),
+			text: async () => 'Invalid API credentials',
 		});
 
 		const result = await sikka.getAuthorizedPractices();
 
 		expect(result.success).toBe(false);
-		expect(result.error?.code).toBe('auth_expired');
+		expect(result.error?.code).toBe('api_error');
 	});
 
 	it('should handle rate limit error', async () => {
