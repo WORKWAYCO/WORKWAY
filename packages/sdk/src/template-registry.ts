@@ -50,7 +50,8 @@ export type OutcomeFrameId =
 	| 'when_meetings_booked'
 	| 'when_forms_submitted'
 	| 'when_deals_progress'
-	| 'when_tasks_complete';
+	| 'when_tasks_complete'
+	| 'when_errors_happen';
 
 /**
  * Outcome frame definitions (re-exported for convenience)
@@ -113,6 +114,10 @@ export const OUTCOME_FRAMES: Record<OutcomeFrameId, { label: string; description
 	when_tasks_complete: {
 		label: 'When tasks complete...',
 		description: 'Build a productivity journal automatically',
+	},
+	when_errors_happen: {
+		label: 'When errors happen...',
+		description: 'Document incidents and alert your team',
 	},
 };
 
