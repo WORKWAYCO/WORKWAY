@@ -256,8 +256,8 @@ Notion's integration deficiencies are real and documented. Compound workflow the
 ### 3. Platform Dependencies
 Heavy Cloudflare + Notion dependency. What if Notion builds these integrations natively?
 
-### 4. "System Architect" Launch Strategy
-"10 architects at launch" is anti-exponential. YC wants hockey sticks, not curated growth.
+### 4. Curated Developer Launch Strategy
+"10 developers at launch" is anti-exponential. YC wants hockey sticks, not curated growth.
 
 ### 5. Philosophy as Communication Risk
 Heideggerian framing may not translate to investor conversations. The insight is real; the language may not land.
@@ -294,7 +294,7 @@ No team information visible in codebase. Solo founder? YC invests in teams.
 **Stretch Goals**:
 
 - [ ] 50+ active workflows deployed
-- [ ] 3+ System Architects building on platform
+- [ ] 3+ developers building on platform
 - [ ] $5K MRR
 - [ ] Enterprise pilot conversation
 
@@ -354,7 +354,7 @@ For deeper context on WORKWAY's positioning:
 - `/docs/MARKETPLACE_CURATION.md` - Pre-curation strategy
 - `/docs/HEIDEGGER_DESIGN.md` - Philosophical foundation
 - `/docs/MEETING_INTELLIGENCE_WORKFLOW.md` - Compound outcome example
-- `/docs/DEVELOPER_ONBOARDING.md` - System Architect program
+- `/docs/DEVELOPER_ONBOARDING.md` - Developer program
 
 ---
 

@@ -1,6 +1,6 @@
-# System Architect Onboarding
+# Developer Onboarding
 
-WORKWAY Marketplace launches with 10 System Architects. Not 10,000.
+WORKWAY Marketplace launches with 10 developers. Not 10,000.
 
 Quality emerges from constraint, not scale.
 
@@ -8,7 +8,7 @@ Quality emerges from constraint, not scale.
 
 ## The Program
 
-We're accepting 10 System Architects for the initial Marketplace cohort. Each will have the ability to publish workflows that users pay for. This isn't a beta—it's a curated launch.
+We're accepting 10 developers for the initial Marketplace cohort. Each will have the ability to publish workflows that users pay for. This isn't a beta—it's a curated launch.
 
 **Why 10?**
 
@@ -23,7 +23,7 @@ We're accepting 10 System Architects for the initial Marketplace cohort. Each wi
 - Professional presence (your profile attracts client work)
 - WORKWAY support crafting your positioning
 
-WORKWAY helps System Architects build workflows AND find work.
+WORKWAY helps developers build workflows AND find work.
 
 If you're here, you've joined the waitlist. What follows is the path from waitlist to publishing.
 
@@ -88,7 +88,7 @@ Build locally. Break things. The SDK and CLI are public—improvements are welco
 workway developer init
 ```
 
-This creates your System Architect profile. It's stored locally until you submit.
+This creates your developer profile. It's stored locally until you submit.
 
 Your profile serves two purposes:
 - **Marketplace access**: Publishing rights, revenue share
@@ -148,7 +148,7 @@ workway whoami             # Display current user
 ### Developer Commands
 
 ```bash
-workway developer init     # Create System Architect profile
+workway developer init     # Create developer profile
 workway developer submit   # Submit for marketplace review
 workway developer status   # Check application status
 workway developer profile  # View/edit profile
@@ -562,7 +562,7 @@ Do not email asking for faster review. The timeline is the timeline.
 | Review | Build locally, contribute | Publish workflows |
 | Approved | Publish, earn, BYOO OAuth, attract clients | — |
 
-10 System Architects. Curated quality. The marketplace you publish to will be worth publishing to.
+10 developers. Curated quality. The marketplace you publish to will be worth publishing to.
 
 ---
 

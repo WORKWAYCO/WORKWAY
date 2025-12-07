@@ -1,12 +1,12 @@
 /**
  * Developer Init Command
  *
- * Create a System Architect profile for the WORKWAY Marketplace.
+ * Create a developer profile for the WORKWAY Marketplace.
  * Your profile serves two purposes:
  * 1. Waitlist application for marketplace publishing
  * 2. Professional presence for generating client work
  *
- * WORKWAY helps System Architects build workflows AND find work.
+ * WORKWAY helps developers build workflows AND find work.
  */
 
 import inquirer from 'inquirer';
@@ -35,7 +35,7 @@ const AVAILABLE_INTEGRATIONS = [
 ];
 
 export async function developerInitCommand(): Promise<void> {
-	Logger.header('System Architect Profile');
+	Logger.header('Developer Profile');
 
 	// Check if profile already exists
 	const existingProfile = await loadDeveloperProfile();
@@ -103,7 +103,7 @@ async function createProfile(): Promise<void> {
 	Logger.listItem('Marketplace access (publish workflows, earn revenue)');
 	Logger.listItem('Professional presence (attract client work)');
 	Logger.blank();
-	Logger.log('WORKWAY helps System Architects build workflows AND find work.');
+	Logger.log('WORKWAY helps developers build workflows AND find work.');
 	Logger.blank();
 
 	// Identity

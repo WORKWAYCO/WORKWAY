@@ -322,12 +322,12 @@ program
 // DEVELOPER COMMANDS
 // ============================================================================
 
-const developerCommand = program.command('developer').description('System Architect profile and marketplace access');
+const developerCommand = program.command('developer').description('Developer profile and marketplace access');
 
 // Waitlist flow commands
 developerCommand
 	.command('init')
-	.description('Create your System Architect profile')
+	.description('Create your developer profile')
 	.action(handleCommand(developerInitCommand));
 
 developerCommand
