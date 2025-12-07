@@ -103,6 +103,11 @@ export { default as projectTimeTracker } from './project-time-tracker/index.js';
 export { default as dentalAppointmentAutopilot } from './dental-appointment-autopilot/index.js';
 export { default as dentalReviewBooster } from './dental-review-booster/index.js';
 
+// Construction
+export { default as constructionRFITracker } from './construction-rfi-tracker/index.js';
+export { default as constructionDailyLog } from './construction-daily-log/index.js';
+export { default as constructionProjectDigest } from './construction-project-digest/index.js';
+
 // ============================================================================
 // INTEGRATION PAIR REGISTRY
 // ============================================================================
@@ -408,6 +413,38 @@ export const integrationPairs = {
 		outcome: 'Visits become Yelp reviews',
 		outcomeFrame: 'after_appointments',
 	},
+
+	// Construction
+	'procore:slack': {
+		workflowId: 'construction-rfi-tracker',
+		outcome: 'RFIs that get answered',
+		outcomeFrame: 'when_rfis_need_answers',
+	},
+	'procore:notion': {
+		workflowId: 'construction-rfi-tracker',
+		outcome: 'RFI history documented automatically',
+		outcomeFrame: 'when_rfis_need_answers',
+	},
+	'procore:slack:dailylog': {
+		workflowId: 'construction-daily-log',
+		outcome: 'Daily logs that write themselves',
+		outcomeFrame: 'end_of_day',
+	},
+	'procore:notion:dailylog': {
+		workflowId: 'construction-daily-log',
+		outcome: 'Daily logs archived to Notion',
+		outcomeFrame: 'end_of_day',
+	},
+	'procore:slack:digest': {
+		workflowId: 'construction-project-digest',
+		outcome: 'Projects that report themselves',
+		outcomeFrame: 'weekly_automatically',
+	},
+	'procore:notion:digest': {
+		workflowId: 'construction-project-digest',
+		outcome: 'Weekly reports archived to Notion',
+		outcomeFrame: 'weekly_automatically',
+	},
 } as const;
 
 export type IntegrationPairKey = keyof typeof integrationPairs;
@@ -569,6 +606,16 @@ export const outcomeFrames = {
 		label: 'After patient visits...',
 		description: 'Turn happy patients into reviews',
 	},
+
+	// Construction
+	when_rfis_need_answers: {
+		label: 'When RFIs need answers...',
+		description: 'Track and escalate open RFIs automatically',
+	},
+	end_of_day: {
+		label: 'At end of day...',
+		description: 'Daily logs and site reports',
+	},
 } as const;
 
 export type OutcomeFrameId = keyof typeof outcomeFrames;
@@ -620,6 +667,10 @@ export const workflows = {
 	// Dental / Healthcare
 	'dental-appointment-autopilot': { id: 'dental-appointment-autopilot', outcomeFrame: 'when_appointments_scheduled' },
 	'dental-review-booster': { id: 'dental-review-booster', outcomeFrame: 'after_appointments' },
+	// Construction
+	'construction-rfi-tracker': { id: 'construction-rfi-tracker', outcomeFrame: 'when_rfis_need_answers' },
+	'construction-daily-log': { id: 'construction-daily-log', outcomeFrame: 'end_of_day' },
+	'construction-project-digest': { id: 'construction-project-digest', outcomeFrame: 'weekly_automatically' },
 } as const;
 
 export type WorkflowId = keyof typeof workflows;
