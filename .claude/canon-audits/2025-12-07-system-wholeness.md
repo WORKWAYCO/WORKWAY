@@ -249,32 +249,37 @@ if (inputs.enableAI && transcript?.length > 100) {
 
 ## Recommendations (Prioritized)
 
-### P0: Critical (Before next release)
+### P0: Critical (Before next release) ✅ COMPLETED
 
-1. **Refactor Stripe to BaseAPIClient**
+1. **Refactor Stripe to BaseAPIClient** ✅
    - Location: `packages/integrations/src/stripe/index.ts`
-   - Effort: 2 hours
-   - Impact: Pattern consistency, reduced maintenance
+   - Commit: `11516d2` (2025-12-07)
+   - Result: Extends BaseAPIClient, uses stripeRequest() wrapper for form-urlencoded
 
-2. **Remove deprecated Gmail workflows from exports**
-   - Keep files for reference, remove from `index.ts`
-   - Effort: 30 minutes
+2. **Remove deprecated Gmail workflows from exports** ✅
+   - Already done in previous release
+   - Commit: `dce8966`
 
-### P1: Important (Next sprint)
+### P1: Important (Next sprint) ✅ COMPLETED
 
-3. **Split form-response-hub into 3 focused workflows**
-   - `form-response-hub-notion`
-   - `form-response-hub-airtable`
-   - `form-response-hub-slack`
-   - Follows integration pair model
+3. **Simplify form-response-hub (6 → 2 fields)** ✅
+   - Keep: typeformFormId, slackChannel
+   - Auto-detect: Notion database, Airtable base/table from connected integrations
+   - Graceful degradation via try/catch
+   - Commit: `eaf0425` (2025-12-07)
 
-4. **Reduce sales-lead-pipeline config from 8 to 3 fields**
-   - Keep: typeformId, slackChannel, hubspotPipeline
-   - Infer: todoistProject, notionDatabaseId from connected integrations
-   - Remove: CRM toggles (make them smart defaults)
+4. **Reduce sales-lead-pipeline config (8 → 3 fields)** ✅
+   - Keep: typeformId, slackChannel, todoistProjectId (optional)
+   - Smart defaults: enableCRM=true, enableAIScoring=true, followUpDays=1
+   - Auto-detect: Todoist project if not specified
+   - Commit: `11516d2` (2025-12-07)
 
-5. **Merge meeting-intelligence + meeting-summarizer**
-   - Single workflow with `analysisDepth: 'minimal' | 'standard' | 'comprehensive'`
+5. **Deprecate meeting-summarizer (merge to meeting-intelligence)** ✅
+   - Added deprecated: true, supersededBy: 'meeting-intelligence'
+   - Removed from discovery moments
+   - Updated integrationPairs to route zoom:slack to meeting-intelligence
+   - Added SDK support for deprecated/supersededBy fields
+   - Commit: `eaf0425` (2025-12-07)
 
 ### P2: Enhancement (Backlog)
 
