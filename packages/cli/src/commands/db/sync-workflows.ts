@@ -403,6 +403,37 @@ const WORKFLOW_REGISTRY: WorkflowMetadata[] = [
 		pricingModel: 'freemium',
 		category: 'healthcare',
 	},
+	// Construction
+	{
+		id: 'construction-rfi-tracker',
+		name: 'Construction RFI Tracker',
+		description: 'Track RFIs across projects with daily digests, overdue alerts, and automatic escalation to Slack and Notion.',
+		tagline: 'RFIs that get answered',
+		outcomeFrame: 'when_rfis_need_answers',
+		integrations: ['procore', 'slack', 'notion'],
+		pricingModel: 'paid',
+		category: 'construction',
+	},
+	{
+		id: 'construction-daily-log',
+		name: 'Construction Daily Log Autopilot',
+		description: 'Daily logs that write themselves. Automated reminders, aggregated summaries, and Notion archival for project documentation.',
+		tagline: 'Daily logs that write themselves',
+		outcomeFrame: 'end_of_day',
+		integrations: ['procore', 'slack', 'notion'],
+		pricingModel: 'paid',
+		category: 'construction',
+	},
+	{
+		id: 'construction-project-digest',
+		name: 'Construction Project Status Digest',
+		description: 'Weekly project health reports with budget tracking, schedule status, and risk alerts across your portfolio.',
+		tagline: 'Projects that report themselves',
+		outcomeFrame: 'weekly_automatically',
+		integrations: ['procore', 'slack', 'notion'],
+		pricingModel: 'paid',
+		category: 'construction',
+	},
 ];
 
 /**
