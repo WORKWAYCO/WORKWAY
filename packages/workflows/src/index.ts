@@ -98,7 +98,7 @@ export const integrationPairs = {
 		outcomeFrame: 'after_meetings',
 	},
 	'zoom:slack': {
-		workflowId: 'meeting-summarizer',
+		workflowId: 'meeting-intelligence',
 		outcome: 'Meeting summaries in Slack',
 		outcomeFrame: 'after_meetings',
 	},

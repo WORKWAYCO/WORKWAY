@@ -499,6 +499,24 @@ export interface WorkflowDefinition<TConfig = any, TInputs = Record<string, any>
 	/** Workflow version (shorthand) */
 	version?: string;
 
+	/**
+	 * Whether this workflow is deprecated
+	 *
+	 * Deprecated workflows:
+	 * - Are hidden from discovery moments
+	 * - Show deprecation warnings in UI
+	 * - Still function for existing users
+	 */
+	deprecated?: boolean;
+
+	/**
+	 * ID of the workflow that supersedes this one
+	 *
+	 * When set, users will be guided to the replacement workflow.
+	 * Used with deprecated: true for clean workflow consolidation.
+	 */
+	supersededBy?: string;
+
 	/** Metadata for marketplace */
 	metadata?: WorkflowMetadata;
 

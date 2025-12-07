@@ -1,11 +1,14 @@
 /**
  * Meeting Notes Summarizer
  *
- * AI-generated summaries with action items from meeting notes.
- * Integrates with Notion for storage and Slack for notifications.
+ * @deprecated Use 'meeting-intelligence' instead.
  *
- * Integrations: AI, Notion, Slack
- * Trigger: Notion page update (meeting notes)
+ * This workflow is deprecated in favor of meeting-intelligence which provides
+ * a more comprehensive solution. Set analysisDepth: 'minimal' for lightweight
+ * summarization similar to this workflow.
+ *
+ * Canon Audit 2025-12-07: Merged to reduce user confusion.
+ * "One integration pair = one workflow" principle.
  */
 
 import { defineWorkflow, webhook } from '@workwayco/sdk';
@@ -13,8 +16,10 @@ import { AIModels } from '@workwayco/sdk';
 
 export default defineWorkflow({
 	name: 'Meeting Notes Summarizer',
-	description: 'AI-generated summaries with action items',
+	description: '[DEPRECATED] Use Meeting Intelligence instead. AI-generated summaries with action items.',
 	version: '1.0.0',
+	deprecated: true,
+	supersededBy: 'meeting-intelligence',
 
 	// Pathway metadata for Heideggerian discovery model
 	pathway: {
@@ -22,7 +27,7 @@ export default defineWorkflow({
 
 		outcomeStatement: {
 			suggestion: 'Want AI summaries of your meeting notes?',
-			explanation: 'When you update meeting notes in Notion, we\'ll generate summaries and extract action items.',
+			explanation: 'This workflow is deprecated. Use Meeting Intelligence for comprehensive meeting automation.',
 			outcome: 'Meeting notes summarized with AI',
 		},
 
@@ -34,19 +39,7 @@ export default defineWorkflow({
 		},
 
 		discoveryMoments: [
-			{
-				trigger: 'integration_connected',
-				integrations: ['notion', 'slack'],
-				workflowId: 'meeting-summarizer',
-				priority: 70, // Lower than meeting-intelligence (which is more complete)
-			},
-			{
-				trigger: 'event_received',
-				eventType: 'notion.page.updated',
-				integrations: ['notion', 'slack'],
-				workflowId: 'meeting-summarizer',
-				priority: 70,
-			},
+			// Removed from discovery - users should find meeting-intelligence instead
 		],
 
 		smartDefaults: {

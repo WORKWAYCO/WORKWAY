@@ -91,42 +91,20 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['chat:write'], optional: true },
 	],
 
+	// Weniger, aber besser: 2 essential fields
+	// Destinations auto-detect from connected integrations
 	inputs: {
 		typeformFormId: {
-			type: 'text',
-			label: 'Typeform Form ID',
+			type: 'typeform_form_picker',
+			label: 'Form to Monitor',
 			required: true,
-			description: 'The Typeform form to monitor',
-		},
-		notionDatabaseId: {
-			type: 'notion_database_picker',
-			label: 'Notion Database',
-			required: false,
-			description: 'Database to store responses',
-		},
-		airtableBaseId: {
-			type: 'airtable_base_picker',
-			label: 'Airtable Base',
-			required: false,
-			description: 'Base to store responses',
-		},
-		airtableTableId: {
-			type: 'airtable_table_picker',
-			label: 'Airtable Table',
-			required: false,
-			description: 'Table to store responses',
+			description: 'The Typeform form to monitor for responses',
 		},
 		slackChannel: {
 			type: 'slack_channel_picker',
 			label: 'Notification Channel',
 			required: false,
-			description: 'Channel for response notifications',
-		},
-		includeAllFields: {
-			type: 'boolean',
-			label: 'Include All Fields',
-			default: true,
-			description: 'Include all form fields in the response',
+			description: 'Channel for response notifications (optional)',
 		},
 	},
 
@@ -175,29 +153,56 @@ export default defineWorkflow({
 		let airtableCreated = false;
 		let slackSent = false;
 
-		// 1. Create Notion page
-		if (inputs.notionDatabaseId && integrations.notion) {
-			const properties = buildNotionProperties(answers, responseSummary, submittedAt);
-			const content = buildNotionContent(answers, formResponse);
+		// 1. Create Notion page (auto-detect first available database)
+		if (integrations.notion) {
+			try {
+				// Auto-detect: find first database user has access to
+				const databases = await integrations.notion.search({
+					filter: { property: 'object', value: 'database' },
+					page_size: 1,
+				});
 
-			await integrations.notion.pages.create({
-				parent: { database_id: inputs.notionDatabaseId },
-				properties,
-				children: content,
-			});
-			notionCreated = true;
+				if (databases.success && databases.data.results.length > 0) {
+					const databaseId = databases.data.results[0].id;
+					const properties = buildNotionProperties(answers, responseSummary, submittedAt);
+					const content = buildNotionContent(answers, formResponse);
+
+					await integrations.notion.pages.create({
+						parent: { database_id: databaseId },
+						properties,
+						children: content,
+					});
+					notionCreated = true;
+				}
+			} catch {
+				// Graceful degradation: Notion logging skipped
+			}
 		}
 
-		// 2. Create Airtable record
-		if (inputs.airtableBaseId && inputs.airtableTableId && integrations.airtable) {
-			const fields = buildAirtableFields(answers, responseSummary, submittedAt);
+		// 2. Create Airtable record (auto-detect first base and table)
+		if (integrations.airtable) {
+			try {
+				// Auto-detect: use first available base and table
+				const bases = await integrations.airtable.bases.list();
+				if (bases.success && bases.data.bases.length > 0) {
+					const baseId = bases.data.bases[0].id;
+					const tables = await integrations.airtable.tables.list({ baseId });
 
-			await integrations.airtable.records.create({
-				baseId: inputs.airtableBaseId,
-				tableId: inputs.airtableTableId,
-				fields,
-			});
-			airtableCreated = true;
+					if (tables.success && tables.data.tables.length > 0) {
+						const tableId = tables.data.tables[0].id;
+						const fields = buildAirtableFields(answers, responseSummary, submittedAt);
+
+						await integrations.airtable.records.create({
+							baseId,
+							tableId,
+							fields,
+						});
+						airtableCreated = true;
+					}
+				}
+			} catch {
+				// Graceful degradation: Airtable logging skipped
+			}
 		}
 
 		// 3. Send Slack notification
