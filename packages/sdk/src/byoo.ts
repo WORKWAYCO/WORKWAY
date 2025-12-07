@@ -398,7 +398,7 @@ export const OAUTH_PROVIDERS: Record<string, OAuthProviderConfig> = {
 		name: 'Procore',
 		authorizationUrl: 'https://login.procore.com/oauth/authorize',
 		tokenUrl: 'https://login.procore.com/oauth/token',
-		redirectUri: 'https://api.workway.co/oauth/procore/callback',
+		redirectUri: 'https://api.workway.co/oauth/callback/procore',
 		scopes: [], // Procore uses tool-level permissions configured in app manifest
 		supportsPKCE: false,
 		tokenAuthMethod: 'client_secret_basic',
