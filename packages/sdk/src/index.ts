@@ -479,6 +479,18 @@ export type { CredentialResolverEnv } from './credential-resolver';
 export { CredentialResolver, DeveloperOAuthAppManager } from './credential-resolver';
 
 // ============================================================================
+// STEP EXECUTOR (Atomic Step Tracking)
+// ============================================================================
+
+export type { StepState, ExecutionState, StepExecutorOptions } from './step-executor';
+
+export {
+	StepExecutor,
+	createStepExecutor,
+	generateExecutionId,
+} from './step-executor';
+
+// ============================================================================
 // RE-EXPORTS
 // ============================================================================
 

@@ -713,9 +713,10 @@ describe('Slack', () => {
 			expect(result.success).toBe(true);
 			expect(result.standard).toBeDefined();
 			expect(result.standard?.type).toBe('list');
-			expect(result.standard?.items).toHaveLength(1);
-			expect(result.standard?.items?.[0].id).toBe('C123456');
-			expect(result.standard?.items?.[0].title).toBe('general');
+			const list = result.standard as { type: 'list'; items: Array<{ id: string; title: string }> };
+			expect(list.items).toHaveLength(1);
+			expect(list.items[0].id).toBe('C123456');
+			expect(list.items[0].title).toBe('general');
 		});
 
 		it('should include capabilities in response', async () => {

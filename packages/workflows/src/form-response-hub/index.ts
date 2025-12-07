@@ -13,7 +13,7 @@
  * not "manually export and import form data"
  */
 
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { defineWorkflow, webhook, createStepExecutor } from '@workwayco/sdk';
 import { Typeform } from '@workwayco/integrations';
 
 export default defineWorkflow({
@@ -128,12 +128,15 @@ export default defineWorkflow({
 			return { success: false, error: 'Missing response ID in webhook payload' };
 		}
 
-		// Idempotency check: verify this response hasn't already been processed
-		// This prevents duplicate entries when Typeform retries webhook delivery
-		const processedKey = `processed:${inputs.typeformFormId}:${responseId}`;
-		const alreadyProcessed = await storage.get(processedKey);
+		// Create StepExecutor for atomic step tracking
+		// On retry: completed steps are skipped, failed steps are re-executed
+		const executor = createStepExecutor(storage, `form-response:${responseId}`, {
+			throwOnFailure: false, // Graceful degradation for optional destinations
+		});
 
-		if (alreadyProcessed) {
+		// Check if execution already completed
+		const progress = await executor.getProgress();
+		if (progress.isComplete) {
 			return {
 				success: true,
 				skipped: true,
@@ -149,15 +152,13 @@ export default defineWorkflow({
 		// Build a summary of the response
 		const responseSummary = buildResponseSummary(answers, formResponse.definition?.fields || []);
 
-		let notionCreated = false;
-		let airtableCreated = false;
-		let slackSent = false;
-
-		// 1. Create Notion page (auto-detect first available database)
-		if (integrations.notion) {
-			try {
+		// Step 1: Create Notion page (auto-detect first available database)
+		const notionResult = await executor.stepIf(
+			!!integrations.notion,
+			'create-notion-page',
+			async () => {
 				// Auto-detect: find first database user has access to
-				const databases = await integrations.notion.search({
+				const databases = await integrations.notion!.search({
 					filter: { property: 'object', value: 'database' },
 					page_size: 1,
 				});
@@ -167,60 +168,60 @@ export default defineWorkflow({
 					const properties = buildNotionProperties(answers, responseSummary, submittedAt);
 					const content = buildNotionContent(answers, formResponse);
 
-					await integrations.notion.pages.create({
+					const result = await integrations.notion!.pages.create({
 						parent: { database_id: databaseId },
 						properties,
 						children: content,
 					});
-					notionCreated = true;
+					return { created: true, pageId: result.data?.id };
 				}
-			} catch {
-				// Graceful degradation: Notion logging skipped
+				return { created: false, reason: 'No database found' };
 			}
-		}
+		);
 
-		// 2. Create Airtable record (auto-detect first base and table)
-		if (integrations.airtable) {
-			try {
+		// Step 2: Create Airtable record (auto-detect first base and table)
+		const airtableResult = await executor.stepIf(
+			!!integrations.airtable,
+			'create-airtable-record',
+			async () => {
 				// Auto-detect: use first available base and table
-				const bases = await integrations.airtable.bases.list();
+				const bases = await integrations.airtable!.bases.list();
 				if (bases.success && bases.data.bases.length > 0) {
 					const baseId = bases.data.bases[0].id;
-					const tables = await integrations.airtable.tables.list({ baseId });
+					const tables = await integrations.airtable!.tables.list({ baseId });
 
 					if (tables.success && tables.data.tables.length > 0) {
 						const tableId = tables.data.tables[0].id;
 						const fields = buildAirtableFields(answers, responseSummary, submittedAt);
 
-						await integrations.airtable.records.create({
+						const result = await integrations.airtable!.records.create({
 							baseId,
 							tableId,
 							fields,
 						});
-						airtableCreated = true;
+						return { created: true, recordId: result.data?.id };
 					}
 				}
-			} catch {
-				// Graceful degradation: Airtable logging skipped
+				return { created: false, reason: 'No base/table found' };
 			}
-		}
+		);
 
-		// 3. Send Slack notification
-		if (inputs.slackChannel && integrations.slack) {
-			await integrations.slack.chat.postMessage({
-				channel: inputs.slackChannel,
-				blocks: buildSlackBlocks(answers, responseSummary, formResponse),
-				text: `New form response: ${responseSummary.title}`,
-			});
-			slackSent = true;
-		}
+		// Step 3: Send Slack notification
+		const slackResult = await executor.stepIf(
+			!!inputs.slackChannel && !!integrations.slack,
+			'send-slack-notification',
+			async () => {
+				const result = await integrations.slack!.chat.postMessage({
+					channel: inputs.slackChannel as string,
+					blocks: buildSlackBlocks(answers, responseSummary, formResponse),
+					text: `New form response: ${responseSummary.title}`,
+				});
+				return { sent: true, messageTs: result.data?.ts };
+			}
+		);
 
-		// Mark response as processed for idempotency
-		// Store with 30-day TTL to prevent unbounded storage growth
-		await storage.set(processedKey, {
-			processedAt: new Date().toISOString(),
-			destinations: { notion: notionCreated, airtable: airtableCreated, slack: slackSent },
-		});
+		// Mark execution as complete (keeps step state for debugging/auditing)
+		await executor.complete();
 
 		return {
 			success: true,
@@ -231,9 +232,9 @@ export default defineWorkflow({
 				summary: responseSummary.title,
 			},
 			destinations: {
-				notion: notionCreated,
-				airtable: airtableCreated,
-				slack: slackSent,
+				notion: notionResult?.created ?? false,
+				airtable: airtableResult?.created ?? false,
+				slack: slackResult?.sent ?? false,
 			},
 		};
 	},
