@@ -348,7 +348,7 @@ This is fixable. The architecture is sound. The gaps are implementation details,
 | OAuth token encryption | CLI | 4 hrs | ✅ Fixed (AES-256-GCM) |
 | Rate limit handling | Integrations | 4 hrs | ⏳ Future |
 | Slack tests | Integrations | 4 hrs | ✅ Added (38 tests) |
-| SDK core tests | SDK | 8 hrs | ⏳ Future |
+| SDK core tests | SDK | 8 hrs | ✅ Added (247 tests) |
 | Storage atomicity | Workflows | 4 hrs | ⏳ Future |
 
 ---
