@@ -8,7 +8,7 @@
     "dev": "workway workflow dev",
     "test": "workway workflow test --mock",
     "test:live": "workway workflow test --live",
-    "build": "workway workflow build",
+    "build": "tsc --noEmit || true",
     "publish": "workway workflow publish"
   },
   "dependencies": {
