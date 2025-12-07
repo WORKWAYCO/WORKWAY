@@ -52,3 +52,6 @@ workway-private/
 # Audit artifacts
 .triad-audit/
 triad-audit-report.json
+
+# Generated OpenAPI types (regenerate with: pnpm generate:types)
+packages/integrations/openapi/generated/

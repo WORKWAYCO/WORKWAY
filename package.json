@@ -13,7 +13,8 @@
     "test": "turbo run test",
     "lint": "turbo run lint",
     "dev": "turbo run dev",
-    "clean": "turbo run clean"
+    "clean": "turbo run clean",
+    "generate:types": "npx tsx packages/integrations/openapi/generate.ts"
   },
   "repository": {
     "type": "git",
@@ -29,6 +30,7 @@
     "marketplace"
   ],
   "devDependencies": {
+    "openapi-typescript": "^7.10.1",
     "turbo": "latest",
     "typescript": "^5.0.0"
   },

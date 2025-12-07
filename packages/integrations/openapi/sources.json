@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "description": "OpenAPI sources for WORKWAY integrations",
+  "integrations": {
+    "stripe": {
+      "name": "Stripe",
+      "url": "https://raw.githubusercontent.com/stripe/openapi/master/openapi/spec3.json",
+      "output": "stripe.generated.d.ts",
+      "official": true
+    },
+    "hubspot-crm": {
+      "name": "HubSpot CRM",
+      "url": "https://api.hubspot.com/api-catalog-public/v1/apis/crm/v3/objects",
+      "output": "hubspot-crm.generated.d.ts",
+      "official": true,
+      "note": "CRM objects API only"
+    },
+    "hubspot-engagements": {
+      "name": "HubSpot Engagements",
+      "url": "https://api.hubspot.com/api-catalog-public/v1/apis/crm/v3/objects/meetings",
+      "output": "hubspot-engagements.generated.d.ts",
+      "official": true
+    },
+    "zoom": {
+      "name": "Zoom",
+      "url": "https://marketplace.zoom.us/docs/api-reference/zoom-api/openapi.json",
+      "output": "zoom.generated.d.ts",
+      "official": true
+    },
+    "calendly": {
+      "name": "Calendly",
+      "url": "https://developer.calendly.com/api-reference/spec.json",
+      "output": "calendly.generated.d.ts",
+      "official": true
+    },
+    "typeform": {
+      "name": "Typeform",
+      "url": "https://developer.typeform.com/specs/forms.yml",
+      "output": "typeform.generated.d.ts",
+      "official": true
+    }
+  },
+  "unsupported": {
+    "notion": "No official OpenAPI spec published",
+    "airtable": "No official OpenAPI spec published",
+    "todoist": "No official OpenAPI spec published",
+    "dribbble": "No official OpenAPI spec published",
+    "linear": "GraphQL API, not REST/OpenAPI",
+    "google-sheets": "Uses Google Discovery format, not OpenAPI"
+  }
+}
