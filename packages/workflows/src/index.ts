@@ -33,6 +33,7 @@ export { default as invoiceGenerator } from './invoice-generator/index.js';
 
 // Meetings & Productivity
 export { default as meetingIntelligence } from './meeting-intelligence/index.js';
+export { default as meetingIntelligencePrivate } from './meeting-intelligence-private/index.js';
 export { default as meetingSummarizer } from './meeting-summarizer/index.js';
 export { default as meetingFollowupEngine } from './meeting-followup-engine/index.js';
 export { default as weeklyProductivityDigest } from './weekly-productivity-digest/index.js';
@@ -126,6 +127,12 @@ export const integrationPairs = {
 	'zoom:notion': {
 		workflowId: 'meeting-intelligence',
 		outcome: 'Zoom meetings that write their own notes',
+		outcomeFrame: 'after_meetings',
+	},
+	// Private Workflow (Bookmarklet auth - no OAuth required)
+	'zoom-cookies:notion': {
+		workflowId: 'meeting-intelligence-private',
+		outcome: 'Zoom meetings to Notion (bookmarklet auth)',
 		outcomeFrame: 'after_meetings',
 	},
 	'zoom:slack': {
@@ -640,6 +647,7 @@ export const workflows = {
 	'onboarding': { id: 'onboarding', outcomeFrame: 'when_clients_onboard' },
 	'standup-bot': { id: 'standup-bot', outcomeFrame: 'every_morning' },
 	'meeting-intelligence': { id: 'meeting-intelligence', outcomeFrame: 'after_meetings' },
+	'meeting-intelligence-private': { id: 'meeting-intelligence-private', outcomeFrame: 'after_meetings' },
 	'sales-lead-pipeline': { id: 'sales-lead-pipeline', outcomeFrame: 'when_leads_come_in' },
 	'client-onboarding': { id: 'client-onboarding', outcomeFrame: 'when_clients_onboard' },
 	'meeting-followup-engine': { id: 'meeting-followup-engine', outcomeFrame: 'after_calls' },

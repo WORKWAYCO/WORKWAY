@@ -1,0 +1,25 @@
+name = "zoom-cookie-sync"
+account_id = "5c3e9cf4d55ce171b844fad0931607f9"  # Half Dozen
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Browser Rendering API for Zoom scraping
+browser = { binding = "BROWSER" }
+
+# Durable Objects for per-user cookie storage
+[[durable_objects.bindings]]
+name = "USER_SESSIONS"
+class_name = "UserSession"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["UserSession"]
+
+# Environment variables (set via wrangler secret put)
+# UPLOAD_SECRET - Secret for cookie upload authorization (shared across users)
+# API_SECRET - Secret for API calls from workflows
+
+[vars]
+# Public configuration
+WORKER_URL = "https://zoom-cookie-sync.half-dozen.workers.dev"
