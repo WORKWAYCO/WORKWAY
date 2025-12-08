@@ -1,46 +1,30 @@
 /**
- * Meeting Intelligence Private Workflow
+ * Meeting Intelligence (Quick Start)
  *
- * A Private Workflow that uses bookmarklet-synced cookies instead of Zoom OAuth.
- * This bypasses the need for Zoom OAuth app approval while providing full
- * transcript extraction with speaker attribution.
+ * Meetings that document themselves in Notion.
+ * Start immediately - no app approvals, no waiting.
  *
- * ## Delivery Mechanism: Bookmarklet
+ * ## Outcome
  *
- * The bookmarklet approach embodies Zuhandenheit - zero installation, 5 seconds daily:
+ * After every meeting:
+ * - AI summary with key decisions
+ * - Action items extracted automatically
+ * - Full transcript preserved
+ * - Searchable in your Notion workspace
  *
- * 1. User visits /workflows/meeting-intelligence-private/setup
- * 2. Drags personalized bookmarklet to bookmarks bar (once)
- * 3. Daily: Login to Zoom → Click bookmark → Done (5 seconds)
+ * ## Setup (30 seconds)
  *
- * ## Architecture
+ * 1. Connect Notion
+ * 2. Add the "Sync Zoom" bookmark to your browser
+ * 3. Click it once while logged into Zoom
  *
- * Unlike standard workflows that use OAuth, this workflow:
- * - Uses browser cookies synced via bookmarklet
- * - Stores cookies per-user in Durable Objects (24-hour TTL)
- * - Scrapes Zoom using Cloudflare Browser Rendering API
- * - Still uses Notion OAuth for page creation
+ * That's it. Your meetings now document themselves.
  *
  * ## Philosophy
  *
  * "The tool should recede; the outcome should remain."
- * User thinks: "My meetings are documented in Notion"
- * Not: "I need to manage cookies and OAuth tokens"
- *
- * @example Setup (once)
- * ```
- * 1. Connect Notion in WORKWAY
- * 2. Visit /workflows/meeting-intelligence-private/setup
- * 3. Drag bookmarklet to browser
- * 4. Login to Zoom, click bookmarklet
- * ```
- *
- * @example Daily (5 seconds)
- * ```
- * 1. Login to Zoom (if session expired)
- * 2. Click bookmarklet
- * 3. Continue with your day
- * ```
+ * You think: "My meetings are documented"
+ * Not: "I need to sync sessions and manage connections"
  */
 
 import { defineWorkflow, cron } from '@workwayco/sdk';
@@ -56,28 +40,29 @@ const MeetingAnalysisSchema = {
 	sentiment: "'positive' | 'neutral' | 'concerned'",
 } as const;
 
-export default defineWorkflow({
-	name: 'Meeting Intelligence (Private)',
-	description:
-		'Sync Zoom meetings to Notion using bookmarklet authentication. No OAuth app required.',
-	version: '1.0.0',
+// Infrastructure URL (hardcoded - not user-configurable)
+const ZOOM_CONNECTION_URL = 'https://zoom-cookie-sync.half-dozen.workers.dev';
 
-	// Pathway metadata for Heideggerian discovery model
+export default defineWorkflow({
+	name: 'Meeting Intelligence (Quick Start)',
+	description: 'Meetings that document themselves in Notion. Start in 30 seconds.',
+	version: '1.1.0',
+
 	pathway: {
 		outcomeFrame: 'after_meetings',
 
 		outcomeStatement: {
-			suggestion: 'Want meeting notes in Notion without OAuth complexity?',
+			suggestion: 'Want your meetings to document themselves?',
 			explanation:
-				"After Zoom meetings, we'll create a Notion page with transcript and AI summary. Uses a simple bookmarklet for authentication - no Zoom app approval needed.",
-			outcome: 'Meeting notes in Notion (via bookmarklet)',
+				'After every Zoom meeting, a Notion page appears with the transcript, AI summary, and action items. Ready in 30 seconds.',
+			outcome: 'Meetings that document themselves',
 		},
 
 		primaryPair: {
-			from: 'zoom-cookies',
+			from: 'zoom-quick',
 			to: 'notion',
 			workflowId: 'meeting-intelligence-private',
-			outcome: 'Zoom meetings documented automatically (bookmarklet auth)',
+			outcome: 'Meetings documented automatically',
 		},
 
 		additionalPairs: [],
@@ -87,77 +72,64 @@ export default defineWorkflow({
 				trigger: 'integration_connected',
 				integrations: ['notion'],
 				workflowId: 'meeting-intelligence-private',
-				priority: 50, // Lower priority than OAuth-based workflow
+				priority: 50,
 			},
 		],
 
-		// Smart defaults - infer from context, don't ask
 		smartDefaults: {
 			lookbackDays: { value: 1 },
 			enableAI: { value: true },
 			analysisDepth: { value: 'standard' },
 		},
 
-		// Only the Notion database is required
 		essentialFields: ['notionDatabaseId'],
 
 		zuhandenheit: {
-			timeToValue: 5, // Minutes to first outcome (includes bookmarklet setup)
+			timeToValue: 0.5, // 30 seconds to first outcome
 			worksOutOfBox: true,
 			gracefulDegradation: true,
-			automaticTrigger: true, // Daily cron
+			automaticTrigger: true,
 		},
 	},
 
 	pricing: {
 		model: 'usage',
-		pricePerExecution: 0.15, // Slightly cheaper than OAuth version (no OAuth overhead)
+		pricePerExecution: 0.15,
 		freeExecutions: 30,
-		description: 'Per meeting synced (includes transcription + AI analysis)',
+		description: 'Per meeting documented',
 	},
 
-	// Note: No Zoom OAuth integration - uses cookies via bookmarklet
 	integrations: [
 		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
 	],
 
 	inputs: {
-		// Core configuration
 		notionDatabaseId: {
 			type: 'notion_database_picker',
 			label: 'Meeting Notes Database',
 			required: true,
-			description: 'Where to store meeting notes',
+			description: 'Where your meeting notes will appear',
 		},
 
-		// Sync settings
 		lookbackDays: {
 			type: 'number',
 			label: 'Days to Look Back',
 			default: 1,
-			description: 'How many days of meetings to sync',
+			description: 'How many days of meetings to include',
 		},
 
-		// AI settings
 		enableAI: {
 			type: 'boolean',
 			label: 'AI Analysis',
 			default: true,
 			description: 'Extract action items, decisions, and key topics',
 		},
+
 		analysisDepth: {
 			type: 'select',
 			label: 'Analysis Depth',
 			options: ['brief', 'standard', 'detailed'],
 			default: 'standard',
-		},
-
-		// Cookie sync worker URL (internal - set by system)
-		cookieSyncWorkerUrl: {
-			type: 'text',
-			label: 'Cookie Sync Worker URL',
-			default: 'https://zoom-cookie-sync.half-dozen.workers.dev',
-			description: 'Internal: Cloudflare Worker for cookie-based Zoom access',
 		},
 	},
 
@@ -174,31 +146,22 @@ export default defineWorkflow({
 			actionItemCount: number;
 		}> = [];
 
-		// 1. Check if user has valid cookies
-		const cookieStatus = await checkCookieHealth(inputs.cookieSyncWorkerUrl, user.id);
+		// Check Zoom connection status
+		const connectionStatus = await checkZoomConnection(user.id);
 
-		if (!cookieStatus.hasCookies) {
+		if (!connectionStatus.connected) {
 			return {
 				success: false,
-				error: 'No valid Zoom cookies found. Please use the bookmarklet to sync your Zoom session.',
-				needsBookmarkletSync: true,
-				setupUrl: `/workflows/meeting-intelligence-private/setup`,
+				error: 'Your Zoom connection needs a quick refresh.',
+				action: 'refresh_connection',
+				actionLabel: 'Refresh Connection',
+				actionUrl: `${ZOOM_CONNECTION_URL}/setup/${user.id}`,
+				upgradeHint: 'Want to skip this step? Upgrade to the full Meeting Intelligence workflow with automatic OAuth.',
 			};
 		}
 
-		if (cookieStatus.expiresIn < 3600000) {
-			// Less than 1 hour remaining
-			console.log(
-				`Warning: Cookies expire in ${Math.round(cookieStatus.expiresIn / 60000)} minutes`
-			);
-		}
-
-		// 2. Fetch meetings using browser scraper with user's cookies
-		const meetings = await fetchMeetingsWithCookies(
-			inputs.cookieSyncWorkerUrl,
-			user.id,
-			inputs.lookbackDays || 1
-		);
+		// Fetch meetings
+		const meetings = await fetchMeetings(user.id, inputs.lookbackDays || 1);
 
 		if (!meetings.success || meetings.data.length === 0) {
 			return {
@@ -209,26 +172,21 @@ export default defineWorkflow({
 			};
 		}
 
-		// 3. Process each meeting
+		// Process each meeting
 		for (const meeting of meetings.data) {
-			// Check if already synced (deduplication)
-			const existingPage = await checkExistingPage(
+			// Skip if already documented (deduplication)
+			const alreadyDocumented = await checkExistingPage(
 				integrations.notion,
 				inputs.notionDatabaseId,
 				meeting.id
 			);
 
-			if (existingPage) {
+			if (alreadyDocumented) {
 				continue;
 			}
 
 			// Get transcript
-			const transcript = await fetchTranscriptWithCookies(
-				inputs.cookieSyncWorkerUrl,
-				user.id,
-				meeting.id,
-				meeting.share_url
-			);
+			const transcript = await fetchTranscript(user.id, meeting.id, meeting.share_url);
 
 			// AI Analysis (if enabled)
 			let analysis: any = null;
@@ -280,41 +238,39 @@ export default defineWorkflow({
 });
 
 // ============================================================================
-// HELPER FUNCTIONS
+// ZOOM CONNECTION HELPERS
 // ============================================================================
 
 /**
- * Check cookie health for a user
+ * Check if user's Zoom connection is active
+ * (Uses outcome language - "connected" not "has cookies")
  */
-async function checkCookieHealth(
-	workerUrl: string,
-	userId: string
-): Promise<{
-	hasCookies: boolean;
-	age?: number;
-	expiresIn?: number;
+async function checkZoomConnection(userId: string): Promise<{
+	connected: boolean;
+	refreshSoon?: boolean;
 }> {
 	try {
-		const response = await fetch(`${workerUrl}/health/${userId}`);
+		const response = await fetch(`${ZOOM_CONNECTION_URL}/health/${userId}`);
 		if (!response.ok) {
-			return { hasCookies: false };
+			return { connected: false };
 		}
 		const data = (await response.json()) as {
 			hasCookies: boolean;
-			age?: number;
 			expiresIn?: number;
 		};
-		return data;
+		return {
+			connected: data.hasCookies,
+			refreshSoon: data.expiresIn ? data.expiresIn < 3600000 : false,
+		};
 	} catch {
-		return { hasCookies: false };
+		return { connected: false };
 	}
 }
 
 /**
- * Fetch meetings using cookies-based browser scraping
+ * Fetch user's meetings from Zoom
  */
-async function fetchMeetingsWithCookies(
-	workerUrl: string,
+async function fetchMeetings(
 	userId: string,
 	days: number
 ): Promise<{
@@ -327,32 +283,31 @@ async function fetchMeetingsWithCookies(
 		share_url?: string;
 		speakers?: string[];
 	}>;
-	error?: string;
 }> {
 	try {
-		const response = await fetch(`${workerUrl}/scrape-meetings/${userId}?days=${days}`);
+		const response = await fetch(
+			`${ZOOM_CONNECTION_URL}/scrape-meetings/${userId}?days=${days}`
+		);
 		if (!response.ok) {
-			const error = await response.text();
-			return { success: false, data: [], error };
+			return { success: false, data: [] };
 		}
 		const data = await response.json();
 		return { success: true, data: data.meetings || [] };
-	} catch (error: any) {
-		return { success: false, data: [], error: error.message };
+	} catch {
+		return { success: false, data: [] };
 	}
 }
 
 /**
- * Fetch transcript using cookies-based browser scraping
+ * Fetch transcript for a specific meeting
  */
-async function fetchTranscriptWithCookies(
-	workerUrl: string,
+async function fetchTranscript(
 	userId: string,
 	meetingId: string,
 	shareUrl?: string
 ): Promise<string | null> {
 	try {
-		const response = await fetch(`${workerUrl}/scrape-transcript/${userId}`, {
+		const response = await fetch(`${ZOOM_CONNECTION_URL}/scrape-transcript/${userId}`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ meetingId, shareUrl }),
@@ -490,7 +445,7 @@ async function createNotionMeetingPage(params: CreateNotionPageParams) {
 			select: { name: 'Synced' },
 		},
 		Source: {
-			select: { name: 'Private Workflow (Bookmarklet)' },
+			select: { name: 'Quick Start' },
 		},
 	};
 
@@ -682,7 +637,8 @@ function splitTranscriptIntoBlocks(transcript: string): any[] {
 export const metadata = {
 	id: 'meeting-intelligence-private',
 	category: 'productivity',
-	featured: false, // Not featured - prefer OAuth version when available
-	private: true, // Indicates this uses private/bookmarklet auth
+	featured: false,
+	quickStart: true, // Indicates browser-based quick start version
+	upgradeTarget: 'meeting-intelligence', // OAuth version for full automation
 	stats: { rating: 0, users: 0, reviews: 0 },
 };

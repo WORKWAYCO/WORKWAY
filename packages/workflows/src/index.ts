@@ -129,10 +129,10 @@ export const integrationPairs = {
 		outcome: 'Zoom meetings that write their own notes',
 		outcomeFrame: 'after_meetings',
 	},
-	// Private Workflow (Bookmarklet auth - no OAuth required)
-	'zoom-cookies:notion': {
+	// Quick Start (browser-based, no OAuth approval needed)
+	'zoom-quick:notion': {
 		workflowId: 'meeting-intelligence-private',
-		outcome: 'Zoom meetings to Notion (bookmarklet auth)',
+		outcome: 'Meetings that document themselves (quick start)',
 		outcomeFrame: 'after_meetings',
 	},
 	'zoom:slack': {

@@ -1,29 +1,14 @@
 /**
- * Zoom Cookie Sync Worker
+ * Zoom Connection Worker
  *
- * Per-user Durable Objects storage for Zoom cookies used by Private Workflow.
- * Enables bookmarklet-based authentication without Zoom OAuth app approval.
+ * Enables "Meeting Intelligence (Quick Start)" workflow.
+ * Meetings that document themselves - ready in 30 seconds.
  *
  * ## Philosophy
  *
  * "The tool should recede; the outcome should remain."
- * - Users think: "My meetings sync to Notion"
- * - Not: "I manage cookies and sessions"
- *
- * ## Endpoints
- *
- *   GET  /                       - Health check
- *   GET  /setup/:userId          - Personalized bookmarklet page
- *   POST /upload-cookies/:userId - Cookie upload from bookmarklet
- *   GET  /health/:userId         - Check user's cookie status
- *   GET  /scrape-meetings/:userId?days=N - List meetings
- *   POST /scrape-transcript/:userId      - Extract transcript
- *
- * @example Bookmarklet flow:
- * 1. User visits /setup/:userId
- * 2. Drags personalized bookmarklet to browser
- * 3. On Zoom, clicks bookmark -> cookies uploaded
- * 4. Private Workflow can now scrape meetings
+ * User thinks: "My meetings are documented"
+ * Not: "I manage connections and sessions"
  */
 
 import puppeteer, { Browser, Page } from '@cloudflare/puppeteer';
@@ -249,7 +234,8 @@ export class UserSession {
 			return Response.json(
 				{
 					hasCookies: false,
-					message: 'No cookies stored. Use bookmarklet to sync.',
+					connected: false,
+					message: 'Not connected yet',
 				},
 				{ headers: corsHeaders }
 			);
@@ -259,12 +245,12 @@ export class UserSession {
 		const isExpired = now > data.expiresAt;
 
 		if (isExpired) {
-			// Clean up expired cookies
 			await this.state.storage.delete('zoom_cookies');
 			return Response.json(
 				{
 					hasCookies: false,
-					message: 'Cookies expired. Use bookmarklet to re-sync.',
+					connected: false,
+					message: 'Connection needs refresh',
 				},
 				{ headers: corsHeaders }
 			);
@@ -273,10 +259,8 @@ export class UserSession {
 		return Response.json(
 			{
 				hasCookies: true,
-				age: now - data.capturedAt,
+				connected: true,
 				expiresIn: data.expiresAt - now,
-				expiresAt: new Date(data.expiresAt).toISOString(),
-				cookieCount: data.cookies.length,
 			},
 			{ headers: corsHeaders }
 		);
@@ -313,8 +297,8 @@ export class UserSession {
 			return Response.json(
 				{
 					success: false,
-					error: 'No valid cookies. Use bookmarklet to sync.',
-					needsBookmarkletSync: true,
+					error: 'Connection needs refresh',
+					needsRefresh: true,
 				},
 				{ status: 401, headers: corsHeaders }
 			);
@@ -352,8 +336,8 @@ export class UserSession {
 				return Response.json(
 					{
 						success: false,
-						error: 'Session expired. Use bookmarklet to re-sync.',
-						needsBookmarkletSync: true,
+						error: 'Connection needs refresh',
+						needsRefresh: true,
 					},
 					{ status: 401, headers: corsHeaders }
 				);
@@ -458,8 +442,8 @@ export class UserSession {
 			return Response.json(
 				{
 					success: false,
-					error: 'No valid cookies. Use bookmarklet to sync.',
-					needsBookmarkletSync: true,
+					error: 'Connection needs refresh',
+					needsRefresh: true,
 				},
 				{ status: 401, headers: corsHeaders }
 			);
@@ -514,8 +498,8 @@ export class UserSession {
 				return Response.json(
 					{
 						success: false,
-						error: 'Session expired. Use bookmarklet to re-sync.',
-						needsBookmarkletSync: true,
+						error: 'Connection needs refresh',
+						needsRefresh: true,
 					},
 					{ status: 401, headers: corsHeaders }
 				);
@@ -592,17 +576,17 @@ export class UserSession {
 }
 
 // ============================================================================
-// SETUP PAGE (Zuhandenheit: Tool recedes, outcome remains)
+// SETUP PAGE (Zuhandenheit: Outcome first, mechanism invisible)
 // ============================================================================
 
 function serveSetupPage(userId: string, env: Env): Response {
 	const workerUrl = env.WORKER_URL || 'https://zoom-cookie-sync.half-dozen.workers.dev';
 	const uploadSecret = env.UPLOAD_SECRET;
 
-	// Generate personalized bookmarklet with userId embedded
+	// Bookmarklet with friendly success message (no technical details)
 	const bookmarkletCode = `javascript:(function(){
 if(!window.location.hostname.includes('zoom.us')){
-alert('Please open this on a Zoom page (zoom.us)');
+alert('Please open this on Zoom first');
 return;
 }
 const c=document.cookie.split('; ').map(x=>{
@@ -615,166 +599,80 @@ headers:{'Content-Type':'application/json','Authorization':'Bearer ${uploadSecre
 body:JSON.stringify({cookies:c})
 }).then(r=>r.json()).then(d=>{
 if(d.success){
-alert('Synced '+d.cookieCount+' cookies\\nExpires: '+new Date(d.expiresAt).toLocaleString());
+alert('Connected! Your meetings will now document themselves in Notion.');
 }else{
-alert('Error: '+d.error);
+alert('Connection failed. Please try again.');
 }
-}).catch(e=>alert('Error: '+e.message));
+}).catch(e=>alert('Connection failed. Please try again.'));
 })();`.replace(/\n/g, '');
 
+	// Minimal, outcome-focused page
 	const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Zoom Sync Setup | WORKWAY</title>
+  <title>Connect Zoom | WORKWAY</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
       background: #000; color: #fff; min-height: 100vh;
       display: flex; align-items: center; justify-content: center;
-      line-height: 1.6;
     }
-    .container { max-width: 520px; padding: 60px 24px; text-align: center; }
-    .logo {
-      font-size: 11px; letter-spacing: 0.15em; color: rgba(255,255,255,0.5);
-      margin-bottom: 16px; text-transform: uppercase;
-    }
-    h1 { font-size: 36px; font-weight: 600; margin-bottom: 12px; letter-spacing: -0.02em; }
-    .subtitle { color: rgba(255,255,255,0.7); margin-bottom: 48px; font-size: 16px; }
-
-    .bookmarklet-area {
-      background: rgba(255,255,255,0.05);
-      border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 16px;
-      padding: 40px 32px;
-      margin-bottom: 48px;
-    }
-    .bookmarklet-label {
-      color: rgba(255,255,255,0.6); font-size: 13px; margin-bottom: 20px;
-    }
-    .bookmarklet {
-      display: inline-block; padding: 16px 40px;
+    .container { max-width: 400px; padding: 48px 24px; text-align: center; }
+    .logo { font-size: 11px; letter-spacing: 0.15em; color: rgba(255,255,255,0.4); margin-bottom: 32px; }
+    h1 { font-size: 28px; font-weight: 600; margin-bottom: 8px; }
+    .outcome { color: rgba(255,255,255,0.6); margin-bottom: 40px; font-size: 15px; }
+    .bookmark-btn {
+      display: inline-block; padding: 16px 48px;
       background: #fff; color: #000;
       text-decoration: none; font-size: 15px; font-weight: 600;
-      border-radius: 24px; cursor: move;
-      transition: all 0.2s ease;
+      border-radius: 32px; cursor: move;
     }
-    .bookmarklet:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(255,255,255,0.15); }
-
-    .instructions { text-align: left; margin-bottom: 40px; }
-    .step { display: flex; gap: 16px; margin: 20px 0; align-items: flex-start; }
-    .step-num {
-      width: 28px; height: 28px; background: #fff; color: #000;
-      border-radius: 50%; font-size: 13px; font-weight: 600;
-      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
-    }
-    .step-text { color: rgba(255,255,255,0.85); font-size: 15px; padding-top: 3px; }
-
-    .note {
-      background: rgba(255,255,255,0.03);
-      border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px;
-      padding: 20px 24px;
-      font-size: 14px; color: rgba(255,255,255,0.6);
-      text-align: left;
-    }
-    .note strong { color: rgba(255,255,255,0.8); }
-
-    .status-check {
-      margin-top: 32px;
-      padding-top: 32px;
-      border-top: 1px solid rgba(255,255,255,0.1);
-    }
-    .status-btn {
-      background: transparent;
-      border: 1px solid rgba(255,255,255,0.2);
-      color: #fff;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 14px;
-      cursor: pointer;
-      transition: all 0.2s ease;
-    }
-    .status-btn:hover { border-color: rgba(255,255,255,0.4); }
-    #status-result {
-      margin-top: 16px;
-      padding: 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      display: none;
-    }
-    #status-result.success { background: rgba(34, 197, 94, 0.1); color: #22c55e; display: block; }
-    #status-result.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; display: block; }
-
-    footer { margin-top: 48px; font-size: 12px; color: rgba(255,255,255,0.4); }
+    .hint { margin-top: 16px; font-size: 13px; color: rgba(255,255,255,0.4); }
+    .status { margin-top: 48px; padding: 16px; border-radius: 8px; font-size: 14px; }
+    .status.connected { background: rgba(34,197,94,0.1); color: #22c55e; }
+    .status.disconnected { background: rgba(255,255,255,0.05); color: rgba(255,255,255,0.5); }
+    .upgrade { margin-top: 32px; padding-top: 32px; border-top: 1px solid rgba(255,255,255,0.1); font-size: 13px; color: rgba(255,255,255,0.4); }
+    .upgrade a { color: rgba(255,255,255,0.6); }
   </style>
 </head>
 <body>
   <div class="container">
     <div class="logo">WORKWAY</div>
-    <h1>Zoom Sync</h1>
-    <p class="subtitle">Connect your Zoom meetings with one click</p>
+    <h1>Connect Zoom</h1>
+    <p class="outcome">Your meetings will document themselves in Notion</p>
 
-    <div class="bookmarklet-area">
-      <p class="bookmarklet-label">Drag this to your bookmarks bar</p>
-      <a href="${bookmarkletCode}" class="bookmarklet">Sync Zoom</a>
+    <a href="${bookmarkletCode}" class="bookmark-btn">Sync Zoom</a>
+    <p class="hint">Drag this to your bookmarks bar, then click it on Zoom</p>
+
+    <div id="status" class="status"></div>
+
+    <div class="upgrade">
+      Want fully automatic sync? <a href="/workflows/meeting-intelligence">Upgrade to OAuth version</a>
     </div>
-
-    <div class="instructions">
-      <div class="step">
-        <span class="step-num">1</span>
-        <span class="step-text">Drag the button above to your bookmarks bar (usually below the URL bar)</span>
-      </div>
-      <div class="step">
-        <span class="step-num">2</span>
-        <span class="step-text">Login to Zoom at <a href="https://us06web.zoom.us" target="_blank" style="color:#fff;">us06web.zoom.us</a></span>
-      </div>
-      <div class="step">
-        <span class="step-num">3</span>
-        <span class="step-text">Click the bookmark - you'll see a success message</span>
-      </div>
-    </div>
-
-    <div class="note">
-      <p><strong>How it works:</strong> The bookmark captures your Zoom session cookies (valid 24 hours). Your meetings then sync automatically to Notion via the Private Workflow.</p>
-      <p style="margin-top:12px;"><strong>Daily:</strong> When prompted by WORKWAY, just login to Zoom and click the bookmark again. Takes 5 seconds.</p>
-    </div>
-
-    <div class="status-check">
-      <button class="status-btn" onclick="checkStatus()">Check Cookie Status</button>
-      <div id="status-result"></div>
-    </div>
-
-    <footer>
-      <p>User ID: ${userId}</p>
-    </footer>
   </div>
 
   <script>
-    async function checkStatus() {
-      const result = document.getElementById('status-result');
-      result.className = '';
-      result.style.display = 'none';
-
+    // Auto-check connection status on load
+    (async function() {
+      const status = document.getElementById('status');
       try {
-        const response = await fetch('${workerUrl}/health/${userId}');
-        const data = await response.json();
-
+        const res = await fetch('${workerUrl}/health/${userId}');
+        const data = await res.json();
         if (data.hasCookies) {
-          const expiresIn = Math.round(data.expiresIn / 3600000);
-          result.className = 'success';
-          result.innerHTML = 'Cookies synced. Expires in ' + expiresIn + ' hours (' + data.cookieCount + ' cookies stored).';
+          status.className = 'status connected';
+          status.textContent = 'Connected';
         } else {
-          result.className = 'error';
-          result.innerHTML = data.message || 'No cookies found. Please use the bookmarklet after logging into Zoom.';
+          status.className = 'status disconnected';
+          status.textContent = 'Not connected yet';
         }
-      } catch (error) {
-        result.className = 'error';
-        result.innerHTML = 'Error checking status: ' + error.message;
+      } catch {
+        status.className = 'status disconnected';
+        status.textContent = 'Not connected yet';
       }
-    }
+    })();
   </script>
 </body>
 </html>`;
