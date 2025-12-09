@@ -58,6 +58,9 @@ function getCorsHeaders(request: Request): Record<string, string> {
 const SESSION_EXPIRY_MS = 24 * 60 * 60 * 1000;
 const SESSION_EXPIRY_HOURS = 24;
 
+// Keep-alive interval (1 hour) - visits Zoom to refresh session cookies
+const KEEP_ALIVE_INTERVAL_MS = 60 * 60 * 1000;
+
 // Setup info endpoint (JSON API, not HTML - per canon)
 function getSetupInfo(userId: string): Response {
   return Response.json({
@@ -97,9 +100,14 @@ export default {
           'GET /health/:userId': 'Check session health and cookie status',
           'GET /dashboard-data/:userId': 'Dashboard data for workway.co/workflows',
           'POST /upload-cookies/:userId': 'Upload Zoom cookies (from extension)',
+          'POST /keep-alive/:userId': 'Manually trigger session refresh (visits Zoom)',
           'GET /meetings/:userId': 'List AI Companion transcripts from Zoom Recordings',
           'GET /meeting-transcript/:userId?index=N': 'Extract transcript from meeting at index N',
           'POST /transcript/:userId': 'Extract transcript from a Zoom share URL (clips)',
+        },
+        sessionKeepAlive: {
+          interval: '1 hour',
+          mechanism: 'Durable Object alarm visits Zoom profile to refresh session cookies',
         },
       });
     }
@@ -190,6 +198,10 @@ export class ZoomSessionManager {
 
       if (path === '/dashboard-data' && request.method === 'GET') {
         return this.getDashboardData();
+      }
+
+      if (path === '/keep-alive' && request.method === 'POST') {
+        return this.refreshSession();
       }
 
       return Response.json({ error: 'Unknown endpoint', path }, { status: 404 });
@@ -300,11 +312,18 @@ export class ZoomSessionManager {
       // Store cookies
       await this.state.storage.put('zoom_cookies', zoomCookies);
       await this.state.storage.put('cookies_uploaded_at', Date.now());
+      await this.state.storage.put('session_active', true);
+
+      // Set hourly keep-alive alarm to refresh session
+      const nextAlarm = Date.now() + KEEP_ALIVE_INTERVAL_MS;
+      await this.state.storage.setAlarm(nextAlarm);
+      console.log(`Keep-alive alarm set for ${new Date(nextAlarm).toISOString()}`);
 
       return Response.json({
         success: true,
         message: `Stored ${zoomCookies.length} Zoom cookies`,
         expiresAt: new Date(Date.now() + SESSION_EXPIRY_MS).toISOString(),
+        nextKeepAlive: new Date(nextAlarm).toISOString(),
       });
     } catch (error: any) {
       return Response.json({ error: error.message }, { status: 400 });
@@ -1004,6 +1023,150 @@ export class ZoomSessionManager {
     }
 
     return textLines.join('\n');
+  }
+
+  /**
+   * Durable Object Alarm Handler
+   * Called every hour to refresh the Zoom session by visiting a Zoom page
+   */
+  async alarm(): Promise<void> {
+    console.log('Keep-alive alarm triggered');
+
+    const sessionActive = await this.state.storage.get<boolean>('session_active');
+    if (!sessionActive) {
+      console.log('Session not active, skipping keep-alive');
+      return;
+    }
+
+    const cookies = await this.state.storage.get<any[]>('zoom_cookies');
+    if (!cookies || cookies.length === 0) {
+      console.log('No cookies stored, skipping keep-alive');
+      await this.state.storage.put('session_active', false);
+      return;
+    }
+
+    try {
+      // Refresh the session
+      const result = await this.doRefreshSession(cookies);
+
+      if (result.success) {
+        // Update cookies if we got new ones
+        if (result.newCookies && result.newCookies.length > 0) {
+          await this.state.storage.put('zoom_cookies', result.newCookies);
+          await this.state.storage.put('cookies_uploaded_at', Date.now());
+          console.log(`Session refreshed, updated ${result.newCookies.length} cookies`);
+        } else {
+          console.log('Session refreshed, cookies still valid');
+        }
+
+        // Schedule next alarm
+        const nextAlarm = Date.now() + KEEP_ALIVE_INTERVAL_MS;
+        await this.state.storage.setAlarm(nextAlarm);
+        console.log(`Next keep-alive scheduled for ${new Date(nextAlarm).toISOString()}`);
+      } else {
+        console.log(`Session refresh failed: ${result.error}`);
+        // Mark session as inactive - user needs to re-sync
+        await this.state.storage.put('session_active', false);
+        await this.state.storage.put('session_expired_at', Date.now());
+      }
+    } catch (error: any) {
+      console.error('Keep-alive alarm error:', error);
+      // Don't mark inactive on transient errors - try again next hour
+      const nextAlarm = Date.now() + KEEP_ALIVE_INTERVAL_MS;
+      await this.state.storage.setAlarm(nextAlarm);
+    }
+  }
+
+  /**
+   * POST /keep-alive - Manually trigger session refresh
+   */
+  private async refreshSession(): Promise<Response> {
+    const cookies = await this.state.storage.get<any[]>('zoom_cookies');
+    if (!cookies || cookies.length === 0) {
+      return Response.json({
+        success: false,
+        error: 'No cookies stored',
+        needsAuth: true,
+      }, { status: 401 });
+    }
+
+    const result = await this.doRefreshSession(cookies);
+
+    if (result.success && result.newCookies) {
+      await this.state.storage.put('zoom_cookies', result.newCookies);
+      await this.state.storage.put('cookies_uploaded_at', Date.now());
+      await this.state.storage.put('session_active', true);
+
+      // Reset the alarm
+      const nextAlarm = Date.now() + KEEP_ALIVE_INTERVAL_MS;
+      await this.state.storage.setAlarm(nextAlarm);
+    }
+
+    return Response.json(result);
+  }
+
+  /**
+   * Internal: Visit Zoom to refresh session and capture updated cookies
+   */
+  private async doRefreshSession(cookies: any[]): Promise<{
+    success: boolean;
+    error?: string;
+    newCookies?: any[];
+  }> {
+    let browser: Browser | null = null;
+    let page: any = null;
+
+    try {
+      browser = await this.getBrowser();
+      page = await browser.newPage();
+
+      // Set existing cookies
+      for (const cookie of cookies) {
+        try {
+          await page.setCookie(cookie);
+        } catch {
+          // Skip invalid cookies
+        }
+      }
+
+      // Visit Zoom homepage to refresh session
+      console.log('Visiting zoom.us to refresh session...');
+      await page.goto('https://zoom.us/profile', {
+        waitUntil: 'networkidle2',
+        timeout: 30000,
+      });
+
+      // Check if we're still logged in
+      const currentUrl = page.url();
+      if (currentUrl.includes('/signin') || currentUrl.includes('/login')) {
+        await page.close();
+        return {
+          success: false,
+          error: 'Session expired - redirected to login',
+        };
+      }
+
+      // Get updated cookies from the page
+      const updatedCookies = await page.cookies();
+      const zoomCookies = updatedCookies.filter((c: any) =>
+        c.domain?.includes('zoom.us') || c.domain?.includes('.zoom.us')
+      );
+
+      await page.close();
+
+      return {
+        success: true,
+        newCookies: zoomCookies.length > 0 ? zoomCookies : cookies,
+      };
+    } catch (error: any) {
+      if (page) {
+        try { await page.close(); } catch {}
+      }
+      return {
+        success: false,
+        error: error.message || 'Failed to refresh session',
+      };
+    }
   }
 
   /**

@@ -22,9 +22,8 @@ class_name = "ZoomSessionManager"
 tag = "v1"
 new_classes = ["ZoomSessionManager"]
 
-# Session keep-alive: refresh cookies every 6 hours
-[triggers]
-crons = ["0 */6 * * *"]
+# Session keep-alive uses Durable Object alarms (per-user, every hour)
+# No cron needed - alarms are set when cookies are uploaded
 
 [vars]
 # Public configuration
