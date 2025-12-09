@@ -551,6 +551,51 @@ export class WorkwayAPIClient extends BaseHTTPClient {
 	async promoteOAuthApp(provider: string): Promise<DeveloperOAuthApp> {
 		return this.postWrapped<DeveloperOAuthApp>(`/developers/me/oauth-apps/${provider}/promote`);
 	}
+
+	// ============================================================================
+	// ACCESS GRANTS (Private Workflows)
+	// ============================================================================
+
+	/**
+	 * List developer's workflows (for access grant management)
+	 */
+	async listDeveloperWorkflows(): Promise<DeveloperWorkflow[]> {
+		const response = await this.getJson<{ workflows: DeveloperWorkflow[] }>('/developers/me/integrations');
+		return response.workflows || [];
+	}
+
+	/**
+	 * List access grants for a workflow
+	 */
+	async listAccessGrants(workflowId: string): Promise<WorkflowAccessGrant[]> {
+		const response = await this.getJson<{ grants: WorkflowAccessGrant[] }>(
+			`/integrations/${workflowId}/access-grants`
+		);
+		return response.grants || [];
+	}
+
+	/**
+	 * Create an access grant for a workflow
+	 */
+	async createAccessGrant(options: CreateAccessGrantOptions): Promise<WorkflowAccessGrant> {
+		return this.postWrapped<WorkflowAccessGrant>(
+			`/integrations/${options.integrationId}/access-grants`,
+			{
+				grantType: options.grantType,
+				grantValue: options.grantValue,
+				maxInstalls: options.maxInstalls,
+				expiresAt: options.expiresAt?.toISOString(),
+				notes: options.notes,
+			}
+		);
+	}
+
+	/**
+	 * Revoke an access grant
+	 */
+	async revokeAccessGrant(grantId: string): Promise<void> {
+		await this.delete(`/access-grants/${grantId}`);
+	}
 }
 
 // ============================================================================
@@ -674,6 +719,37 @@ export interface OAuthAppTestResult {
 	latencyMs: number;
 	error?: string;
 	scopes?: string[];
+}
+
+// Access Grants (Private Workflows)
+export interface DeveloperWorkflow {
+	id: string;
+	name: string;
+	visibility?: 'public' | 'private' | 'unlisted';
+	status: string;
+	createdAt: string;
+}
+
+export interface WorkflowAccessGrant {
+	id: string;
+	integrationId: string;
+	grantType: 'user' | 'email_domain' | 'access_code';
+	grantValue: string;
+	maxInstalls: number | null;
+	expiresAt: string | null;
+	grantedBy: string;
+	notes: string | null;
+	createdAt: string;
+	revokedAt: string | null;
+}
+
+export interface CreateAccessGrantOptions {
+	integrationId: string;
+	grantType: 'user' | 'email_domain' | 'access_code';
+	grantValue: string;
+	maxInstalls?: number;
+	expiresAt?: Date;
+	notes?: string;
 }
 
 // ============================================================================

@@ -19,6 +19,11 @@ import { workflowValidateCommand } from './commands/workflow/validate.js';
 import { workflowForkCommand } from './commands/workflow/fork.js';
 import { workflowLineageCommand } from './commands/workflow/lineage.js';
 import { workflowDeleteCommand } from './commands/workflow/delete.js';
+import {
+	workflowAccessGrantListCommand,
+	workflowAccessGrantCreateCommand,
+	workflowAccessGrantRevokeCommand,
+} from './commands/workflow/access-grants.js';
 import { oauthConnectCommand } from './commands/oauth/connect.js';
 import { oauthListCommand } from './commands/oauth/list.js';
 import { oauthDisconnectCommand } from './commands/oauth/disconnect.js';
@@ -161,6 +166,42 @@ workflowCommand
 	.option('--keep-data', 'Keep stored data (only remove workflow)')
 	.action(handleCommand(async (workflowId: string, options: any) => {
 		await workflowDeleteCommand(workflowId, options);
+	}));
+
+// Access Grants subcommand (Private Workflows)
+const accessGrantsCommand = workflowCommand.command('access-grants').description('Manage private workflow access');
+
+accessGrantsCommand
+	.command('list [workflow-id]')
+	.description('List access grants for a workflow')
+	.action(handleCommand(async (workflowId: string | undefined, options: any) => {
+		await workflowAccessGrantListCommand(workflowId, options);
+	}));
+
+accessGrantsCommand
+	.command('create [workflow-id]')
+	.description('Create an access grant for a private workflow')
+	.option('--grant-type <type>', 'Grant type: user, email_domain, access_code')
+	.option('--grant-value <value>', 'Email, domain, or access code')
+	.option('--max-installs <n>', 'Maximum installations allowed', parseInt)
+	.option('--expires <date>', 'Expiration date (ISO format)')
+	.option('--notes <text>', 'Internal notes')
+	.action(handleCommand(async (workflowId: string | undefined, options: any) => {
+		await workflowAccessGrantCreateCommand(workflowId, {
+			grantType: options.grantType,
+			grantValue: options.grantValue,
+			maxInstalls: options.maxInstalls,
+			expires: options.expires,
+			notes: options.notes,
+		});
+	}));
+
+accessGrantsCommand
+	.command('revoke [grant-id]')
+	.description('Revoke an access grant')
+	.option('--workflow-id <id>', 'Workflow ID (for lookup)')
+	.action(handleCommand(async (grantId: string | undefined, options: any) => {
+		await workflowAccessGrantRevokeCommand(grantId, { workflowId: options.workflowId });
 	}));
 
 // ============================================================================

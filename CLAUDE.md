@@ -128,3 +128,92 @@ Before committing, verify:
 - [ ] Tests written
 - [ ] Zuhandenheit: Does the tool recede?
 - [ ] Weniger, aber besser: Can anything be removed?
+
+## Private Workflows
+
+Private workflows are organization-specific workflows that require WORKWAY authentication.
+
+### Unified Workflows Page
+
+All workflows (public marketplace + private organization) appear at:
+```
+workway.co/workflows
+```
+
+This follows Zuhandenheit - users see their workflows in one place, not scattered across separate dashboards.
+
+### Private Workflow Structure
+
+```typescript
+export const metadata = {
+  id: 'my-workflow',
+  visibility: 'private' as const,
+  accessGrants: [
+    { type: 'email_domain' as const, value: 'example.com' },
+  ],
+  analyticsUrl: 'https://workway.co/workflows/private/my-workflow/analytics',
+  setupUrl: 'https://example-worker.workway.co/setup',
+};
+```
+
+### URL Patterns
+
+| Purpose | URL Pattern |
+|---------|-------------|
+| All Workflows | `workway.co/workflows` |
+| Private Workflow Analytics | `workway.co/workflows/private/{workflow-id}/analytics` |
+| Worker Setup | `{worker-domain}.workway.co/setup/{user-id}` |
+| Worker Data API | `{worker-domain}.workway.co/dashboard-data/{user-id}` |
+
+### Anti-Pattern: Separate Dashboards
+
+**Don't** create separate dashboard UIs for each workflow. Instead:
+- Analytics live at `workway.co/workflows/private/{workflow-id}/analytics`
+- Worker endpoints provide data APIs only (no HTML)
+- All UI is in the unified `workway.co/workflows` page
+
+## Exception Patterns
+
+### Integration Gap Workarounds
+
+Sometimes OAuth APIs don't provide the data you need. When building workarounds:
+
+**When to use a workaround pattern:**
+- OAuth genuinely doesn't provide required data (e.g., Zoom transcripts)
+- No canonical alternative exists
+- The outcome justifies the complexity
+
+**Requirements for workaround workflows:**
+1. Mark with `experimental: true` and `requiresCustomInfrastructure: true`
+2. Document trade-offs prominently in the file header
+3. Use honest naming (e.g., `meeting-intelligence-workaround`, not `meeting-intelligence-quick-start`)
+4. Set `zuhandenheit.worksOutOfBox: false` - don't pretend it's seamless
+5. Provide upgrade path to canonical workflow when API improves
+
+**What workaround workflows should NOT do:**
+- Claim to be "quick" or "easy" when they require custom infrastructure
+- Hide mechanism complexity from developers
+- Be featured or recommended over canonical alternatives
+
+**Example: `meeting-intelligence-workaround`**
+
+This workflow exists because Zoom OAuth doesn't provide transcript access. It requires:
+- Custom Cloudflare Worker (`zoom-cookie-sync`)
+- Durable Objects for session storage
+- Puppeteer for browser scraping
+- Manual bookmarklet authentication (24-hour expiration)
+
+This is ~1,345 lines vs ~300 for a typical OAuth workflow. It's marked `experimental` and points users to upgrade when OAuth improves.
+
+**The canonical workflow pattern remains:**
+```typescript
+export default defineWorkflow({
+  integrations: [{ service: 'zoom', scopes: [...] }],
+  async execute({ integrations }) {
+    const transcript = await integrations.zoom.getTranscript(meetingId);
+    // Done. Tool recedes.
+  }
+});
+```
+
+Workarounds are exceptions, not templates.

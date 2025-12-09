@@ -123,6 +123,40 @@ export interface WorkflowMetadata {
 	 * See: docs/OUTCOME_TAXONOMY.md
 	 */
 	pathway?: PathwayMetadata;
+
+	/**
+	 * Workflow visibility
+	 *
+	 * - public: Visible in marketplace to all users
+	 * - private: Only visible to users with access grants (organization-specific)
+	 * - unlisted: Accessible via direct link, not shown in marketplace
+	 *
+	 * Default: 'public'
+	 */
+	visibility?: 'public' | 'private' | 'unlisted';
+
+	/**
+	 * Access grants for private workflows
+	 *
+	 * When visibility is 'private', these grants determine who can see/install:
+	 * - email_domain: All users with matching email domain (e.g., '@halfdozen.co')
+	 * - user: Specific user by email
+	 * - access_code: Anyone with the code
+	 *
+	 * Managed via CLI: workway workflow access-grants create
+	 */
+	accessGrants?: Array<{
+		type: 'user' | 'email_domain' | 'access_code';
+		value: string;
+	}>;
+
+	/**
+	 * Dashboard URL for workflow status/management
+	 *
+	 * For private workflows, this URL is shown to granted users
+	 * in their WORKWAY dashboard under "Your Organization".
+	 */
+	dashboardUrl?: string;
 }
 
 // ============================================================================

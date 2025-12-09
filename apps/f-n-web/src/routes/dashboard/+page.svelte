@@ -1,0 +1,373 @@
+<script lang="ts">
+	import type { PageData } from './$types';
+	import { Mic, BookOpen, Check, X, ChevronDown, Loader2 } from 'lucide-svelte';
+
+	interface TranscriptItem {
+		id: string;
+		title: string;
+		date: number;
+		synced: boolean;
+	}
+
+	interface DatabaseItem {
+		id: string;
+		title: string;
+	}
+
+	interface SyncStatus {
+		jobId?: string;
+		status?: string;
+		progress?: number;
+	}
+
+	let { data }: { data: PageData } = $props();
+
+	// Tool recedes when fully connected
+	const bothConnected = $derived(data.connections.fireflies && data.connections.notion);
+
+	// Sync state
+	let syncing = $state(false);
+	let progress = $state(0);
+	let total = $state(0);
+	let selectedTranscripts = $state<string[]>([]);
+	let selectedDatabase = $state<string | null>(null);
+
+	// Data from API
+	let transcripts = $state<TranscriptItem[]>([]);
+	let databases = $state<DatabaseItem[]>([]);
+	let loadingTranscripts = $state(false);
+	let loadingDatabases = $state(false);
+
+	// Subscription limits
+	const limits: Record<string, number> = {
+		free: 5,
+		pro: 100,
+		unlimited: Infinity
+	};
+
+	// Load transcripts when Fireflies is connected
+	$effect(() => {
+		if (data.connections.fireflies && !transcripts.length) {
+			loadTranscripts();
+		}
+	});
+
+	// Load databases when Notion is connected
+	$effect(() => {
+		if (data.connections.notion && !databases.length) {
+			loadDatabases();
+		}
+	});
+
+	async function loadTranscripts() {
+		loadingTranscripts = true;
+		try {
+			const res = await fetch('/api/transcripts');
+			const json = await res.json() as { transcripts?: TranscriptItem[] };
+			if (json.transcripts) {
+				transcripts = json.transcripts;
+			}
+		} catch (e) {
+			console.error('Failed to load transcripts:', e);
+		}
+		loadingTranscripts = false;
+	}
+
+	async function loadDatabases() {
+		loadingDatabases = true;
+		try {
+			const res = await fetch('/api/notion/databases');
+			const json = await res.json() as { databases?: DatabaseItem[] };
+			if (json.databases) {
+				databases = json.databases;
+			}
+		} catch (e) {
+			console.error('Failed to load databases:', e);
+		}
+		loadingDatabases = false;
+	}
+
+	function toggleTranscript(id: string) {
+		if (selectedTranscripts.includes(id)) {
+			selectedTranscripts = selectedTranscripts.filter((t) => t !== id);
+		} else {
+			selectedTranscripts = [...selectedTranscripts, id];
+		}
+	}
+
+	function selectAllUnsynced() {
+		selectedTranscripts = transcripts.filter((t) => !t.synced).map((t) => t.id);
+	}
+
+	async function startSync() {
+		if (!selectedDatabase || !selectedTranscripts.length) return;
+
+		syncing = true;
+		progress = 0;
+		total = selectedTranscripts.length;
+
+		try {
+			const res = await fetch('/api/sync', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					databaseId: selectedDatabase,
+					transcriptIds: selectedTranscripts
+				})
+			});
+
+			const { jobId } = await res.json() as SyncStatus;
+
+			// Poll for progress
+			const pollInterval = setInterval(async () => {
+				const statusRes = await fetch(`/api/sync?jobId=${jobId}`);
+				const status = await statusRes.json() as SyncStatus;
+
+				progress = status.progress || 0;
+
+				if (status.status === 'completed' || status.status === 'failed') {
+					clearInterval(pollInterval);
+					syncing = false;
+
+					if (status.status === 'completed') {
+						// Refresh transcripts to update synced status
+						await loadTranscripts();
+						selectedTranscripts = [];
+					}
+				}
+			}, 1000);
+
+		} catch (e) {
+			console.error('Sync failed:', e);
+			syncing = false;
+		}
+	}
+</script>
+
+<div class="max-w-4xl mx-auto px-4 py-8">
+	<div class="flex items-center justify-between mb-8">
+		<h1 class="text-2xl font-bold">Sync your meetings</h1>
+		<div class="text-sm text-[var(--brand-text-muted)]">
+			{data.subscription?.sync_count || 0} / {limits[data.subscription?.tier || 'free'] === Infinity ? '∞' : limits[data.subscription?.tier || 'free']} syncs this month
+		</div>
+	</div>
+
+	<!-- Connection Status — only show when setup needed (tool recedes when ready) -->
+	{#if !bothConnected}
+		<div class="grid md:grid-cols-2 gap-4 mb-8">
+			<!-- Fireflies Connection -->
+			<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-6 bg-[var(--brand-surface-elevated)]">
+				<div class="flex items-center justify-between mb-4">
+					<div class="flex items-center gap-3">
+						<div class="w-10 h-10 bg-purple-500/10 rounded-full flex items-center justify-center text-purple-500">
+							<Mic size={20} />
+						</div>
+						<div>
+							<h3 class="font-semibold">Fireflies</h3>
+							<p class="text-sm text-[var(--brand-text-muted)]">
+								{data.connections.fireflies ? 'Connected' : 'Not connected'}
+							</p>
+						</div>
+					</div>
+					{#if data.connections.fireflies}
+						<span class="w-2 h-2 bg-green-500 rounded-full"></span>
+					{/if}
+				</div>
+				{#if !data.connections.fireflies}
+					<button
+						class="w-full border border-[var(--brand-border)] py-2 rounded-[var(--brand-radius)] text-sm font-medium hover:bg-[var(--brand-surface)] transition-colors"
+						onclick={() => {/* TODO: Open Fireflies connect modal */}}
+					>
+						Connect Fireflies
+					</button>
+				{:else}
+					<form method="POST" action="/api/integrations/fireflies/disconnect">
+						<button
+							type="submit"
+							class="w-full text-sm text-[var(--brand-text-muted)] hover:text-red-500 transition-colors"
+						>
+							Disconnect
+						</button>
+					</form>
+				{/if}
+			</div>
+
+			<!-- Notion Connection -->
+			<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-6 bg-[var(--brand-surface-elevated)]">
+				<div class="flex items-center justify-between mb-4">
+					<div class="flex items-center gap-3">
+						<div class="w-10 h-10 bg-neutral-500/10 rounded-full flex items-center justify-center text-neutral-500">
+							<BookOpen size={20} />
+						</div>
+						<div>
+							<h3 class="font-semibold">Notion</h3>
+							<p class="text-sm text-[var(--brand-text-muted)]">
+								{#if data.connections.notion}
+									{data.connections.notionWorkspace || 'Connected'}
+								{:else}
+									Not connected
+								{/if}
+							</p>
+						</div>
+					</div>
+					{#if data.connections.notion}
+						<span class="w-2 h-2 bg-green-500 rounded-full"></span>
+					{/if}
+				</div>
+				{#if !data.connections.notion}
+					<a
+						href="/api/integrations/notion/connect"
+						class="block w-full border border-[var(--brand-border)] py-2 rounded-[var(--brand-radius)] text-sm font-medium text-center hover:bg-[var(--brand-surface)] transition-colors"
+					>
+						Connect Notion
+					</a>
+				{:else}
+					<form method="POST" action="/api/integrations/notion/disconnect">
+						<button
+							type="submit"
+							class="w-full text-sm text-[var(--brand-text-muted)] hover:text-red-500 transition-colors"
+						>
+							Disconnect
+						</button>
+					</form>
+				{/if}
+			</div>
+		</div>
+	{/if}
+
+	<!-- Sync Interface -->
+	{#if data.connections.fireflies && data.connections.notion}
+		<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-6 bg-[var(--brand-surface-elevated)]">
+			<!-- Database Selection -->
+			<div class="mb-6">
+				<label for="database" class="block text-sm font-medium mb-2">Notion Database</label>
+				{#if loadingDatabases}
+					<div class="text-sm text-[var(--brand-text-muted)]">Loading databases...</div>
+				{:else}
+					<select
+						id="database"
+						bind:value={selectedDatabase}
+						class="w-full px-4 py-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] bg-[var(--brand-surface)]"
+					>
+						<option value={null}>Select a database</option>
+						{#each databases as db}
+							<option value={db.id}>{db.title}</option>
+						{/each}
+					</select>
+				{/if}
+			</div>
+
+			<!-- Transcript Selection -->
+			<div class="mb-6">
+				<div class="flex items-center justify-between mb-2">
+					<span class="text-sm font-medium">Transcripts</span>
+					<button
+						type="button"
+						onclick={selectAllUnsynced}
+						class="text-xs text-[var(--brand-accent)] hover:underline"
+					>
+						Select all unsynced
+					</button>
+				</div>
+
+				{#if loadingTranscripts}
+					<div class="text-sm text-[var(--brand-text-muted)]">Loading transcripts...</div>
+				{:else if transcripts.length === 0}
+					<div class="text-sm text-[var(--brand-text-muted)]">No transcripts found</div>
+				{:else}
+					<div class="max-h-64 overflow-y-auto border border-[var(--brand-border)] rounded-[var(--brand-radius)]">
+						{#each transcripts as transcript}
+							<label
+								class="flex items-center gap-3 p-3 border-b border-[var(--brand-border)] last:border-b-0 cursor-pointer hover:bg-[var(--brand-surface)] transition-colors"
+								class:opacity-50={transcript.synced}
+							>
+								<input
+									type="checkbox"
+									checked={selectedTranscripts.includes(transcript.id)}
+									onchange={() => toggleTranscript(transcript.id)}
+									disabled={transcript.synced}
+									class="rounded"
+								/>
+								<div class="flex-1 min-w-0">
+									<div class="font-medium truncate">{transcript.title}</div>
+									<div class="text-xs text-[var(--brand-text-muted)] flex items-center gap-1">
+										{new Date(transcript.date).toLocaleDateString()}
+										{#if transcript.synced}
+											<span class="ml-2 text-[var(--brand-success)] flex items-center gap-1">
+												<Check size={12} /> Synced
+											</span>
+										{/if}
+									</div>
+								</div>
+							</label>
+						{/each}
+					</div>
+				{/if}
+			</div>
+
+			<!-- Sync button -->
+			<div class="flex items-center justify-between">
+				<div class="text-sm text-[var(--brand-text-muted)]">
+					{selectedTranscripts.length} transcript{selectedTranscripts.length === 1 ? '' : 's'} selected
+				</div>
+				<button
+					onclick={startSync}
+					disabled={syncing || !selectedDatabase || selectedTranscripts.length === 0}
+					class="bg-[var(--brand-primary)] text-[var(--brand-surface)] px-6 py-2 rounded-[var(--brand-radius)] font-medium hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+				>
+					{syncing ? `Syncing ${progress}/${total}...` : 'Start sync'}
+				</button>
+			</div>
+
+			<!-- Progress bar -->
+			{#if syncing}
+				<div class="mt-4">
+					<div class="h-2 bg-[var(--brand-border)] rounded-full overflow-hidden">
+						<div
+							class="h-full bg-[var(--brand-accent)] transition-all duration-300"
+							style="width: {total > 0 ? (progress / total) * 100 : 0}%"
+						></div>
+					</div>
+				</div>
+			{/if}
+		</div>
+	{:else}
+		<!-- Not fully connected -->
+		<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-8 text-center bg-[var(--brand-surface-elevated)]">
+			<p class="text-[var(--brand-text-muted)]">
+				Connect both Fireflies and Notion to start syncing
+			</p>
+		</div>
+	{/if}
+
+	<!-- Recent Jobs -->
+	{#if data.recentJobs.length > 0}
+		<div class="mt-8">
+			<h2 class="text-lg font-semibold mb-4">Recent syncs</h2>
+			<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] divide-y divide-[var(--brand-border)]">
+				{#each data.recentJobs as job}
+					<div class="p-4 flex items-center justify-between">
+						<div>
+							<div class="font-medium">{job.database_name || 'Unknown database'}</div>
+							<div class="text-sm text-[var(--brand-text-muted)]">
+								{new Date(job.created_at).toLocaleString()} · {job.progress}/{job.total_transcripts} transcripts
+							</div>
+						</div>
+						<span
+							class="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 {job.status === 'completed' ? 'bg-[var(--brand-success)]/10 text-[var(--brand-success)]' : job.status === 'failed' ? 'bg-[var(--brand-error)]/10 text-[var(--brand-error)]' : job.status === 'running' ? 'bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]' : 'bg-neutral-500/10 text-neutral-500'}"
+						>
+							{#if job.status === 'completed'}
+								<Check size={12} />
+							{:else if job.status === 'running'}
+								<Loader2 size={12} class="animate-spin" />
+							{:else if job.status === 'failed'}
+								<X size={12} />
+							{/if}
+							{job.status}
+						</span>
+					</div>
+				{/each}
+			</div>
+		</div>
+	{/if}
+</div>

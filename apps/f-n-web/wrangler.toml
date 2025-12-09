@@ -1,0 +1,23 @@
+name = "f-n-web"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".svelte-kit/cloudflare"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "f-n-production"
+database_id = "4ef3e141-920c-48c9-9f72-17e93b6c8c91"
+
+# KV Namespaces
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "1694af53ec53403e8352e6857c7c232e"
+
+[[kv_namespaces]]
+binding = "CACHE"
+id = "3ef3373d79d44564a9582fc53d4cae49"
+
+[vars]
+ENVIRONMENT = "production"
+SITE_URL = "https://fn.workway.co"

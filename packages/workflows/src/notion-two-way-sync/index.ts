@@ -16,12 +16,26 @@
  * Integrations: Notion (x2 workspaces via separate tokens)
  * Trigger: Notion webhook (page.created, page.properties.updated)
  *
+ * ## Setup Requirements
+ *
+ * This workflow requires webhooks to be configured manually:
+ * 1. Create Notion integration tokens for both workspaces
+ * 2. Configure webhooks via Notion API or use polling fallback
+ * 3. Point webhooks to your WORKWAY webhook endpoint
+ *
+ * ## Experimental Status
+ *
+ * This workflow is marked experimental because:
+ * - Notion webhooks require manual configuration
+ * - Cross-workspace sync patterns are complex
+ * - Loop prevention needs real-world testing
+ *
  * @see https://developers.notion.com/reference/webhooks
  */
 
 import { defineWorkflow, webhook } from '@workwayco/sdk';
 import { AIModels } from '@workwayco/sdk';
-import { Notion } from '@workwayco/integrations/notion';
+import { Notion } from '@workwayco/integrations';
 
 // ============================================================================
 // TYPES
@@ -136,103 +150,49 @@ export default defineWorkflow({
 	],
 
 	inputs: {
-		// Client workspace configuration
+		// Essential: Client workspace configuration
 		clientNotionToken: {
 			type: 'string',
-			label: 'Client Notion Integration Token',
+			label: 'Client Notion Token',
 			required: true,
-			description: 'Integration token for the client workspace (from Notion integrations page)',
+			description: 'Integration token for client workspace',
 			placeholder: 'secret_...',
 		},
 
 		clientDatabase: {
 			type: 'string',
-			label: 'Client Support Database ID',
+			label: 'Client Database ID',
 			required: true,
-			description: 'Database ID in client workspace where support items are created',
+			description: 'Database ID in client workspace',
 			placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
 		},
 
-		// Internal workspace configuration
+		// Essential: Internal workspace configuration
 		internalNotionToken: {
 			type: 'string',
-			label: 'Internal Notion Integration Token',
+			label: 'Internal Notion Token',
 			required: true,
-			description: 'Integration token for your internal workspace',
+			description: 'Integration token for your workspace',
 			placeholder: 'secret_...',
 		},
 
 		internalDatabase: {
 			type: 'string',
-			label: 'Internal Tickets Database ID',
+			label: 'Internal Database ID',
 			required: true,
-			description: 'Database ID in your workspace to receive tickets',
+			description: 'Database ID in your workspace',
 			placeholder: 'xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
 		},
 
-		// Property mappings (simplified as JSON string)
-		propertyMappingsJson: {
-			type: 'string',
-			label: 'Property Mappings (JSON)',
-			description: 'How properties map between workspaces',
-			default: JSON.stringify([
-				{ source: 'Title', destination: 'Title', bidirectional: false },
-				{ source: 'Description', destination: 'Description', bidirectional: false, transform: 'summarize' },
-				{ source: 'Status', destination: 'Status', bidirectional: true, transform: 'status_map' },
-				{ source: 'Priority', destination: 'Priority', bidirectional: true },
-				{ source: 'Resolution', destination: 'Resolution', bidirectional: true },
-			]),
-		},
-
-		// Status mapping (JSON string for client -> internal mapping)
+		// Essential: Status mapping (reverse is auto-derived)
 		statusMapping: {
 			type: 'string',
 			label: 'Status Mapping (JSON)',
-			description: 'Map client statuses to internal statuses as JSON object',
+			description: 'Map client → internal statuses. Reverse mapping is auto-derived.',
 			default: '{"New":"Incoming","In Progress":"Active","Waiting":"Blocked","Resolved":"Done","Closed":"Archived"}',
 		},
 
-		// Reverse status mapping (JSON string for internal -> client mapping)
-		reverseStatusMapping: {
-			type: 'string',
-			label: 'Reverse Status Mapping (JSON)',
-			description: 'Map internal statuses back to client statuses as JSON object',
-			default: '{"Incoming":"New","Active":"In Progress","Blocked":"Waiting","Done":"Resolved","Archived":"Closed"}',
-		},
-
-		// Sync behavior configuration
-		syncDirection: {
-			type: 'select',
-			label: 'Sync Direction',
-			options: ['client_to_internal', 'internal_to_client', 'bidirectional'],
-			default: 'bidirectional',
-			description: 'Which direction(s) to sync',
-		},
-
-		// Loop prevention window (milliseconds)
-		loopPreventionWindow: {
-			type: 'number',
-			label: 'Loop Prevention Window (ms)',
-			default: 5000,
-			description: 'Ignore events within this window after a sync to prevent loops',
-		},
-
-		// Reference property names (for storing sync IDs)
-		clientRefProperty: {
-			type: 'string',
-			label: 'Client Reference Property',
-			default: 'Internal Ticket ID',
-			description: 'Property in client database to store internal page ID',
-		},
-
-		internalRefProperty: {
-			type: 'string',
-			label: 'Internal Reference Property',
-			default: 'Client Page ID',
-			description: 'Property in internal database to store client page ID',
-		},
-
-		// AI summarization toggle
+		// Optional: AI summarization (only non-essential config exposed)
 		enableSummarization: {
 			type: 'boolean',
 			label: 'AI Summarization',
@@ -260,10 +220,23 @@ export default defineWorkflow({
 		const pageId = event.page_id || event.id;
 		const parentDatabaseId = event.parent?.database_id;
 
-		// Parse JSON inputs
-		const propertyMappings: PropertyMapping[] = JSON.parse(inputs.propertyMappingsJson || '[]');
+		// Sensible defaults (Weniger, aber besser - fewer inputs, smart defaults)
+		const LOOP_PREVENTION_WINDOW = 5000; // 5 seconds
+		const CLIENT_REF_PROPERTY = 'Internal Ticket ID';
+		const INTERNAL_REF_PROPERTY = 'Client Page ID';
+
+		// Default property mappings (common support ticket pattern)
+		const propertyMappings: PropertyMapping[] = [
+			{ source: 'Title', destination: 'Title', bidirectional: false },
+			{ source: 'Description', destination: 'Description', bidirectional: false, transform: 'summarize' },
+			{ source: 'Status', destination: 'Status', bidirectional: true, transform: 'status_map' },
+			{ source: 'Priority', destination: 'Priority', bidirectional: true },
+			{ source: 'Resolution', destination: 'Resolution', bidirectional: true },
+		];
+
+		// Parse status mapping and auto-derive reverse
 		const statusMap = JSON.parse(inputs.statusMapping || '{}');
-		const reverseStatusMap = JSON.parse(inputs.reverseStatusMapping || '{}');
+		const reverseStatusMap = deriveReverseMapping(statusMap);
 
 		// Determine source workspace
 		const isFromClient = parentDatabaseId === inputs.clientDatabase;
@@ -290,11 +263,11 @@ export default defineWorkflow({
 		if (recentSync) {
 			const timeSinceLastSync = Date.now() - new Date(recentSync.lastSyncedAt).getTime();
 
-			if (timeSinceLastSync < inputs.loopPreventionWindow) {
+			if (timeSinceLastSync < LOOP_PREVENTION_WINDOW) {
 				return {
 					success: true,
 					skipped: true,
-					reason: `Within loop prevention window (${timeSinceLastSync}ms < ${inputs.loopPreventionWindow}ms)`,
+					reason: `Within loop prevention window (${timeSinceLastSync}ms < ${LOOP_PREVENTION_WINDOW}ms)`,
 					mapping: recentSync,
 				};
 			}
@@ -316,18 +289,11 @@ export default defineWorkflow({
 		}
 
 		// ========================================================================
-		// SYNC DIRECTION CHECK
+		// SYNC DIRECTION: Always bidirectional (Weniger, aber besser)
 		// ========================================================================
-
-		const direction = inputs.syncDirection;
-
-		if (direction === 'client_to_internal' && isFromInternal) {
-			return { success: true, skipped: true, reason: 'Internal->Client sync disabled' };
-		}
-
-		if (direction === 'internal_to_client' && isFromClient) {
-			return { success: true, skipped: true, reason: 'Client->Internal sync disabled' };
-		}
+		// Note: Direction control removed as single config. Bidirectional sync
+		// is the core value proposition. If one-way sync needed, create a
+		// separate simpler workflow.
 
 		// ========================================================================
 		// CREATE NOTION CLIENTS
@@ -360,7 +326,7 @@ export default defineWorkflow({
 
 		let mapping = await storage.get<SyncMapping>(`mapping:${pageId}`);
 
-		const refProperty = isFromClient ? inputs.clientRefProperty : inputs.internalRefProperty;
+		const refProperty = isFromClient ? CLIENT_REF_PROPERTY : INTERNAL_REF_PROPERTY;
 		const linkedPageId = extractRichTextProperty(page?.properties?.[refProperty]);
 
 		if (!mapping && linkedPageId) {
@@ -426,81 +392,115 @@ export default defineWorkflow({
 		}
 
 		// ========================================================================
-		// CREATE OR UPDATE DESTINATION PAGE
+		// CREATE OR UPDATE DESTINATION PAGE (with partial sync recovery)
 		// ========================================================================
 
 		let result;
+		let partialSyncState: {
+			destPageCreated?: boolean;
+			destPageId?: string;
+			mappingStored?: boolean;
+			backRefUpdated?: boolean;
+		} = {};
 
-		if (eventType === 'created' && !mapping) {
-			// Create new page in destination workspace
-			const destDatabase = isFromClient ? inputs.internalDatabase : inputs.clientDatabase;
+		try {
+			if (eventType === 'created' && !mapping) {
+				// Create new page in destination workspace
+				const destDatabase = isFromClient ? inputs.internalDatabase : inputs.clientDatabase;
 
-			// Add reference property pointing back to source
-			const backRefProperty = isFromClient ? inputs.internalRefProperty : inputs.clientRefProperty;
-			destProperties[backRefProperty] = {
-				rich_text: [{ text: { content: pageId } }],
-			};
-
-			result = await destNotion.createPage({
-				parentDatabaseId: destDatabase,
-				properties: destProperties,
-			});
-
-			if (result.success) {
-				// Store mapping
-				const newMapping: SyncMapping = {
-					clientPageId: isFromClient ? pageId : result.data.id,
-					internalPageId: isFromClient ? result.data.id : pageId,
-					lastSyncedAt: new Date().toISOString(),
-					lastSyncDirection: isFromClient ? 'client_to_internal' : 'internal_to_client',
-					syncVersion: 1,
+				// Add reference property pointing back to source
+				const backRefProperty = isFromClient ? INTERNAL_REF_PROPERTY : CLIENT_REF_PROPERTY;
+				destProperties[backRefProperty] = {
+					rich_text: [{ text: { content: pageId } }],
 				};
 
-				await storage.set(`mapping:${pageId}`, newMapping);
-				await storage.set(`mapping:${result.data.id}`, newMapping);
-				await storage.set(syncKey, newMapping);
-
-				// Update source page with reference to new destination page
-				const sourceRefProperty = isFromClient ? inputs.clientRefProperty : inputs.internalRefProperty;
-				await sourceNotion.updatePage({
-					pageId,
-					properties: {
-						[sourceRefProperty]: {
-							rich_text: [{ text: { content: result.data.id } }],
-						},
-					},
+				result = await destNotion.createPage({
+					parentDatabaseId: destDatabase,
+					properties: destProperties,
 				});
+
+				if (result.success) {
+					partialSyncState.destPageCreated = true;
+					partialSyncState.destPageId = result.data.id;
+
+					// Store mapping
+					const newMapping: SyncMapping = {
+						clientPageId: isFromClient ? pageId : result.data.id,
+						internalPageId: isFromClient ? result.data.id : pageId,
+						lastSyncedAt: new Date().toISOString(),
+						lastSyncDirection: isFromClient ? 'client_to_internal' : 'internal_to_client',
+						syncVersion: 1,
+					};
+
+					await storage.set(`mapping:${pageId}`, newMapping);
+					await storage.set(`mapping:${result.data.id}`, newMapping);
+					await storage.set(syncKey, newMapping);
+					partialSyncState.mappingStored = true;
+
+					// Update source page with reference to new destination page
+					const sourceRefProperty = isFromClient ? CLIENT_REF_PROPERTY : INTERNAL_REF_PROPERTY;
+					const backRefResult = await sourceNotion.updatePage({
+						pageId,
+						properties: {
+							[sourceRefProperty]: {
+								rich_text: [{ text: { content: result.data.id } }],
+							},
+						},
+					});
+					partialSyncState.backRefUpdated = backRefResult.success;
+				}
+			} else {
+				// Update existing page
+				const destPageId = isFromClient ? mapping?.internalPageId : mapping?.clientPageId;
+
+				if (!destPageId) {
+					// Recovery: Check if we have a partial state from previous failed sync
+					const recoveryKey = `recovery:${pageId}`;
+					const recoveryState = await storage.get<typeof partialSyncState>(recoveryKey);
+
+					if (recoveryState?.destPageId) {
+						// Resume from partial state
+						result = await destNotion.updatePage({
+							pageId: recoveryState.destPageId,
+							properties: destProperties,
+						});
+						await storage.delete(recoveryKey);
+					} else {
+						return {
+							success: false,
+							error: 'No mapping found for update event',
+							pageId,
+							source,
+							hint: 'This page may need to be manually linked or re-created',
+						};
+					}
+				} else {
+					result = await destNotion.updatePage({
+						pageId: destPageId,
+						properties: destProperties,
+					});
+				}
+
+				if (result?.success && mapping) {
+					const updatedMapping: SyncMapping = {
+						...mapping,
+						lastSyncedAt: new Date().toISOString(),
+						lastSyncDirection: isFromClient ? 'client_to_internal' : 'internal_to_client',
+						syncVersion: mapping.syncVersion + 1,
+					};
+
+					const destPageId = isFromClient ? mapping.internalPageId : mapping.clientPageId;
+					await storage.set(`mapping:${pageId}`, updatedMapping);
+					await storage.set(`mapping:${destPageId}`, updatedMapping);
+					await storage.set(syncKey, updatedMapping);
+				}
 			}
-		} else {
-			// Update existing page
-			const destPageId = isFromClient ? mapping?.internalPageId : mapping?.clientPageId;
-
-			if (!destPageId) {
-				return {
-					success: false,
-					error: 'No mapping found for update event',
-					pageId,
-					source,
-				};
+		} catch (error) {
+			// Store partial state for recovery on next sync attempt
+			if (partialSyncState.destPageCreated && !partialSyncState.mappingStored) {
+				await storage.set(`recovery:${pageId}`, partialSyncState);
 			}
-
-			result = await destNotion.updatePage({
-				pageId: destPageId,
-				properties: destProperties,
-			});
-
-			if (result.success && mapping) {
-				const updatedMapping: SyncMapping = {
-					...mapping,
-					lastSyncedAt: new Date().toISOString(),
-					lastSyncDirection: isFromClient ? 'client_to_internal' : 'internal_to_client',
-					syncVersion: mapping.syncVersion + 1,
-				};
-
-				await storage.set(`mapping:${pageId}`, updatedMapping);
-				await storage.set(`mapping:${destPageId}`, updatedMapping);
-				await storage.set(syncKey, updatedMapping);
-			}
+			throw error;
 		}
 
 		// Mark as processed for idempotency
@@ -526,6 +526,7 @@ export default defineWorkflow({
 			destPageId: result.data?.id,
 			propertiesSynced: Object.keys(destProperties),
 			mapping: await storage.get<SyncMapping>(`mapping:${pageId}`),
+			partialSyncState: partialSyncState.backRefUpdated === false ? partialSyncState : undefined,
 		};
 	},
 });
@@ -533,6 +534,18 @@ export default defineWorkflow({
 // ============================================================================
 // HELPERS
 // ============================================================================
+
+/**
+ * Auto-derive reverse mapping from status mapping
+ * Less config for user - system handles the inversion
+ */
+function deriveReverseMapping(mapping: Record<string, string>): Record<string, string> {
+	const reverse: Record<string, string> = {};
+	for (const [key, value] of Object.entries(mapping)) {
+		reverse[value] = key;
+	}
+	return reverse;
+}
 
 /**
  * Extract plain text from a Notion rich_text property
@@ -558,7 +571,8 @@ function extractRichTextProperty(prop: any): string | undefined {
 export const metadata = {
 	id: 'notion-two-way-sync',
 	category: 'data-sync',
-	featured: true,
+	featured: false, // Not featured until tested in production
+	experimental: true, // Requires manual webhook setup, loop prevention needs testing
 	stats: { rating: 4.9, users: 0, reviews: 0 },
-	tags: ['notion', 'sync', 'bidirectional', 'support', 'tickets', 'cross-workspace'],
+	tags: ['notion', 'sync', 'bidirectional', 'support', 'tickets', 'cross-workspace', 'experimental'],
 };
