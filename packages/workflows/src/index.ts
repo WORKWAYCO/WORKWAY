@@ -33,7 +33,7 @@ export { default as invoiceGenerator } from './invoice-generator/index.js';
 
 // Meetings & Productivity
 export { default as meetingIntelligence } from './meeting-intelligence/index.js';
-export { default as meetingIntelligencePrivate } from './meeting-intelligence-private/index.js';
+export { default as meetingIntelligenceWorkaround } from './meeting-intelligence-workaround/index.js';
 export { default as meetingSummarizer } from './meeting-summarizer/index.js';
 export { default as meetingFollowupEngine } from './meeting-followup-engine/index.js';
 export { default as weeklyProductivityDigest } from './weekly-productivity-digest/index.js';
@@ -82,6 +82,9 @@ export { default as dealTracker } from './deal-tracker/index.js';
 // Task Management
 export { default as taskSyncBridge } from './task-sync-bridge/index.js';
 
+// Cross-Workspace Sync
+export { default as notionTwoWaySync } from './notion-two-way-sync/index.js';
+
 // Developer Tools
 export { default as githubToLinear } from './github-to-linear/index.js';
 export { default as prReviewNotifier } from './pr-review-notifier/index.js';
@@ -129,11 +132,13 @@ export const integrationPairs = {
 		outcome: 'Zoom meetings that write their own notes',
 		outcomeFrame: 'after_meetings',
 	},
-	// Quick Start (browser-based, no OAuth approval needed)
-	'zoom-quick:notion': {
-		workflowId: 'meeting-intelligence-private',
-		outcome: 'Meetings that document themselves (quick start)',
+	// Browser Workaround (when OAuth not available - NOT typical)
+	'zoom-browser:notion': {
+		workflowId: 'meeting-intelligence-workaround',
+		outcome: 'Meetings that document themselves (browser workaround)',
 		outcomeFrame: 'after_meetings',
+		experimental: true,
+		requiresCustomInfrastructure: true,
 	},
 	'zoom:slack': {
 		workflowId: 'meeting-intelligence',
@@ -311,6 +316,23 @@ export const integrationPairs = {
 		workflowId: 'task-sync-bridge',
 		outcome: 'Completed tasks logged to Notion',
 		outcomeFrame: 'when_tasks_complete',
+	},
+
+	// Cross-Workspace Sync (Notion to Notion)
+	'notion:notion': {
+		workflowId: 'notion-two-way-sync',
+		outcome: 'Support tickets that sync across workspaces',
+		outcomeFrame: 'when_tickets_arrive',
+	},
+	'notion:notion:support': {
+		workflowId: 'notion-two-way-sync',
+		outcome: 'Client tickets that manage themselves',
+		outcomeFrame: 'when_tickets_arrive',
+	},
+	'notion:notion:updates': {
+		workflowId: 'notion-two-way-sync',
+		outcome: 'Agentic updates between workspaces',
+		outcomeFrame: 'when_data_changes',
 	},
 
 	// Error Tracking & Incidents (WORKWAY Dogfooding!)
@@ -647,7 +669,7 @@ export const workflows = {
 	'onboarding': { id: 'onboarding', outcomeFrame: 'when_clients_onboard' },
 	'standup-bot': { id: 'standup-bot', outcomeFrame: 'every_morning' },
 	'meeting-intelligence': { id: 'meeting-intelligence', outcomeFrame: 'after_meetings' },
-	'meeting-intelligence-private': { id: 'meeting-intelligence-private', outcomeFrame: 'after_meetings' },
+	'meeting-intelligence-workaround': { id: 'meeting-intelligence-workaround', outcomeFrame: 'after_meetings', experimental: true },
 	'sales-lead-pipeline': { id: 'sales-lead-pipeline', outcomeFrame: 'when_leads_come_in' },
 	'client-onboarding': { id: 'client-onboarding', outcomeFrame: 'when_clients_onboard' },
 	'meeting-followup-engine': { id: 'meeting-followup-engine', outcomeFrame: 'after_calls' },
@@ -661,6 +683,8 @@ export const workflows = {
 	'form-response-hub': { id: 'form-response-hub', outcomeFrame: 'when_forms_submitted' },
 	'deal-tracker': { id: 'deal-tracker', outcomeFrame: 'when_deals_progress' },
 	'task-sync-bridge': { id: 'task-sync-bridge', outcomeFrame: 'when_tasks_complete' },
+	// Cross-Workspace Sync
+	'notion-two-way-sync': { id: 'notion-two-way-sync', outcomeFrame: 'when_tickets_arrive' },
 	'error-incident-manager': { id: 'error-incident-manager', outcomeFrame: 'when_errors_happen' },
 	'github-to-linear': { id: 'github-to-linear', outcomeFrame: 'when_issues_arrive' },
 	'pr-review-notifier': { id: 'pr-review-notifier', outcomeFrame: 'when_code_changes' },
