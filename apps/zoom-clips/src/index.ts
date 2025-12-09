@@ -95,6 +95,7 @@ export default {
         endpoints: {
           'GET /setup/:userId': 'Setup info (JSON) with extension instructions',
           'GET /health/:userId': 'Check session health and cookie status',
+          'GET /dashboard-data/:userId': 'Dashboard data for workway.co/workflows',
           'POST /upload-cookies/:userId': 'Upload Zoom cookies (from extension)',
           'GET /meetings/:userId': 'List AI Companion transcripts from Zoom Recordings',
           'GET /meeting-transcript/:userId?index=N': 'Extract transcript from meeting at index N',
@@ -187,6 +188,10 @@ export class ZoomSessionManager {
         return this.getMeetingTranscript(index);
       }
 
+      if (path === '/dashboard-data' && request.method === 'GET') {
+        return this.getDashboardData();
+      }
+
       return Response.json({ error: 'Unknown endpoint', path }, { status: 404 });
     } catch (error: any) {
       console.error('DO Error:', error);
@@ -228,6 +233,47 @@ export class ZoomSessionManager {
       cookieAge: Math.floor(cookieAge / 1000 / 60 / 60),
       expiresIn: Math.floor(expiresIn / 1000 / 60 / 60),
       needsAuth: false,
+    });
+  }
+
+  /**
+   * GET /dashboard-data - Get data for workway.co/workflows dashboard
+   * Returns connection status and execution stats in expected format
+   */
+  private async getDashboardData(): Promise<Response> {
+    const cookies = await this.state.storage.get<any[]>('zoom_cookies');
+    const uploadedAt = await this.state.storage.get<number>('cookies_uploaded_at');
+    const executions = await this.state.storage.get<Array<{
+      started_at: string;
+      completed_at?: string;
+      success: boolean;
+      source_url?: string;
+    }>>('executions') || [];
+
+    // Connection status
+    let connected = false;
+    let expiresIn = 0;
+
+    if (cookies && cookies.length > 0 && uploadedAt) {
+      const cookieAge = Date.now() - uploadedAt;
+      expiresIn = SESSION_EXPIRY_MS - cookieAge;
+      connected = expiresIn > 0;
+    }
+
+    // Calculate stats
+    const totalRuns = executions.length;
+    const successfulRuns = executions.filter(e => e.success).length;
+
+    return Response.json({
+      zoomConnection: {
+        connected,
+        expiresIn: expiresIn > 0 ? expiresIn : 0,
+      },
+      stats: {
+        totalRuns,
+        successfulRuns,
+      },
+      executions: executions.slice(0, 10), // Last 10 executions
     });
   }
 
