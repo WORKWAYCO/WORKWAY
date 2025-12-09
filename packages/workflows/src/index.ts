@@ -54,6 +54,9 @@ export { default as onboardingAutomation } from './onboarding/index.js';
 // aiNewsletter - DEPRECATED: Requires Gmail (app verification not completed)
 // feedbackAnalyzer - DEPRECATED: Requires Gmail (app verification not completed)
 
+// Email Sync (Private - BYOO)
+export { default as gmailToNotionPrivate } from './gmail-to-notion-private/index.js';
+
 // Dev Team & Data
 export { default as sprintProgressTracker } from './sprint-progress-tracker/index.js';
 export { default as spreadsheetSync } from './spreadsheet-sync/index.js';
@@ -178,6 +181,15 @@ export const integrationPairs = {
 		workflowId: 'meeting-to-action',
 		outcome: 'Meeting action items in Linear',
 		outcomeFrame: 'after_meetings',
+	},
+
+	// Email Sync (BYOO - Private)
+	'gmail:notion': {
+		workflowId: 'gmail-to-notion-private',
+		outcome: 'Important emails that become searchable knowledge',
+		outcomeFrame: 'when_emails_arrive',
+		experimental: true,
+		requiresBYOO: true,
 	},
 
 	// Payments
@@ -597,6 +609,10 @@ export const outcomeFrames = {
 		label: 'When tasks complete...',
 		description: 'Build a productivity journal automatically',
 	},
+	when_emails_arrive: {
+		label: 'When important emails arrive...',
+		description: 'Sync emails to your knowledge base',
+	},
 	when_errors_happen: {
 		label: 'When errors happen...',
 		description: 'Document incidents and alert your team',
@@ -683,6 +699,8 @@ export const workflows = {
 	'form-response-hub': { id: 'form-response-hub', outcomeFrame: 'when_forms_submitted' },
 	'deal-tracker': { id: 'deal-tracker', outcomeFrame: 'when_deals_progress' },
 	'task-sync-bridge': { id: 'task-sync-bridge', outcomeFrame: 'when_tasks_complete' },
+	// Email Sync (Private - BYOO)
+	'gmail-to-notion-private': { id: 'gmail-to-notion-private', outcomeFrame: 'when_emails_arrive', experimental: true },
 	// Cross-Workspace Sync
 	'notion-two-way-sync': { id: 'notion-two-way-sync', outcomeFrame: 'when_tickets_arrive' },
 	'error-incident-manager': { id: 'error-incident-manager', outcomeFrame: 'when_errors_happen' },
