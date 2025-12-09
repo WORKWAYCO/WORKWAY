@@ -1,55 +1,59 @@
 /**
- * Meeting Intelligence (Browser Workaround)
+ * Meeting Intelligence - Half Dozen Internal
  *
- * Meetings AND Clips that document themselves in Notion.
+ * Organization-specific workflow for @halfdozen.co team only.
+ * NOT a reusable template - hardcoded to internal infrastructure.
  *
- * ## When to Use This
+ * ## Why This Exists
  *
- * Only use this workflow if:
- * - Zoom OAuth app approval is blocked or pending
- * - You need transcript access (not available via Zoom API)
- *
- * For all other cases, use the canonical `meeting-intelligence` workflow.
+ * Zoom OAuth doesn't provide transcript access. This workflow uses browser
+ * session scraping as a workaround. It's private because:
+ * - Requires custom infrastructure (zoom-cookie-sync worker)
+ * - Hardcoded to Half Dozen's internal Notion database
+ * - 24-hour session expiration requires daily manual refresh
  *
  * ## Trade-offs (Be Honest)
  *
- * This is a workaround, not a feature:
+ * This is infrastructure, not a product:
  * - Requires custom Cloudflare Worker deployment (zoom-cookie-sync)
- * - 24-hour session expiration (manual refresh via bookmarklet)
+ * - 24-hour session expiration (manual refresh via bookmarklet DAILY)
  * - Browser scraping is brittle (may break if Zoom updates UI)
  * - Higher operational cost (Puppeteer on Workers)
+ * - All data goes to central Half Dozen database (not user-configurable)
  *
  * ## How It Works
  *
  * 1. User visits setup page, drags bookmarklet to browser
  * 2. User clicks bookmarklet while logged into Zoom (captures session)
  * 3. Worker uses session to scrape meetings AND clips via Puppeteer
- * 4. Workflow creates Notion pages with AI analysis for each
- *
- * ## Capabilities
- *
- * - Zoom Meetings: Scrapes recordings page, extracts transcripts
- * - Zoom Clips: Scrapes clips page, uses virtual scroll for transcripts
+ * 4. Workflow creates Notion pages in Half Dozen's central database
  *
  * ## Upgrade Path
  *
- * When Zoom OAuth provides transcript access, migrate users to
- * `meeting-intelligence` (the canonical OAuth version).
+ * When Zoom OAuth provides transcript access, migrate to canonical
+ * `meeting-intelligence` workflow (which will be user-configurable).
  *
- * @see /packages/workflows/src/meeting-intelligence - Canonical OAuth version
+ * @see /packages/workflows/src/meeting-intelligence - Future canonical version
  * @see /packages/workers/zoom-cookie-sync - Required infrastructure
+ * @private For @halfdozen.co team only
  */
 
 import { defineWorkflow, cron } from '@workwayco/sdk';
 import { AIModels } from '@workwayco/sdk';
 
-// Infrastructure URL (hardcoded - internal detail)
+// ============================================================================
+// HALF DOZEN INTERNAL CONSTANTS
+// These are organization-specific. Do NOT use this workflow as a template.
+// ============================================================================
+
+/** Infrastructure URL - Half Dozen's zoom-cookie-sync worker */
 const ZOOM_CONNECTION_URL = 'https://meetings.workway.co';
 
-// Execution tracking API (same worker handles both connection and execution tracking)
-// The workflow needs ZOOM_API_SECRET env var set to match the worker's API_SECRET
-
-// Half Dozen Internal LLM database - central hub for all @halfdozen.co users
+/**
+ * Half Dozen's central LLM database in Notion
+ * All meeting intelligence data for @halfdozen.co goes here.
+ * This is intentionally NOT configurable - it's internal infrastructure.
+ */
 const HALFDOZEN_INTERNAL_LLM_DATABASE = '27a019187ac580b797fec563c98afbbc';
 
 // Cache for database schema (avoid repeated API calls)
@@ -100,9 +104,9 @@ async function trackExecution(
 }
 
 export default defineWorkflow({
-	name: 'Meeting Intelligence (Browser Workaround)',
-	description: 'Meetings and Clips that document themselves. Workaround for Zoom API limitations.',
-	version: '3.4.0',
+	name: 'Meeting Intelligence (Half Dozen Internal)',
+	description: 'Internal workflow for @halfdozen.co. Meetings sync to central database via browser scraping. Requires daily bookmarklet refresh.',
+	version: '3.5.0',
 
 	pathway: {
 		outcomeFrame: 'after_meetings',
@@ -110,15 +114,15 @@ export default defineWorkflow({
 		outcomeStatement: {
 			suggestion: 'Want your meetings and clips to document themselves?',
 			explanation:
-				'After every Zoom meeting or clip, a Notion page appears with the transcript, AI summary, and action items.',
-			outcome: 'Meetings and clips that document themselves',
+				'After every Zoom meeting or clip, a Notion page appears with the transcript, AI summary, and action items. Requires daily bookmarklet refresh (24-hour session expiration).',
+			outcome: 'Meetings and clips that document themselves (with daily maintenance)',
 		},
 
 		primaryPair: {
 			from: 'zoom-browser',
 			to: 'notion',
 			workflowId: 'meeting-intelligence-workaround',
-			outcome: 'Meetings and clips documented automatically',
+			outcome: 'Meetings documented (requires daily refresh)',
 		},
 
 		additionalPairs: [],
@@ -560,11 +564,28 @@ async function checkExistingPage(
 	sourceId: string,
 	sourceUrl?: string
 ): Promise<boolean> {
-	// Internal LLM database doesn't have Source ID - use URL-based deduplication
+	// Try URL-based deduplication first (most reliable)
 	if (sourceUrl) {
 		return checkExistingPageByUrl(notion, databaseId, sourceUrl);
 	}
-	// Fallback: can't deduplicate without URL
+	// Fallback: check by Source ID if URL not available
+	// The worker generates deterministic IDs from topic+date
+	if (sourceId) {
+		try {
+			const result = await notion.databases.query({
+				database_id: databaseId,
+				filter: {
+					property: 'Source ID',
+					rich_text: { equals: sourceId },
+				},
+				page_size: 1,
+			});
+			return result.success && result.data?.length > 0;
+		} catch {
+			// Property might not exist - that's ok, continue without deduplication
+			return false;
+		}
+	}
 	return false;
 }
 
@@ -693,6 +714,13 @@ async function createNotionMeetingPage(params: CreateNotionPageParams) {
 
 	if (sourceUrl) {
 		properties['Source URL'] = { url: sourceUrl };
+	}
+
+	// Always add Source ID for deduplication (even without URL)
+	if (sourceId) {
+		properties['Source ID'] = {
+			rich_text: [{ text: { content: sourceId } }],
+		};
 	}
 
 	const children: any[] = [];

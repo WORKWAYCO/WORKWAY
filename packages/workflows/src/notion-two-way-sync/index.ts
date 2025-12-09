@@ -38,6 +38,28 @@ import { AIModels } from '@workwayco/sdk';
 import { Notion } from '@workwayco/integrations';
 
 // ============================================================================
+// CONSTANTS (Weniger, aber besser - sensible defaults, no user config needed)
+// ============================================================================
+
+/** Time window to ignore events after a sync (prevents infinite loops) */
+const LOOP_PREVENTION_WINDOW_MS = 5000;
+
+/** Property name in client database to store link to internal page */
+const CLIENT_REF_PROPERTY = 'Internal Ticket ID';
+
+/** Property name in internal database to store link to client page */
+const INTERNAL_REF_PROPERTY = 'Client Page ID';
+
+/** Default property mappings for support ticket pattern */
+const DEFAULT_PROPERTY_MAPPINGS: PropertyMapping[] = [
+	{ source: 'Title', destination: 'Title', bidirectional: false },
+	{ source: 'Description', destination: 'Description', bidirectional: false, transform: 'summarize' },
+	{ source: 'Status', destination: 'Status', bidirectional: true, transform: 'status_map' },
+	{ source: 'Priority', destination: 'Priority', bidirectional: true },
+	{ source: 'Resolution', destination: 'Resolution', bidirectional: true },
+];
+
+// ============================================================================
 // TYPES
 // ============================================================================
 
@@ -220,19 +242,8 @@ export default defineWorkflow({
 		const pageId = event.page_id || event.id;
 		const parentDatabaseId = event.parent?.database_id;
 
-		// Sensible defaults (Weniger, aber besser - fewer inputs, smart defaults)
-		const LOOP_PREVENTION_WINDOW = 5000; // 5 seconds
-		const CLIENT_REF_PROPERTY = 'Internal Ticket ID';
-		const INTERNAL_REF_PROPERTY = 'Client Page ID';
-
-		// Default property mappings (common support ticket pattern)
-		const propertyMappings: PropertyMapping[] = [
-			{ source: 'Title', destination: 'Title', bidirectional: false },
-			{ source: 'Description', destination: 'Description', bidirectional: false, transform: 'summarize' },
-			{ source: 'Status', destination: 'Status', bidirectional: true, transform: 'status_map' },
-			{ source: 'Priority', destination: 'Priority', bidirectional: true },
-			{ source: 'Resolution', destination: 'Resolution', bidirectional: true },
-		];
+		// Use module-level constants (Weniger, aber besser)
+		const propertyMappings = DEFAULT_PROPERTY_MAPPINGS;
 
 		// Parse status mapping and auto-derive reverse
 		const statusMap = JSON.parse(inputs.statusMapping || '{}');
@@ -263,11 +274,11 @@ export default defineWorkflow({
 		if (recentSync) {
 			const timeSinceLastSync = Date.now() - new Date(recentSync.lastSyncedAt).getTime();
 
-			if (timeSinceLastSync < LOOP_PREVENTION_WINDOW) {
+			if (timeSinceLastSync < LOOP_PREVENTION_WINDOW_MS) {
 				return {
 					success: true,
 					skipped: true,
-					reason: `Within loop prevention window (${timeSinceLastSync}ms < ${LOOP_PREVENTION_WINDOW}ms)`,
+					reason: `Within loop prevention window (${timeSinceLastSync}ms < ${LOOP_PREVENTION_WINDOW_MS}ms)`,
 					mapping: recentSync,
 				};
 			}
