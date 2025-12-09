@@ -28,10 +28,12 @@
 			use:enhance={() => {
 				loading = true;
 				error = null;
-				return async ({ result }) => {
+				return async ({ result, update }) => {
 					loading = false;
 					if (result.type === 'failure') {
 						error = (result.data?.message as string | undefined) ?? 'Something went wrong';
+					} else {
+						await update();
 					}
 				};
 			}}

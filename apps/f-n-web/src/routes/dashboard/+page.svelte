@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { PageData } from './$types';
 	import { Mic, BookOpen, Check, X, ChevronDown, Loader2 } from 'lucide-svelte';
+	import { invalidateAll } from '$app/navigation';
 
 	interface TranscriptItem {
 		id: string;
@@ -24,6 +25,43 @@
 
 	// Tool recedes when fully connected
 	const bothConnected = $derived(data.connections.fireflies && data.connections.notion);
+
+	// Fireflies connect state
+	let showFirefliesForm = $state(false);
+	let firefliesApiKey = $state('');
+	let firefliesConnecting = $state(false);
+	let firefliesError = $state<string | null>(null);
+
+	async function connectFireflies() {
+		if (!firefliesApiKey.trim()) return;
+
+		firefliesConnecting = true;
+		firefliesError = null;
+
+		try {
+			const res = await fetch('/api/integrations/fireflies/connect', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({ apiKey: firefliesApiKey.trim() })
+			});
+
+			const result = await res.json();
+
+			if (!res.ok) {
+				firefliesError = result.error || 'Failed to connect';
+				return;
+			}
+
+			// Success - refresh page data
+			showFirefliesForm = false;
+			firefliesApiKey = '';
+			await invalidateAll();
+		} catch (e) {
+			firefliesError = 'Connection failed';
+		} finally {
+			firefliesConnecting = false;
+		}
+	}
 
 	// Sync state
 	let syncing = $state(false);
@@ -174,12 +212,49 @@
 					{/if}
 				</div>
 				{#if !data.connections.fireflies}
-					<button
-						class="w-full border border-[var(--brand-border)] py-2 rounded-[var(--brand-radius)] text-sm font-medium hover:bg-[var(--brand-surface)] transition-colors"
-						onclick={() => {/* TODO: Open Fireflies connect modal */}}
-					>
-						Connect Fireflies
-					</button>
+					{#if showFirefliesForm}
+						<div class="space-y-3">
+							{#if firefliesError}
+								<div class="text-sm text-[var(--brand-error)]">{firefliesError}</div>
+							{/if}
+							<input
+								type="password"
+								bind:value={firefliesApiKey}
+								placeholder="Paste your Fireflies API key"
+								class="w-full px-3 py-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] bg-[var(--brand-surface)] text-sm"
+							/>
+							<div class="flex gap-2">
+								<button
+									onclick={connectFireflies}
+									disabled={firefliesConnecting || !firefliesApiKey.trim()}
+									class="flex-1 bg-[var(--brand-primary)] text-[var(--brand-bg)] py-2 rounded-[var(--brand-radius)] text-sm font-medium disabled:opacity-50"
+								>
+									{firefliesConnecting ? 'Connecting...' : 'Connect'}
+								</button>
+								<button
+									onclick={() => { showFirefliesForm = false; firefliesError = null; }}
+									class="px-3 py-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] text-sm hover:bg-[var(--brand-surface)] transition-colors"
+								>
+									Cancel
+								</button>
+							</div>
+							<a
+								href="https://app.fireflies.ai/integrations/custom/api"
+								target="_blank"
+								rel="noopener"
+								class="block text-xs text-[var(--brand-text-muted)] hover:text-[var(--brand-text)] transition-colors"
+							>
+								Get your API key →
+							</a>
+						</div>
+					{:else}
+						<button
+							class="w-full border border-[var(--brand-border)] py-2 rounded-[var(--brand-radius)] text-sm font-medium hover:bg-[var(--brand-surface)] transition-colors"
+							onclick={() => { showFirefliesForm = true; }}
+						>
+							Connect Fireflies
+						</button>
+					{/if}
 				{:else}
 					<form method="POST" action="/api/integrations/fireflies/disconnect">
 						<button

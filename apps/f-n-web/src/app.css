@@ -43,6 +43,19 @@
 	/* Spacing - Golden Ratio */
 	--radius-sm: 0.375rem;
 	--radius-md: 0.5rem;
+
+	/* Brand tokens (aliased to functional tokens for dashboard) */
+	--brand-bg: var(--color-bg-pure);
+	--brand-surface: var(--color-bg-surface);
+	--brand-surface-elevated: var(--color-bg-elevated);
+	--brand-border: var(--color-border-default);
+	--brand-radius: var(--radius-md);
+	--brand-text: var(--color-fg-primary);
+	--brand-text-muted: var(--color-fg-muted);
+	--brand-primary: var(--color-fg-primary);
+	--brand-accent: var(--color-fg-primary);
+	--brand-success: var(--color-success);
+	--brand-error: var(--color-error);
 }
 
 /* Dark mode base - override Tailwind's white background */

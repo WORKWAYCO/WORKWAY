@@ -113,11 +113,11 @@
 	<!-- Hero -->
 	<main class="flex-1">
 		<section class="max-w-5xl mx-auto px-4 py-24 text-center">
-			<h1 class="text-5xl font-bold tracking-tight mb-6 leading-tight">
+			<h1 class="font-bold tracking-tight mb-6 leading-tight" style="font-size: clamp(2.5rem, 7vw, 4.5rem);">
 				Fireflies transcripts<br />
 				<span class="text-white/80">in Notion databases</span>
 			</h1>
-			<p class="text-xl text-white/60 max-w-2xl mx-auto mb-10 text-center leading-relaxed">
+			<p class="text-white/60 max-w-2xl mx-auto mb-10 text-center leading-relaxed" style="font-size: clamp(1.125rem, 2vw, 1.5rem);">
 				Not pages — databases. Queryable, filterable, linked to your work.
 			</p>
 			<div class="flex items-center justify-center gap-4">
@@ -167,7 +167,7 @@
 		</section>
 
 		<!-- CTA -->
-		<section class="border-t border-white/10 bg-grey-100">
+		<section class="border-t border-white/10 bg-[#0a0a0a]">
 			<div class="max-w-5xl mx-auto px-4 py-20 text-center">
 				<h2 class="text-3xl font-bold mb-4">5 syncs free. No card required.</h2>
 				<p class="text-white/60 mb-8 leading-relaxed">Pro: $5/mo for 100 syncs. Unlimited: $15/mo.</p>
