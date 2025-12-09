@@ -1,0 +1,31 @@
+name = "zoom-clips"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+account_id = "5c3e9cf4d55ce171b844fad0931607f9"
+
+# Custom domain - outcome-focused URL (Zuhandenheit)
+# Users see "meetings" (their outcome), not "zoom" (the tool)
+routes = [
+  { pattern = "meetings.workway.co", custom_domain = true }
+]
+
+# Browser Rendering API binding
+browser = { binding = "BROWSER" }
+
+# Durable Objects for session management
+[[durable_objects.bindings]]
+name = "SESSIONS"
+class_name = "ZoomSessionManager"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ZoomSessionManager"]
+
+# Session keep-alive: refresh cookies every 6 hours
+[triggers]
+crons = ["0 */6 * * *"]
+
+[vars]
+# Public configuration
+WORKER_URL = "https://meetings.workway.co"

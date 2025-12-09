@@ -1,40 +1,33 @@
 /**
- * Meeting Intelligence - Half Dozen Internal
+ * Meeting Intelligence - Private (Half Dozen Internal)
  *
- * Organization-specific workflow for @halfdozen.co team only.
- * NOT a reusable template - hardcoded to internal infrastructure.
+ * Organization-specific workflow for @halfdozen.co team.
+ * Uses browser-based transcript extraction via meetings.workway.co.
  *
- * ## Why This Exists
+ * ## Architecture
  *
- * Zoom OAuth doesn't provide transcript access. This workflow uses browser
- * session scraping as a workaround. It's private because:
- * - Requires custom infrastructure (zoom-cookie-sync worker)
- * - Hardcoded to Half Dozen's internal Notion database
- * - 24-hour session expiration requires daily manual refresh
+ * - Transcript source: meetings.workway.co (Cloudflare Puppeteer)
+ * - Storage: Half Dozen's central Notion database
+ * - Auth: Chrome extension syncs Zoom cookies (auto-refreshes every 6 hours)
  *
- * ## Trade-offs (Be Honest)
+ * ## Capabilities
  *
- * This is infrastructure, not a product:
- * - Requires custom Cloudflare Worker deployment (zoom-cookie-sync)
- * - 24-hour session expiration (manual refresh via bookmarklet DAILY)
- * - Browser scraping is brittle (may break if Zoom updates UI)
- * - Higher operational cost (Puppeteer on Workers)
- * - All data goes to central Half Dozen database (not user-configurable)
+ * - Zoom Meetings: AI Companion transcripts with speaker attribution
+ * - Zoom Clips: Full transcript extraction via virtual scroll
+ * - Deduplication: Two-tier (Source URL primary, Source ID fallback)
+ * - AI Analysis: Summary, decisions, action items, follow-ups
  *
- * ## How It Works
+ * ## vs. meeting-intelligence (Public)
  *
- * 1. User visits setup page, drags bookmarklet to browser
- * 2. User clicks bookmarklet while logged into Zoom (captures session)
- * 3. Worker uses session to scrape meetings AND clips via Puppeteer
- * 4. Workflow creates Notion pages in Half Dozen's central database
+ * | Feature | Private | Public |
+ * |---------|---------|--------|
+ * | Transcript source | Browser scraper | Zoom OAuth API |
+ * | Speaker attribution | Full | Limited |
+ * | Clips support | Yes | OAuth-dependent |
+ * | Configuration | Hardcoded | User-configurable |
  *
- * ## Upgrade Path
- *
- * When Zoom OAuth provides transcript access, migrate to canonical
- * `meeting-intelligence` workflow (which will be user-configurable).
- *
- * @see /packages/workflows/src/meeting-intelligence - Future canonical version
- * @see /packages/workers/zoom-cookie-sync - Required infrastructure
+ * @see /packages/workflows/src/meeting-intelligence - Public marketplace version
+ * @see /apps/zoom-clips - Browser scraper infrastructure
  * @private For @halfdozen.co team only
  */
 
@@ -84,7 +77,7 @@ async function trackExecution(
 				'Authorization': `Bearer ${apiSecret}`,
 			},
 			body: JSON.stringify({
-				workflow_id: 'meeting-intelligence-workaround',
+				workflow_id: 'meeting-intelligence-private',
 				trigger_type: 'schedule',
 				status: data.status,
 				meetings_synced: data.meetingsSynced || 0,
@@ -121,7 +114,7 @@ export default defineWorkflow({
 		primaryPair: {
 			from: 'zoom-browser',
 			to: 'notion',
-			workflowId: 'meeting-intelligence-workaround',
+			workflowId: 'meeting-intelligence-private',
 			outcome: 'Meetings documented (requires daily refresh)',
 		},
 
@@ -131,7 +124,7 @@ export default defineWorkflow({
 			{
 				trigger: 'integration_connected',
 				integrations: ['notion'],
-				workflowId: 'meeting-intelligence-workaround',
+				workflowId: 'meeting-intelligence-private',
 				priority: 25, // Lower than OAuth version (priority 50)
 			},
 		],
@@ -397,7 +390,7 @@ export default defineWorkflow({
 			clips: clipResults.length,
 			actionItems: totalActionItems,
 			results: allResults,
-			analyticsUrl: 'https://workway.co/workflows/private/meeting-intelligence-workaround/analytics',
+			analyticsUrl: 'https://workway.co/workflows/private/meeting-intelligence-private/analytics',
 		};
 	},
 
@@ -893,7 +886,7 @@ function splitTranscriptIntoBlocks(transcript: string): any[] {
  * Workflow metadata - Private workflow for @halfdozen.co
  */
 export const metadata = {
-	id: 'meeting-intelligence-workaround',
+	id: 'meeting-intelligence-private',
 	category: 'productivity',
 	featured: false,
 
@@ -918,7 +911,7 @@ export const metadata = {
 
 	// Analytics URL - unified at workway.co/workflows
 	// Private workflow analytics are accessible at /workflows/private/{workflow-id}/analytics
-	analyticsUrl: 'https://workway.co/workflows/private/meeting-intelligence-workaround/analytics',
+	analyticsUrl: 'https://workway.co/workflows/private/meeting-intelligence-private/analytics',
 
 	// Setup URL - initial connection setup
 	setupUrl: `${ZOOM_CONNECTION_URL}/setup`,

@@ -600,7 +600,7 @@ export class UserSession {
 
 			const execution: ExecutionRecord = {
 				id: crypto.randomUUID(),
-				workflow_id: body.workflow_id || 'meeting-intelligence-workaround',
+				workflow_id: body.workflow_id || 'meeting-intelligence-private',
 				status: body.status || 'running',
 				trigger_type: body.trigger_type || 'schedule',
 				meetings_synced: body.meetings_synced || 0,

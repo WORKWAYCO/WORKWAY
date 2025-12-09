@@ -33,7 +33,7 @@ export { default as invoiceGenerator } from './invoice-generator/index.js';
 
 // Meetings & Productivity
 export { default as meetingIntelligence } from './meeting-intelligence/index.js';
-export { default as meetingIntelligenceWorkaround } from './meeting-intelligence-workaround/index.js';
+export { default as meetingIntelligenceWorkaround } from './meeting-intelligence-private/index.js';
 export { default as meetingSummarizer } from './meeting-summarizer/index.js';
 export { default as meetingFollowupEngine } from './meeting-followup-engine/index.js';
 export { default as weeklyProductivityDigest } from './weekly-productivity-digest/index.js';
@@ -134,7 +134,7 @@ export const integrationPairs = {
 	},
 	// Browser Workaround (when OAuth not available - NOT typical)
 	'zoom-browser:notion': {
-		workflowId: 'meeting-intelligence-workaround',
+		workflowId: 'meeting-intelligence-private',
 		outcome: 'Meetings that document themselves (browser workaround)',
 		outcomeFrame: 'after_meetings',
 		experimental: true,
@@ -669,7 +669,7 @@ export const workflows = {
 	'onboarding': { id: 'onboarding', outcomeFrame: 'when_clients_onboard' },
 	'standup-bot': { id: 'standup-bot', outcomeFrame: 'every_morning' },
 	'meeting-intelligence': { id: 'meeting-intelligence', outcomeFrame: 'after_meetings' },
-	'meeting-intelligence-workaround': { id: 'meeting-intelligence-workaround', outcomeFrame: 'after_meetings', experimental: true },
+	'meeting-intelligence-private': { id: 'meeting-intelligence-private', outcomeFrame: 'after_meetings', experimental: true },
 	'sales-lead-pipeline': { id: 'sales-lead-pipeline', outcomeFrame: 'when_leads_come_in' },
 	'client-onboarding': { id: 'client-onboarding', outcomeFrame: 'when_clients_onboard' },
 	'meeting-followup-engine': { id: 'meeting-followup-engine', outcomeFrame: 'after_calls' },

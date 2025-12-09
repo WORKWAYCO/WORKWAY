@@ -186,7 +186,7 @@ Sometimes OAuth APIs don't provide the data you need. When building workarounds:
 **Requirements for workaround workflows:**
 1. Mark with `experimental: true` and `requiresCustomInfrastructure: true`
 2. Document trade-offs prominently in the file header
-3. Use honest naming (e.g., `meeting-intelligence-workaround`, not `meeting-intelligence-quick-start`)
+3. Use honest naming (e.g., `meeting-intelligence-private`, not `meeting-intelligence-quick-start`)
 4. Set `zuhandenheit.worksOutOfBox: false` - don't pretend it's seamless
 5. Provide upgrade path to canonical workflow when API improves
 
@@ -195,7 +195,7 @@ Sometimes OAuth APIs don't provide the data you need. When building workarounds:
 - Hide mechanism complexity from developers
 - Be featured or recommended over canonical alternatives
 
-**Example: `meeting-intelligence-workaround`**
+**Example: `meeting-intelligence-private`**
 
 This workflow exists because Zoom OAuth doesn't provide transcript access. It requires:
 - Custom Cloudflare Worker (`zoom-cookie-sync`)
