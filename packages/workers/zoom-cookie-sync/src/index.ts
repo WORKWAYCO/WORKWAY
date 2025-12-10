@@ -259,24 +259,7 @@ export class UserSession {
 		// Rate limiting check
 		const rateLimitResult = await this.checkRateLimit(endpoint);
 		if (!rateLimitResult.allowed) {
-			return Response.json(
-				{
-					error: 'Rate limit exceeded',
-					retryAfter: Math.ceil(rateLimitResult.retryAfter / 1000),
-					limit: rateLimitResult.limit,
-					remaining: 0,
-				},
-				{
-					status: 429,
-					headers: {
-						...corsHeaders,
-						'Retry-After': String(Math.ceil(rateLimitResult.retryAfter / 1000)),
-						'X-RateLimit-Limit': String(rateLimitResult.limit),
-						'X-RateLimit-Remaining': '0',
-						'X-RateLimit-Reset': String(Math.ceil((Date.now() + rateLimitResult.retryAfter) / 1000)),
-					},
-				}
-			);
+			return createRateLimitResponse(rateLimitResult, corsHeaders);
 		}
 
 		try {
@@ -693,21 +676,15 @@ export class UserSession {
 	/**
 	 * Record a workflow execution (called by workflow)
 	 *
-	 * Security: Supports two authentication methods:
-	 * 1. Bearer token: Authorization header with API_SECRET
-	 * 2. HMAC signature: X-Signature header with HMAC-SHA256 of request body
-	 *
-	 * When both are provided, both are verified (defense in depth)
+	 * Authentication: Bearer token (API_SECRET)
+	 * Private workflows use a known, trusted internal caller list.
+	 * Bearer token is sufficient - HMAC adds complexity without benefit.
 	 */
 	async recordExecution(
 		request: Request,
 		corsHeaders: Record<string, string>
 	): Promise<Response> {
-		// Clone request to read body multiple times if needed
-		const clonedRequest = request.clone();
-		const bodyText = await clonedRequest.text();
-
-		// Verify Bearer token (required)
+		// Verify Bearer token
 		const authHeader = request.headers.get('Authorization');
 		if (!authHeader || authHeader !== `Bearer ${this.env.API_SECRET}`) {
 			return Response.json(
@@ -716,20 +693,8 @@ export class UserSession {
 			);
 		}
 
-		// Verify HMAC signature if provided (optional but recommended)
-		const signature = request.headers.get('X-Signature');
-		if (signature && this.env.API_SECRET) {
-			const isValid = await verifyHmacSignature(bodyText, signature, this.env.API_SECRET);
-			if (!isValid) {
-				return Response.json(
-					{ success: false, error: 'Invalid signature' },
-					{ status: 401, headers: corsHeaders }
-				);
-			}
-		}
-
 		try {
-			const body = JSON.parse(bodyText) as Partial<ExecutionRecord>;
+			const body = (await request.json()) as Partial<ExecutionRecord>;
 
 			const execution: ExecutionRecord = {
 				id: crypto.randomUUID(),
@@ -1875,79 +1840,52 @@ function serveDashboard(userId: string, env: Env): Response {
 // ============================================================================
 
 /**
- * Verify HMAC-SHA256 signature for webhook payloads
- * Expected signature format: sha256=<hex-encoded-signature>
- */
-async function verifyHmacSignature(
-	payload: string,
-	signature: string,
-	secret: string
-): Promise<boolean> {
-	try {
-		// Parse signature format (sha256=...)
-		const parts = signature.split('=');
-		if (parts.length !== 2 || parts[0] !== 'sha256') {
-			return false;
-		}
-		const providedSig = parts[1];
-
-		// Generate expected signature
-		const encoder = new TextEncoder();
-		const key = await crypto.subtle.importKey(
-			'raw',
-			encoder.encode(secret),
-			{ name: 'HMAC', hash: 'SHA-256' },
-			false,
-			['sign']
-		);
-		const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-
-		// Convert to hex
-		const expectedSig = Array.from(new Uint8Array(signatureBuffer))
-			.map((b) => b.toString(16).padStart(2, '0'))
-			.join('');
-
-		// Constant-time comparison to prevent timing attacks
-		if (providedSig.length !== expectedSig.length) {
-			return false;
-		}
-		let result = 0;
-		for (let i = 0; i < providedSig.length; i++) {
-			result |= providedSig.charCodeAt(i) ^ expectedSig.charCodeAt(i);
-		}
-		return result === 0;
-	} catch {
-		return false;
-	}
-}
-
-/**
  * Sanitize error messages before returning to clients
- * Removes stack traces, file paths, and internal implementation details
+ * Removes stack traces and file paths while preserving error type context
  */
 function sanitizeErrorMessage(message: string): string {
 	if (!message) return 'An unexpected error occurred';
 
-	// Remove stack traces (lines starting with "at ")
+	// Remove stack traces (keep only first line)
 	let sanitized = message.split('\n')[0];
 
-	// Remove file paths
+	// Remove file paths (preserves error type like "TypeError:" for diagnostics)
 	sanitized = sanitized.replace(/\/[^\s]+\.(ts|js):\d+:\d+/g, '[internal]');
-
-	// Remove internal error prefixes
-	sanitized = sanitized.replace(/^(Error|TypeError|ReferenceError):\s*/i, '');
 
 	// Cap length to prevent leaking large error messages
 	if (sanitized.length > 200) {
 		sanitized = sanitized.substring(0, 200) + '...';
 	}
 
-	// If message is now empty or only whitespace, return generic error
-	if (!sanitized.trim()) {
-		return 'An unexpected error occurred';
-	}
+	return sanitized.trim() || 'An unexpected error occurred';
+}
 
-	return sanitized;
+/**
+ * Create standardized rate limit response
+ * Hides internal rate limit categories from users
+ */
+function createRateLimitResponse(
+	result: { retryAfter: number; limit: number },
+	corsHeaders: Record<string, string>
+): Response {
+	const retryAfterSecs = Math.ceil(result.retryAfter / 1000);
+	const resetTime = Math.ceil((Date.now() + result.retryAfter) / 1000);
+
+	return Response.json(
+		{
+			error: 'Too many requests',
+			retryAfter: retryAfterSecs,
+		},
+		{
+			status: 429,
+			headers: {
+				...corsHeaders,
+				'Retry-After': String(retryAfterSecs),
+				'X-RateLimit-Remaining': '0',
+				'X-RateLimit-Reset': String(resetTime),
+			},
+		}
+	);
 }
 
 function getCorsHeaders(request: Request): Record<string, string> {
@@ -1959,16 +1897,26 @@ function getCorsHeaders(request: Request): Record<string, string> {
 
 	let isAllowed = false;
 	try {
-		const originUrl = new URL(origin);
-		isAllowed = allowedDomains.some((domain) => {
-			if (domain === 'localhost') {
-				return originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1';
+		if (origin) {
+			const originUrl = new URL(origin);
+			isAllowed = allowedDomains.some((domain) => {
+				if (domain === 'localhost') {
+					return originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1';
+				}
+				// Check exact match or subdomain match (e.g., "us06web.zoom.us" matches "zoom.us")
+				return originUrl.hostname === domain || originUrl.hostname.endsWith(`.${domain}`);
+			});
+
+			// Log rejected origins for security monitoring
+			if (!isAllowed) {
+				console.warn(`CORS rejected origin: ${originUrl.hostname}`);
 			}
-			// Check exact match or subdomain match (e.g., "us06web.zoom.us" matches "zoom.us")
-			return originUrl.hostname === domain || originUrl.hostname.endsWith(`.${domain}`);
-		});
+		}
 	} catch {
-		// Invalid origin URL - reject
+		// Invalid origin URL - log and reject
+		if (origin) {
+			console.warn(`CORS invalid origin: ${origin.substring(0, 100)}`);
+		}
 		isAllowed = false;
 	}
 
@@ -1977,7 +1925,7 @@ function getCorsHeaders(request: Request): Record<string, string> {
 		'Access-Control-Allow-Origin': isAllowed ? origin : 'https://workway.co',
 		'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 		'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Endpoint, X-User-Id',
-		// Security headers (defense in depth)
+		// Security headers
 		'X-Content-Type-Options': 'nosniff',
 		'X-Frame-Options': 'DENY',
 		'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://workway.co data:; connect-src 'self' https://*.workway.co https://*.workers.dev",
