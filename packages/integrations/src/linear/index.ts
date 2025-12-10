@@ -313,15 +313,13 @@ export interface LinearConfig {
  * - `assigneeByName` resolves user IDs automatically
  * - `labels` accepts names, not IDs
  * - Consistent ActionResult pattern across all methods
+ *
+ * Weniger, aber besser: No caching layer. Let GraphQL handle efficiency.
  */
 export class Linear {
 	private readonly accessToken: string;
 	private readonly apiUrl = 'https://api.linear.app/graphql';
 	private readonly timeout: number;
-
-	// Cache for user/team lookups
-	private userCache: Map<string, LinearUser> = new Map();
-	private teamCache: Map<string, LinearTeam> = new Map();
 
 	constructor(config: LinearConfig) {
 		validateAccessToken(config.accessToken, 'Linear');
@@ -715,13 +713,10 @@ export class Linear {
 
 	/**
 	 * Get a team by ID
+	 *
+	 * Weniger, aber besser: Direct fetch, no caching complexity.
 	 */
 	async getTeamById(teamId: string): Promise<ActionResult<LinearTeam>> {
-		// Check cache first
-		if (this.teamCache.has(teamId)) {
-			return createActionResult({ success: true, data: this.teamCache.get(teamId)! });
-		}
-
 		const query = `
 			query Team($id: String!) {
 				team(id: $id) {
@@ -730,13 +725,7 @@ export class Linear {
 			}
 		`;
 
-		const result = await this.execute<LinearTeam>(query, { id: teamId }, (data) => data.team);
-
-		if (result.success && result.data) {
-			this.teamCache.set(teamId, result.data);
-		}
-
-		return result;
+		return this.execute<LinearTeam>(query, { id: teamId }, (data) => data.team);
 	}
 
 	// ============================================================================
@@ -760,6 +749,8 @@ export class Linear {
 
 	/**
 	 * List users in the organization
+	 *
+	 * Weniger, aber besser: Direct fetch, no caching complexity.
 	 */
 	async listUsers(options: {
 		first?: number;
@@ -778,7 +769,7 @@ export class Linear {
 			}
 		`;
 
-		const result = await this.execute<StandardList<LinearUser>>(
+		return this.execute<StandardList<LinearUser>>(
 			query,
 			{ first: options.first || 100 },
 			(data) => ({
@@ -787,35 +778,27 @@ export class Linear {
 				cursor: data.users.pageInfo.endCursor,
 			})
 		);
-
-		// Cache users
-		if (result.success && result.data) {
-			for (const user of result.data.items) {
-				this.userCache.set(user.name.toLowerCase(), user);
-				this.userCache.set(user.email.toLowerCase(), user);
-			}
-		}
-
-		return result;
 	}
 
 	/**
 	 * Find user by name or email (Zuhandenheit helper)
+	 *
+	 * Weniger, aber besser: Simple search, no caching layer.
 	 */
 	async findUserByName(nameOrEmail: string): Promise<LinearUser | null> {
 		const key = nameOrEmail.toLowerCase();
 
-		// Check cache
-		if (this.userCache.has(key)) {
-			return this.userCache.get(key)!;
-		}
-
-		// Fetch all users and cache
+		// Fetch users and search directly
 		const users = await this.listUsers({ first: 100 });
-		if (!users.success) return null;
+		if (!users.success || !users.data) return null;
 
-		// Search in freshly cached users
-		return this.userCache.get(key) || null;
+		// Search by name or email (case-insensitive)
+		return users.data.items.find(
+			(user) =>
+				user.name.toLowerCase() === key ||
+				user.email.toLowerCase() === key ||
+				user.displayName.toLowerCase() === key
+		) || null;
 	}
 
 	// ============================================================================

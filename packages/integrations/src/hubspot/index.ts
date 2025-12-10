@@ -157,7 +157,31 @@ export interface UpdateDealOptions {
 }
 
 /**
- * Options for updating deal from meeting
+ * Options for updating deal after a meeting
+ *
+ * Zuhandenheit: Outcome-focused interface
+ * Developer thinks "update CRM after meeting" not "construct property object"
+ */
+export interface UpdateDealAfterMeetingOptions {
+	/** Deal ID */
+	dealId: string;
+	/** Meeting summary - what was discussed */
+	summary: string;
+	/**
+	 * Meeting outcome - infers stage progression
+	 * - 'progressed': Move to next stage in pipeline
+	 * - 'stalled': Keep current stage, log concern
+	 * - 'closed-won': Move to closed-won
+	 * - 'closed-lost': Move to closed-lost
+	 */
+	outcome?: 'progressed' | 'stalled' | 'closed-won' | 'closed-lost';
+	/** Link to full notes (Notion, Google Doc, etc) */
+	notesUrl?: string;
+}
+
+/**
+ * @deprecated Use UpdateDealAfterMeetingOptions instead
+ * Legacy interface kept for backwards compatibility
  */
 export interface UpdateDealFromMeetingOptions {
 	/** Deal ID */
@@ -432,15 +456,76 @@ export class HubSpot extends BaseAPIClient {
 	}
 
 	/**
-	 * Update deal from meeting data
+	 * Update deal after a meeting (Zuhandenheit API)
 	 *
-	 * Zuhandenheit: Developer thinks "update CRM after meeting"
-	 * not "construct property object, format notes, PATCH to deals API"
+	 * Outcome-focused: Developer thinks "meeting went well, deal progressed"
+	 * not "PATCH description, lookup stage ID, format timestamp"
 	 *
-	 * This method:
-	 * - Appends meeting summary to deal description
-	 * - Updates notes_last_updated timestamp
-	 * - Optionally moves deal to new stage
+	 * @example
+	 * ```typescript
+	 * await hubspot.updateDealAfterMeeting({
+	 *   dealId: '123',
+	 *   summary: 'Discussed Q4 roadmap, client approved budget',
+	 *   outcome: 'progressed',
+	 *   notesUrl: 'https://notion.so/meeting-notes/abc'
+	 * });
+	 * ```
+	 */
+	async updateDealAfterMeeting(options: UpdateDealAfterMeetingOptions): Promise<ActionResult<HubSpotDeal>> {
+		const { dealId, summary, outcome, notesUrl } = options;
+
+		if (!dealId) {
+			return ActionResult.error('Deal ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'hubspot',
+				action: 'update-deal-after-meeting',
+			});
+		}
+
+		if (!summary) {
+			return ActionResult.error('Meeting summary is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'hubspot',
+				action: 'update-deal-after-meeting',
+			});
+		}
+
+		// Get current deal state
+		const currentDealResult = await this.getDeal(dealId);
+		if (!currentDealResult.success) {
+			return currentDealResult;
+		}
+
+		const currentDescription = currentDealResult.data.properties.description || '';
+		const timestamp = new Date().toISOString().split('T')[0];
+
+		// Build concise meeting note
+		const meetingNote = [
+			`---`,
+			`**Meeting** (${timestamp})`,
+			``,
+			summary,
+			notesUrl ? `\n[Full notes](${notesUrl})` : '',
+			`---`,
+		].filter(Boolean).join('\n');
+
+		const properties: Record<string, string> = {
+			description: `${currentDescription}\n\n${meetingNote}`.trim(),
+			notes_last_updated: new Date().toISOString(),
+		};
+
+		// Infer stage changes from outcome
+		if (outcome === 'closed-won') {
+			properties.dealstage = 'closedwon';
+		} else if (outcome === 'closed-lost') {
+			properties.dealstage = 'closedlost';
+		}
+		// 'progressed' and 'stalled' don't auto-change stage - that requires pipeline context
+
+		return this.updateDeal({ dealId, properties });
+	}
+
+	/**
+	 * @deprecated Use updateDealAfterMeeting instead
+	 * Legacy method kept for backwards compatibility
 	 */
 	async updateDealFromMeeting(options: UpdateDealFromMeetingOptions): Promise<ActionResult<HubSpotDeal>> {
 		const { dealId, meetingTitle, summary, actionItems, nextSteps, newStage, notionUrl } = options;

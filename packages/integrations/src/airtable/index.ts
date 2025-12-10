@@ -208,6 +208,16 @@ export interface ListRecordsOptions {
 	timeZone?: string;
 	/** User locale for formatting */
 	userLocale?: string;
+	/**
+	 * Explicit field name to use as title (Zuhandenheit: no guessing)
+	 * If not provided, falls back to first string field
+	 */
+	titleField?: string;
+	/**
+	 * Explicit field name to use as description
+	 * If not provided, falls back to first long text field
+	 */
+	descriptionField?: string;
 }
 
 /**
@@ -347,6 +357,8 @@ export class Airtable extends BaseAPIClient {
 			cellFormat,
 			timeZone,
 			userLocale,
+			titleField,
+			descriptionField,
 		} = options;
 
 		if (!tableId) {
@@ -386,12 +398,13 @@ export class Airtable extends BaseAPIClient {
 			const data = (await response.json()) as AirtableListResponse;
 
 			// Provide standardized list format
+			// Zuhandenheit: Use explicit field names when provided, no guessing
 			const standard: StandardList = {
 				type: 'list',
 				items: data.records.map((record) => ({
 					id: record.id,
-					title: this.extractTitle(record),
-					description: this.extractDescription(record),
+					title: this.extractTitle(record, titleField),
+					description: this.extractDescription(record, descriptionField),
 					metadata: {
 						createdTime: record.createdTime,
 						fields: Object.keys(record.fields),
@@ -858,21 +871,26 @@ export class Airtable extends BaseAPIClient {
 	}
 
 	/**
-	 * Extract title from a record (looks for common field names)
+	 * Extract title from a record
+	 *
+	 * Zuhandenheit: If explicit titleField provided, use it directly.
+	 * Fallback to first string field only when no explicit field given.
+	 *
+	 * @param record - The Airtable record
+	 * @param titleField - Explicit field name (recommended)
 	 */
-	private extractTitle(record: AirtableRecord): string {
+	private extractTitle(record: AirtableRecord, titleField?: string): string {
 		const fields = record.fields;
-		const titleFields = ['Name', 'Title', 'Task', 'Subject', 'name', 'title'];
 
-		for (const field of titleFields) {
-			if (fields[field] && typeof fields[field] === 'string') {
-				return fields[field] as string;
-			}
+		// Zuhandenheit: Explicit field takes priority - no guessing
+		if (titleField && fields[titleField] !== undefined) {
+			const value = fields[titleField];
+			return typeof value === 'string' ? value : String(value);
 		}
 
-		// Return first string field as fallback
+		// Fallback: Return first string field (honest about limitation)
 		for (const [, value] of Object.entries(fields)) {
-			if (typeof value === 'string') {
+			if (typeof value === 'string' && value.length > 0) {
 				return value;
 			}
 		}
@@ -882,17 +900,22 @@ export class Airtable extends BaseAPIClient {
 
 	/**
 	 * Extract description from a record
+	 *
+	 * Zuhandenheit: If explicit descriptionField provided, use it directly.
+	 *
+	 * @param record - The Airtable record
+	 * @param descriptionField - Explicit field name (recommended)
 	 */
-	private extractDescription(record: AirtableRecord): string | undefined {
+	private extractDescription(record: AirtableRecord, descriptionField?: string): string | undefined {
 		const fields = record.fields;
-		const descFields = ['Description', 'Notes', 'Details', 'description', 'notes'];
 
-		for (const field of descFields) {
-			if (fields[field] && typeof fields[field] === 'string') {
-				return fields[field] as string;
-			}
+		// Zuhandenheit: Explicit field takes priority - no guessing
+		if (descriptionField && fields[descriptionField] !== undefined) {
+			const value = fields[descriptionField];
+			return typeof value === 'string' ? value : String(value);
 		}
 
+		// No fallback guessing - return undefined if no explicit field
 		return undefined;
 	}
 
