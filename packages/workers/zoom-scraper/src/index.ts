@@ -570,16 +570,36 @@ function parseWebVTT(webvtt: string): { text: string; speakers: string[] } {
 }
 
 /**
- * Get CORS headers based on request origin
+ * Get CORS and security headers based on request origin
  */
 function getCorsHeaders(request: Request): Record<string, string> {
 	const origin = request.headers.get('Origin') || '';
-	const allowedOrigins = ['zoom.us', 'workway.co', 'localhost'];
-	const isAllowed = allowedOrigins.some(o => origin.includes(o));
+
+	// Secure CORS validation using URL parsing (prevents subdomain spoofing)
+	const allowedDomains = ['zoom.us', 'workway.co', 'half-dozen.workers.dev', 'localhost'];
+
+	let isAllowed = false;
+	try {
+		const originUrl = new URL(origin);
+		isAllowed = allowedDomains.some((domain) => {
+			if (domain === 'localhost') {
+				return originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1';
+			}
+			return originUrl.hostname === domain || originUrl.hostname.endsWith(`.${domain}`);
+		});
+	} catch {
+		isAllowed = false;
+	}
 
 	return {
+		// CORS headers
 		'Access-Control-Allow-Origin': isAllowed ? origin : 'https://workway.co',
 		'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 		'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+		// Security headers
+		'X-Content-Type-Options': 'nosniff',
+		'X-Frame-Options': 'DENY',
+		'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.workway.co https://*.workers.dev",
+		'Referrer-Policy': 'strict-origin-when-cross-origin',
 	};
 }

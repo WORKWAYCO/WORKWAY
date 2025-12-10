@@ -138,6 +138,51 @@ export async function validateWorkflowFile(workflowPath: string): Promise<Valida
 }
 
 /**
+ * Node.js modules that don't work in Cloudflare Workers
+ * See docs/WORKERS_RUNTIME_GUIDE.md for details
+ */
+const BLOCKED_NODE_MODULES = [
+	'fs',
+	'path',
+	'child_process',
+	'os',
+	'net',
+	'http',
+	'https',
+	'stream',
+	'buffer',
+	'crypto',        // Use Web Crypto API instead
+	'util',
+	'events',
+	'cluster',
+	'dns',
+	'readline',
+	'tty',
+	'vm',
+	'zlib',
+	'worker_threads',
+	'perf_hooks',
+	'async_hooks',
+];
+
+/**
+ * npm packages known to not work in Workers
+ */
+const BLOCKED_NPM_PACKAGES = [
+	'axios',         // Use fetch() instead
+	'request',       // Use fetch() instead
+	'node-fetch',    // Native fetch() available
+	'express',       // Not applicable
+	'bcrypt',        // Use bcryptjs instead
+	'sharp',         // Use Cloudflare Images
+	'puppeteer',     // Use external service
+	'mongoose',      // No MongoDB in Workers
+	'pg',            // Use D1 instead
+	'mysql',         // Use D1 instead
+	'redis',         // Use KV instead
+];
+
+/**
  * Validate imports
  */
 function validateImports(
@@ -171,6 +216,58 @@ function validateImports(
 	}
 
 	metadata.hasAI = hasAIUsage;
+
+	// Check for Node.js stdlib imports (BLOCKED in Workers)
+	for (const mod of BLOCKED_NODE_MODULES) {
+		// Match: import x from 'fs', import { x } from 'fs', require('fs')
+		const importPattern = new RegExp(`(import\\s+.*from\\s+['"\`]${mod}['"\`])|(require\\s*\\(\\s*['"\`]${mod}['"\`]\\s*\\))`, 'g');
+		if (importPattern.test(content)) {
+			const suggestions: Record<string, string> = {
+				'fs': 'Cloudflare Workers have no filesystem. Store data in KV or R2.',
+				'path': 'Use string manipulation or URL API instead.',
+				'child_process': 'Workers cannot spawn processes. Use external services.',
+				'crypto': 'Use Web Crypto API: crypto.subtle.digest(), crypto.randomUUID()',
+				'http': 'Use native fetch() instead.',
+				'https': 'Use native fetch() instead.',
+				'buffer': 'Use ArrayBuffer/Uint8Array instead.',
+				'stream': 'Use Web Streams API (ReadableStream, WritableStream).',
+			};
+
+			errors.push({
+				type: 'error',
+				code: 'BLOCKED_NODE_MODULE',
+				message: `Node.js module '${mod}' is not available in Cloudflare Workers`,
+				suggestion: suggestions[mod] || 'See docs/WORKERS_RUNTIME_GUIDE.md for alternatives.',
+			});
+		}
+	}
+
+	// Check for npm packages known to not work
+	for (const pkg of BLOCKED_NPM_PACKAGES) {
+		const importPattern = new RegExp(`(import\\s+.*from\\s+['"\`]${pkg}['"\`])|(require\\s*\\(\\s*['"\`]${pkg}['"\`]\\s*\\))`, 'g');
+		if (importPattern.test(content)) {
+			const suggestions: Record<string, string> = {
+				'axios': 'Use native fetch() - it works identically in Workers.',
+				'request': 'Use native fetch() - request is deprecated anyway.',
+				'node-fetch': 'Native fetch() is available - no polyfill needed.',
+				'express': 'Workers use event-driven model, not HTTP servers.',
+				'bcrypt': 'Use bcryptjs (pure JS) or Web Crypto API.',
+				'sharp': 'Use Cloudflare Images for image processing.',
+				'puppeteer': 'Use an external browser service or Cloudflare Browser Rendering.',
+				'mongoose': 'Use Cloudflare D1 (SQLite) or external API.',
+				'pg': 'Use Cloudflare D1 or Hyperdrive for PostgreSQL.',
+				'mysql': 'Use Cloudflare D1 or Hyperdrive.',
+				'redis': 'Use Cloudflare KV for key-value storage.',
+			};
+
+			warnings.push({
+				type: 'warning',
+				code: 'INCOMPATIBLE_NPM_PACKAGE',
+				message: `npm package '${pkg}' is incompatible with Cloudflare Workers`,
+				suggestion: suggestions[pkg] || 'See docs/WORKERS_RUNTIME_GUIDE.md for alternatives.',
+			});
+		}
+	}
 }
 
 /**

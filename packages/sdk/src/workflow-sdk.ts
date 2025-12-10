@@ -283,13 +283,56 @@ export interface WorkflowContext {
 
 /**
  * Helper interface for executing integration actions
+ *
+ * For type-safe integration access, import types from `@workwayco/sdk`:
+ *
+ * @example
+ * ```typescript
+ * import type { ZoomIntegration, NotionIntegration, PickIntegrations } from '@workwayco/sdk';
+ *
+ * export default defineWorkflow({
+ *   integrations: ['zoom', 'notion'],
+ *   async execute({ integrations }) {
+ *     // Cast for type safety
+ *     const zoom = integrations.zoom as ZoomIntegration;
+ *     const meetings = await zoom.getMeetings({ days: 1 });
+ *   }
+ * });
+ * ```
+ *
+ * Or use the generic parameter on ExtendedWorkflowContext:
+ * ```typescript
+ * async execute({ integrations }: ExtendedWorkflowContext<
+ *   MyInputs,
+ *   PickIntegrations<'zoom' | 'notion'>
+ * >) {
+ *   // integrations.zoom is now typed
+ * }
+ * ```
  */
 export interface ActionHelpers {
-	/** Execute any action by ID */
+	/** Execute any action by ID (including custom actions) */
 	execute<TInput = any, TOutput = any>(actionId: string, input: TInput): Promise<TOutput>;
 
-	/** Integration-specific helpers (auto-generated) */
+	/** Integration-specific helpers - see generated/integration-types.ts for typed interfaces */
 	[integration: string]: any;
+}
+
+/**
+ * Context provided to custom actions
+ *
+ * Custom actions receive a subset of the workflow context,
+ * allowing them to access configuration and storage.
+ */
+export interface CustomActionContext {
+	/** User's configuration */
+	config: Record<string, any>;
+
+	/** Storage for workflow state */
+	storage: WorkflowStorage;
+
+	/** Environment */
+	env: any;
 }
 
 /**
@@ -600,6 +643,44 @@ export interface WorkflowDefinition<TConfig = any, TInputs = Record<string, any>
 
 	/** Configuration fields (for UI generation) - legacy, prefer inputs */
 	configFields?: WorkflowConfigField[];
+
+	/**
+	 * Custom actions - escape hatch for APIs without pre-built integrations
+	 *
+	 * When you need to call an API that WORKWAY doesn't have an integration for,
+	 * define it here instead of waiting for an integration PR.
+	 *
+	 * @example
+	 * ```typescript
+	 * customActions: {
+	 *   'weather.fetch': async (input, context) => {
+	 *     const response = await fetch(`https://api.weather.com?city=${input.city}`, {
+	 *       headers: { 'Authorization': `Bearer ${context.config.weatherApiKey}` }
+	 *     });
+	 *     return await response.json();
+	 *   },
+	 *   'custom-crm.createLead': async (input) => {
+	 *     const response = await fetch('https://my-crm.com/api/leads', {
+	 *       method: 'POST',
+	 *       headers: { 'Content-Type': 'application/json' },
+	 *       body: JSON.stringify(input)
+	 *     });
+	 *     return await response.json();
+	 *   }
+	 * }
+	 * ```
+	 *
+	 * Then call in execute():
+	 * ```typescript
+	 * const weather = await actions.execute('weather.fetch', { city: 'NYC' });
+	 * ```
+	 *
+	 * Heideggerian note: This escape hatch maintains Zuhandenheit by letting
+	 * developers extend without waiting. The tool doesn't block the outcome.
+	 */
+	customActions?: {
+		[actionId: string]: (input: any, context: CustomActionContext) => Promise<any>;
+	};
 
 	/**
 	 * Main workflow execution function

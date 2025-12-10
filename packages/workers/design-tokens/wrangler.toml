@@ -1,0 +1,17 @@
+name = "workway-design-tokens"
+account_id = "5c3e9cf4d55ce171b844fad0931607f9"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+
+# Enable workers.dev subdomain for testing
+workers_dev = true
+
+# Custom domain - cdn.workway.co (auto-creates DNS)
+routes = [
+  { pattern = "cdn.workway.co", custom_domain = true }
+]
+
+# Import CSS as text
+[[rules]]
+type = "Text"
+globs = ["**/*.css"]

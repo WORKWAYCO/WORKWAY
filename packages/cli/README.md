@@ -63,6 +63,59 @@ workway workflow build --sourcemap     # Generate sourcemaps
 workway workflow build --out-dir dist  # Custom output directory
 ```
 
+### Agentic Commands (AI-Powered Workflow Operations)
+
+Build workflows using natural language. No templates. No boilerplate.
+
+| Command | Description |
+|---------|-------------|
+| `workway create [prompt]` | Generate a workflow from natural language |
+| `workway explain [file]` | Understand what a workflow does |
+| `workway modify [file] [request]` | Transform existing workflows |
+
+**Create from natural language:**
+```bash
+# Interactive mode
+workway create
+
+# Direct prompt
+workway create "When a Zoom meeting ends, create a Notion page with the transcript and send a Slack summary"
+
+# With output file
+workway create "sync Stripe payments to Airtable" --output stripe-sync.ts
+```
+
+**Explain any workflow:**
+```bash
+# Get a plain-English explanation
+workway explain ./my-workflow.ts
+
+# Explain with different verbosity
+workway explain ./my-workflow.ts --verbose    # Full technical breakdown
+workway explain ./my-workflow.ts --brief      # One-sentence summary
+
+# Explain specific aspects
+workway explain ./my-workflow.ts --focus triggers   # Just trigger logic
+workway explain ./my-workflow.ts --focus data-flow  # Data transformations
+```
+
+**Modify existing workflows:**
+```bash
+# Add functionality
+workway modify ./meeting-workflow.ts "add email notification after Slack message"
+
+# Refactor
+workway modify ./workflow.ts "use batch processing for the API calls"
+
+# Fix issues
+workway modify ./workflow.ts "handle the case where transcript is empty"
+
+# Interactive mode
+workway modify ./workflow.ts
+```
+
+These commands use AI to understand workflow patterns and generate idiomatic WORKWAY code that follows the `defineWorkflow()` structure.
+
 ### AI Commands (Cloudflare Workers AI)
 
 | Command | Description |

@@ -100,6 +100,8 @@ export type {
 	WorkflowResult,
 	WorkflowStorage,
 	ActionHelpers,
+	// Custom actions escape hatch
+	CustomActionContext,
 	// Extended context types (for workflow execute/hooks)
 	IntegrationRequirement,
 	ExtendedWorkflowContext,
@@ -497,6 +499,50 @@ export {
 	createStepExecutor,
 	generateExecutionId,
 } from './step-executor';
+
+// ============================================================================
+// GENERATED INTEGRATION TYPES
+// ============================================================================
+
+export type {
+	// Zoom
+	ZoomMeeting,
+	ZoomRecording,
+	ZoomRecordingFile,
+	ZoomClip,
+	TranscriptResult,
+	ZoomIntegration,
+	// Notion
+	NotionPage,
+	NotionDatabase,
+	NotionRichText,
+	NotionProperty,
+	NotionPropertySchema,
+	NotionBlock,
+	NotionIntegration,
+	// Slack
+	SlackChannel,
+	SlackMessage,
+	SlackUser,
+	SlackIntegration,
+	// Stripe
+	StripeCustomer,
+	StripePaymentIntent,
+	StripeSubscription,
+	StripeIntegration,
+	// Linear
+	LinearIssue,
+	LinearTeam,
+	LinearIntegration,
+	// Gmail
+	GmailMessage,
+	GmailIntegration,
+	// Workers AI
+	AIIntegration,
+	// Combined map
+	IntegrationsMap,
+	PickIntegrations,
+} from './generated/integration-types';
 
 // ============================================================================
 // RE-EXPORTS

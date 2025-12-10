@@ -59,6 +59,54 @@ packages/integrations/src/{service}/
 └── {service}.test.ts  # Tests
 ```
 
+## Workflow Developer Capabilities
+
+**The Honest Truth**: Workflows are TypeScript-based, but with Cloudflare Workers runtime constraints.
+
+### What Developers CAN Do
+
+Inside `defineWorkflow()`, developers have significant flexibility:
+
+| Capability | Works | Example |
+|------------|-------|---------|
+| `fetch()` | Yes | Call any HTTP API directly |
+| Custom helpers | Yes | Define functions at module level |
+| Workers AI | Yes | `integrations.ai.generateText()` |
+| Persistent storage | Yes | `context.storage.get/put()` |
+| Standard JS APIs | Yes | Array, Date, JSON, RegExp, Map, Set |
+| Complex control flow | Yes | if/else, loops, try/catch |
+
+**Evidence**: Production workflows like `meeting-intelligence-private` use direct `fetch()` calls (lines 73, 447, 519).
+
+### What Developers CANNOT Do
+
+The constraint is the **runtime** (Cloudflare Workers V8 isolate), not the language:
+
+| Blocked | Reason |
+|---------|--------|
+| Node.js stdlib | `fs`, `child_process`, `os` not available |
+| Most npm packages | Only Workers-compatible packages work |
+| Escape `defineWorkflow()` | Required structure for execution |
+| Long-running processes | Workers have execution time limits |
+
+### The Escape Hatch
+
+For APIs without pre-built integrations, use `fetch()` directly:
+
+```typescript
+export default defineWorkflow({
+  async execute({ config }) {
+    // Direct fetch() for any API
+    const response = await fetch('https://api.custom-service.com/data', {
+      headers: { 'Authorization': `Bearer ${config.apiKey}` }
+    });
+    return await response.json();
+  }
+});
+```
+
+**Full documentation**: See `docs/DEVELOPER_CAPABILITIES.md`
+
 ## Positioning Context
 
 ### WORKWAY fills Notion's integration gaps:
@@ -87,10 +135,20 @@ Each outcome page targets:
 |-----------|----------|
 | Integrations | `packages/integrations/src/` |
 | Workflows | `packages/workflows/src/` |
+| Workers | `packages/workers/` |
+| Design Tokens CDN | `packages/workers/design-tokens/` |
 | Web UI | `apps/web/` (separate repo) |
 | API | `apps/api/` (separate repo) |
 | SDK | `packages/sdk/` |
 | Documentation | `docs/` |
+
+## Key Documentation
+
+| Document | Purpose |
+|----------|---------|
+| `docs/PLATFORM_THESIS.md` | **Start here.** Two-sided platform model, pricing, competitive positioning |
+| `docs/DEVELOPER_CAPABILITIES.md` | What developers can/cannot do in workflows |
+| `docs/WORKERS_RUNTIME_GUIDE.md` | Cloudflare Workers constraints and patterns |
 
 ## Commands
 
@@ -171,6 +229,33 @@ export const metadata = {
 - Analytics live at `workway.co/workflows/private/{workflow-id}/analytics`
 - Worker endpoints provide data APIs only (no HTML)
 - All UI is in the unified `workway.co/workflows` page
+
+### Design Token Distribution (CDN)
+
+Private/BYOO workflows inherit WORKWAY design automatically via CDN:
+
+```html
+<head>
+  <!-- Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Stack+Sans+Notch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <!-- Design Tokens - ONE LINE -->
+  <link rel="stylesheet" href="https://cdn.workway.co/tokens.css" />
+  <!-- Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+```
+
+**What the CDN provides:**
+- Color tokens: `--color-bg-pure`, `--color-fg-primary`, `--color-success`, etc.
+- Short aliases: `--bg-pure`, `--fg-primary`, `--success` (backwards compatibility)
+- Typography: `--font-sans`, `--font-mono`, `--text-h1`, `--text-body`, etc.
+- Spacing: `--space-xs` to `--space-2xl` (Golden Ratio scale)
+- Animation: `--ease-standard`, `--duration-standard`, etc.
+- Base body styles: font-family, background, color, antialiasing
+
+**Zuhandenheit achieved:** Developer adds one `<link>` tag. Design flows through. The mechanism disappears.
+
+**CDN Worker location:** `packages/workers/design-tokens/`
 
 ## Exception Patterns
 

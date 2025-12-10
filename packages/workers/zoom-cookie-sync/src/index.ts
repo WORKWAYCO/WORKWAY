@@ -203,6 +203,36 @@ export default {
 };
 
 // ============================================================================
+// RATE LIMITING CONFIGURATION
+// ============================================================================
+
+// Requests per hour limits (per user)
+const RATE_LIMITS = {
+	// Expensive operations (browser scraping)
+	expensive: { limit: 20, window: 3600000 }, // 20 per hour
+	// Standard operations (API calls, uploads)
+	standard: { limit: 100, window: 3600000 }, // 100 per hour
+	// Cheap operations (health checks, dashboard data)
+	cheap: { limit: 300, window: 3600000 }, // 300 per hour
+};
+
+// Map endpoints to rate limit categories
+const ENDPOINT_RATE_CATEGORY: Record<string, keyof typeof RATE_LIMITS> = {
+	'scrape-meetings': 'expensive',
+	'scrape-transcript': 'expensive',
+	'scrape-clips': 'expensive',
+	'scrape-clip-transcript': 'expensive',
+	'refresh-session': 'expensive',
+	'upload-cookies': 'standard',
+	'executions': 'standard',
+	'disconnect': 'standard',
+	'sync': 'standard',
+	'health': 'cheap',
+	'dashboard-data': 'cheap',
+	'debug-cookies': 'cheap',
+};
+
+// ============================================================================
 // DURABLE OBJECT: Per-User Session
 // ============================================================================
 
@@ -224,6 +254,29 @@ export class UserSession {
 		// CORS preflight
 		if (request.method === 'OPTIONS') {
 			return new Response(null, { headers: corsHeaders });
+		}
+
+		// Rate limiting check
+		const rateLimitResult = await this.checkRateLimit(endpoint);
+		if (!rateLimitResult.allowed) {
+			return Response.json(
+				{
+					error: 'Rate limit exceeded',
+					retryAfter: Math.ceil(rateLimitResult.retryAfter / 1000),
+					limit: rateLimitResult.limit,
+					remaining: 0,
+				},
+				{
+					status: 429,
+					headers: {
+						...corsHeaders,
+						'Retry-After': String(Math.ceil(rateLimitResult.retryAfter / 1000)),
+						'X-RateLimit-Limit': String(rateLimitResult.limit),
+						'X-RateLimit-Remaining': '0',
+						'X-RateLimit-Reset': String(Math.ceil((Date.now() + rateLimitResult.retryAfter) / 1000)),
+					},
+				}
+			);
 		}
 
 		try {
@@ -287,9 +340,15 @@ export class UserSession {
 					);
 			}
 		} catch (error: any) {
+			// Log full error with stack trace for debugging
 			console.error(`Error in UserSession (${endpoint}):`, error);
+
+			// Return sanitized error to client (no stack traces)
 			return Response.json(
-				{ error: error.message },
+				{
+					error: sanitizeErrorMessage(error.message),
+					code: 'INTERNAL_ERROR',
+				},
 				{ status: 500, headers: corsHeaders }
 			);
 		}
@@ -517,6 +576,58 @@ export class UserSession {
 	}
 
 	// --------------------------------------------------------------------------
+	// Rate Limiting
+	// --------------------------------------------------------------------------
+
+	/**
+	 * Check and update rate limit for an endpoint
+	 * Uses sliding window algorithm stored in Durable Object storage
+	 */
+	private async checkRateLimit(endpoint: string): Promise<{
+		allowed: boolean;
+		remaining: number;
+		limit: number;
+		retryAfter: number;
+	}> {
+		const category = ENDPOINT_RATE_CATEGORY[endpoint] || 'standard';
+		const { limit, window } = RATE_LIMITS[category];
+		const now = Date.now();
+		const windowStart = now - window;
+
+		// Get request timestamps for this category
+		const storageKey = `rate_limit:${category}`;
+		const timestamps = await this.state.storage.get<number[]>(storageKey) || [];
+
+		// Filter to only requests within the window
+		const validTimestamps = timestamps.filter((ts) => ts > windowStart);
+
+		// Check if under limit
+		if (validTimestamps.length >= limit) {
+			// Find when the oldest request will expire
+			const oldestInWindow = Math.min(...validTimestamps);
+			const retryAfter = oldestInWindow + window - now;
+
+			return {
+				allowed: false,
+				remaining: 0,
+				limit,
+				retryAfter: Math.max(retryAfter, 1000), // At least 1 second
+			};
+		}
+
+		// Add current request and save
+		validTimestamps.push(now);
+		await this.state.storage.put(storageKey, validTimestamps);
+
+		return {
+			allowed: true,
+			remaining: limit - validTimestamps.length,
+			limit,
+			retryAfter: 0,
+		};
+	}
+
+	// --------------------------------------------------------------------------
 	// Execution Tracking (Private Workflow Dashboard)
 	// --------------------------------------------------------------------------
 
@@ -581,12 +692,22 @@ export class UserSession {
 
 	/**
 	 * Record a workflow execution (called by workflow)
+	 *
+	 * Security: Supports two authentication methods:
+	 * 1. Bearer token: Authorization header with API_SECRET
+	 * 2. HMAC signature: X-Signature header with HMAC-SHA256 of request body
+	 *
+	 * When both are provided, both are verified (defense in depth)
 	 */
 	async recordExecution(
 		request: Request,
 		corsHeaders: Record<string, string>
 	): Promise<Response> {
-		// Verify API secret
+		// Clone request to read body multiple times if needed
+		const clonedRequest = request.clone();
+		const bodyText = await clonedRequest.text();
+
+		// Verify Bearer token (required)
 		const authHeader = request.headers.get('Authorization');
 		if (!authHeader || authHeader !== `Bearer ${this.env.API_SECRET}`) {
 			return Response.json(
@@ -595,8 +716,20 @@ export class UserSession {
 			);
 		}
 
+		// Verify HMAC signature if provided (optional but recommended)
+		const signature = request.headers.get('X-Signature');
+		if (signature && this.env.API_SECRET) {
+			const isValid = await verifyHmacSignature(bodyText, signature, this.env.API_SECRET);
+			if (!isValid) {
+				return Response.json(
+					{ success: false, error: 'Invalid signature' },
+					{ status: 401, headers: corsHeaders }
+				);
+			}
+		}
+
 		try {
-			const body = (await request.json()) as Partial<ExecutionRecord>;
+			const body = JSON.parse(bodyText) as Partial<ExecutionRecord>;
 
 			const execution: ExecutionRecord = {
 				id: crypto.randomUUID(),
@@ -1741,14 +1874,113 @@ function serveDashboard(userId: string, env: Env): Response {
 // HELPERS
 // ============================================================================
 
+/**
+ * Verify HMAC-SHA256 signature for webhook payloads
+ * Expected signature format: sha256=<hex-encoded-signature>
+ */
+async function verifyHmacSignature(
+	payload: string,
+	signature: string,
+	secret: string
+): Promise<boolean> {
+	try {
+		// Parse signature format (sha256=...)
+		const parts = signature.split('=');
+		if (parts.length !== 2 || parts[0] !== 'sha256') {
+			return false;
+		}
+		const providedSig = parts[1];
+
+		// Generate expected signature
+		const encoder = new TextEncoder();
+		const key = await crypto.subtle.importKey(
+			'raw',
+			encoder.encode(secret),
+			{ name: 'HMAC', hash: 'SHA-256' },
+			false,
+			['sign']
+		);
+		const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
+
+		// Convert to hex
+		const expectedSig = Array.from(new Uint8Array(signatureBuffer))
+			.map((b) => b.toString(16).padStart(2, '0'))
+			.join('');
+
+		// Constant-time comparison to prevent timing attacks
+		if (providedSig.length !== expectedSig.length) {
+			return false;
+		}
+		let result = 0;
+		for (let i = 0; i < providedSig.length; i++) {
+			result |= providedSig.charCodeAt(i) ^ expectedSig.charCodeAt(i);
+		}
+		return result === 0;
+	} catch {
+		return false;
+	}
+}
+
+/**
+ * Sanitize error messages before returning to clients
+ * Removes stack traces, file paths, and internal implementation details
+ */
+function sanitizeErrorMessage(message: string): string {
+	if (!message) return 'An unexpected error occurred';
+
+	// Remove stack traces (lines starting with "at ")
+	let sanitized = message.split('\n')[0];
+
+	// Remove file paths
+	sanitized = sanitized.replace(/\/[^\s]+\.(ts|js):\d+:\d+/g, '[internal]');
+
+	// Remove internal error prefixes
+	sanitized = sanitized.replace(/^(Error|TypeError|ReferenceError):\s*/i, '');
+
+	// Cap length to prevent leaking large error messages
+	if (sanitized.length > 200) {
+		sanitized = sanitized.substring(0, 200) + '...';
+	}
+
+	// If message is now empty or only whitespace, return generic error
+	if (!sanitized.trim()) {
+		return 'An unexpected error occurred';
+	}
+
+	return sanitized;
+}
+
 function getCorsHeaders(request: Request): Record<string, string> {
 	const origin = request.headers.get('Origin') || '';
-	const allowedOrigins = ['zoom.us', 'workway.co', 'half-dozen.workers.dev', 'localhost'];
-	const isAllowed = allowedOrigins.some((o) => origin.includes(o));
+
+	// Secure CORS validation using URL parsing (prevents subdomain spoofing)
+	// e.g., rejects "attacker-zoom.us" while allowing "us06web.zoom.us"
+	const allowedDomains = ['zoom.us', 'workway.co', 'half-dozen.workers.dev', 'localhost'];
+
+	let isAllowed = false;
+	try {
+		const originUrl = new URL(origin);
+		isAllowed = allowedDomains.some((domain) => {
+			if (domain === 'localhost') {
+				return originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1';
+			}
+			// Check exact match or subdomain match (e.g., "us06web.zoom.us" matches "zoom.us")
+			return originUrl.hostname === domain || originUrl.hostname.endsWith(`.${domain}`);
+		});
+	} catch {
+		// Invalid origin URL - reject
+		isAllowed = false;
+	}
 
 	return {
+		// CORS headers
 		'Access-Control-Allow-Origin': isAllowed ? origin : 'https://workway.co',
 		'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 		'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Endpoint, X-User-Id',
+		// Security headers (defense in depth)
+		'X-Content-Type-Options': 'nosniff',
+		'X-Frame-Options': 'DENY',
+		'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https://workway.co data:; connect-src 'self' https://*.workway.co https://*.workers.dev",
+		'Referrer-Policy': 'strict-origin-when-cross-origin',
 	};
 }

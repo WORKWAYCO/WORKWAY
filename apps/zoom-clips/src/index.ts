@@ -40,17 +40,37 @@ interface Env {
   WORKER_URL?: string;
 }
 
-// CORS helper
+// CORS and security headers helper
 function getCorsHeaders(request: Request): Record<string, string> {
   const origin = request.headers.get('Origin') || '';
-  const isZoomOrigin = origin.includes('zoom.us');
-  const isWorkwayOrigin = origin.includes('workway.co') || origin.includes('localhost');
+
+  // Secure CORS validation using URL parsing (prevents subdomain spoofing)
+  const allowedDomains = ['zoom.us', 'workway.co', 'half-dozen.workers.dev', 'localhost'];
+
+  let isAllowed = false;
+  try {
+    const originUrl = new URL(origin);
+    isAllowed = allowedDomains.some((domain) => {
+      if (domain === 'localhost') {
+        return originUrl.hostname === 'localhost' || originUrl.hostname === '127.0.0.1';
+      }
+      return originUrl.hostname === domain || originUrl.hostname.endsWith(`.${domain}`);
+    });
+  } catch {
+    isAllowed = false;
+  }
 
   return {
-    'Access-Control-Allow-Origin': isZoomOrigin ? origin : isWorkwayOrigin ? origin : 'https://workway.co',
+    // CORS headers
+    'Access-Control-Allow-Origin': isAllowed ? origin : 'https://workway.co',
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Credentials': 'true',
+    // Security headers
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'Content-Security-Policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; connect-src 'self' https://*.workway.co https://*.workers.dev",
+    'Referrer-Policy': 'strict-origin-when-cross-origin',
   };
 }
 
@@ -133,13 +153,26 @@ export default {
     const headers = new Headers(request.headers);
     headers.set('X-User-Id', userId);
 
-    return session.fetch(
+    const doResponse = await session.fetch(
       new Request(doUrl.toString(), {
         method: request.method,
         headers,
         body: request.body,
       })
     );
+
+    // Add security headers to all Durable Object responses
+    const securityHeaders = getCorsHeaders(request);
+    const responseHeaders = new Headers(doResponse.headers);
+    for (const [key, value] of Object.entries(securityHeaders)) {
+      responseHeaders.set(key, value);
+    }
+
+    return new Response(doResponse.body, {
+      status: doResponse.status,
+      statusText: doResponse.statusText,
+      headers: responseHeaders,
+    });
   },
 };
 

@@ -60,6 +60,9 @@ export interface ActionHelpers {
 	gmail: GmailActions;
 	slack: SlackActions;
 	notion: NotionActions;
+	zoom: ZoomActions;
+	stripe: StripeActions;
+	linear: LinearActions;
 	[integration: string]: any;
 }
 
@@ -110,6 +113,28 @@ interface NotionActions {
 	createPage(input: { database_id: string; properties: any; children?: any[] }): Promise<any>;
 	updatePage(input: { page_id: string; properties: any }): Promise<any>;
 	queryDatabase(input: { database_id: string; filter?: any; sorts?: any[] }): Promise<any>;
+}
+
+interface ZoomActions {
+	getMeetings(input?: { userId?: string; type?: string; days?: number }): Promise<any>;
+	getMeeting(input: { meetingId: string }): Promise<any>;
+	getRecordings(input: { meetingId: string }): Promise<any>;
+	getTranscript(input: { meetingId: string }): Promise<any>;
+}
+
+interface StripeActions {
+	getCustomer(input: { customerId: string }): Promise<any>;
+	listCustomers(input?: { limit?: number; email?: string }): Promise<any>;
+	listPaymentIntents(input?: { limit?: number; customer?: string }): Promise<any>;
+	listSubscriptions(input?: { limit?: number; customer?: string; status?: string }): Promise<any>;
+}
+
+interface LinearActions {
+	createIssue(input: { teamId: string; title: string; description?: string; priority?: number }): Promise<any>;
+	getIssue(input: { issueId: string }): Promise<any>;
+	updateIssue(input: { issueId: string; title?: string; description?: string; stateId?: string }): Promise<any>;
+	listIssues(input?: { teamId?: string; limit?: number }): Promise<any>;
+	listTeams(): Promise<any>;
 }
 
 // ============================================================================
@@ -399,6 +424,25 @@ export class WorkflowRuntime {
 				updatePage: (input) => execute('notion.update-page', input),
 				queryDatabase: (input) => execute('notion.query-database', input),
 			},
+			zoom: {
+				getMeetings: (input) => execute('zoom.get-meetings', input),
+				getMeeting: (input) => execute('zoom.get-meeting', input),
+				getRecordings: (input) => execute('zoom.get-recordings', input),
+				getTranscript: (input) => execute('zoom.get-transcript', input),
+			},
+			stripe: {
+				getCustomer: (input) => execute('stripe.get-customer', input),
+				listCustomers: (input) => execute('stripe.list-customers', input),
+				listPaymentIntents: (input) => execute('stripe.list-payment-intents', input),
+				listSubscriptions: (input) => execute('stripe.list-subscriptions', input),
+			},
+			linear: {
+				createIssue: (input) => execute('linear.create-issue', input),
+				getIssue: (input) => execute('linear.get-issue', input),
+				updateIssue: (input) => execute('linear.update-issue', input),
+				listIssues: (input) => execute('linear.list-issues', input),
+				listTeams: () => execute('linear.list-teams', {}),
+			},
 		};
 	}
 
@@ -421,6 +465,25 @@ export class WorkflowRuntime {
 				'create-page': this.notionCreatePage.bind(this),
 				'update-page': this.notionUpdatePage.bind(this),
 				'query-database': this.notionQueryDatabase.bind(this),
+			},
+			zoom: {
+				'get-meetings': this.zoomGetMeetings.bind(this),
+				'get-meeting': this.zoomGetMeeting.bind(this),
+				'get-recordings': this.zoomGetRecordings.bind(this),
+				'get-transcript': this.zoomGetTranscript.bind(this),
+			},
+			stripe: {
+				'get-customer': this.stripeGetCustomer.bind(this),
+				'list-customers': this.stripeListCustomers.bind(this),
+				'list-payment-intents': this.stripeListPaymentIntents.bind(this),
+				'list-subscriptions': this.stripeListSubscriptions.bind(this),
+			},
+			linear: {
+				'create-issue': this.linearCreateIssue.bind(this),
+				'get-issue': this.linearGetIssue.bind(this),
+				'update-issue': this.linearUpdateIssue.bind(this),
+				'list-issues': this.linearListIssues.bind(this),
+				'list-teams': this.linearListTeams.bind(this),
 			},
 		};
 
@@ -739,6 +802,335 @@ export class WorkflowRuntime {
 		}
 
 		return await response.json();
+	}
+
+	// ============================================================================
+	// ZOOM ACTIONS
+	// ============================================================================
+
+	private async zoomGetMeetings(input?: { userId?: string; type?: string; days?: number }): Promise<any> {
+		const token = this.oauthTokens.zoom;
+		if (!token?.access_token) {
+			throw new Error('Zoom not connected. Run: workway oauth connect zoom');
+		}
+
+		const userId = input?.userId || 'me';
+		const type = input?.type || 'scheduled';
+		const params = new URLSearchParams({ type });
+
+		if (input?.days) {
+			const from = new Date();
+			from.setDate(from.getDate() - input.days);
+			params.set('from', from.toISOString().split('T')[0]);
+		}
+
+		const response = await fetch(`https://api.zoom.us/v2/users/${userId}/meetings?${params}`, {
+			headers: { Authorization: `Bearer ${token.access_token}` },
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`Zoom API error: ${response.status} - ${error}`);
+		}
+
+		return await response.json();
+	}
+
+	private async zoomGetMeeting(input: { meetingId: string }): Promise<any> {
+		const token = this.oauthTokens.zoom;
+		if (!token?.access_token) {
+			throw new Error('Zoom not connected. Run: workway oauth connect zoom');
+		}
+
+		const response = await fetch(`https://api.zoom.us/v2/meetings/${input.meetingId}`, {
+			headers: { Authorization: `Bearer ${token.access_token}` },
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`Zoom API error: ${response.status} - ${error}`);
+		}
+
+		return await response.json();
+	}
+
+	private async zoomGetRecordings(input: { meetingId: string }): Promise<any> {
+		const token = this.oauthTokens.zoom;
+		if (!token?.access_token) {
+			throw new Error('Zoom not connected. Run: workway oauth connect zoom');
+		}
+
+		const response = await fetch(`https://api.zoom.us/v2/meetings/${input.meetingId}/recordings`, {
+			headers: { Authorization: `Bearer ${token.access_token}` },
+		});
+
+		if (!response.ok) {
+			if (response.status === 404) {
+				return null; // No recordings
+			}
+			const error = await response.text();
+			throw new Error(`Zoom API error: ${response.status} - ${error}`);
+		}
+
+		return await response.json();
+	}
+
+	private async zoomGetTranscript(input: { meetingId: string }): Promise<any> {
+		// Note: Zoom OAuth doesn't provide transcript access directly
+		// This returns recording info which may include transcript files
+		const recordings = await this.zoomGetRecordings(input);
+		if (!recordings?.recording_files) {
+			return null;
+		}
+
+		const transcriptFile = recordings.recording_files.find(
+			(f: any) => f.file_type === 'TRANSCRIPT'
+		);
+
+		return transcriptFile || null;
+	}
+
+	// ============================================================================
+	// STRIPE ACTIONS
+	// ============================================================================
+
+	private async stripeGetCustomer(input: { customerId: string }): Promise<any> {
+		const token = this.oauthTokens.stripe;
+		if (!token?.access_token) {
+			throw new Error('Stripe not connected. Run: workway oauth connect stripe');
+		}
+
+		const response = await fetch(`https://api.stripe.com/v1/customers/${input.customerId}`, {
+			headers: { Authorization: `Bearer ${token.access_token}` },
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`Stripe API error: ${response.status} - ${error}`);
+		}
+
+		return await response.json();
+	}
+
+	private async stripeListCustomers(input?: { limit?: number; email?: string }): Promise<any> {
+		const token = this.oauthTokens.stripe;
+		if (!token?.access_token) {
+			throw new Error('Stripe not connected. Run: workway oauth connect stripe');
+		}
+
+		const params = new URLSearchParams();
+		if (input?.limit) params.set('limit', String(input.limit));
+		if (input?.email) params.set('email', input.email);
+
+		const response = await fetch(`https://api.stripe.com/v1/customers?${params}`, {
+			headers: { Authorization: `Bearer ${token.access_token}` },
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`Stripe API error: ${response.status} - ${error}`);
+		}
+
+		return await response.json();
+	}
+
+	private async stripeListPaymentIntents(input?: { limit?: number; customer?: string }): Promise<any> {
+		const token = this.oauthTokens.stripe;
+		if (!token?.access_token) {
+			throw new Error('Stripe not connected. Run: workway oauth connect stripe');
+		}
+
+		const params = new URLSearchParams();
+		if (input?.limit) params.set('limit', String(input.limit));
+		if (input?.customer) params.set('customer', input.customer);
+
+		const response = await fetch(`https://api.stripe.com/v1/payment_intents?${params}`, {
+			headers: { Authorization: `Bearer ${token.access_token}` },
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`Stripe API error: ${response.status} - ${error}`);
+		}
+
+		return await response.json();
+	}
+
+	private async stripeListSubscriptions(input?: { limit?: number; customer?: string; status?: string }): Promise<any> {
+		const token = this.oauthTokens.stripe;
+		if (!token?.access_token) {
+			throw new Error('Stripe not connected. Run: workway oauth connect stripe');
+		}
+
+		const params = new URLSearchParams();
+		if (input?.limit) params.set('limit', String(input.limit));
+		if (input?.customer) params.set('customer', input.customer);
+		if (input?.status) params.set('status', input.status);
+
+		const response = await fetch(`https://api.stripe.com/v1/subscriptions?${params}`, {
+			headers: { Authorization: `Bearer ${token.access_token}` },
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`Stripe API error: ${response.status} - ${error}`);
+		}
+
+		return await response.json();
+	}
+
+	// ============================================================================
+	// LINEAR ACTIONS
+	// ============================================================================
+
+	private async linearGraphQL(query: string, variables: Record<string, any> = {}): Promise<any> {
+		const token = this.oauthTokens.linear;
+		if (!token?.access_token) {
+			throw new Error('Linear not connected. Run: workway oauth connect linear');
+		}
+
+		const response = await fetch('https://api.linear.app/graphql', {
+			method: 'POST',
+			headers: {
+				Authorization: `Bearer ${token.access_token}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ query, variables }),
+		});
+
+		if (!response.ok) {
+			const error = await response.text();
+			throw new Error(`Linear API error: ${response.status} - ${error}`);
+		}
+
+		const result = await response.json() as { data?: any; errors?: any[] };
+		if (result.errors) {
+			throw new Error(`Linear GraphQL error: ${JSON.stringify(result.errors)}`);
+		}
+
+		return result.data;
+	}
+
+	private async linearCreateIssue(input: {
+		teamId: string;
+		title: string;
+		description?: string;
+		priority?: number;
+	}): Promise<any> {
+		const mutation = `
+			mutation CreateIssue($teamId: String!, $title: String!, $description: String, $priority: Int) {
+				issueCreate(input: { teamId: $teamId, title: $title, description: $description, priority: $priority }) {
+					success
+					issue {
+						id
+						identifier
+						title
+						description
+						priority
+						state { id name }
+						assignee { id name }
+						createdAt
+						updatedAt
+					}
+				}
+			}
+		`;
+
+		const result = await this.linearGraphQL(mutation, input);
+		return result.issueCreate.issue;
+	}
+
+	private async linearGetIssue(input: { issueId: string }): Promise<any> {
+		const query = `
+			query GetIssue($issueId: String!) {
+				issue(id: $issueId) {
+					id
+					identifier
+					title
+					description
+					priority
+					state { id name }
+					assignee { id name }
+					createdAt
+					updatedAt
+				}
+			}
+		`;
+
+		const result = await this.linearGraphQL(query, input);
+		return result.issue;
+	}
+
+	private async linearUpdateIssue(input: {
+		issueId: string;
+		title?: string;
+		description?: string;
+		stateId?: string;
+	}): Promise<any> {
+		const mutation = `
+			mutation UpdateIssue($issueId: String!, $title: String, $description: String, $stateId: String) {
+				issueUpdate(id: $issueId, input: { title: $title, description: $description, stateId: $stateId }) {
+					success
+					issue {
+						id
+						identifier
+						title
+						description
+						priority
+						state { id name }
+						assignee { id name }
+						createdAt
+						updatedAt
+					}
+				}
+			}
+		`;
+
+		const result = await this.linearGraphQL(mutation, input);
+		return result.issueUpdate.issue;
+	}
+
+	private async linearListIssues(input?: { teamId?: string; limit?: number }): Promise<any> {
+		const query = `
+			query ListIssues($teamId: String, $first: Int) {
+				issues(filter: { team: { id: { eq: $teamId } } }, first: $first) {
+					nodes {
+						id
+						identifier
+						title
+						description
+						priority
+						state { id name }
+						assignee { id name }
+						createdAt
+						updatedAt
+					}
+				}
+			}
+		`;
+
+		const result = await this.linearGraphQL(query, {
+			teamId: input?.teamId,
+			first: input?.limit || 50,
+		});
+		return result.issues.nodes;
+	}
+
+	private async linearListTeams(): Promise<any> {
+		const query = `
+			query ListTeams {
+				teams {
+					nodes {
+						id
+						name
+						key
+					}
+				}
+			}
+		`;
+
+		const result = await this.linearGraphQL(query);
+		return result.teams.nodes;
 	}
 }
 
