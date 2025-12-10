@@ -155,10 +155,11 @@ export default defineWorkflow({
 
 		// Calendar settings
 		calendarsToSync: {
-			type: 'google_calendar_picker',
-			label: 'Calendars',
+			type: 'text',
+			label: 'Calendar IDs',
 			required: false,
-			description: 'Calendars to sync (default: primary)',
+			default: 'primary',
+			description: 'Comma-separated calendar IDs to sync (default: primary). Find IDs in Google Calendar settings.',
 		},
 		ignoreDeclined: {
 			type: 'boolean',
