@@ -79,7 +79,7 @@ export default defineWorkflow({
 
 	inputs: {
 		projectsDatabase: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Projects Database',
 			required: true,
 			description: 'Database with project details',

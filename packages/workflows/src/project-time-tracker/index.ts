@@ -134,13 +134,13 @@ export default defineWorkflow({
 
 		// Filtering
 		teamIds: {
-			type: 'linear_team_picker',
+			type: 'text',
 			label: 'Teams to Track',
 			required: false,
 			description: 'Limit to specific teams (empty = all)',
 		},
 		projectIds: {
-			type: 'linear_project_picker',
+			type: 'text',
 			label: 'Projects to Track',
 			required: false,
 			description: 'Limit to specific projects (empty = all)',
@@ -154,7 +154,7 @@ export default defineWorkflow({
 
 		// Slack settings
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Weekly Digest Channel',
 			required: false,
 			description: 'Channel for weekly time summary',

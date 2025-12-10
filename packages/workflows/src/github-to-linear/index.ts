@@ -100,13 +100,13 @@ export default defineWorkflow({
 
 	inputs: {
 		linearTeamId: {
-			type: 'linear_team_picker',
+			type: 'text',
 			label: 'Linear Team',
 			required: true,
 			description: 'Select the Linear team where issues will be created',
 		},
 		linearProjectId: {
-			type: 'linear_project_picker',
+			type: 'text',
 			label: 'Linear Project (optional)',
 			required: false,
 			description: 'Optionally assign issues to a specific project',

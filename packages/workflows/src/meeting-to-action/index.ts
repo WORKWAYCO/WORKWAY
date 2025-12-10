@@ -115,7 +115,7 @@ export default defineWorkflow({
 
 		// Todoist settings
 		todoistProject: {
-			type: 'todoist_project_picker',
+			type: 'text',
 			label: 'Todoist Project',
 			required: false,
 			description: 'Project for meeting tasks (defaults to Inbox)',
@@ -123,13 +123,13 @@ export default defineWorkflow({
 
 		// Linear settings
 		linearTeam: {
-			type: 'linear_team_picker',
+			type: 'text',
 			label: 'Linear Team',
 			required: false,
 			description: 'Team to create issues in',
 		},
 		linearProject: {
-			type: 'linear_project_picker',
+			type: 'text',
 			label: 'Linear Project',
 			required: false,
 			description: 'Optional project for issues',
@@ -172,7 +172,7 @@ export default defineWorkflow({
 
 		// Notification settings
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Action Item Notifications',
 			required: false,
 			description: 'Channel to post extracted action items',

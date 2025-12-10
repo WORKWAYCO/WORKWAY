@@ -80,7 +80,7 @@ export default defineWorkflow({
 
 	inputs: {
 		supportChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Support Intake Channel',
 			required: true,
 			description: 'Channel where support requests come in',
@@ -89,10 +89,10 @@ export default defineWorkflow({
 			type: 'object',
 			label: 'Routing Channels',
 			properties: {
-				billing: { type: 'slack_channel_picker', label: 'Billing Issues' },
-				technical: { type: 'slack_channel_picker', label: 'Technical Support' },
-				sales: { type: 'slack_channel_picker', label: 'Sales Questions' },
-				general: { type: 'slack_channel_picker', label: 'General Inquiries' },
+				billing: { type: 'text', label: 'Billing Issues' },
+				technical: { type: 'text', label: 'Technical Support' },
+				sales: { type: 'text', label: 'Sales Questions' },
+				general: { type: 'text', label: 'General Inquiries' },
 			},
 		},
 		urgencyThreshold: {

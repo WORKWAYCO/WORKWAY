@@ -171,7 +171,7 @@ export default defineWorkflow({
 
 		// Notion tracking
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Time Tracking Database',
 			required: false,
 			description: 'Notion database for logging billable time',

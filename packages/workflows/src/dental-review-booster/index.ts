@@ -141,7 +141,7 @@ export default defineWorkflow({
 			description: 'Direct link to your Yelp review page',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Feedback Alert Channel',
 			required: false,
 			description: 'Channel for positive feedback and recovery alerts',

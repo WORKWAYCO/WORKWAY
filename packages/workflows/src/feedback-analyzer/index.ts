@@ -83,7 +83,7 @@ export default defineWorkflow({
 
 	inputs: {
 		feedbackDatabase: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Feedback Database',
 			required: true,
 			description: 'Where to store analyzed feedback',

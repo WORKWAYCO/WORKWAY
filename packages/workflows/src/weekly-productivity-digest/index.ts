@@ -89,20 +89,20 @@ export default defineWorkflow({
 
 	inputs: {
 		todoistProjectIds: {
-			type: 'todoist_project_picker',
+			type: 'text',
 			label: 'Projects to Analyze',
 			required: true,
 			multiple: true,
 			description: 'Select Todoist projects to include in the digest',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Digest Channel',
 			required: true,
 			description: 'Channel to post weekly digests',
 		},
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Digest Archive',
 			required: false,
 			description: 'Optional: Notion database to archive weekly digests',

@@ -77,7 +77,7 @@ export default defineWorkflow({
 
 	inputs: {
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Notion Database for Payments',
 			required: true,
 			description: 'Select the database where payments will be logged',

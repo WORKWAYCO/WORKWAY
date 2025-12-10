@@ -87,7 +87,7 @@ export default defineWorkflow({
 	inputs: {
 		// Folder selection
 		watchFolders: {
-			type: 'google_drive_folder_picker',
+			type: 'text',
 			label: 'Folders to Watch',
 			required: false,
 			description: 'Leave empty to watch entire Drive',
@@ -101,7 +101,7 @@ export default defineWorkflow({
 
 		// Notion destination
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Notion Database',
 			required: true,
 			description: 'Database to sync documents to',
@@ -151,7 +151,7 @@ export default defineWorkflow({
 
 		// Notifications
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Notification Channel',
 			required: false,
 			description: 'Channel for file update notifications',

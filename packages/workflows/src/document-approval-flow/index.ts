@@ -82,19 +82,19 @@ export default defineWorkflow({
 	inputs: {
 		// Folder configuration
 		approvalFolderId: {
-			type: 'google_drive_folder_picker',
+			type: 'text',
 			label: 'Approval Folder',
 			required: true,
 			description: 'Folder to watch for documents needing approval',
 		},
 		approvedFolderId: {
-			type: 'google_drive_folder_picker',
+			type: 'text',
 			label: 'Approved Folder',
 			required: false,
 			description: 'Move approved documents here (optional)',
 		},
 		rejectedFolderId: {
-			type: 'google_drive_folder_picker',
+			type: 'text',
 			label: 'Rejected Folder',
 			required: false,
 			description: 'Move rejected documents here (optional)',
@@ -102,13 +102,13 @@ export default defineWorkflow({
 
 		// Approver settings
 		approverChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Approver Channel',
 			required: true,
 			description: 'Channel where approval requests are posted',
 		},
 		approverUsers: {
-			type: 'slack_users_picker',
+			type: 'text',
 			label: 'Approvers',
 			required: false,
 			description: 'Specific users who can approve (empty = anyone in channel)',
@@ -156,7 +156,7 @@ export default defineWorkflow({
 
 		// Tracking
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Approval Tracking Database',
 			required: false,
 			description: 'Notion database for tracking approvals',

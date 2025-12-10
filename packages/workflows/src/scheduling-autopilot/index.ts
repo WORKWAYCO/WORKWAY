@@ -93,13 +93,13 @@ export default defineWorkflow({
 
 	inputs: {
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Meetings Database',
 			required: true,
 			description: 'Notion database to log meetings',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Notification Channel',
 			required: false,
 			description: 'Channel for booking notifications',

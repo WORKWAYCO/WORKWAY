@@ -142,13 +142,13 @@ export default defineWorkflow({
 			description: 'The project to track RFIs for',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'RFI Alerts Channel',
 			required: true,
 			description: 'Channel for RFI notifications',
 		},
 		escalationChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Escalation Channel',
 			required: false,
 			description: 'Channel for overdue RFI escalations (defaults to main channel)',

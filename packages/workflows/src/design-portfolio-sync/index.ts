@@ -92,13 +92,13 @@ export default defineWorkflow({
 
 	inputs: {
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Portfolio Database',
 			required: true,
 			description: 'Notion database for your design portfolio',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Announcement Channel',
 			required: false,
 			description: 'Optional: Channel to announce new shots',

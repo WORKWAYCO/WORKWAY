@@ -86,13 +86,13 @@ export default defineWorkflow({
 
 	inputs: {
 		notionDatabase: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Incident Database',
 			required: true,
 			description: 'Notion database where incident pages will be created',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Alert Channel',
 			required: false,
 			description: 'Slack channel for incident alerts (optional)',

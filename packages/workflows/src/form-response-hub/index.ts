@@ -95,13 +95,13 @@ export default defineWorkflow({
 	// Destinations auto-detect from connected integrations
 	inputs: {
 		typeformFormId: {
-			type: 'typeform_form_picker',
+			type: 'text',
 			label: 'Form to Monitor',
 			required: true,
 			description: 'The Typeform form to monitor for responses',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Notification Channel',
 			required: false,
 			description: 'Channel for response notifications (optional)',

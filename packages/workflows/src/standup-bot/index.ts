@@ -78,7 +78,7 @@ export default defineWorkflow({
 
 	inputs: {
 		standupChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Standup Channel',
 			required: true,
 			description: 'Channel for daily standups',
@@ -99,7 +99,7 @@ export default defineWorkflow({
 			default: 'America/New_York',
 		},
 		standupDatabase: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Standup Archive (Notion)',
 			description: 'Optional: Archive standups in Notion',
 		},
@@ -246,7 +246,7 @@ export const standupSummary = defineWorkflow({
 
 	inputs: {
 		standupChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Standup Channel',
 			required: true,
 		},

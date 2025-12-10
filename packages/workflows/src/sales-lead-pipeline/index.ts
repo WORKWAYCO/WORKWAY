@@ -104,20 +104,20 @@ export default defineWorkflow({
 	// Optional integrations auto-detected from connected services
 	inputs: {
 		typeformId: {
-			type: 'typeform_form_picker',
+			type: 'text',
 			label: 'Lead Capture Form',
 			required: true,
 			description: 'Select the Typeform that captures leads',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Sales Notifications Channel',
 			required: true,
 			description: 'Channel where lead alerts will be posted',
 		},
 		// Optional: Only shown if Todoist connected and user wants to customize
 		todoistProjectId: {
-			type: 'todoist_project_picker',
+			type: 'text',
 			label: 'Follow-up Tasks Project',
 			required: false,
 			description: 'Auto-detects first project if not specified',

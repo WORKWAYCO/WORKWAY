@@ -91,19 +91,19 @@ export default defineWorkflow({
 
 	inputs: {
 		todoistProjectId: {
-			type: 'todoist_project_picker',
+			type: 'text',
 			label: 'Meeting Tasks Project',
 			required: true,
 			description: 'Todoist project for meeting prep and follow-up tasks',
 		},
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Meetings Database',
 			required: false,
 			description: 'Optional: Notion database to log meetings',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Meeting Notifications',
 			required: false,
 			description: 'Optional: Channel for meeting alerts',

@@ -256,7 +256,7 @@ export default defineWorkflow({
 		// Everything else is handled automatically via the invite flow.
 
 		internalDatabase: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Your Ticket Database',
 			required: true,
 			description: 'Database in your workspace where synced tickets will appear',

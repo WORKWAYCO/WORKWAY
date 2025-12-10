@@ -136,7 +136,7 @@ export default defineWorkflow({
 			description: 'The project to track daily logs for',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Daily Log Channel',
 			required: true,
 			description: 'Channel for daily log summaries',

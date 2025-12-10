@@ -78,7 +78,7 @@ export default defineWorkflow({
 
 	inputs: {
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Task Log Database',
 			required: true,
 			description: 'Database to log completed tasks',
@@ -90,7 +90,7 @@ export default defineWorkflow({
 			description: 'Optional: Only sync tasks from this project',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Weekly Summary Channel',
 			required: false,
 			description: 'Optional: Post weekly productivity summary',

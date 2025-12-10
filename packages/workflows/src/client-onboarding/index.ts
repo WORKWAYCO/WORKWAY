@@ -91,19 +91,19 @@ export default defineWorkflow({
 
 	inputs: {
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Client Database',
 			required: true,
 			description: 'Notion database to track clients',
 		},
 		todoistProjectId: {
-			type: 'todoist_project_picker',
+			type: 'text',
 			label: 'Onboarding Tasks Project',
 			required: true,
 			description: 'Todoist project for onboarding task checklists',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Team Notifications Channel',
 			required: true,
 			description: 'Channel for new client alerts',

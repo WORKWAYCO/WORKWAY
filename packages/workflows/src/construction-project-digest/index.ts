@@ -129,13 +129,13 @@ export default defineWorkflow({
 			description: 'Specific projects to track. Leave blank for all active projects.',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Digest Channel',
 			required: true,
 			description: 'Channel for weekly project digests',
 		},
 		executiveChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Executive Summary Channel',
 			required: false,
 			description: 'Optional channel for executive-level summary',

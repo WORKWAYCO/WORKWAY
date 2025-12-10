@@ -77,19 +77,19 @@ export default defineWorkflow({
 
 	inputs: {
 		airtableBaseId: {
-			type: 'airtable_base_picker',
+			type: 'text',
 			label: 'Content Calendar Base',
 			required: true,
 			description: 'Airtable base with your content calendar',
 		},
 		airtableTableId: {
-			type: 'airtable_table_picker',
+			type: 'text',
 			label: 'Content Table',
 			required: true,
 			description: 'Table containing content items',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Content Updates Channel',
 			required: true,
 			description: 'Channel for daily content reminders',

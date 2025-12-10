@@ -103,13 +103,13 @@ export default defineWorkflow({
 			description: 'Where to send PR notifications',
 		},
 		slackChannelId: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Slack Channel',
 			required: false,
 			description: 'Slack channel for PR notifications',
 		},
 		discordChannelId: {
-			type: 'discord_channel_picker',
+			type: 'text',
 			label: 'Discord Channel',
 			required: false,
 			description: 'Discord channel for PR notifications',

@@ -84,17 +84,17 @@ export default defineWorkflow({
 
 	inputs: {
 		teamDatabase: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Team Members Database',
 			required: true,
 		},
 		onboardingTasksDatabase: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Onboarding Tasks Database',
 			required: true,
 		},
 		announcementChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Team Announcement Channel',
 			required: true,
 		},

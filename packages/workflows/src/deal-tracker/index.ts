@@ -86,13 +86,13 @@ export default defineWorkflow({
 
 	inputs: {
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Sales Channel',
 			required: true,
 			description: 'Channel for deal updates',
 		},
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Deal History Database',
 			required: false,
 			description: 'Optional: Log deal changes to Notion',

@@ -123,7 +123,7 @@ export default defineWorkflow({
 			description: 'Your practice ID from Sikka portal',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Staff Notification Channel',
 			required: false,
 			description: 'Channel for staff alerts (cancellations, no-show risks)',

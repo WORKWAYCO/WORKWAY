@@ -93,7 +93,7 @@ export default defineWorkflow({
 
 	inputs: {
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Revenue Channel',
 			required: true,
 			description: 'Channel for payment notifications',

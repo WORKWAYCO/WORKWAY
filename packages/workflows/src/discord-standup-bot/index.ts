@@ -88,7 +88,7 @@ export default defineWorkflow({
 
 	inputs: {
 		discordChannelId: {
-			type: 'discord_channel_picker',
+			type: 'text',
 			label: 'Standup Channel',
 			required: true,
 			description: 'Channel where standups will be posted',
@@ -100,7 +100,7 @@ export default defineWorkflow({
 			description: 'When to post the standup prompt (local time)',
 		},
 		timezone: {
-			type: 'timezone_picker',
+			type: 'text',
 			label: 'Timezone',
 			default: 'America/New_York',
 			description: 'Your team\'s timezone',
@@ -118,13 +118,13 @@ export default defineWorkflow({
 			description: 'Override default standup questions (one per line)',
 		},
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Archive to Notion (optional)',
 			required: false,
 			description: 'Optionally save standup summaries to Notion',
 		},
 		mentionRole: {
-			type: 'discord_role_picker',
+			type: 'text',
 			label: 'Role to Mention',
 			required: false,
 			description: 'Role to @mention when posting standup prompt',

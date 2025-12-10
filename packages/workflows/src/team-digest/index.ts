@@ -80,7 +80,7 @@ export default defineWorkflow({
 
 	inputs: {
 		digestChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Digest Channel',
 			required: true,
 			description: 'Where to post the daily digest',
@@ -99,11 +99,11 @@ export default defineWorkflow({
 		slackChannels: {
 			type: 'array',
 			label: 'Channels to Monitor',
-			items: { type: 'slack_channel_picker' },
+			items: { type: 'text' },
 			description: 'Which Slack channels to include in digest',
 		},
 		notionDatabase: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Notion Tasks Database',
 			description: 'Track task updates from this database',
 		},

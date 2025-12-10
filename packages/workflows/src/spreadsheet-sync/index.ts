@@ -93,13 +93,13 @@ export default defineWorkflow({
 			description: 'Name of the specific sheet tab to sync',
 		},
 		airtableBaseId: {
-			type: 'airtable_base_picker',
+			type: 'text',
 			label: 'Airtable Base',
 			required: true,
 			description: 'Destination Airtable base',
 		},
 		airtableTableId: {
-			type: 'airtable_table_picker',
+			type: 'text',
 			label: 'Airtable Table',
 			required: true,
 			description: 'Destination table in the base',
@@ -118,7 +118,7 @@ export default defineWorkflow({
 			description: 'How often to check for changes',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Notification Channel',
 			required: false,
 			description: 'Optional: Channel for sync notifications',

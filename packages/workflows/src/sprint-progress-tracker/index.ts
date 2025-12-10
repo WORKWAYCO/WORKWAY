@@ -87,19 +87,19 @@ export default defineWorkflow({
 
 	inputs: {
 		linearTeamId: {
-			type: 'linear_team_picker',
+			type: 'text',
 			label: 'Linear Team',
 			required: true,
 			description: 'Select the Linear team to track',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Updates Channel',
 			required: true,
 			description: 'Channel for daily sprint updates',
 		},
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Sprint History Database',
 			required: false,
 			description: 'Optional: Notion database to log sprint metrics',

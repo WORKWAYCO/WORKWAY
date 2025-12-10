@@ -89,7 +89,7 @@ export default defineWorkflow({
 			description: 'We\'ll search this workspace for meeting context',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Brief Delivery Channel',
 			required: false,
 			description: 'Where to post meeting briefs (defaults to DM)',

@@ -71,13 +71,13 @@ export default defineWorkflow({
 
 	inputs: {
 		meetingNotesDatabase: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Meeting Notes Database',
 			required: true,
 			description: 'Database containing meeting notes',
 		},
 		notifyChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Notification Channel',
 			description: 'Where to post summaries (optional)',
 		},

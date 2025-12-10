@@ -107,13 +107,13 @@ export default defineWorkflow({
 	inputs: {
 		// Core configuration
 		notionDatabaseId: {
-			type: 'notion_database_picker',
+			type: 'text',
 			label: 'Meeting Notes Database',
 			required: true,
 			description: 'Where to store meeting notes',
 		},
 		slackChannel: {
-			type: 'slack_channel_picker',
+			type: 'text',
 			label: 'Meeting Summaries Channel',
 			required: true,
 			description: 'Where to post meeting summaries',
