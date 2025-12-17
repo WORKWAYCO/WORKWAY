@@ -1,0 +1,61 @@
+{
+  "name": "@workway/learn",
+  "version": "1.0.0",
+  "description": "WORKWAY learning MCP server and CLI for workflow development mastery",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "import": "./dist/server.js"
+    }
+  },
+  "bin": {
+    "workway-learn": "./bin/workway-learn.js"
+  },
+  "files": [
+    "dist",
+    "bin",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/server.ts src/cli.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts src/server.ts src/cli.ts --format esm --dts --watch",
+    "start": "node dist/server.js",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "commander": "^12.1.0",
+    "chalk": "^5.3.0",
+    "ora": "^8.0.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "WORKWAY",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/workwayco/workway.git",
+    "directory": "packages/learn"
+  },
+  "keywords": [
+    "workway",
+    "mcp",
+    "claude",
+    "learning",
+    "workflows"
+  ]
+}

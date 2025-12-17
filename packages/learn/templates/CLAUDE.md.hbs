@@ -1,0 +1,58 @@
+# {{projectName}}
+
+## Overview
+
+WORKWAY workflow project. Built with Claude Code.
+
+## Workflow Principles
+
+{{#each principles}}
+### {{category}}
+
+{{content}}
+
+{{#if context}}
+> {{context}}
+{{/if}}
+
+{{/each}}
+
+## Patterns
+
+- Use `defineWorkflow()` for all workflows
+- Follow BaseAPIClient pattern for integrations
+- Sensible defaults over configuration
+- Graceful degradation on errors
+
+## Structure
+
+```
+src/
+├── index.ts          # Main workflow definition
+├── types.ts          # TypeScript interfaces
+└── helpers/          # Helper functions
+```
+
+## Commands
+
+```bash
+pnpm dev              # Start development
+pnpm build            # Build workflow
+pnpm deploy           # Deploy to Cloudflare
+pnpm test             # Run tests
+```
+
+## Zuhandenheit Checklist
+
+Before deploying, verify:
+
+- [ ] Can you describe this workflow without mentioning technology?
+- [ ] Does it have sensible defaults?
+- [ ] Will users forget it exists when it works?
+- [ ] Does it fail gracefully with helpful messages?
+
+## Learn More
+
+- [WORKWAY Learn](https://learn.workway.co) - Interactive tutorials
+- [Workflow Foundations](https://learn.workway.co/paths/workflow-foundations) - Core patterns
+- Use `learn_coach` in Claude Code for real-time guidance

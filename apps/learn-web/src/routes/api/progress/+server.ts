@@ -1,5 +1,23 @@
 import { json, error } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { paths } from '$lib/content/paths';
+
+// Lesson title lookup from paths
+const LESSON_TITLES: Record<string, string> = {};
+for (const path of paths) {
+	for (const lesson of path.lessons) {
+		LESSON_TITLES[lesson.id] = lesson.title;
+	}
+}
+
+// Path lesson counts
+const PATH_LESSON_COUNTS: Record<string, number> = {};
+for (const path of paths) {
+	PATH_LESSON_COUNTS[path.id] = path.lessons.length;
+}
+
+const TOTAL_PATHS = paths.length;
+const TOTAL_LESSONS = paths.reduce((sum, p) => sum + p.lessons.length, 0);
 
 export const GET: RequestHandler = async ({ locals, platform }) => {
 	if (!locals.user) {
@@ -19,24 +37,147 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
 			.first();
 
 		if (!learner) {
-			return json({ pathProgress: [], lessonProgress: [] });
+			// Return empty progress for new learners
+			return json({
+				overall: {
+					pathsCompleted: 0,
+					pathsTotal: TOTAL_PATHS,
+					lessonsCompleted: 0,
+					lessonsTotal: TOTAL_LESSONS,
+					progressPercent: 0,
+					totalTimeHours: 0,
+					praxisCompleted: 0
+				},
+				paths: paths.map((p) => ({
+					pathId: p.id,
+					status: 'not_started',
+					lessonsCompleted: 0,
+					lessonsTotal: p.lessons.length
+				})),
+				lessons: [],
+				recentActivity: []
+			});
 		}
 
 		// Get path progress
-		const pathProgress = await db
+		const pathProgressRows = await db
 			.prepare('SELECT * FROM path_progress WHERE learner_id = ?')
 			.bind(learner.id)
 			.all();
 
 		// Get lesson progress
-		const lessonProgress = await db
+		const lessonProgressRows = await db
 			.prepare('SELECT * FROM lesson_progress WHERE learner_id = ?')
 			.bind(learner.id)
 			.all();
 
+		// Get praxis completions count
+		const praxisCount = await db
+			.prepare('SELECT COUNT(*) as count FROM praxis_completions WHERE learner_id = ?')
+			.bind(learner.id)
+			.first();
+
+		// Calculate stats
+		const lessonResults = lessonProgressRows.results as Array<{
+			lesson_id: string;
+			path_id: string;
+			status: string;
+			time_spent_seconds: number;
+			completed_at: string | null;
+			started_at: string | null;
+			visits: number;
+		}>;
+
+		const completedLessons = lessonResults.filter((l) => l.status === 'completed');
+		const totalTimeSeconds = lessonResults.reduce((sum, l) => sum + (l.time_spent_seconds || 0), 0);
+
+		// Build path progress with lesson counts
+		const pathProgressMap = new Map<
+			string,
+			{ status: string; startedAt: string | null; completedAt: string | null }
+		>();
+		for (const p of pathProgressRows.results as Array<{
+			path_id: string;
+			status: string;
+			started_at: string | null;
+			completed_at: string | null;
+		}>) {
+			pathProgressMap.set(p.path_id, {
+				status: p.status,
+				startedAt: p.started_at,
+				completedAt: p.completed_at
+			});
+		}
+
+		// Count completed lessons per path
+		const completedPerPath = new Map<string, number>();
+		for (const lesson of completedLessons) {
+			const count = completedPerPath.get(lesson.path_id) || 0;
+			completedPerPath.set(lesson.path_id, count + 1);
+		}
+
+		// Build paths array
+		const pathsProgress = paths.map((p) => {
+			const progress = pathProgressMap.get(p.id);
+			const lessonsCompleted = completedPerPath.get(p.id) || 0;
+			const lessonsTotal = p.lessons.length;
+
+			// Determine status
+			let status = progress?.status || 'not_started';
+			if (lessonsCompleted === lessonsTotal && lessonsTotal > 0) {
+				status = 'completed';
+			} else if (lessonsCompleted > 0) {
+				status = 'in_progress';
+			}
+
+			return {
+				pathId: p.id,
+				status,
+				lessonsCompleted,
+				lessonsTotal,
+				startedAt: progress?.startedAt,
+				completedAt: progress?.completedAt
+			};
+		});
+
+		// Calculate completed paths
+		const completedPaths = pathsProgress.filter((p) => p.status === 'completed').length;
+
+		// Build lessons array
+		const lessons = lessonResults.map((l) => ({
+			lessonId: l.lesson_id,
+			pathId: l.path_id,
+			status: l.status,
+			visits: l.visits,
+			timeSpentSeconds: l.time_spent_seconds,
+			startedAt: l.started_at,
+			completedAt: l.completed_at
+		}));
+
+		// Recent activity (last 5 completed lessons)
+		const recentActivity = completedLessons
+			.filter((l) => l.completed_at)
+			.sort((a, b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime())
+			.slice(0, 5)
+			.map((l) => ({
+				lessonId: l.lesson_id,
+				lessonTitle: LESSON_TITLES[l.lesson_id] || l.lesson_id,
+				completedAt: l.completed_at!
+			}));
+
 		return json({
-			pathProgress: pathProgress.results,
-			lessonProgress: lessonProgress.results
+			overall: {
+				pathsCompleted: completedPaths,
+				pathsTotal: TOTAL_PATHS,
+				lessonsCompleted: completedLessons.length,
+				lessonsTotal: TOTAL_LESSONS,
+				progressPercent: Math.round((completedLessons.length / TOTAL_LESSONS) * 100),
+				totalTimeHours: Math.round((totalTimeSeconds / 3600) * 10) / 10,
+				praxisCompleted: (praxisCount as { count: number } | null)?.count || 0
+			},
+			paths: pathsProgress,
+			lessons,
+			recentActivity
 		});
 	} catch (err) {
 		console.error('Error fetching progress:', err);

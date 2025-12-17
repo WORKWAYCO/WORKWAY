@@ -1,0 +1,55 @@
+/**
+ * {{workflowName}}
+ *
+ * {{workflowDescription}}
+ *
+ * Zuhandenheit: This workflow recedes. Users forget it exists.
+ */
+
+import { defineWorkflow } from '@workwayco/sdk';
+
+export default defineWorkflow({
+  id: '{{workflowId}}',
+  name: '{{workflowName}}',
+  description: '{{workflowDescription}}',
+
+  // Which OAuth integrations this workflow needs
+  integrations: [
+    // 'gmail',
+    // 'notion',
+    // 'slack'
+  ],
+
+  // When this workflow runs
+  triggers: {
+    type: 'manual'  // Change to 'webhook' or 'cron' as needed
+  },
+
+  // User configuration - use sensible defaults
+  configSchema: {
+    inputs: [
+      // {
+      //   id: 'targetDatabase',
+      //   type: 'notion_database_picker',
+      //   label: 'Destination',
+      //   description: 'Where to save items'
+      // }
+    ]
+  },
+
+  // Error handling - fail gracefully
+  onError: async ({ error, context }) => {
+    console.error('Workflow error:', error.message);
+    // Optionally notify user via Slack, email, etc.
+  },
+
+  // Main execution
+  async execute({ config, integrations, context }) {
+    // TODO: Implement your workflow
+
+    return {
+      success: true,
+      message: 'Workflow completed'
+    };
+  }
+});
