@@ -1,0 +1,108 @@
+<script lang="ts">
+	import { getPath } from '$lib/content/paths';
+	import { page } from '$app/stores';
+	import { Clock, CheckCircle2, Circle, ArrowLeft, ExternalLink } from 'lucide-svelte';
+	import { error } from '@sveltejs/kit';
+
+	const pathId = $derived($page.params.pathId);
+	const path = $derived(getPath(pathId));
+
+	$effect(() => {
+		if (!path) {
+			error(404, 'Path not found');
+		}
+	});
+
+	// TODO: Replace with actual progress from database
+	const completedLessons: string[] = [];
+</script>
+
+<svelte:head>
+	{#if path}
+		<title>{path.title} | Learn WORKWAY</title>
+		<meta name="description" content={path.description} />
+	{/if}
+</svelte:head>
+
+{#if path}
+	<div class="max-w-4xl mx-auto px-6 py-12">
+		<a
+			href="/paths"
+			class="inline-flex items-center gap-2 text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] mb-8 transition-colors"
+		>
+			<ArrowLeft size={16} />
+			All Paths
+		</a>
+
+		<div class="mb-12">
+			<h1 class="text-4xl font-semibold mb-4">{path.title}</h1>
+			<p class="text-[var(--color-fg-muted)] text-lg mb-4">{path.description}</p>
+
+			<div class="flex items-center gap-6 text-sm text-[var(--color-fg-subtle)]">
+				<span>{path.lessons.length} lessons</span>
+				<span>{path.estimatedHours} hours</span>
+				<span class="capitalize">{path.difficulty}</span>
+			</div>
+		</div>
+
+		<!-- Progress bar -->
+		<div class="mb-8">
+			<div class="flex items-center justify-between mb-2">
+				<span class="text-sm text-[var(--color-fg-muted)]">Progress</span>
+				<span class="text-sm font-medium">
+					{completedLessons.length} / {path.lessons.length}
+				</span>
+			</div>
+			<div class="h-2 bg-[var(--color-bg-surface)] rounded-full overflow-hidden">
+				<div
+					class="h-full bg-[var(--color-fg-primary)] transition-all duration-500"
+					style="width: {(completedLessons.length / path.lessons.length) * 100}%"
+				></div>
+			</div>
+		</div>
+
+		<!-- Lessons list -->
+		<div class="space-y-3">
+			{#each path.lessons as lesson, index}
+				{@const isCompleted = completedLessons.includes(lesson.id)}
+				<a
+					href="/paths/{path.id}/{lesson.id}"
+					class="flex items-center gap-4 p-4 card hover:border-[var(--color-border-strong)] transition-colors"
+				>
+					<div class="flex-shrink-0">
+						{#if isCompleted}
+							<CheckCircle2 size={20} class="text-[var(--color-success)]" />
+						{:else}
+							<Circle size={20} class="text-[var(--color-fg-subtle)]" />
+						{/if}
+					</div>
+
+					<div class="flex-1 min-w-0">
+						<div class="flex items-center gap-2">
+							<span class="text-sm text-[var(--color-fg-subtle)]">{index + 1}.</span>
+							<h3 class="font-medium">{lesson.title}</h3>
+						</div>
+						<p class="text-sm text-[var(--color-fg-muted)] mt-1">{lesson.description}</p>
+					</div>
+
+					<div class="flex items-center gap-4 flex-shrink-0">
+						<div class="flex items-center gap-1 text-sm text-[var(--color-fg-subtle)]">
+							<Clock size={14} />
+							{lesson.duration}
+						</div>
+
+						{#if lesson.templateWorkflow}
+							<div
+								class="px-2 py-1 text-xs bg-[var(--color-bg-elevated)] rounded-[var(--radius-sm)] flex items-center gap-1"
+								title="Includes template workflow"
+							>
+								<ExternalLink size={12} />
+								Praxis
+							</div>
+						{/if}
+					</div>
+				</a>
+			{/each}
+		</div>
+	</div>
+{/if}

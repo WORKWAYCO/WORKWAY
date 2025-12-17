@@ -1,0 +1,19 @@
+name = "learn-web"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+pages_build_output_dir = ".svelte-kit/cloudflare"
+
+# D1 Database for learner progress
+[[d1_databases]]
+binding = "DB"
+database_name = "learn-workway-db"
+database_id = "2d2ccb18-e11c-4f5f-9811-c4df87b044d3"
+
+# KV for sessions
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "97a6bd8642a545fd9f2acde6cc6745e6"
+
+[vars]
+IDENTITY_WORKER_URL = "https://id.createsomething.space"
+WORKWAY_MARKETPLACE_URL = "https://workway.co"
