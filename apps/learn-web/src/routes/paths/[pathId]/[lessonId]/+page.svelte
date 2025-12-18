@@ -111,6 +111,40 @@
 			]
 		}
 		</script>`}
+
+		<!-- FAQ Schema for AEO (lesson-specific) -->
+		{@html `<script type="application/ld+json">
+		{
+			"@context": "https://schema.org",
+			"@type": "FAQPage",
+			"mainEntity": [
+				{
+					"@type": "Question",
+					"name": "What does the ${lesson.title} lesson cover?",
+					"acceptedAnswer": {
+						"@type": "Answer",
+						"text": "${lesson.description} This lesson is part of the ${path.title} path and takes approximately ${lesson.duration} to complete."
+					}
+				}${lesson.templateWorkflow ? `,
+				{
+					"@type": "Question",
+					"name": "Is there a hands-on exercise for ${lesson.title}?",
+					"acceptedAnswer": {
+						"@type": "Answer",
+						"text": "Yes, this lesson includes a Praxis exercise using the ${lesson.templateWorkflow.name} workflow template. ${lesson.templateWorkflow.description}"
+					}
+				}` : ''}${nextLesson ? `,
+				{
+					"@type": "Question",
+					"name": "What comes after ${lesson.title}?",
+					"acceptedAnswer": {
+						"@type": "Answer",
+						"text": "After completing ${lesson.title}, the next lesson is ${nextLesson.title}: ${nextLesson.description}"
+					}
+				}` : ''}
+			]
+		}
+		</script>`}
 	{/if}
 </svelte:head>
 
