@@ -253,10 +253,11 @@ export async function runHarness(
       }
     }
 
-    // 2. Get next work item
+    // 2. Get next work item (exclude checkpoints - they're progress reports, not tasks)
     const readyIssues = await store.getReadyIssues();
     const harnessIssues = readyIssues.filter((issue) =>
-      issue.labels.includes(`harness:${harnessState.id}`)
+      issue.labels.includes(`harness:${harnessState.id}`) &&
+      !issue.labels.includes('checkpoint')
     );
 
     if (harnessIssues.length === 0) {
