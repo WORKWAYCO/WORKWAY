@@ -240,8 +240,8 @@ Private/BYOO workflows inherit WORKWAY design automatically via CDN:
   <link href="https://fonts.googleapis.com/css2?family=Stack+Sans+Notch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <!-- Design Tokens - ONE LINE -->
   <link rel="stylesheet" href="https://cdn.workway.co/tokens.css" />
-  <!-- Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Icons - version-pinned Lucide via CDN -->
+  <script src="https://cdn.workway.co/lucide.js"></script>
 </head>
 ```
 

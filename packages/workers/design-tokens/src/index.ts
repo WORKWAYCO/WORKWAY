@@ -4,11 +4,16 @@
  * Zuhandenheit: The tool recedes - developers add one <link> tag,
  * design flows through automatically.
  *
- * "Weniger, aber besser" - This worker does one thing:
- * serve canonical CSS design tokens.
+ * "Weniger, aber besser" - This worker serves:
+ * - /tokens.css - canonical CSS design tokens
+ * - /lucide.js - Lucide icons library (proxied with caching)
  */
 
 import TOKENS_CSS from './tokens.css';
+
+// Lucide version pinned for consistency across all WORKWAY properties
+const LUCIDE_VERSION = '0.468.0';
+const LUCIDE_CDN_URL = `https://unpkg.com/lucide@${LUCIDE_VERSION}/dist/umd/lucide.min.js`;
 
 export default {
   async fetch(request: Request): Promise<Response> {
@@ -34,6 +39,11 @@ export default {
       });
     }
 
+    // Serve Lucide icons library (proxied for version consistency)
+    if (path === '/lucide.js') {
+      return await serveLucide();
+    }
+
     // Health check
     if (path === '/health') {
       return new Response('OK', {
@@ -48,6 +58,40 @@ export default {
     });
   },
 };
+
+/**
+ * Proxy and cache Lucide icons library from unpkg
+ * Provides consistent versioning across all WORKWAY properties
+ */
+async function serveLucide(): Promise<Response> {
+  try {
+    const response = await fetch(LUCIDE_CDN_URL);
+
+    if (!response.ok) {
+      return new Response('Failed to fetch Lucide icons', {
+        status: 502,
+        headers: { 'Content-Type': 'text/plain' },
+      });
+    }
+
+    const script = await response.text();
+
+    return new Response(script, {
+      headers: {
+        'Content-Type': 'application/javascript; charset=utf-8',
+        // Aggressive caching: 7 days fresh, 30-day stale-while-revalidate
+        // Safe to cache longer since we pin the version
+        'Cache-Control': 'public, max-age=604800, stale-while-revalidate=2592000',
+        ...corsHeaders(),
+      },
+    });
+  } catch (error) {
+    return new Response('Error fetching Lucide icons', {
+      status: 500,
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }
+}
 
 function corsHeaders(): Record<string, string> {
   return {
