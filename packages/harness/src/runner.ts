@@ -318,10 +318,22 @@ export async function runHarness(
     harnessState.currentSession++;
     console.log(`\n🤖 Starting session #${harnessState.currentSession}...`);
 
+    // DEBUG: Check file before session
+    const beforeSession = await readFile(`${options.cwd}/.beads/issues.jsonl`, 'utf-8');
+    const beforeLines = beforeSession.trim().split('\n').filter(Boolean);
+    const beforeHarness = beforeLines.filter(l => l.includes(`harness:${harnessState.id}`));
+    console.log(`   DEBUG BEFORE: ${beforeLines.length} issues, ${beforeHarness.length} with harness label`);
+
     const sessionResult = await runSession(nextIssue, primingContext, {
       cwd: options.cwd,
       dryRun: options.dryRun,
     });
+
+    // DEBUG: Check file after session
+    const afterSession = await readFile(`${options.cwd}/.beads/issues.jsonl`, 'utf-8');
+    const afterLines = afterSession.trim().split('\n').filter(Boolean);
+    const afterHarness = afterLines.filter(l => l.includes(`harness:${harnessState.id}`));
+    console.log(`   DEBUG AFTER: ${afterLines.length} issues, ${afterHarness.length} with harness label`);
 
     // 5. Handle session result
     recordSession(checkpointTracker, sessionResult);

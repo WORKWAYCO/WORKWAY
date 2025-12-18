@@ -308,13 +308,13 @@ export function generatePrimingPrompt(context: PrimingContext): string {
     lines.push('2. TypeScript compiles without errors');
     lines.push('3. Tests pass');
   }
-  lines.push('3. Issue commented with implementation notes');
-  lines.push('4. Status updated to Done');
   lines.push('');
 
   lines.push('---');
   lines.push('');
-  lines.push('Begin working on this issue. When complete, close the issue with `bd close <id>`.');
+  lines.push('Begin working on this issue. When complete, simply finish your work - the harness will close the issue automatically.');
+  lines.push('');
+  lines.push('**IMPORTANT**: Do NOT run `bd close` or `bd update` commands - the harness manages issue state.');
 
   return lines.join('\n');
 }
