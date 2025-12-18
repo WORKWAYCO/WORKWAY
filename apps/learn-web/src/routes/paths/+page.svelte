@@ -193,11 +193,11 @@
 
 						<div class="flex items-center gap-6 text-sm text-[var(--color-fg-subtle)]">
 							<div class="flex items-center gap-2">
-								<BookOpen size={14} />
+								<BookOpen size={16} />
 								{path.lessons.length} lessons
 							</div>
 							<div class="flex items-center gap-2">
-								<Clock size={14} />
+								<Clock size={16} />
 								{path.estimatedHours} hours
 							</div>
 						</div>

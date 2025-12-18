@@ -177,7 +177,7 @@
 					Lesson {lessonIndex + 1} of {path.lessons.length}
 				</span>
 				<div class="flex items-center gap-1 text-sm text-[var(--color-fg-subtle)]">
-					<Clock size={14} />
+					<Clock size={16} />
 					{lesson.duration}
 				</div>
 			</div>

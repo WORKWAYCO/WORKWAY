@@ -35,11 +35,11 @@
 						class="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 {job.status === 'completed' ? 'bg-[var(--brand-success)]/10 text-[var(--brand-success)]' : job.status === 'failed' ? 'bg-[var(--brand-error)]/10 text-[var(--brand-error)]' : job.status === 'running' ? 'bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]' : 'bg-neutral-500/10 text-neutral-500'}"
 					>
 						{#if job.status === 'completed'}
-							<Check size={12} />
+							<Check size={16} />
 						{:else if job.status === 'running'}
-							<Loader2 size={12} class="animate-spin" />
+							<Loader2 size={16} class="animate-spin" />
 						{:else if job.status === 'failed'}
-							<X size={12} />
+							<X size={16} />
 						{/if}
 						{job.status}
 					</span>

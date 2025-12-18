@@ -193,7 +193,7 @@
 
 					<div class="flex items-center gap-4 flex-shrink-0">
 						<div class="flex items-center gap-1 text-sm text-[var(--color-fg-subtle)]">
-							<Clock size={14} />
+							<Clock size={16} />
 							{lesson.duration}
 						</div>
 
@@ -202,7 +202,7 @@
 								class="px-2 py-1 text-xs bg-[var(--color-bg-elevated)] rounded-[var(--radius-sm)] flex items-center gap-1"
 								title="Includes template workflow"
 							>
-								<ExternalLink size={12} />
+								<ExternalLink size={16} />
 								Praxis
 							</div>
 						{/if}
