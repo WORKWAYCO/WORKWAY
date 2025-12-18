@@ -58,12 +58,12 @@ export async function discoverDryContext(
     // No rules
   }
 
-  // Search for relevant files based on keywords
+  // Search for relevant files based on keywords (exclude archive, node_modules, dist)
   for (const keyword of keywords.slice(0, 3)) { // Limit to 3 keywords
     try {
-      // Search for files containing the keyword
+      // Search for files containing the keyword, excluding non-source directories
       const { stdout } = await execAsync(
-        `find . -type f -name "*.ts" -o -name "*.svelte" -o -name "*.css" 2>/dev/null | xargs grep -l -i "${keyword}" 2>/dev/null | head -5`,
+        `find . -type f \\( -name "*.ts" -o -name "*.svelte" -o -name "*.css" \\) -not -path "*/node_modules/*" -not -path "*/.archive/*" -not -path "*/dist/*" -not -path "*/.git/*" 2>/dev/null | xargs grep -l -i "${keyword}" 2>/dev/null | head -5`,
         { cwd }
       );
       const files = stdout.trim().split('\n').filter(Boolean);
@@ -352,6 +352,11 @@ export async function runSession(
     // Using -p flag to pass prompt, --dangerously-skip-permissions for automation
     const result = await runClaudeCode(prompt, options.cwd);
 
+    // Log session output for debugging
+    const sessionLog = join(promptDir, `session-${issue.id}-${Date.now()}.log`);
+    await writeFile(sessionLog, `Exit Code: ${result.exitCode}\n\n--- OUTPUT ---\n${result.output}`);
+    console.log(`   Session log: ${sessionLog}`);
+
     // Get end commit
     const endCommit = await getHeadCommit(options.cwd);
     const gitCommit = endCommit !== startCommit ? endCommit : null;
@@ -383,16 +388,17 @@ export async function runSession(
 
 /**
  * Run Claude Code CLI with a prompt.
+ * Uses stdin pipe for prompt delivery (more reliable for long prompts).
  */
 async function runClaudeCode(
   prompt: string,
   cwd: string
 ): Promise<{ output: string; exitCode: number; contextUsed: number }> {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const args = [
-      '-p', prompt,
+      '-p',
       '--dangerously-skip-permissions',
-      '--output-format', 'text',
+      '--output-format', 'json',
     ];
 
     const child = spawn('claude', args, {
@@ -400,6 +406,21 @@ async function runClaudeCode(
       stdio: ['pipe', 'pipe', 'pipe'],
       env: { ...process.env },
     });
+
+    // Write prompt to stdin and close it (like CREATE SOMETHING does)
+    if (child.stdin) {
+      child.stdin.write(prompt);
+      child.stdin.end();
+    } else {
+      resolve({
+        output: '',
+        exitCode: -1,
+        contextUsed: 0,
+      });
+      return;
+    }
+
+    console.log(`   [Session] Prompt sent (${prompt.length} chars), waiting for response...`);
 
     let output = '';
     let errorOutput = '';
@@ -412,7 +433,18 @@ async function runClaudeCode(
       errorOutput += data.toString();
     });
 
+    // Set a timeout (30 minutes max per session)
+    const timeoutId = setTimeout(() => {
+      child.kill('SIGTERM');
+      resolve({
+        output: output + '\n[TIMEOUT]',
+        exitCode: 124,
+        contextUsed: 0,
+      });
+    }, 30 * 60 * 1000);
+
     child.on('close', (code) => {
+      clearTimeout(timeoutId);
       // Try to extract context usage from output
       const contextMatch = output.match(/context[:\s]+(\d+)/i);
       const contextUsed = contextMatch ? parseInt(contextMatch[1], 10) : 0;
@@ -425,18 +457,13 @@ async function runClaudeCode(
     });
 
     child.on('error', (error) => {
-      reject(error);
-    });
-
-    // Set a timeout (30 minutes max per session)
-    setTimeout(() => {
-      child.kill('SIGTERM');
+      clearTimeout(timeoutId);
       resolve({
-        output: output + '\n[TIMEOUT]',
-        exitCode: 124,
+        output: `Error: ${error.message}`,
+        exitCode: -1,
         contextUsed: 0,
       });
-    }, 30 * 60 * 1000);
+    });
   });
 }
 
@@ -446,11 +473,12 @@ async function runClaudeCode(
 
 /**
  * Detect session outcome from output.
+ * Aligned with CREATE SOMETHING's simpler, more reliable approach.
  */
 function detectOutcome(output: string, exitCode: number): SessionOutcome {
   const lower = output.toLowerCase();
 
-  // Context overflow indicators
+  // Context overflow indicators (check first)
   if (
     lower.includes('context limit') ||
     lower.includes('context overflow') ||
@@ -460,40 +488,23 @@ function detectOutcome(output: string, exitCode: number): SessionOutcome {
     return 'context_overflow';
   }
 
-  // Success indicators
-  if (
-    lower.includes('completed') ||
-    lower.includes('done') ||
-    lower.includes('finished') ||
-    lower.includes('closed issue') ||
-    lower.includes('bd close')
-  ) {
-    return 'success';
+  // Non-zero exit code is a clear failure
+  if (exitCode !== 0) {
+    return 'failure';
   }
 
-  // Partial progress indicators
+  // Partial progress indicators (blocked, needs help)
   if (
-    lower.includes('partial') ||
-    lower.includes('in progress') ||
-    lower.includes('continuing') ||
     lower.includes('blocked') ||
-    lower.includes('need clarification')
+    lower.includes('unable to complete') ||
+    lower.includes('need clarification') ||
+    lower.includes('need human input')
   ) {
     return 'partial';
   }
 
-  // Failure indicators
-  if (
-    exitCode !== 0 ||
-    lower.includes('error') ||
-    lower.includes('failed') ||
-    lower.includes('unable to')
-  ) {
-    return 'failure';
-  }
-
-  // Default to partial (better safe than marking success prematurely)
-  return 'partial';
+  // If exit code is 0, assume success (trust Claude's judgment)
+  return 'success';
 }
 
 /**
