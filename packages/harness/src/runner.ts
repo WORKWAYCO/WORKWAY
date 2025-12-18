@@ -120,7 +120,18 @@ export async function initializeHarness(
     harnessIssue.id,
     store
   );
-  console.log(`Created ${featureMap.size} issues in Beads.\n`);
+  console.log(`Created ${featureMap.size} issues in Beads.`);
+
+  // DEBUG: Verify issues were written to file
+  const verifyIssues = await store.getAllIssues();
+  const harnessLabelIssues = verifyIssues.filter(i => i.labels.includes(`harness:${harnessIssue.id}`));
+  console.log(`DEBUG: Store root: ${cwd}`);
+  console.log(`DEBUG: Total issues in store: ${verifyIssues.length}, with harness label: ${harnessLabelIssues.length}`);
+
+  // Double-check by reading file directly
+  const directContent = await readFile(`${cwd}/.beads/issues.jsonl`, 'utf-8');
+  const directLines = directContent.trim().split('\n').filter(Boolean);
+  console.log(`DEBUG: Direct file read: ${directLines.length} lines\n`);
 
   const harnessState: HarnessState = {
     id: harnessIssue.id,
@@ -256,13 +267,19 @@ export async function runHarness(
 
     // 2. Get next work item (exclude checkpoints - they're progress reports, not tasks)
     const readyIssues = await store.getReadyIssues();
+    console.log(`DEBUG: Ready issues: ${readyIssues.length}`);
     const harnessIssues = readyIssues.filter((issue) =>
       issue.labels.includes(`harness:${harnessState.id}`) &&
       !issue.labels.includes('checkpoint')
     );
+    console.log(`DEBUG: Harness issues (${harnessState.id}): ${harnessIssues.length}`);
 
     if (harnessIssues.length === 0) {
-      // No more work
+      // No more work - debug why
+      const allIssues = await store.getAllIssues();
+      const allWithLabel = allIssues.filter(i => i.labels.includes(`harness:${harnessState.id}`));
+      console.log(`DEBUG: Total issues: ${allIssues.length}, with harness label: ${allWithLabel.length}`);
+      console.log(`DEBUG: By status: open=${allWithLabel.filter(i => i.status === 'open').length}, closed=${allWithLabel.filter(i => i.status === 'closed').length}, in_progress=${allWithLabel.filter(i => i.status === 'in_progress').length}`);
       harnessState.status = 'completed';
       console.log('\n✅ All tasks completed!');
       break;
