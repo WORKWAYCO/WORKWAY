@@ -35,6 +35,12 @@
 
 		<!-- SEO -->
 		<link rel="canonical" href="https://learn.workway.co/paths/{path.id}/{lesson.id}" />
+		{#if previousLesson}
+			<link rel="prev" href="https://learn.workway.co/paths/{path.id}/{previousLesson.id}" />
+		{/if}
+		{#if nextLesson}
+			<link rel="next" href="https://learn.workway.co/paths/{path.id}/{nextLesson.id}" />
+		{/if}
 
 		<!-- Open Graph -->
 		<meta property="og:title" content="{lesson.title} | {path.title}" />

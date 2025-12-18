@@ -115,6 +115,22 @@
 					"@type": "Answer",
 					"text": "Yes. Learn WORKWAY teaches workflow development using Claude Code as the primary development environment. Claude Code understands WORKWAY patterns and can help write, debug, and deploy workflows."
 				}
+			},
+			{
+				"@type": "Question",
+				"name": "What is defineWorkflow()?",
+				"acceptedAnswer": {
+					"@type": "Answer",
+					"text": "defineWorkflow() is the core function for creating WORKWAY workflows. It takes a configuration object with metadata, integrations, triggers, and an execute function. This pattern ensures type safety and enables the platform to validate, deploy, and run your workflow on Cloudflare Workers."
+				}
+			},
+			{
+				"@type": "Question",
+				"name": "How do I build a workflow?",
+				"acceptedAnswer": {
+					"@type": "Answer",
+					"text": "Build a WORKWAY workflow by: 1) Define your workflow using defineWorkflow() with metadata, 2) Specify integrations (Zoom, Slack, Notion, etc.) with required OAuth scopes, 3) Set up triggers (webhook, cron, or manual), 4) Implement the execute function with your business logic, 5) Deploy to Cloudflare Workers using the WORKWAY CLI."
+				}
 			}
 		]
 	}

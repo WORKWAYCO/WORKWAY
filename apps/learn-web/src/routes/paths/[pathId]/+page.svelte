@@ -1,11 +1,13 @@
 <script lang="ts">
-	import { getPath } from '$lib/content/paths';
+	import { getPath, paths } from '$lib/content/paths';
 	import { page } from '$app/stores';
 	import { Clock, CheckCircle2, Circle, ArrowLeft, ExternalLink } from 'lucide-svelte';
 	import { error } from '@sveltejs/kit';
 
-	const pathId = $derived($page.params.pathId);
+	const pathId = $derived($page.params.pathId ?? '');
 	const path = $derived(getPath(pathId));
+	const pathIndex = $derived(paths.findIndex((p) => p.id === pathId));
+	const prerequisitePath = $derived(pathIndex > 0 ? paths[pathIndex - 1] : null);
 
 	$effect(() => {
 		if (!path) {
@@ -51,7 +53,12 @@
 			},
 			"educationalLevel": "${path.difficulty}",
 			"timeRequired": "PT${path.estimatedHours}H",
-			"numberOfLessons": ${path.lessons.length},
+			"numberOfLessons": ${path.lessons.length}${prerequisitePath ? `,
+			"coursePrerequisites": {
+				"@type": "Course",
+				"name": "${prerequisitePath.title}",
+				"url": "https://learn.workway.co/paths/${prerequisitePath.id}"
+			}` : ''},
 			"hasCourseInstance": {
 				"@type": "CourseInstance",
 				"courseMode": "online"
