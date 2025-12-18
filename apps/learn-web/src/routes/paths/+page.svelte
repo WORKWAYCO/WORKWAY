@@ -18,7 +18,75 @@
 
 <svelte:head>
 	<title>Learning Paths | Learn WORKWAY</title>
-	<meta name="description" content="Choose your learning path: from local setup to advanced compound workflows." />
+	<meta name="description" content="Choose your learning path: from local setup to advanced compound workflows. Structured courses for workflow automation with Claude Code." />
+
+	<!-- SEO -->
+	<meta name="keywords" content="WORKWAY learning paths, workflow courses, claude code tutorial, workflow automation training" />
+	<link rel="canonical" href="https://learn.workway.co/paths" />
+
+	<!-- Open Graph -->
+	<meta property="og:title" content="Learning Paths | Learn WORKWAY" />
+	<meta property="og:description" content="Choose your learning path: from local setup to advanced compound workflows." />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://learn.workway.co/paths" />
+	<meta property="og:site_name" content="Learn WORKWAY" />
+
+	<!-- Twitter -->
+	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:title" content="Learning Paths | Learn WORKWAY" />
+	<meta name="twitter:description" content="Choose your learning path: from local setup to advanced compound workflows." />
+
+	<!-- ItemList Schema for learning paths -->
+	{@html `<script type="application/ld+json">
+	{
+		"@context": "https://schema.org",
+		"@type": "ItemList",
+		"name": "WORKWAY Learning Paths",
+		"description": "Structured learning paths for WORKWAY workflow development",
+		"itemListElement": [
+			{
+				"@type": "ListItem",
+				"position": 1,
+				"item": {
+					"@type": "Course",
+					"name": "Local Setup",
+					"description": "Configure WezTerm, Claude Code, Neomutt, and essential developer tools",
+					"url": "https://learn.workway.co/paths/local-setup"
+				}
+			},
+			{
+				"@type": "ListItem",
+				"position": 2,
+				"item": {
+					"@type": "Course",
+					"name": "Workflow Foundations",
+					"description": "Learn defineWorkflow(), integrations, OAuth, triggers, and configuration schemas",
+					"url": "https://learn.workway.co/paths/workflow-foundations"
+				}
+			},
+			{
+				"@type": "ListItem",
+				"position": 3,
+				"item": {
+					"@type": "Course",
+					"name": "Building Workflows",
+					"description": "Create real workflows with Gmail, Slack, Zoom, Notion, and Workers AI",
+					"url": "https://learn.workway.co/paths/building-workflows"
+				}
+			},
+			{
+				"@type": "ListItem",
+				"position": 4,
+				"item": {
+					"@type": "Course",
+					"name": "Systems Thinking",
+					"description": "Master compound workflows, private patterns, and agency architectures",
+					"url": "https://learn.workway.co/paths/systems-thinking"
+				}
+			}
+		]
+	}
+	</script>`}
 </svelte:head>
 
 <div class="max-w-7xl mx-auto px-6 py-12">

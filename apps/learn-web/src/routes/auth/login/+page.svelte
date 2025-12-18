@@ -7,6 +7,25 @@
 
 <svelte:head>
 	<title>Sign In | Learn WORKWAY</title>
+	<meta name="description" content="Sign in to Learn WORKWAY. Track your progress and pick up where you left off." />
+
+	<!-- SEO -->
+	<link rel="canonical" href="https://learn.workway.co/auth/login" />
+
+	<!-- Open Graph -->
+	<meta property="og:title" content="Sign In | Learn WORKWAY" />
+	<meta property="og:description" content="Sign in to track your progress and pick up where you left off." />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://learn.workway.co/auth/login" />
+	<meta property="og:site_name" content="Learn WORKWAY" />
+
+	<!-- Twitter -->
+	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:title" content="Sign In | Learn WORKWAY" />
+	<meta name="twitter:description" content="Sign in to track your progress and pick up where you left off." />
+
+	<!-- Robots: Don't index auth pages -->
+	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <div class="min-h-[80vh] flex items-center justify-center px-6">

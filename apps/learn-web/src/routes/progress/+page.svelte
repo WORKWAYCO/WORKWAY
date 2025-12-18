@@ -15,7 +15,25 @@
 
 <svelte:head>
 	<title>Your Progress | Learn WORKWAY</title>
-	<meta name="description" content="Track your learning progress across all WORKWAY courses." />
+	<meta name="description" content="Track your learning progress across all WORKWAY courses. See completed lessons, time spent, and streak." />
+
+	<!-- SEO -->
+	<link rel="canonical" href="https://learn.workway.co/progress" />
+
+	<!-- Open Graph -->
+	<meta property="og:title" content="Your Progress | Learn WORKWAY" />
+	<meta property="og:description" content="Track your learning progress across all WORKWAY courses." />
+	<meta property="og:type" content="website" />
+	<meta property="og:url" content="https://learn.workway.co/progress" />
+	<meta property="og:site_name" content="Learn WORKWAY" />
+
+	<!-- Twitter -->
+	<meta name="twitter:card" content="summary" />
+	<meta name="twitter:title" content="Your Progress | Learn WORKWAY" />
+	<meta name="twitter:description" content="Track your learning progress across all WORKWAY courses." />
+
+	<!-- Robots: Don't index user-specific pages -->
+	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
 <div class="max-w-7xl mx-auto px-6 py-12">

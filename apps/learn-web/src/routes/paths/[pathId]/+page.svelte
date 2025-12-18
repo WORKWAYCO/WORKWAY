@@ -21,6 +21,71 @@
 	{#if path}
 		<title>{path.title} | Learn WORKWAY</title>
 		<meta name="description" content={path.description} />
+
+		<!-- SEO -->
+		<link rel="canonical" href="https://learn.workway.co/paths/{path.id}" />
+
+		<!-- Open Graph -->
+		<meta property="og:title" content="{path.title} | Learn WORKWAY" />
+		<meta property="og:description" content={path.description} />
+		<meta property="og:type" content="website" />
+		<meta property="og:url" content="https://learn.workway.co/paths/{path.id}" />
+		<meta property="og:site_name" content="Learn WORKWAY" />
+
+		<!-- Twitter -->
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:title" content="{path.title} | Learn WORKWAY" />
+		<meta name="twitter:description" content={path.description} />
+
+		<!-- Course Schema -->
+		{@html `<script type="application/ld+json">
+		{
+			"@context": "https://schema.org",
+			"@type": "Course",
+			"name": "${path.title}",
+			"description": "${path.description}",
+			"provider": {
+				"@type": "Organization",
+				"name": "WORKWAY",
+				"url": "https://workway.co"
+			},
+			"educationalLevel": "${path.difficulty}",
+			"timeRequired": "PT${path.estimatedHours}H",
+			"numberOfLessons": ${path.lessons.length},
+			"hasCourseInstance": {
+				"@type": "CourseInstance",
+				"courseMode": "online"
+			}
+		}
+		</script>`}
+
+		<!-- BreadcrumbList Schema -->
+		{@html `<script type="application/ld+json">
+		{
+			"@context": "https://schema.org",
+			"@type": "BreadcrumbList",
+			"itemListElement": [
+				{
+					"@type": "ListItem",
+					"position": 1,
+					"name": "Learn WORKWAY",
+					"item": "https://learn.workway.co"
+				},
+				{
+					"@type": "ListItem",
+					"position": 2,
+					"name": "Paths",
+					"item": "https://learn.workway.co/paths"
+				},
+				{
+					"@type": "ListItem",
+					"position": 3,
+					"name": "${path.title}",
+					"item": "https://learn.workway.co/paths/${path.id}"
+				}
+			]
+		}
+		</script>`}
 	{/if}
 </svelte:head>
 

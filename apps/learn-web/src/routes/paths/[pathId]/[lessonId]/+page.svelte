@@ -32,6 +32,79 @@
 	{#if lesson && path}
 		<title>{lesson.title} | {path.title} | Learn WORKWAY</title>
 		<meta name="description" content={lesson.description} />
+
+		<!-- SEO -->
+		<link rel="canonical" href="https://learn.workway.co/paths/{path.id}/{lesson.id}" />
+
+		<!-- Open Graph -->
+		<meta property="og:title" content="{lesson.title} | {path.title}" />
+		<meta property="og:description" content={lesson.description} />
+		<meta property="og:type" content="article" />
+		<meta property="og:url" content="https://learn.workway.co/paths/{path.id}/{lesson.id}" />
+		<meta property="og:site_name" content="Learn WORKWAY" />
+
+		<!-- Twitter -->
+		<meta name="twitter:card" content="summary" />
+		<meta name="twitter:title" content="{lesson.title} | {path.title}" />
+		<meta name="twitter:description" content={lesson.description} />
+
+		<!-- Article Schema for lesson content -->
+		{@html `<script type="application/ld+json">
+		{
+			"@context": "https://schema.org",
+			"@type": "Article",
+			"headline": "${lesson.title}",
+			"description": "${lesson.description}",
+			"isPartOf": {
+				"@type": "Course",
+				"name": "${path.title}",
+				"url": "https://learn.workway.co/paths/${path.id}"
+			},
+			"publisher": {
+				"@type": "Organization",
+				"name": "WORKWAY",
+				"url": "https://workway.co"
+			},
+			"mainEntityOfPage": {
+				"@type": "WebPage",
+				"@id": "https://learn.workway.co/paths/${path.id}/${lesson.id}"
+			}
+		}
+		</script>`}
+
+		<!-- BreadcrumbList Schema -->
+		{@html `<script type="application/ld+json">
+		{
+			"@context": "https://schema.org",
+			"@type": "BreadcrumbList",
+			"itemListElement": [
+				{
+					"@type": "ListItem",
+					"position": 1,
+					"name": "Learn WORKWAY",
+					"item": "https://learn.workway.co"
+				},
+				{
+					"@type": "ListItem",
+					"position": 2,
+					"name": "Paths",
+					"item": "https://learn.workway.co/paths"
+				},
+				{
+					"@type": "ListItem",
+					"position": 3,
+					"name": "${path.title}",
+					"item": "https://learn.workway.co/paths/${path.id}"
+				},
+				{
+					"@type": "ListItem",
+					"position": 4,
+					"name": "${lesson.title}",
+					"item": "https://learn.workway.co/paths/${path.id}/${lesson.id}"
+				}
+			]
+		}
+		</script>`}
 	{/if}
 </svelte:head>
 
