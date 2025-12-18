@@ -93,6 +93,40 @@
 			]
 		}
 		</script>`}
+
+		<!-- FAQ Schema for AEO (path-specific) -->
+		{@html `<script type="application/ld+json">
+		{
+			"@context": "https://schema.org",
+			"@type": "FAQPage",
+			"mainEntity": [
+				{
+					"@type": "Question",
+					"name": "What will I learn in the ${path.title} path?",
+					"acceptedAnswer": {
+						"@type": "Answer",
+						"text": "${path.description} This ${path.difficulty}-level path contains ${path.lessons.length} lessons and takes approximately ${path.estimatedHours} hours to complete."
+					}
+				},
+				{
+					"@type": "Question",
+					"name": "How long is the ${path.title} course?",
+					"acceptedAnswer": {
+						"@type": "Answer",
+						"text": "The ${path.title} path takes approximately ${path.estimatedHours} hours to complete and includes ${path.lessons.length} lessons. It is designed for ${path.difficulty} level learners."
+					}
+				}${prerequisitePath ? `,
+				{
+					"@type": "Question",
+					"name": "What are the prerequisites for ${path.title}?",
+					"acceptedAnswer": {
+						"@type": "Answer",
+						"text": "Before starting ${path.title}, you should complete the ${prerequisitePath.title} path. This ensures you have the foundational knowledge needed for this ${path.difficulty}-level course."
+					}
+				}` : ''}
+			]
+		}
+		</script>`}
 	{/if}
 </svelte:head>
 

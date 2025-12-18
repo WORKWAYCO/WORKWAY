@@ -4,8 +4,8 @@
 	import { ArrowLeft, ArrowRight, Clock, CheckCircle2, ExternalLink } from 'lucide-svelte';
 	import { error } from '@sveltejs/kit';
 
-	const pathId = $derived($page.params.pathId);
-	const lessonId = $derived($page.params.lessonId);
+	const pathId = $derived($page.params.pathId ?? '');
+	const lessonId = $derived($page.params.lessonId ?? '');
 
 	const path = $derived(getPath(pathId));
 	const lesson = $derived(getLesson(pathId, lessonId));

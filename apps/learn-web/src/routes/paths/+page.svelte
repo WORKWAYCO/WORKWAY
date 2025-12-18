@@ -49,9 +49,9 @@
 				"position": 1,
 				"item": {
 					"@type": "Course",
-					"name": "Local Setup",
-					"description": "Configure WezTerm, Claude Code, Neomutt, and essential developer tools",
-					"url": "https://learn.workway.co/paths/local-setup"
+					"name": "Getting Started",
+					"description": "Set up your local development environment with WezTerm, Claude Code, and essential tools",
+					"url": "https://learn.workway.co/paths/getting-started"
 				}
 			},
 			{
@@ -82,6 +82,48 @@
 					"name": "Systems Thinking",
 					"description": "Master compound workflows, private patterns, and agency architectures",
 					"url": "https://learn.workway.co/paths/systems-thinking"
+				}
+			}
+		]
+	}
+	</script>`}
+
+	<!-- FAQ Schema for AEO -->
+	{@html `<script type="application/ld+json">
+	{
+		"@context": "https://schema.org",
+		"@type": "FAQPage",
+		"mainEntity": [
+			{
+				"@type": "Question",
+				"name": "What learning paths are available for WORKWAY?",
+				"acceptedAnswer": {
+					"@type": "Answer",
+					"text": "WORKWAY offers four learning paths: Getting Started (local setup with WezTerm and Claude Code), Workflow Foundations (core concepts like defineWorkflow and integrations), Building Workflows (hands-on development with Gmail, Slack, Zoom), and Systems Thinking (advanced compound workflows and agency patterns)."
+				}
+			},
+			{
+				"@type": "Question",
+				"name": "How long does it take to learn WORKWAY?",
+				"acceptedAnswer": {
+					"@type": "Answer",
+					"text": "The complete WORKWAY learning curriculum takes approximately 14 hours: Getting Started (2 hours), Workflow Foundations (3 hours), Building Workflows (5 hours), and Systems Thinking (4 hours). Each path can be completed independently."
+				}
+			},
+			{
+				"@type": "Question",
+				"name": "What prerequisites do I need for WORKWAY development?",
+				"acceptedAnswer": {
+					"@type": "Answer",
+					"text": "Start with the Getting Started path which covers all prerequisites: WezTerm terminal installation, Claude Code CLI setup, and WORKWAY CLI installation. Basic familiarity with TypeScript is helpful but not required."
+				}
+			},
+			{
+				"@type": "Question",
+				"name": "Which WORKWAY learning path should I start with?",
+				"acceptedAnswer": {
+					"@type": "Answer",
+					"text": "Start with Getting Started if you need to set up your development environment. If your environment is ready, begin with Workflow Foundations to learn the core defineWorkflow() pattern and integration concepts."
 				}
 			}
 		]
