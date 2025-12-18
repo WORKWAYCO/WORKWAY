@@ -37,12 +37,12 @@
 </svelte:head>
 
 <div class="page-container">
-	<h1 style="margin-bottom: var(--space-lg);">Your Progress</h1>
+	<h1 class="mb-lg">Your Progress</h1>
 
 	<!-- Stats overview -->
-	<div class="grid grid-cols-2 md:grid-cols-4 gap-4" style="margin-bottom: var(--space-xl);">
+	<div class="grid grid-cols-2 md:grid-cols-4 gap-md mb-xl">
 		<div class="card">
-			<div class="flex items-center gap-3 mb-2">
+			<div class="flex items-center gap-sm mb-xs">
 				<div class="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--color-bg-elevated)] flex items-center justify-center">
 					<CheckCircle2 size={16} class="text-[var(--color-success)]" />
 				</div>
@@ -55,7 +55,7 @@
 		</div>
 
 		<div class="card">
-			<div class="flex items-center gap-3 mb-2">
+			<div class="flex items-center gap-sm mb-xs">
 				<div class="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--color-bg-elevated)] flex items-center justify-center">
 					<BarChart3 size={16} class="text-[var(--color-fg-primary)]" />
 				</div>
@@ -65,7 +65,7 @@
 		</div>
 
 		<div class="card">
-			<div class="flex items-center gap-3 mb-2">
+			<div class="flex items-center gap-sm mb-xs">
 				<div class="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--color-bg-elevated)] flex items-center justify-center">
 					<Clock size={16} class="text-[var(--color-fg-primary)]" />
 				</div>
@@ -77,7 +77,7 @@
 		</div>
 
 		<div class="card">
-			<div class="flex items-center gap-3 mb-2">
+			<div class="flex items-center gap-sm mb-xs">
 				<div class="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--color-bg-elevated)] flex items-center justify-center">
 					<Calendar size={16} class="text-[var(--color-fg-primary)]" />
 				</div>
@@ -88,15 +88,15 @@
 	</div>
 
 	<!-- Path progress -->
-	<h2 class="text-2xl font-semibold" style="margin-bottom: var(--space-md);">Path Progress</h2>
-	<div class="space-y-4">
+	<h2 class="text-2xl font-semibold mb-md">Path Progress</h2>
+	<div class="space-y-md">
 		{#each paths as path}
 			{@const completedInPath = 0}
 			{@const pathProgress = Math.round((completedInPath / path.lessons.length) * 100)}
 
 			<div class="card">
-				<div class="flex items-center justify-between mb-4">
-					<div class="flex items-center gap-3">
+				<div class="flex items-center justify-between mb-md">
+					<div class="flex items-center gap-sm">
 						<BookOpen size={20} class="text-[var(--color-fg-primary)]" />
 						<h3 class="font-medium">{path.title}</h3>
 					</div>
@@ -114,7 +114,7 @@
 				</div>
 
 				<!-- Lesson dots -->
-				<div class="flex items-center gap-1 mt-4">
+				<div class="flex items-center gap-xs mt-md">
 					{#each path.lessons as lesson, index}
 						{@const isComplete = false}
 						<div

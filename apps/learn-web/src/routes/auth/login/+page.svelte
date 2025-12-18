@@ -28,21 +28,21 @@
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
-<div class="min-h-[80vh] flex items-center justify-center" style="padding-left: var(--page-padding-x); padding-right: var(--page-padding-x);">
+<div class="min-h-[80vh] flex items-center justify-center px-page-x">
 	<div class="w-full max-w-md">
-		<div class="text-center mb-8">
+		<div class="text-center mb-lg">
 			<h2>Sign in to continue</h2>
-			<p class="text-[var(--color-fg-muted)] mt-2">
+			<p class="text-[var(--color-fg-muted)] mt-xs">
 				Track your progress and pick up where you left off.
 			</p>
 		</div>
 
 		<div class="card">
-			<form method="POST" action="/auth/login" class="space-y-4">
+			<form method="POST" action="/auth/login" class="space-y-md">
 				<input type="hidden" name="returnUrl" value={returnUrl} />
 
 				<div>
-					<label for="email" class="block text-sm font-medium mb-2">Email</label>
+					<label for="email" class="block text-sm font-medium mb-xs">Email</label>
 					<div class="relative">
 						<Mail
 							size={16}
@@ -60,7 +60,7 @@
 				</div>
 
 				<div>
-					<label for="password" class="block text-sm font-medium mb-2">Password</label>
+					<label for="password" class="block text-sm font-medium mb-xs">Password</label>
 					<input
 						type="password"
 						id="password"
@@ -77,7 +77,7 @@
 				</button>
 			</form>
 
-			<div class="mt-6 pt-6 border-t border-[var(--color-border-default)] text-center">
+			<div class="mt-md pt-md border-t border-[var(--color-border-default)] text-center">
 				<p class="text-sm text-[var(--color-fg-muted)]">
 					Don't have an account?
 					<a href="/auth/signup" class="text-[var(--color-fg-primary)] underline hover:no-underline">Sign up</a>

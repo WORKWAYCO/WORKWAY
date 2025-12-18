@@ -7,6 +7,23 @@ export default {
 				sans: ['var(--font-sans)', 'system-ui', 'sans-serif'],
 				mono: ['var(--font-mono)', 'monospace']
 			},
+			spacing: {
+				// Golden Ratio Scale (φ = 1.618)
+				xs: 'var(--space-xs)', // 0.5rem / 8px
+				sm: 'var(--space-sm)', // 1rem / 16px
+				md: 'var(--space-md)', // 1.618rem / ~26px
+				lg: 'var(--space-lg)', // 2.618rem / ~42px
+				xl: 'var(--space-xl)', // 4.236rem / ~68px
+				'2xl': 'var(--space-2xl)', // 6.854rem / ~110px
+				'3xl': 'var(--space-3xl)', // 11.089rem / ~177px
+				// Page layout aliases
+				'page-x': 'var(--page-padding-x)',
+				'page-y': 'var(--page-padding-y)',
+				section: 'var(--section-gap)'
+			},
+			transitionDuration: {
+				hover: '150ms'
+			},
 			typography: {
 				DEFAULT: {
 					css: {

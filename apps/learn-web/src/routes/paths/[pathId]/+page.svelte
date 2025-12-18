@@ -134,17 +134,17 @@
 	<div class="page-container-narrow">
 		<a
 			href="/paths"
-			class="inline-flex items-center gap-2 text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] mb-8 transition-colors"
+			class="inline-flex items-center gap-xs text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] mb-lg transition-colors"
 		>
 			<ArrowLeft size={16} />
 			All Paths
 		</a>
 
-		<div style="margin-bottom: var(--space-xl);">
+		<div class="mb-xl">
 			<h1>{path.title}</h1>
-			<p class="text-[var(--color-fg-muted)] text-lg mt-4 mb-4">{path.description}</p>
+			<p class="text-[var(--color-fg-muted)] text-lg mt-md mb-md">{path.description}</p>
 
-			<div class="flex items-center gap-6 text-sm text-[var(--color-fg-subtle)]">
+			<div class="flex items-center gap-md text-sm text-[var(--color-fg-subtle)]">
 				<span>{path.lessons.length} lessons</span>
 				<span>{path.estimatedHours} hours</span>
 				<span class="capitalize">{path.difficulty}</span>
@@ -152,8 +152,8 @@
 		</div>
 
 		<!-- Progress bar -->
-		<div class="mb-8">
-			<div class="flex items-center justify-between mb-2">
+		<div class="mb-lg">
+			<div class="flex items-center justify-between mb-xs">
 				<span class="text-sm text-[var(--color-fg-muted)]">Progress</span>
 				<span class="text-sm font-medium">
 					{completedLessons.length} / {path.lessons.length}
@@ -168,12 +168,12 @@
 		</div>
 
 		<!-- Lessons list -->
-		<div class="space-y-3">
+		<div class="space-y-sm">
 			{#each path.lessons as lesson, index}
 				{@const isCompleted = completedLessons.includes(lesson.id)}
 				<a
 					href="/paths/{path.id}/{lesson.id}"
-					class="flex items-center gap-4 p-4 card hover:border-[var(--color-border-strong)] transition-colors"
+					class="flex items-center gap-md p-md card hover:border-[var(--color-border-strong)] transition-colors"
 				>
 					<div class="flex-shrink-0">
 						{#if isCompleted}
@@ -184,22 +184,22 @@
 					</div>
 
 					<div class="flex-1 min-w-0">
-						<div class="flex items-center gap-2">
+						<div class="flex items-center gap-xs">
 							<span class="text-sm text-[var(--color-fg-subtle)]">{index + 1}.</span>
 							<h3 class="font-medium">{lesson.title}</h3>
 						</div>
-						<p class="text-sm text-[var(--color-fg-muted)] mt-1">{lesson.description}</p>
+						<p class="text-sm text-[var(--color-fg-muted)] mt-xs">{lesson.description}</p>
 					</div>
 
-					<div class="flex items-center gap-4 flex-shrink-0">
-						<div class="flex items-center gap-1 text-sm text-[var(--color-fg-subtle)]">
+					<div class="flex items-center gap-md flex-shrink-0">
+						<div class="flex items-center gap-xs text-sm text-[var(--color-fg-subtle)]">
 							<Clock size={16} />
 							{lesson.duration}
 						</div>
 
 						{#if lesson.templateWorkflow}
 							<div
-								class="px-2 py-1 text-xs bg-[var(--color-bg-elevated)] rounded-[var(--radius-sm)] flex items-center gap-1"
+								class="px-xs py-xs text-xs bg-[var(--color-bg-elevated)] rounded-[var(--radius-sm)] flex items-center gap-xs"
 								title="Includes template workflow"
 							>
 								<ExternalLink size={16} />

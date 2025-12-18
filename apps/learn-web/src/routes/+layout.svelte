@@ -15,7 +15,7 @@
 <div class="min-h-screen flex flex-col">
 	<!-- Header - matches workway-platform pattern -->
 	<header class="sticky top-0 z-40 w-full border-b border-[var(--color-border-default)] bg-[var(--color-bg-pure)]">
-		<div class="max-w-7xl mx-auto w-full" style="padding: var(--space-sm) var(--page-padding-x);">
+		<div class="max-w-7xl mx-auto w-full py-sm px-page-x">
 			<div class="flex items-center justify-between">
 				<!-- Logo -->
 				<a href="/" class="text-xl font-bold tracking-tight text-[var(--color-fg-primary)]">
@@ -34,7 +34,7 @@
 					{/each}
 
 					{#if data.user}
-						<div class="flex items-center gap-4 ml-4 pl-4 border-l border-[var(--color-border-default)]">
+						<div class="flex items-center gap-md ml-md pl-md border-l border-[var(--color-border-default)]">
 							<span class="text-sm text-[var(--color-fg-secondary)]">
 								{data.user.displayName || data.user.email}
 							</span>
@@ -75,7 +75,7 @@
 	<!-- Mobile Menu -->
 	{#if isMenuOpen}
 		<div class="md:hidden border-t border-[var(--color-border-default)] bg-[var(--color-bg-pure)]">
-			<div class="max-w-7xl mx-auto flex flex-col gap-4" style="padding: var(--space-sm) var(--page-padding-x) var(--space-xs);">
+			<div class="max-w-7xl mx-auto flex flex-col gap-md pt-sm pb-xs px-page-x">
 				{#each navItems as item}
 					<a
 						href={item.href}
@@ -87,7 +87,7 @@
 				{/each}
 
 				{#if data.user}
-					<div class="pt-4 border-t border-[var(--color-border-default)] flex flex-col gap-4">
+					<div class="pt-md border-t border-[var(--color-border-default)] flex flex-col gap-md">
 						<span class="text-sm text-[var(--color-fg-tertiary)]">
 							{data.user.displayName || data.user.email}
 						</span>
@@ -117,12 +117,12 @@
 	</main>
 
 	<!-- Footer -->
-	<footer class="border-t border-[var(--color-border-default)]" style="padding-top: var(--space-xl); padding-bottom: var(--space-xl);">
-		<div class="max-w-7xl mx-auto" style="padding-left: var(--page-padding-x); padding-right: var(--page-padding-x);">
-			<div class="grid grid-cols-2 md:grid-cols-4 gap-8">
+	<footer class="border-t border-[var(--color-border-default)] py-xl">
+		<div class="max-w-7xl mx-auto px-page-x">
+			<div class="grid grid-cols-2 md:grid-cols-4 gap-lg">
 				<div>
-					<h6 class="text-sm font-semibold text-[var(--color-fg-primary)] mb-4">Learn</h6>
-					<ul class="space-y-3">
+					<h6 class="text-sm font-semibold text-[var(--color-fg-primary)] mb-md">Learn</h6>
+					<ul class="space-y-sm">
 						<li>
 							<a href="/paths" class="text-sm text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
 								All Paths
@@ -142,8 +142,8 @@
 				</div>
 
 				<div>
-					<h6 class="text-sm font-semibold text-[var(--color-fg-primary)] mb-4">WORKWAY</h6>
-					<ul class="space-y-3">
+					<h6 class="text-sm font-semibold text-[var(--color-fg-primary)] mb-md">WORKWAY</h6>
+					<ul class="space-y-sm">
 						<li>
 							<a href="https://workway.co" class="text-sm text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
 								Marketplace
@@ -163,8 +163,8 @@
 				</div>
 
 				<div>
-					<h6 class="text-sm font-semibold text-[var(--color-fg-primary)] mb-4">Resources</h6>
-					<ul class="space-y-3">
+					<h6 class="text-sm font-semibold text-[var(--color-fg-primary)] mb-md">Resources</h6>
+					<ul class="space-y-sm">
 						<li>
 							<a href="https://github.com/workway" class="text-sm text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
 								GitHub
@@ -179,8 +179,8 @@
 				</div>
 
 				<div>
-					<h6 class="text-sm font-semibold text-[var(--color-fg-primary)] mb-4">Company</h6>
-					<ul class="space-y-3">
+					<h6 class="text-sm font-semibold text-[var(--color-fg-primary)] mb-md">Company</h6>
+					<ul class="space-y-sm">
 						<li>
 							<a href="https://createsomething.space" class="text-sm text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
 								Create Something
@@ -190,7 +190,7 @@
 				</div>
 			</div>
 
-			<div class="mt-12 pt-8 border-t border-[var(--color-border-default)] text-center">
+			<div class="mt-xl pt-lg border-t border-[var(--color-border-default)] text-center">
 				<p class="text-sm text-[var(--color-fg-muted)]">
 					Learn WORKWAY Workflows with Claude Code
 				</p>

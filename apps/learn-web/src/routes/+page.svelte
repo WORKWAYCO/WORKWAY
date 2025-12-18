@@ -139,9 +139,9 @@
 
 <div class="page-container">
 	<!-- Hero -->
-	<section class="text-center" style="margin-bottom: var(--section-gap);">
+	<section class="text-center mb-section">
 		<h1 class="mx-auto text-center">Learn WORKWAY</h1>
-		<p class="text-xl md:text-2xl text-[var(--color-fg-muted)] max-w-2xl mx-auto mb-8">
+		<p class="text-xl md:text-2xl text-[var(--color-fg-muted)] max-w-2xl mx-auto mb-lg">
 			Build powerful workflow automations using Claude Code. From first commit to production-ready
 			compound workflows.
 		</p>
@@ -152,15 +152,15 @@
 	</section>
 
 	<!-- Features -->
-	<section class="grid md:grid-cols-2 gap-6" style="margin-bottom: var(--section-gap);">
+	<section class="grid md:grid-cols-2 gap-md mb-section">
 		{#each features as feature}
 			<div class="card">
 				<div
-					class="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] flex items-center justify-center mb-4"
+					class="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] flex items-center justify-center mb-md"
 				>
 					<feature.icon size={20} class="text-[var(--color-fg-primary)]" />
 				</div>
-				<h3 class="text-lg font-medium mb-2">{feature.title}</h3>
+				<h3 class="text-lg font-medium mb-xs">{feature.title}</h3>
 				<p class="text-[var(--color-fg-muted)]">{feature.description}</p>
 			</div>
 		{/each}
@@ -168,7 +168,7 @@
 
 	<!-- Philosophy -->
 	<section class="text-center max-w-3xl mx-auto">
-		<blockquote class="text-2xl md:text-3xl font-light italic text-[var(--color-fg-muted)] mb-4">
+		<blockquote class="text-2xl md:text-3xl font-light italic text-[var(--color-fg-muted)] mb-md">
 			"The tool should recede; the outcome should remain."
 		</blockquote>
 		<p class="text-[var(--color-fg-subtle)]">

@@ -160,7 +160,7 @@
 {#if path && lesson}
 	<div class="page-container-narrow">
 		<!-- Breadcrumb -->
-		<div class="flex items-center gap-2 text-sm text-[var(--color-fg-muted)] mb-8">
+		<div class="flex items-center gap-xs text-sm text-[var(--color-fg-muted)] mb-lg">
 			<a href="/paths" class="hover:text-[var(--color-fg-primary)] transition-colors">Paths</a>
 			<span>/</span>
 			<a href="/paths/{path.id}" class="hover:text-[var(--color-fg-primary)] transition-colors">
@@ -171,31 +171,31 @@
 		</div>
 
 		<!-- Lesson header -->
-		<header style="margin-bottom: var(--space-xl);">
-			<div class="flex items-center gap-3 mb-4">
+		<header class="mb-xl">
+			<div class="flex items-center gap-sm mb-md">
 				<span class="text-sm text-[var(--color-fg-subtle)]">
 					Lesson {lessonIndex + 1} of {path.lessons.length}
 				</span>
-				<div class="flex items-center gap-1 text-sm text-[var(--color-fg-subtle)]">
+				<div class="flex items-center gap-xs text-sm text-[var(--color-fg-subtle)]">
 					<Clock size={16} />
 					{lesson.duration}
 				</div>
 			</div>
 
 			<h1>{lesson.title}</h1>
-			<p class="text-[var(--color-fg-muted)] text-lg mt-4">{lesson.description}</p>
+			<p class="text-[var(--color-fg-muted)] text-lg mt-md">{lesson.description}</p>
 		</header>
 
 		<!-- Lesson content -->
-		<article class="prose prose-invert max-w-none" style="margin-bottom: var(--space-xl);">
+		<article class="prose prose-invert max-w-none mb-xl">
 			<div class="card">
 				<p class="text-[var(--color-fg-muted)]">
 					Lesson content will be loaded from markdown files. This is a placeholder for the lesson:
 					<strong>{lesson.title}</strong>
 				</p>
 
-				<div class="mt-6 p-4 bg-[var(--color-bg-pure)] rounded-[var(--radius-md)] border border-[var(--color-border-default)]">
-					<h3 class="text-sm font-medium mb-2">Coming Soon</h3>
+				<div class="mt-md p-md bg-[var(--color-bg-pure)] rounded-[var(--radius-md)] border border-[var(--color-border-default)]">
+					<h3 class="text-sm font-medium mb-xs">Coming Soon</h3>
 					<p class="text-sm text-[var(--color-fg-muted)]">
 						Full lesson content with code examples, explanations, and interactive elements.
 					</p>
@@ -205,15 +205,15 @@
 
 		<!-- Praxis section -->
 		{#if lesson.praxis || lesson.templateWorkflow}
-			<section style="margin-bottom: var(--space-xl);">
+			<section class="mb-xl">
 				<div class="card border-[var(--color-border-emphasis)]">
-					<h2 class="text-lg font-medium mb-4 flex items-center gap-2">
+					<h2 class="text-lg font-medium mb-md flex items-center gap-xs">
 						<span class="text-[var(--color-fg-primary)]">Praxis</span>
 						<span class="text-[var(--color-fg-muted)]">— Hands-on Exercise</span>
 					</h2>
 
 					{#if lesson.praxis}
-						<p class="text-[var(--color-fg-muted)] mb-4">{lesson.praxis}</p>
+						<p class="text-[var(--color-fg-muted)] mb-md">{lesson.praxis}</p>
 					{/if}
 
 					{#if lesson.templateWorkflow}
@@ -232,7 +232,7 @@
 		{/if}
 
 		<!-- Completion -->
-		<section style="margin-bottom: var(--space-xl);">
+		<section class="mb-xl">
 			<button
 				onclick={markComplete}
 				disabled={isCompleted}
@@ -246,12 +246,12 @@
 		</section>
 
 		<!-- Navigation -->
-		<nav class="flex items-center justify-between pt-8 border-t border-[var(--color-border-default)]" aria-label="Lesson navigation">
+		<nav class="flex items-center justify-between pt-lg border-t border-[var(--color-border-default)]" aria-label="Lesson navigation">
 			{#if previousLesson}
 				<a
 					href="/paths/{path.id}/{previousLesson.id}"
 					rel="prev"
-					class="flex items-center gap-2 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
+					class="flex items-center gap-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
 				>
 					<ArrowLeft size={16} />
 					<div>
@@ -267,7 +267,7 @@
 				<a
 					href="/paths/{path.id}/{nextLesson.id}"
 					rel="next"
-					class="flex items-center gap-2 text-right text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
+					class="flex items-center gap-xs text-right text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
 				>
 					<div>
 						<div class="text-xs uppercase tracking-wider">Next</div>
@@ -278,7 +278,7 @@
 			{:else}
 				<a
 					href="/paths/{path.id}"
-					class="flex items-center gap-2 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
+					class="flex items-center gap-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
 				>
 					Back to Path Overview
 					<ArrowRight size={16} />

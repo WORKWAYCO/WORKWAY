@@ -182,21 +182,21 @@
 </svelte:head>
 
 <div class="page-container">
-	<div style="margin-bottom: var(--space-xl);">
+	<div class="mb-xl">
 		<h1>Learning Paths</h1>
-		<p class="text-[var(--color-fg-muted)] text-lg mt-4">
+		<p class="text-[var(--color-fg-muted)] text-lg mt-md">
 			Progress through structured paths from beginner to advanced. Each path builds on the previous.
 		</p>
 	</div>
 
-	<div class="space-y-6">
+	<div class="space-y-md">
 		{#each paths as path}
 			{@const Icon = iconMap[path.icon] || BookOpen}
 			<a
 				href="/paths/{path.id}"
 				class="block card hover:border-[var(--color-border-strong)] transition-colors"
 			>
-				<div class="flex items-start gap-6">
+				<div class="flex items-start gap-md">
 					<div
 						class="w-14 h-14 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] flex items-center justify-center flex-shrink-0"
 					>
@@ -204,21 +204,21 @@
 					</div>
 
 					<div class="flex-1 min-w-0">
-						<div class="flex items-center gap-3 mb-2">
+						<div class="flex items-center gap-sm mb-xs">
 							<h2 class="text-xl font-medium">{path.title}</h2>
 							<span class="text-xs uppercase tracking-wider {difficultyColors[path.difficulty]}">
 								{path.difficulty}
 							</span>
 						</div>
 
-						<p class="text-[var(--color-fg-muted)] mb-4">{path.description}</p>
+						<p class="text-[var(--color-fg-muted)] mb-md">{path.description}</p>
 
-						<div class="flex items-center gap-6 text-sm text-[var(--color-fg-subtle)]">
-							<div class="flex items-center gap-2">
+						<div class="flex items-center gap-md text-sm text-[var(--color-fg-subtle)]">
+							<div class="flex items-center gap-xs">
 								<BookOpen size={16} />
 								{path.lessons.length} lessons
 							</div>
-							<div class="flex items-center gap-2">
+							<div class="flex items-center gap-xs">
 								<Clock size={16} />
 								{path.estimatedHours} hours
 							</div>
