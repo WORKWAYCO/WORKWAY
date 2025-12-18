@@ -157,12 +157,70 @@ pre,
 	opacity: 1;
 }
 
+.button-ghost {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 0.5rem;
+	padding: 0.5rem 1rem;
+	min-height: 40px;
+	background-color: transparent;
+	border: 1px solid var(--color-border-default);
+	color: var(--color-fg-primary);
+	font-weight: var(--font-medium);
+	font-size: var(--text-sm);
+	border-radius: var(--radius-none);
+	cursor: pointer;
+	transition: all var(--duration-standard) var(--ease-standard);
+	text-decoration: none;
+}
+
+.button-ghost:hover {
+	background-color: var(--color-bg-surface);
+	border-color: var(--color-border-strong);
+}
+
+.button-ghost.active,
+.button-ghost[aria-pressed='true'] {
+	background-color: var(--color-success);
+	color: var(--color-bg-pure);
+	border-color: var(--color-success);
+}
+
+/* ==========================================================================
+   Form Inputs - WORKWAY Canonical (square corners per design system)
+   ========================================================================== */
+
+.input {
+	width: 100%;
+	background-color: var(--color-bg-pure);
+	border: 1px solid var(--color-border-default);
+	border-radius: var(--radius-none);
+	padding: 0.5rem 1rem;
+	font-size: var(--text-sm);
+	color: var(--color-fg-primary);
+	transition: border-color var(--duration-standard) var(--ease-standard);
+}
+
+.input:focus {
+	outline: none;
+	border-color: var(--color-border-strong);
+}
+
+.input::placeholder {
+	color: var(--color-fg-muted);
+}
+
+.input-with-icon {
+	padding-left: 2.5rem;
+}
+
 /* ==========================================================================
    Cards - Canonical hover pattern
    ========================================================================== */
 
 .card {
-	background: rgba(0, 0, 0, 0.3);
+	background: var(--color-bg-elevated);
 	border: 1px solid var(--color-border-default);
 	border-radius: var(--radius-md);
 	padding: var(--space-md);
