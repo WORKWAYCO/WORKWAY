@@ -181,6 +181,10 @@ export interface PrimingContext {
   sessionGoal: string;
   /** Harness mode */
   mode: HarnessMode;
+  /** Existing patterns to reuse (DRY) */
+  existingPatterns?: string[];
+  /** Relevant files to reference (DRY) */
+  relevantFiles?: string[];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

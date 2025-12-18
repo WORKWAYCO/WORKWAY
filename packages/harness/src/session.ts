@@ -21,6 +21,116 @@ import type {
 const execAsync = promisify(exec);
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DRY Context Discovery
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Discover existing patterns and files relevant to an issue.
+ * This helps the agent avoid duplicating existing work.
+ */
+export async function discoverDryContext(
+  issueTitle: string,
+  cwd: string
+): Promise<{ existingPatterns: string[]; relevantFiles: string[] }> {
+  const existingPatterns: string[] = [];
+  const relevantFiles: string[] = [];
+
+  // Extract keywords from issue title
+  const keywords = extractKeywords(issueTitle);
+
+  // Always include CLAUDE.md if it exists
+  try {
+    await execAsync('test -f CLAUDE.md', { cwd });
+    relevantFiles.push('CLAUDE.md');
+  } catch {
+    // CLAUDE.md doesn't exist
+  }
+
+  // Always include .claude/rules if they exist
+  try {
+    const { stdout } = await execAsync('ls .claude/rules/*.md 2>/dev/null || true', { cwd });
+    const rules = stdout.trim().split('\n').filter(Boolean);
+    if (rules.length > 0) {
+      relevantFiles.push(...rules.slice(0, 3)); // Max 3 rule files
+      existingPatterns.push('Project rules exist in .claude/rules/ - read before implementing');
+    }
+  } catch {
+    // No rules
+  }
+
+  // Search for relevant files based on keywords
+  for (const keyword of keywords.slice(0, 3)) { // Limit to 3 keywords
+    try {
+      // Search for files containing the keyword
+      const { stdout } = await execAsync(
+        `find . -type f -name "*.ts" -o -name "*.svelte" -o -name "*.css" 2>/dev/null | xargs grep -l -i "${keyword}" 2>/dev/null | head -5`,
+        { cwd }
+      );
+      const files = stdout.trim().split('\n').filter(Boolean);
+      for (const file of files) {
+        if (!relevantFiles.includes(file) && relevantFiles.length < 10) {
+          relevantFiles.push(file);
+        }
+      }
+    } catch {
+      // No matches
+    }
+  }
+
+  // Detect existing patterns based on issue content
+  const lowerTitle = issueTitle.toLowerCase();
+
+  if (lowerTitle.includes('component') || lowerTitle.includes('ui')) {
+    existingPatterns.push('Check existing components in src/lib/components/ or similar directories');
+  }
+
+  if (lowerTitle.includes('style') || lowerTitle.includes('css') || lowerTitle.includes('design')) {
+    existingPatterns.push('Use design tokens from CDN: https://cdn.workway.co/tokens.css');
+    existingPatterns.push('Check app.css or tailwind.config.js for existing styles');
+  }
+
+  if (lowerTitle.includes('seo') || lowerTitle.includes('meta')) {
+    existingPatterns.push('Check +page.svelte files for existing meta tag patterns');
+    existingPatterns.push('Use svelte:head for meta tags');
+  }
+
+  if (lowerTitle.includes('api') || lowerTitle.includes('fetch')) {
+    existingPatterns.push('Check packages/integrations/src/ for BaseAPIClient patterns');
+  }
+
+  if (lowerTitle.includes('workflow')) {
+    existingPatterns.push('Use defineWorkflow() from @workwayco/sdk');
+    existingPatterns.push('Check packages/workflows/src/ for existing workflow patterns');
+  }
+
+  if (lowerTitle.includes('schema') || lowerTitle.includes('structured data')) {
+    existingPatterns.push('Add JSON-LD in svelte:head with type="application/ld+json"');
+  }
+
+  return { existingPatterns, relevantFiles };
+}
+
+/**
+ * Extract meaningful keywords from an issue title.
+ */
+function extractKeywords(title: string): string[] {
+  const stopWords = new Set([
+    'a', 'an', 'the', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+    'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'be', 'been',
+    'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would',
+    'could', 'should', 'may', 'might', 'must', 'shall', 'can', 'need',
+    'add', 'update', 'create', 'implement', 'fix', 'use', 'make', 'get',
+  ]);
+
+  return title
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !stopWords.has(word))
+    .slice(0, 5);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Git Operations
 // ─────────────────────────────────────────────────────────────────────────────
 
@@ -97,6 +207,43 @@ export function generatePrimingPrompt(context: PrimingContext): string {
   }
 
   lines.push('');
+
+  // DRY Principles - Critical for agent behavior
+  lines.push('## DRY Principles (CRITICAL)');
+  lines.push('');
+  lines.push('Before writing ANY code:');
+  lines.push('1. **Read first** - ALWAYS read existing files before modifying or creating new ones');
+  lines.push('2. **Search for patterns** - Use Grep/Glob to find existing implementations of similar functionality');
+  lines.push('3. **Reuse, don\'t recreate** - If a pattern, component, or utility exists, USE it');
+  lines.push('4. **Edit over create** - Prefer editing existing files over creating new ones');
+  lines.push('5. **Check CLAUDE.md** - Read project rules and conventions first');
+  lines.push('');
+  lines.push('**Anti-patterns to AVOID:**');
+  lines.push('- Creating a new file without checking if similar exists');
+  lines.push('- Duplicating utility functions that exist elsewhere');
+  lines.push('- Hardcoding values that are defined as design tokens');
+  lines.push('- Ignoring existing component patterns in the codebase');
+  lines.push('- Writing code before understanding the existing architecture');
+  lines.push('');
+
+  // Existing patterns context
+  if (context.existingPatterns && context.existingPatterns.length > 0) {
+    lines.push('## Existing Patterns to Reuse');
+    for (const pattern of context.existingPatterns) {
+      lines.push(`- ${pattern}`);
+    }
+    lines.push('');
+  }
+
+  // Relevant files to reference
+  if (context.relevantFiles && context.relevantFiles.length > 0) {
+    lines.push('## Relevant Files to Reference');
+    for (const file of context.relevantFiles) {
+      lines.push(`- \`${file}\``);
+    }
+    lines.push('');
+  }
+
   lines.push('---');
   lines.push('');
 

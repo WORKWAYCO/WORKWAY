@@ -44,6 +44,7 @@ export {
 export {
   runSession,
   generatePrimingPrompt,
+  discoverDryContext,
   getRecentCommits,
   getHeadCommit,
   createHarnessBranch,
