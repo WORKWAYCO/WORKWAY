@@ -137,12 +137,10 @@
 	</script>`}
 </svelte:head>
 
-<div class="max-w-7xl mx-auto px-6 py-16">
+<div class="page-container">
 	<!-- Hero -->
-	<section class="text-center mb-24">
-		<h1 class="text-5xl md:text-7xl font-semibold tracking-tight mb-6 mx-auto text-center">
-			Learn WORKWAY
-		</h1>
+	<section class="text-center" style="margin-bottom: var(--section-gap);">
+		<h1 class="mx-auto text-center">Learn WORKWAY</h1>
 		<p class="text-xl md:text-2xl text-[var(--color-fg-muted)] max-w-2xl mx-auto mb-8">
 			Build powerful workflow automations using Claude Code. From first commit to production-ready
 			compound workflows.
@@ -154,7 +152,7 @@
 	</section>
 
 	<!-- Features -->
-	<section class="grid md:grid-cols-2 gap-6 mb-24">
+	<section class="grid md:grid-cols-2 gap-6" style="margin-bottom: var(--section-gap);">
 		{#each features as feature}
 			<div class="card">
 				<div

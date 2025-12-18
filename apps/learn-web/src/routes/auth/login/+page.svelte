@@ -28,11 +28,11 @@
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
-<div class="min-h-[80vh] flex items-center justify-center px-6">
+<div class="min-h-[80vh] flex items-center justify-center" style="padding-left: var(--page-padding-x); padding-right: var(--page-padding-x);">
 	<div class="w-full max-w-md">
 		<div class="text-center mb-8">
-			<h1 class="text-3xl font-semibold mb-2">Sign in to continue</h1>
-			<p class="text-[var(--color-fg-muted)]">
+			<h2>Sign in to continue</h2>
+			<p class="text-[var(--color-fg-muted)] mt-2">
 				Track your progress and pick up where you left off.
 			</p>
 		</div>
@@ -53,7 +53,7 @@
 							id="email"
 							name="email"
 							required
-							class="w-full bg-[var(--color-bg-pure)] border border-[var(--color-border-default)] rounded-[var(--radius-md)] px-4 py-2 pl-10 text-sm focus:border-[var(--color-border-strong)] focus:outline-none transition-colors"
+							class="input input-with-icon"
 							placeholder="you@example.com"
 						/>
 					</div>
@@ -66,7 +66,7 @@
 						id="password"
 						name="password"
 						required
-						class="w-full bg-[var(--color-bg-pure)] border border-[var(--color-border-default)] rounded-[var(--radius-md)] px-4 py-2 text-sm focus:border-[var(--color-border-strong)] focus:outline-none transition-colors"
+						class="input"
 						placeholder="••••••••"
 					/>
 				</div>

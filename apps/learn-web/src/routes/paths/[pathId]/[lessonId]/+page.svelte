@@ -129,26 +129,26 @@
 			"mainEntity": [
 				{
 					"@type": "Question",
-					"name": "What does the ${lesson.title} lesson cover?",
+					"name": "What does WORKWAY's ${lesson.title} lesson cover?",
 					"acceptedAnswer": {
 						"@type": "Answer",
-						"text": "${lesson.description} This lesson is part of the ${path.title} path and takes approximately ${lesson.duration} to complete."
+						"text": "WORKWAY's ${lesson.title} lesson teaches: ${lesson.description} This lesson is part of WORKWAY's ${path.title} learning path and takes approximately ${lesson.duration} to complete."
 					}
 				}${lesson.templateWorkflow ? `,
 				{
 					"@type": "Question",
-					"name": "Is there a hands-on exercise for ${lesson.title}?",
+					"name": "Is there a hands-on exercise for WORKWAY's ${lesson.title} lesson?",
 					"acceptedAnswer": {
 						"@type": "Answer",
-						"text": "Yes, this lesson includes a Praxis exercise using the ${lesson.templateWorkflow.name} workflow template. ${lesson.templateWorkflow.description}"
+						"text": "Yes, WORKWAY's ${lesson.title} lesson includes a Praxis exercise using the ${lesson.templateWorkflow.name} workflow template. ${lesson.templateWorkflow.description}"
 					}
 				}` : ''}${nextLesson ? `,
 				{
 					"@type": "Question",
-					"name": "What comes after ${lesson.title}?",
+					"name": "What comes after WORKWAY's ${lesson.title} lesson?",
 					"acceptedAnswer": {
 						"@type": "Answer",
-						"text": "After completing ${lesson.title}, the next lesson is ${nextLesson.title}: ${nextLesson.description}"
+						"text": "After completing WORKWAY's ${lesson.title} lesson, the next lesson in the ${path.title} path is ${nextLesson.title}: ${nextLesson.description}"
 					}
 				}` : ''}
 			]
@@ -158,7 +158,7 @@
 </svelte:head>
 
 {#if path && lesson}
-	<div class="max-w-4xl mx-auto px-6 py-12">
+	<div class="page-container-narrow">
 		<!-- Breadcrumb -->
 		<div class="flex items-center gap-2 text-sm text-[var(--color-fg-muted)] mb-8">
 			<a href="/paths" class="hover:text-[var(--color-fg-primary)] transition-colors">Paths</a>
@@ -171,7 +171,7 @@
 		</div>
 
 		<!-- Lesson header -->
-		<header class="mb-12">
+		<header style="margin-bottom: var(--space-xl);">
 			<div class="flex items-center gap-3 mb-4">
 				<span class="text-sm text-[var(--color-fg-subtle)]">
 					Lesson {lessonIndex + 1} of {path.lessons.length}
@@ -187,7 +187,7 @@
 		</header>
 
 		<!-- Lesson content -->
-		<article class="prose prose-invert max-w-none mb-12">
+		<article class="prose prose-invert max-w-none" style="margin-bottom: var(--space-xl);">
 			<div class="card">
 				<p class="text-[var(--color-fg-muted)]">
 					Lesson content will be loaded from markdown files. This is a placeholder for the lesson:
@@ -205,7 +205,7 @@
 
 		<!-- Praxis section -->
 		{#if lesson.praxis || lesson.templateWorkflow}
-			<section class="mb-12">
+			<section style="margin-bottom: var(--space-xl);">
 				<div class="card border-[var(--color-border-emphasis)]">
 					<h2 class="text-lg font-medium mb-4 flex items-center gap-2">
 						<span class="text-[var(--color-fg-primary)]">Praxis</span>
@@ -232,7 +232,7 @@
 		{/if}
 
 		<!-- Completion -->
-		<section class="mb-12">
+		<section style="margin-bottom: var(--space-xl);">
 			<button
 				onclick={markComplete}
 				disabled={isCompleted}

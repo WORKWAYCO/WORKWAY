@@ -51,7 +51,14 @@
 					"@type": "Course",
 					"name": "Getting Started",
 					"description": "Set up your local development environment with WezTerm, Claude Code, and essential tools",
-					"url": "https://learn.workway.co/paths/getting-started"
+					"url": "https://learn.workway.co/paths/getting-started",
+					"provider": {
+						"@type": "Organization",
+						"name": "WORKWAY",
+						"url": "https://workway.co"
+					},
+					"educationalLevel": "beginner",
+					"timeRequired": "PT2H"
 				}
 			},
 			{
@@ -61,7 +68,14 @@
 					"@type": "Course",
 					"name": "Workflow Foundations",
 					"description": "Learn defineWorkflow(), integrations, OAuth, triggers, and configuration schemas",
-					"url": "https://learn.workway.co/paths/workflow-foundations"
+					"url": "https://learn.workway.co/paths/workflow-foundations",
+					"provider": {
+						"@type": "Organization",
+						"name": "WORKWAY",
+						"url": "https://workway.co"
+					},
+					"educationalLevel": "beginner",
+					"timeRequired": "PT3H"
 				}
 			},
 			{
@@ -71,7 +85,14 @@
 					"@type": "Course",
 					"name": "Building Workflows",
 					"description": "Create real workflows with Gmail, Slack, Zoom, Notion, and Workers AI",
-					"url": "https://learn.workway.co/paths/building-workflows"
+					"url": "https://learn.workway.co/paths/building-workflows",
+					"provider": {
+						"@type": "Organization",
+						"name": "WORKWAY",
+						"url": "https://workway.co"
+					},
+					"educationalLevel": "intermediate",
+					"timeRequired": "PT5H"
 				}
 			},
 			{
@@ -81,7 +102,14 @@
 					"@type": "Course",
 					"name": "Systems Thinking",
 					"description": "Master compound workflows, private patterns, and agency architectures",
-					"url": "https://learn.workway.co/paths/systems-thinking"
+					"url": "https://learn.workway.co/paths/systems-thinking",
+					"provider": {
+						"@type": "Organization",
+						"name": "WORKWAY",
+						"url": "https://workway.co"
+					},
+					"educationalLevel": "advanced",
+					"timeRequired": "PT4H"
 				}
 			}
 		]
@@ -115,7 +143,7 @@
 				"name": "What prerequisites do I need for WORKWAY development?",
 				"acceptedAnswer": {
 					"@type": "Answer",
-					"text": "Start with the Getting Started path which covers all prerequisites: WezTerm terminal installation, Claude Code CLI setup, and WORKWAY CLI installation. Basic familiarity with TypeScript is helpful but not required."
+					"text": "WORKWAY's Getting Started path covers all prerequisites: WezTerm terminal installation, Claude Code CLI setup, and WORKWAY CLI installation. Basic familiarity with TypeScript is helpful but not required."
 				}
 			},
 			{
@@ -123,7 +151,7 @@
 				"name": "Which WORKWAY learning path should I start with?",
 				"acceptedAnswer": {
 					"@type": "Answer",
-					"text": "Start with Getting Started if you need to set up your development environment. If your environment is ready, begin with Workflow Foundations to learn the core defineWorkflow() pattern and integration concepts."
+					"text": "Start with WORKWAY's Getting Started path if you need to set up your development environment. If your environment is ready, begin with WORKWAY's Workflow Foundations path to learn the core defineWorkflow() pattern and integration concepts."
 				}
 			}
 		]
@@ -131,10 +159,10 @@
 	</script>`}
 </svelte:head>
 
-<div class="max-w-7xl mx-auto px-6 py-12">
-	<div class="mb-12">
-		<h1 class="text-4xl font-semibold mb-4">Learning Paths</h1>
-		<p class="text-[var(--color-fg-muted)] text-lg">
+<div class="page-container">
+	<div style="margin-bottom: var(--space-xl);">
+		<h1>Learning Paths</h1>
+		<p class="text-[var(--color-fg-muted)] text-lg mt-4">
 			Progress through structured paths from beginner to advanced. Each path builds on the previous.
 		</p>
 	</div>

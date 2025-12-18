@@ -15,7 +15,7 @@
 <div class="min-h-screen flex flex-col">
 	<!-- Header - matches workway-platform pattern -->
 	<header class="sticky top-0 z-40 w-full border-b border-[var(--color-border-default)] bg-[var(--color-bg-pure)]">
-		<div class="max-w-7xl mx-auto w-full px-6 py-4">
+		<div class="max-w-7xl mx-auto w-full" style="padding: var(--space-sm) var(--page-padding-x);">
 			<div class="flex items-center justify-between">
 				<!-- Logo -->
 				<a href="/" class="text-xl font-bold tracking-tight text-[var(--color-fg-primary)]">
@@ -75,7 +75,7 @@
 	<!-- Mobile Menu -->
 	{#if isMenuOpen}
 		<div class="md:hidden border-t border-[var(--color-border-default)] bg-[var(--color-bg-pure)]">
-			<div class="max-w-7xl mx-auto px-6 pt-4 pb-2 flex flex-col gap-4">
+			<div class="max-w-7xl mx-auto flex flex-col gap-4" style="padding: var(--space-sm) var(--page-padding-x) var(--space-xs);">
 				{#each navItems as item}
 					<a
 						href={item.href}
@@ -117,8 +117,8 @@
 	</main>
 
 	<!-- Footer -->
-	<footer class="border-t border-[var(--color-border-default)] py-12">
-		<div class="max-w-7xl mx-auto px-6">
+	<footer class="border-t border-[var(--color-border-default)]" style="padding-top: var(--space-xl); padding-bottom: var(--space-xl);">
+		<div class="max-w-7xl mx-auto" style="padding-left: var(--page-padding-x); padding-right: var(--page-padding-x);">
 			<div class="grid grid-cols-2 md:grid-cols-4 gap-8">
 				<div>
 					<h6 class="text-sm font-semibold text-[var(--color-fg-primary)] mb-4">Learn</h6>

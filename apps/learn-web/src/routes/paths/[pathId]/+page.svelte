@@ -102,26 +102,26 @@
 			"mainEntity": [
 				{
 					"@type": "Question",
-					"name": "What will I learn in the ${path.title} path?",
+					"name": "What will I learn in WORKWAY's ${path.title} path?",
 					"acceptedAnswer": {
 						"@type": "Answer",
-						"text": "${path.description} This ${path.difficulty}-level path contains ${path.lessons.length} lessons and takes approximately ${path.estimatedHours} hours to complete."
+						"text": "WORKWAY's ${path.title} path teaches: ${path.description} This ${path.difficulty}-level WORKWAY course contains ${path.lessons.length} lessons and takes approximately ${path.estimatedHours} hours to complete."
 					}
 				},
 				{
 					"@type": "Question",
-					"name": "How long is the ${path.title} course?",
+					"name": "How long is the WORKWAY ${path.title} course?",
 					"acceptedAnswer": {
 						"@type": "Answer",
-						"text": "The ${path.title} path takes approximately ${path.estimatedHours} hours to complete and includes ${path.lessons.length} lessons. It is designed for ${path.difficulty} level learners."
+						"text": "WORKWAY's ${path.title} path takes approximately ${path.estimatedHours} hours to complete and includes ${path.lessons.length} lessons. It is designed for ${path.difficulty} level learners in the WORKWAY learning curriculum."
 					}
 				}${prerequisitePath ? `,
 				{
 					"@type": "Question",
-					"name": "What are the prerequisites for ${path.title}?",
+					"name": "What are the prerequisites for WORKWAY's ${path.title} path?",
 					"acceptedAnswer": {
 						"@type": "Answer",
-						"text": "Before starting ${path.title}, you should complete the ${prerequisitePath.title} path. This ensures you have the foundational knowledge needed for this ${path.difficulty}-level course."
+						"text": "Before starting WORKWAY's ${path.title} path, complete the ${prerequisitePath.title} path. This ensures you have the foundational knowledge needed for this ${path.difficulty}-level WORKWAY course."
 					}
 				}` : ''}
 			]
@@ -131,7 +131,7 @@
 </svelte:head>
 
 {#if path}
-	<div class="max-w-4xl mx-auto px-6 py-12">
+	<div class="page-container-narrow">
 		<a
 			href="/paths"
 			class="inline-flex items-center gap-2 text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] mb-8 transition-colors"
@@ -140,9 +140,9 @@
 			All Paths
 		</a>
 
-		<div class="mb-12">
-			<h1 class="text-4xl font-semibold mb-4">{path.title}</h1>
-			<p class="text-[var(--color-fg-muted)] text-lg mb-4">{path.description}</p>
+		<div style="margin-bottom: var(--space-xl);">
+			<h1>{path.title}</h1>
+			<p class="text-[var(--color-fg-muted)] text-lg mt-4 mb-4">{path.description}</p>
 
 			<div class="flex items-center gap-6 text-sm text-[var(--color-fg-subtle)]">
 				<span>{path.lessons.length} lessons</span>

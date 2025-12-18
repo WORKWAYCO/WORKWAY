@@ -21,6 +21,14 @@
 	--text-h6: clamp(0.875rem, 0.25vw + 0.75rem, 1rem);
 
 	/* ==========================================================================
+	   Page Layout - Consistent spacing across all pages
+	   ========================================================================== */
+	--page-padding-x: var(--space-md); /* ~26px */
+	--page-padding-y: var(--space-xl); /* ~68px - Golden Ratio */
+	--page-max-width: 80rem; /* 1280px */
+	--section-gap: var(--space-2xl); /* ~110px between major sections */
+
+	/* ==========================================================================
 	   Legacy brand aliases - For compatibility with existing components
 	   ========================================================================== */
 	--brand-bg: var(--color-bg-pure);
@@ -67,15 +75,15 @@ h1 {
 }
 
 h2 {
-	font-size: var(--text-h1);
+	font-size: var(--text-h2);
 	font-weight: var(--font-semibold);
-	line-height: var(--leading-tight);
+	line-height: var(--leading-tighter);
 	letter-spacing: var(--tracking-tighter);
 	font-family: var(--font-sans);
 }
 
 h3 {
-	font-size: var(--text-h2);
+	font-size: var(--text-h3);
 	font-weight: var(--font-semibold);
 	line-height: var(--leading-tight);
 	letter-spacing: var(--tracking-tight);
@@ -83,7 +91,7 @@ h3 {
 }
 
 h4 {
-	font-size: var(--text-h3);
+	font-size: var(--text-h4);
 	font-weight: var(--font-semibold);
 	line-height: var(--leading-snug);
 	font-family: var(--font-sans);
@@ -125,7 +133,8 @@ pre,
 	border-radius: var(--radius-none);
 	border: none;
 	cursor: pointer;
-	transition: all var(--duration-standard) var(--ease-standard);
+	transition: background-color var(--duration-hover) var(--ease-standard),
+		color var(--duration-hover) var(--ease-standard);
 	text-decoration: none;
 }
 
@@ -147,7 +156,9 @@ pre,
 	font-weight: var(--font-semibold);
 	border-radius: var(--radius-none);
 	cursor: pointer;
-	transition: all var(--duration-standard) var(--ease-standard);
+	transition: background-color var(--duration-hover) var(--ease-standard),
+		border-color var(--duration-hover) var(--ease-standard),
+		color var(--duration-hover) var(--ease-standard);
 	text-decoration: none;
 }
 
@@ -171,7 +182,9 @@ pre,
 	font-size: var(--text-sm);
 	border-radius: var(--radius-none);
 	cursor: pointer;
-	transition: all var(--duration-standard) var(--ease-standard);
+	transition: background-color var(--duration-hover) var(--ease-standard),
+		border-color var(--duration-hover) var(--ease-standard),
+		color var(--duration-hover) var(--ease-standard);
 	text-decoration: none;
 }
 
@@ -199,7 +212,7 @@ pre,
 	padding: 0.5rem 1rem;
 	font-size: var(--text-sm);
 	color: var(--color-fg-primary);
-	transition: border-color var(--duration-standard) var(--ease-standard);
+	transition: border-color var(--duration-hover) var(--ease-standard);
 }
 
 .input:focus {
@@ -224,7 +237,8 @@ pre,
 	border: 1px solid var(--color-border-default);
 	border-radius: var(--radius-md);
 	padding: var(--space-md);
-	transition: all var(--duration-standard) var(--ease-standard);
+	transition: border-color var(--duration-hover) var(--ease-standard),
+		transform var(--duration-hover) var(--ease-standard);
 }
 
 .card:hover {
@@ -276,6 +290,26 @@ pre,
 /* ==========================================================================
    Utility classes
    ========================================================================== */
+
+.page-container {
+	max-width: var(--page-max-width);
+	margin-left: auto;
+	margin-right: auto;
+	padding-left: var(--page-padding-x);
+	padding-right: var(--page-padding-x);
+	padding-top: var(--page-padding-y);
+	padding-bottom: var(--page-padding-y);
+}
+
+.page-container-narrow {
+	max-width: 56rem; /* 896px - for content-focused pages */
+	margin-left: auto;
+	margin-right: auto;
+	padding-left: var(--page-padding-x);
+	padding-right: var(--page-padding-x);
+	padding-top: var(--page-padding-y);
+	padding-bottom: var(--page-padding-y);
+}
 
 .glass {
 	background: var(--color-bg-surface);

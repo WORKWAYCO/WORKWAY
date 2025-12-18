@@ -36,11 +36,11 @@
 	<meta name="robots" content="noindex, nofollow" />
 </svelte:head>
 
-<div class="max-w-7xl mx-auto px-6 py-12">
-	<h1 class="text-4xl font-semibold mb-8">Your Progress</h1>
+<div class="page-container">
+	<h1 style="margin-bottom: var(--space-lg);">Your Progress</h1>
 
 	<!-- Stats overview -->
-	<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-12">
+	<div class="grid grid-cols-2 md:grid-cols-4 gap-4" style="margin-bottom: var(--space-xl);">
 		<div class="card">
 			<div class="flex items-center gap-3 mb-2">
 				<div class="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--color-bg-elevated)] flex items-center justify-center">
@@ -88,7 +88,7 @@
 	</div>
 
 	<!-- Path progress -->
-	<h2 class="text-2xl font-semibold mb-6">Path Progress</h2>
+	<h2 class="text-2xl font-semibold" style="margin-bottom: var(--space-md);">Path Progress</h2>
 	<div class="space-y-4">
 		{#each paths as path}
 			{@const completedInPath = 0}
