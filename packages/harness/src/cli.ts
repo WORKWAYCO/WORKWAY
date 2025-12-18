@@ -21,6 +21,7 @@ import {
   pauseHarness,
   resumeHarness,
   getHarnessStatus,
+  findAndResumeHarness,
 } from './runner.js';
 
 const program = new Command();
@@ -55,6 +56,7 @@ program
   .option('-h, --max-hours <n>', 'Max hours before auto-pause', '4')
   .option('-t, --confidence <threshold>', 'Confidence threshold for pause (0-1)', '0.7')
   .option('--dry-run', 'Parse spec and show plan without executing')
+  .option('--resume', 'Resume existing harness for this spec instead of starting fresh')
   .action(async (specFile, options) => {
     printBanner();
 
@@ -68,6 +70,21 @@ program
     const cwd = process.cwd();
 
     try {
+      // Check for resume flag
+      if (options.resume) {
+        const spinner = ora('Looking for existing harness...').start();
+        const result = await findAndResumeHarness(specFile, cwd);
+
+        if (!result) {
+          spinner.fail('No existing harness found for this spec');
+          console.log(chalk.yellow('Starting fresh instead...\n'));
+        } else {
+          spinner.succeed(`Resuming harness: ${result.harnessState.id}`);
+          await runHarness(result.harnessState, { cwd, dryRun: false });
+          return;
+        }
+      }
+
       const spinner = ora('Initializing harness...').start();
 
       const { harnessState } = await initializeHarness(

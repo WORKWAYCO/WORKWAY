@@ -17,8 +17,8 @@ import type {
   Checkpoint,
   CheckpointPolicy,
   PrimingContext,
-  DEFAULT_CHECKPOINT_POLICY,
 } from './types.js';
+import { DEFAULT_CHECKPOINT_POLICY } from './types.js';
 import { parseSpec, formatSpecSummary, validateSpec } from './spec-parser.js';
 import {
   runSession,
@@ -394,6 +394,73 @@ export async function runHarness(
 // ─────────────────────────────────────────────────────────────────────────────
 // Control Functions
 // ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Find and resume an existing harness for a spec file.
+ */
+export async function findAndResumeHarness(
+  specFile: string,
+  cwd: string
+): Promise<{ harnessState: HarnessState; featureMap: Map<string, string> } | null> {
+  const store = new BeadsStore(cwd);
+  const issues = await store.getOpenIssues();
+
+  // Find harness issues that match this spec file
+  const harnessIssues = issues.filter(
+    (i) => i.labels.includes('harness') && i.description?.includes(specFile)
+  );
+
+  if (harnessIssues.length === 0) {
+    return null;
+  }
+
+  // Use the most recent harness (first in list)
+  const harnessIssue = harnessIssues[0];
+  console.log(`\n📂 Found existing harness: ${harnessIssue.id}`);
+  console.log(`   Title: ${harnessIssue.title}`);
+
+  // Find associated issues
+  const associatedIssues = issues.filter((i) =>
+    i.labels.includes(`harness:${harnessIssue.id}`) && !i.labels.includes('checkpoint')
+  );
+
+  // Count status
+  const completed = associatedIssues.filter((i) => i.status === 'closed').length;
+  const failed = associatedIssues.filter((i) => i.labels.includes('failed')).length;
+  const total = associatedIssues.length;
+
+  console.log(`   Progress: ${completed}/${total} completed, ${failed} failed`);
+
+  // Extract git branch from description
+  const branchMatch = harnessIssue.description?.match(/Branch: ([\w\/-]+)/);
+  const gitBranch = branchMatch ? branchMatch[1] : `harness/resumed-${Date.now()}`;
+
+  // Reconstruct harness state
+  const harnessState: HarnessState = {
+    id: harnessIssue.id,
+    status: 'running',
+    mode: harnessIssue.description?.includes('workflow') ? 'workflow' : 'platform',
+    specFile,
+    gitBranch,
+    startedAt: new Date().toISOString(),
+    currentSession: completed + failed,
+    sessionsCompleted: completed + failed,
+    featuresTotal: total,
+    featuresCompleted: completed,
+    featuresFailed: failed,
+    lastCheckpoint: null,
+    checkpointPolicy: DEFAULT_CHECKPOINT_POLICY,
+    pauseReason: null,
+  };
+
+  // Build feature map (id -> issue id)
+  const featureMap = new Map<string, string>();
+  for (const issue of associatedIssues) {
+    featureMap.set(issue.id, issue.id);
+  }
+
+  return { harnessState, featureMap };
+}
 
 /**
  * Resume a paused harness.
