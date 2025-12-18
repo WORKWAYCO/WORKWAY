@@ -6,6 +6,7 @@
  *
  * "Weniger, aber besser" - This worker serves:
  * - /tokens.css - canonical CSS design tokens
+ * - /fonts.css - Stack Sans Notch + JetBrains Mono (proxied from Google Fonts)
  * - /lucide.js - Lucide icons library (proxied with caching)
  */
 
@@ -14,6 +15,10 @@ import TOKENS_CSS from './tokens.css';
 // Lucide version pinned for consistency across all WORKWAY properties
 const LUCIDE_VERSION = '0.468.0';
 const LUCIDE_CDN_URL = `https://unpkg.com/lucide@${LUCIDE_VERSION}/dist/umd/lucide.min.js`;
+
+// Google Fonts URLs for WORKWAY canonical typefaces
+const GOOGLE_FONTS_CSS_URL =
+  'https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&family=Stack+Sans+Notch:wght@200..700&display=swap';
 
 export default {
   async fetch(request: Request): Promise<Response> {
@@ -39,6 +44,11 @@ export default {
       });
     }
 
+    // Serve fonts (proxied from Google Fonts for single-CDN convenience)
+    if (path === '/fonts.css') {
+      return await serveFonts(request);
+    }
+
     // Serve Lucide icons library (proxied for version consistency)
     if (path === '/lucide.js') {
       return await serveLucide();
@@ -58,6 +68,48 @@ export default {
     });
   },
 };
+
+/**
+ * Proxy and cache Google Fonts CSS
+ * Forwards User-Agent to get appropriate font format (woff2 for modern browsers)
+ * Provides single-CDN convenience: developers add one link, fonts work
+ */
+async function serveFonts(request: Request): Promise<Response> {
+  try {
+    // Forward User-Agent to get appropriate font formats
+    const userAgent = request.headers.get('User-Agent') || '';
+
+    const response = await fetch(GOOGLE_FONTS_CSS_URL, {
+      headers: {
+        'User-Agent': userAgent,
+      },
+    });
+
+    if (!response.ok) {
+      return new Response('Failed to fetch fonts', {
+        status: 502,
+        headers: { 'Content-Type': 'text/plain' },
+      });
+    }
+
+    const css = await response.text();
+
+    return new Response(css, {
+      headers: {
+        'Content-Type': 'text/css; charset=utf-8',
+        // Cache for 24 hours, stale-while-revalidate for 7 days
+        // Font CSS rarely changes, safe to cache aggressively
+        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+        ...corsHeaders(),
+      },
+    });
+  } catch (error) {
+    return new Response('Error fetching fonts', {
+      status: 500,
+      headers: { 'Content-Type': 'text/plain' },
+    });
+  }
+}
 
 /**
  * Proxy and cache Lucide icons library from unpkg

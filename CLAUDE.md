@@ -236,16 +236,17 @@ Private/BYOO workflows inherit WORKWAY design automatically via CDN:
 
 ```html
 <head>
-  <!-- Fonts -->
-  <link href="https://fonts.googleapis.com/css2?family=Stack+Sans+Notch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <!-- Design Tokens - ONE LINE -->
+  <!-- Fonts - Stack Sans Notch + JetBrains Mono (proxied from Google Fonts) -->
+  <link rel="stylesheet" href="https://cdn.workway.co/fonts.css" />
+  <!-- Design Tokens -->
   <link rel="stylesheet" href="https://cdn.workway.co/tokens.css" />
-  <!-- Icons - version-pinned Lucide via CDN -->
+  <!-- Icons - version-pinned Lucide -->
   <script src="https://cdn.workway.co/lucide.js"></script>
 </head>
 ```
 
 **What the CDN provides:**
+- Fonts: Stack Sans Notch (sans-serif) + JetBrains Mono (monospace) via `/fonts.css`
 - Color tokens: `--color-bg-pure`, `--color-fg-primary`, `--color-success`, etc.
 - Short aliases: `--bg-pure`, `--fg-primary`, `--success` (backwards compatibility)
 - Typography: `--font-sans`, `--font-mono`, `--text-h1`, `--text-body`, etc.
