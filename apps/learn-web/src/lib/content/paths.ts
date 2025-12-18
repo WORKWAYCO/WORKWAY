@@ -25,7 +25,7 @@ export const paths: Path[] = [
 	{
 		id: 'getting-started',
 		title: 'Getting Started',
-		description: 'Set up your local development environment with WezTerm, Claude Code, and essential tools.',
+		description: 'Get your development environment ready in under 2 hours. Install WezTerm, Claude Code, and WORKWAY CLI—everything needed to start building workflows.',
 		icon: 'terminal',
 		difficulty: 'beginner',
 		estimatedHours: 2,
@@ -65,7 +65,7 @@ export const paths: Path[] = [
 	{
 		id: 'workflow-foundations',
 		title: 'Workflow Foundations',
-		description: 'Understand the core concepts of WORKWAY: defineWorkflow(), integrations, and triggers.',
+		description: 'Understand the building blocks that make automations work. Learn patterns for connecting services, handling OAuth, and triggering workflows reliably.',
 		icon: 'workflow',
 		difficulty: 'beginner',
 		estimatedHours: 3,
@@ -105,7 +105,7 @@ export const paths: Path[] = [
 	{
 		id: 'building-workflows',
 		title: 'Building Workflows',
-		description: 'Hands-on development of real workflows with Gmail, Slack, Zoom, and Workers AI.',
+		description: 'Build real automations: sync Gmail to Notion, summarize meetings with AI, connect Slack with your tools. Five hours of hands-on projects you can ship.',
 		icon: 'code',
 		difficulty: 'intermediate',
 		estimatedHours: 5,
@@ -151,7 +151,7 @@ export const paths: Path[] = [
 	{
 		id: 'systems-thinking',
 		title: 'Systems Thinking',
-		description: 'Advanced patterns for compound workflows, private deployments, and agency architectures.',
+		description: 'Design compound workflows where one meeting triggers Notion notes, Slack updates, email drafts, and CRM entries—all automatically. Production patterns.',
 		icon: 'brain',
 		difficulty: 'advanced',
 		estimatedHours: 4,

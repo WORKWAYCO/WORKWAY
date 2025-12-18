@@ -29,7 +29,7 @@
 	<title>Learn WORKWAY | Build Workflows with Claude Code</title>
 	<meta
 		name="description"
-		content="Master WORKWAY workflow development using Claude Code. From local setup to production-ready compound workflows."
+		content="Build workflows that disappear into your work. Go from first commit to production-ready automations that handle follow-ups, sync data, and save hours weekly."
 	/>
 
 	<!-- SEO -->
@@ -38,7 +38,7 @@
 
 	<!-- Open Graph -->
 	<meta property="og:title" content="Learn WORKWAY | Build Workflows with Claude Code" />
-	<meta property="og:description" content="Master WORKWAY workflow development. From local setup to production-ready compound workflows." />
+	<meta property="og:description" content="Build workflows that disappear into your work. From first commit to production-ready automations that save hours weekly." />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://learn.workway.co" />
 	<meta property="og:site_name" content="Learn WORKWAY" />
@@ -46,7 +46,7 @@
 	<!-- Twitter -->
 	<meta name="twitter:card" content="summary" />
 	<meta name="twitter:title" content="Learn WORKWAY | Build Workflows with Claude Code" />
-	<meta name="twitter:description" content="Master WORKWAY workflow development. From local setup to production-ready compound workflows." />
+	<meta name="twitter:description" content="Build workflows that disappear into your work. From first commit to production-ready automations that save hours weekly." />
 
 	<!-- JSON-LD Structured Data -->
 	{@html `<script type="application/ld+json">

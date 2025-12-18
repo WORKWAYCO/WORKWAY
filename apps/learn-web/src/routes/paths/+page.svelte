@@ -18,7 +18,7 @@
 
 <svelte:head>
 	<title>Learning Paths | Learn WORKWAY</title>
-	<meta name="description" content="Choose your learning path: from local setup to advanced compound workflows. Structured courses for workflow automation with Claude Code." />
+	<meta name="description" content="Four learning paths from beginner to advanced. Set up tools, learn workflow patterns, build integrations, and ship automations that run themselves." />
 
 	<!-- SEO -->
 	<meta name="keywords" content="WORKWAY learning paths, workflow courses, claude code tutorial, workflow automation training" />
@@ -26,7 +26,7 @@
 
 	<!-- Open Graph -->
 	<meta property="og:title" content="Learning Paths | Learn WORKWAY" />
-	<meta property="og:description" content="Choose your learning path: from local setup to advanced compound workflows." />
+	<meta property="og:description" content="Four paths from beginner to advanced. Set up tools, learn patterns, build integrations, ship automations that run themselves." />
 	<meta property="og:type" content="website" />
 	<meta property="og:url" content="https://learn.workway.co/paths" />
 	<meta property="og:site_name" content="Learn WORKWAY" />
@@ -34,7 +34,7 @@
 	<!-- Twitter -->
 	<meta name="twitter:card" content="summary" />
 	<meta name="twitter:title" content="Learning Paths | Learn WORKWAY" />
-	<meta name="twitter:description" content="Choose your learning path: from local setup to advanced compound workflows." />
+	<meta name="twitter:description" content="Four paths from beginner to advanced. Set up tools, learn patterns, build integrations, ship automations that run themselves." />
 
 	<!-- ItemList Schema for learning paths -->
 	{@html `<script type="application/ld+json">
