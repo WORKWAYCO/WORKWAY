@@ -1,7 +1,7 @@
 {
   "name": "@workway/learn",
   "version": "1.0.0",
-  "description": "WORKWAY learning MCP server and CLI for workflow development mastery",
+  "description": "MCP server and CLI for learning WORKWAY workflow development with Claude Code. Build automations that recede—outcomes remain.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -44,18 +44,51 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "author": "WORKWAY",
+  "author": {
+    "name": "Half Dozen",
+    "url": "https://halfdozen.co"
+  },
+  "contributors": [
+    {
+      "name": "WORKWAY",
+      "url": "https://workway.co"
+    }
+  ],
   "license": "Apache-2.0",
+  "homepage": "https://learn.workway.co",
   "repository": {
     "type": "git",
     "url": "https://github.com/workwayco/workway.git",
     "directory": "packages/learn"
   },
+  "bugs": {
+    "url": "https://github.com/workwayco/workway/issues"
+  },
+  "funding": {
+    "type": "github",
+    "url": "https://github.com/sponsors/workwayco"
+  },
   "keywords": [
     "workway",
     "mcp",
+    "model-context-protocol",
     "claude",
+    "claude-code",
+    "anthropic",
+    "ai",
     "learning",
-    "workflows"
+    "workflows",
+    "automation",
+    "cloudflare-workers",
+    "integrations",
+    "gmail",
+    "notion",
+    "slack",
+    "zoom",
+    "oauth",
+    "api-client",
+    "zuhandenheit",
+    "dieter-rams",
+    "half-dozen"
   ]
 }
