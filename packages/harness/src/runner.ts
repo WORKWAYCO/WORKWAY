@@ -94,24 +94,25 @@ export async function initializeHarness(
     onRedirect: true,
   };
 
-  // Create harness issue
-  const harnessIssue = await store.createIssue({
-    title: `Harness: ${spec.title}`,
-    description: `Harness run for: ${options.specFile}\nMode: ${options.mode}\nFeatures: ${spec.features.length}\nStarted: ${new Date().toISOString()}`,
-    type: 'epic',
-    priority: 0,
-    labels: ['harness'],
-  });
-
-  console.log(`Created harness issue: ${harnessIssue.id}`);
-
-  // Create git branch
+  // IMPORTANT: Create git branch FIRST, before any beads operations
+  // This prevents git checkout from resetting the beads file after we've appended issues
   const slugTitle = spec.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
     .slice(0, 30);
   const gitBranch = await createHarnessBranch(slugTitle, cwd);
   console.log(`Created git branch: ${gitBranch}`);
+
+  // Now create harness issue (after branch switch, so it won't be lost)
+  const harnessIssue = await store.createIssue({
+    title: `Harness: ${spec.title}`,
+    description: `Harness run for: ${options.specFile}\nMode: ${options.mode}\nFeatures: ${spec.features.length}\nStarted: ${new Date().toISOString()}\nBranch: ${gitBranch}`,
+    type: 'epic',
+    priority: 0,
+    labels: ['harness'],
+  });
+
+  console.log(`Created harness issue: ${harnessIssue.id}`);
 
   // Create issues from features
   const featureMap = await createIssuesFromFeatures(

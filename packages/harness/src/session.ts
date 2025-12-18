@@ -163,19 +163,31 @@ export async function getHeadCommit(cwd: string): Promise<string | null> {
 
 /**
  * Create a harness branch.
+ * Uses timestamp suffix to ensure uniqueness and prevent reusing old branches.
  */
 export async function createHarnessBranch(slugTitle: string, cwd: string): Promise<string> {
   const date = new Date().toISOString().split('T')[0];
-  const branchName = `harness/${slugTitle}-${date}`;
+  const baseBranchName = `harness/${slugTitle}-${date}`;
 
+  // First, try to create the base branch name
   try {
-    await execAsync(`git checkout -b ${branchName}`, { cwd });
+    await execAsync(`git checkout -b ${baseBranchName}`, { cwd });
+    return baseBranchName;
   } catch {
-    // Branch might already exist
-    await execAsync(`git checkout ${branchName}`, { cwd });
-  }
+    // Branch exists - create a unique one with timestamp suffix
+    const timestamp = Date.now().toString(36); // Short unique suffix
+    const uniqueBranchName = `${baseBranchName}-${timestamp}`;
 
-  return branchName;
+    try {
+      await execAsync(`git checkout -b ${uniqueBranchName}`, { cwd });
+      return uniqueBranchName;
+    } catch {
+      // If we still can't create, just stay on current branch
+      const { stdout } = await execAsync('git branch --show-current', { cwd });
+      console.log(`Warning: Could not create harness branch, staying on: ${stdout.trim()}`);
+      return stdout.trim();
+    }
+  }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
