@@ -1,0 +1,60 @@
+{
+  "name": "@workwayco/beads",
+  "version": "0.1.0",
+  "description": "Agent-native task management for WORKWAY. The tool recedes; the work remains.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "bin": {
+    "bd": "./bin/bd.js",
+    "bv": "./bin/bv.js"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts src/cli.ts src/viewer.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts src/cli.ts src/viewer.ts --format esm --dts --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "chalk": "^5.3.0",
+    "nanoid": "^5.0.7"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": {
+    "name": "WORKWAY",
+    "url": "https://workway.co"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/workwayco/workway.git",
+    "directory": "packages/beads"
+  },
+  "keywords": [
+    "workway",
+    "beads",
+    "task-management",
+    "agent",
+    "ai",
+    "claude-code",
+    "issue-tracking",
+    "zuhandenheit"
+  ]
+}
