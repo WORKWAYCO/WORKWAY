@@ -182,6 +182,11 @@
 					<h6 class="text-sm font-semibold text-[var(--color-fg-primary)] mb-md">Company</h6>
 					<ul class="space-y-sm">
 						<li>
+							<a href="https://halfdozen.co" class="text-sm text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
+								Half Dozen
+							</a>
+						</li>
+						<li>
 							<a href="https://createsomething.space" class="text-sm text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
 								Create Something
 							</a>
