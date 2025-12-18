@@ -136,6 +136,33 @@
   --icon-lg: 24px;         /* Header icons, hero elements */
 
   /* ==========================================================================
+     Component Spacing - Buttons, Inputs, Cards
+     ========================================================================== */
+  --button-padding-x: 1.5rem;     /* Horizontal padding for standard buttons */
+  --button-padding-y: 0.75rem;    /* Vertical padding for standard buttons */
+  --button-padding-x-sm: 1rem;    /* Horizontal padding for small/ghost buttons */
+  --button-padding-y-sm: 0.5rem;  /* Vertical padding for small/ghost buttons */
+  --button-min-height: 44px;      /* Touch target minimum (WCAG) */
+  --button-min-height-sm: 40px;   /* Smaller button minimum */
+  --button-gap: 0.5rem;           /* Gap between button icon and text */
+  --input-padding-x: 1rem;        /* Horizontal padding for inputs */
+  --input-padding-y: 0.5rem;      /* Vertical padding for inputs */
+  --input-icon-offset: 2.5rem;    /* Left padding when input has icon */
+
+  /* ==========================================================================
+     Layout Tokens - Max widths, blur, micro-spacing
+     ========================================================================== */
+  --max-width-content: 80rem;     /* 1280px - Standard page content */
+  --max-width-narrow: 56rem;      /* 896px - Content-focused pages (e.g., articles) */
+  --blur-glass: 12px;             /* Backdrop blur for glass effects */
+  --translate-micro: 2px;         /* Micro-interactions (e.g., card hover) */
+  --translate-sm: 10px;           /* Small animations (e.g., fade-in-up) */
+  --scrollbar-width: 8px;         /* Scrollbar dimensions */
+  --scrollbar-radius: 4px;        /* Scrollbar thumb radius */
+  --outline-offset: 2px;          /* Focus outline offset (a11y standard) */
+  --radius-none: 0;               /* Explicit zero radius for square corners */
+
+  /* ==========================================================================
      Short Aliases - Backwards compatibility for existing workflows
      Usage: var(--bg-pure) instead of var(--color-bg-pure)
      ========================================================================== */
@@ -176,6 +203,40 @@ body {
   background-color: var(--color-bg-pure);
   color: var(--color-fg-primary);
   line-height: var(--leading-body);
+}
+
+/* ==========================================================================
+   Heading Styles - Applied automatically
+   ========================================================================== */
+h1, h2, h3, h4, h5, h6 {
+  margin: 0;
+  font-weight: var(--font-semibold);
+  letter-spacing: var(--tracking-tighter);
+}
+
+h1 {
+  font-size: var(--text-h1);
+  line-height: var(--leading-tightest);
+}
+
+h2 {
+  font-size: var(--text-h2);
+  line-height: var(--leading-tighter);
+}
+
+h3 {
+  font-size: var(--text-h3);
+  line-height: var(--leading-tight);
+}
+
+h4 {
+  font-size: var(--text-h4);
+  line-height: var(--leading-tight);
+}
+
+h5, h6 {
+  font-size: var(--text-body);
+  line-height: var(--leading-snug);
 }
 
 /* Focus states for accessibility */

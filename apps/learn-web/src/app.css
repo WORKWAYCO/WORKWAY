@@ -16,7 +16,6 @@
 	   ========================================================================== */
 	--space-3xl: 11.089rem; /* ~177px - φ⁵ */
 	--shadow-none: none;
-	--radius-none: 0px;
 	--text-h5: clamp(1rem, 0.5vw + 0.75rem, 1.25rem);
 	--text-h6: clamp(0.875rem, 0.25vw + 0.75rem, 1rem);
 
@@ -25,7 +24,6 @@
 	   ========================================================================== */
 	--page-padding-x: var(--space-md); /* ~26px */
 	--page-padding-y: var(--space-xl); /* ~68px - Golden Ratio */
-	--page-max-width: 80rem; /* 1280px */
 	--section-gap: var(--space-2xl); /* ~110px between major sections */
 
 	/* ==========================================================================
@@ -45,7 +43,8 @@
 }
 
 /* ==========================================================================
-   Base Styles - Overrides for CDN base styles
+   Base Styles - App-specific extensions only
+   (CDN provides: font-family, background-color, color, line-height, etc.)
    ========================================================================== */
 
 html {
@@ -53,8 +52,7 @@ html {
 }
 
 body {
-	/* Pure black canvas - canonical WORKWAY background (CDN uses this too) */
-	background-color: var(--color-bg-pure);
+	/* Extend CDN base with additional font features */
 	font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
 	min-height: 100vh;
 }
@@ -66,7 +64,7 @@ body {
 h1 {
 	font-size: var(--text-display-xl);
 	font-weight: var(--font-semibold);
-	line-height: 1.05;
+	line-height: var(--leading-tightest);
 	letter-spacing: var(--tracking-tighter);
 	max-width: 20ch;
 	font-family: var(--font-sans);
@@ -124,9 +122,9 @@ pre,
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 0.5rem;
-	padding: 0.75rem 1.5rem;
-	min-height: 44px;
+	gap: var(--button-gap);
+	padding: var(--button-padding-y) var(--button-padding-x);
+	min-height: var(--button-min-height);
 	background-color: var(--color-fg-primary);
 	color: var(--color-bg-pure);
 	font-weight: var(--font-semibold);
@@ -147,9 +145,9 @@ pre,
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 0.5rem;
-	padding: 0.75rem 1.5rem;
-	min-height: 44px;
+	gap: var(--button-gap);
+	padding: var(--button-padding-y) var(--button-padding-x);
+	min-height: var(--button-min-height);
 	background-color: var(--color-active);
 	border: 1px solid var(--color-border-emphasis);
 	color: var(--color-fg-primary);
@@ -172,9 +170,9 @@ pre,
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
-	gap: 0.5rem;
-	padding: 0.5rem 1rem;
-	min-height: 40px;
+	gap: var(--button-gap);
+	padding: var(--button-padding-y-sm) var(--button-padding-x-sm);
+	min-height: var(--button-min-height-sm);
 	background-color: transparent;
 	border: 1px solid var(--color-border-default);
 	color: var(--color-fg-primary);
@@ -209,7 +207,7 @@ pre,
 	background-color: var(--color-bg-pure);
 	border: 1px solid var(--color-border-default);
 	border-radius: var(--radius-none);
-	padding: 0.5rem 1rem;
+	padding: var(--input-padding-y) var(--input-padding-x);
 	font-size: var(--text-sm);
 	color: var(--color-fg-primary);
 	transition: border-color var(--duration-hover) var(--ease-standard);
@@ -225,7 +223,7 @@ pre,
 }
 
 .input-with-icon {
-	padding-left: 2.5rem;
+	padding-left: var(--input-icon-offset);
 }
 
 /* ==========================================================================
@@ -243,17 +241,18 @@ pre,
 
 .card:hover {
 	border-color: var(--color-border-strong);
-	transform: translateX(2px);
+	transform: translateX(var(--translate-micro));
 }
 
 /* ==========================================================================
-   Focus states - Square corners per WORKWAY design system
+   Focus states - App-specific override for square corners
+   (CDN provides default focus-visible, this enforces WORKWAY square corner standard)
    ========================================================================== */
 
 *:focus-visible {
 	outline: 2px solid var(--color-focus);
-	outline-offset: 2px;
-	border-radius: 0px;
+	outline-offset: var(--outline-offset);
+	border-radius: var(--radius-none);
 }
 
 /* ==========================================================================
@@ -270,8 +269,8 @@ pre,
    ========================================================================== */
 
 ::-webkit-scrollbar {
-	width: 8px;
-	height: 8px;
+	width: var(--scrollbar-width);
+	height: var(--scrollbar-width);
 }
 
 ::-webkit-scrollbar-track {
@@ -280,7 +279,7 @@ pre,
 
 ::-webkit-scrollbar-thumb {
 	background: var(--color-border-default);
-	border-radius: 4px;
+	border-radius: var(--scrollbar-radius);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -292,7 +291,7 @@ pre,
    ========================================================================== */
 
 .page-container {
-	max-width: var(--page-max-width);
+	max-width: var(--max-width-content);
 	margin-left: auto;
 	margin-right: auto;
 	padding-left: var(--page-padding-x);
@@ -302,7 +301,7 @@ pre,
 }
 
 .page-container-narrow {
-	max-width: 56rem; /* 896px - for content-focused pages */
+	max-width: var(--max-width-narrow);
 	margin-left: auto;
 	margin-right: auto;
 	padding-left: var(--page-padding-x);
@@ -313,7 +312,7 @@ pre,
 
 .glass {
 	background: var(--color-bg-surface);
-	backdrop-filter: blur(12px);
+	backdrop-filter: blur(var(--blur-glass));
 	border: 1px solid var(--color-border-default);
 }
 
@@ -324,7 +323,7 @@ pre,
 @keyframes fadeInUp {
 	from {
 		opacity: 0;
-		transform: translateY(10px);
+		transform: translateY(var(--translate-sm));
 	}
 	to {
 		opacity: 1;
@@ -351,16 +350,6 @@ pre,
 }
 
 /* ==========================================================================
-   Accessibility - Respect reduced motion preference
+   Accessibility - Reduced motion handled by CDN tokens.css
+   (CDN provides @media (prefers-reduced-motion: reduce) - no duplicate needed)
    ========================================================================== */
-
-@media (prefers-reduced-motion: reduce) {
-	*,
-	*::before,
-	*::after {
-		animation-duration: 0.01ms !important;
-		animation-iteration-count: 1 !important;
-		transition-duration: 0.01ms !important;
-		scroll-behavior: auto !important;
-	}
-}
