@@ -3,6 +3,9 @@
 	import { page } from '$app/stores';
 	import { ArrowLeft, ArrowRight, Clock, CheckCircle2, ExternalLink } from 'lucide-svelte';
 	import { error } from '@sveltejs/kit';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
 
 	const pathId = $derived($page.params.pathId ?? '');
 	const lessonId = $derived($page.params.lessonId ?? '');
@@ -12,6 +15,9 @@
 	const nextLesson = $derived(getNextLesson(pathId, lessonId));
 	const previousLesson = $derived(getPreviousLesson(pathId, lessonId));
 	const lessonIndex = $derived(path?.lessons.findIndex((l) => l.id === lessonId) ?? -1);
+
+	// Use excerpt from loaded content, fallback to description
+	const metaDescription = $derived(data.content.excerpt || lesson?.description || '');
 
 	$effect(() => {
 		if (!path || !lesson) {
@@ -31,7 +37,7 @@
 <svelte:head>
 	{#if lesson && path}
 		<title>{lesson.title} | {path.title} | Learn WORKWAY</title>
-		<meta name="description" content={lesson.description} />
+		<meta name="description" content={metaDescription} />
 
 		<!-- SEO -->
 		<link rel="canonical" href="https://learn.workway.co/paths/{path.id}/{lesson.id}" />
@@ -44,7 +50,7 @@
 
 		<!-- Open Graph -->
 		<meta property="og:title" content="{lesson.title} | {path.title}" />
-		<meta property="og:description" content={lesson.description} />
+		<meta property="og:description" content={metaDescription} />
 		<meta property="og:type" content="article" />
 		<meta property="og:url" content="https://learn.workway.co/paths/{path.id}/{lesson.id}" />
 		<meta property="og:site_name" content="Learn WORKWAY" />
@@ -52,7 +58,7 @@
 		<!-- Twitter -->
 		<meta name="twitter:card" content="summary" />
 		<meta name="twitter:title" content="{lesson.title} | {path.title}" />
-		<meta name="twitter:description" content={lesson.description} />
+		<meta name="twitter:description" content={metaDescription} />
 
 		<!-- Article Schema for lesson content -->
 		{@html `<script type="application/ld+json">
@@ -60,11 +66,14 @@
 			"@context": "https://schema.org",
 			"@type": "Article",
 			"headline": "${lesson.title}",
-			"description": "${lesson.description}",
+			"description": "${metaDescription.replace(/"/g, '\\"')}",
+			"timeRequired": "PT${lesson.duration.replace(' min', 'M').replace(' hour', 'H').replace('s', '')}",
 			"isPartOf": {
 				"@type": "Course",
 				"name": "${path.title}",
-				"url": "https://learn.workway.co/paths/${path.id}"
+				"url": "https://learn.workway.co/paths/${path.id}",
+				"educationalLevel": "${path.difficulty}",
+				"timeRequired": "PT${path.estimatedHours}H"
 			},
 			"publisher": {
 				"@type": "Organization",
@@ -173,8 +182,8 @@
 				</div>
 			</div>
 
-			<h1 class="text-4xl font-semibold mb-4">{lesson.title}</h1>
-			<p class="text-[var(--color-fg-muted)] text-lg">{lesson.description}</p>
+			<h1>{lesson.title}</h1>
+			<p class="text-[var(--color-fg-muted)] text-lg mt-4">{lesson.description}</p>
 		</header>
 
 		<!-- Lesson content -->
@@ -212,7 +221,7 @@
 							href="https://workway.co/workflow/{lesson.templateWorkflow.id}?source=learn&lesson={lesson.id}"
 							target="_blank"
 							rel="noopener noreferrer"
-							class="inline-flex items-center gap-2 bg-[var(--color-bg-elevated)] hover:bg-[var(--color-border-default)] px-4 py-2 rounded-[var(--radius-md)] text-sm transition-colors"
+							class="button-ghost"
 						>
 							<ExternalLink size={16} />
 							Try: {lesson.templateWorkflow.name}
@@ -227,9 +236,9 @@
 			<button
 				onclick={markComplete}
 				disabled={isCompleted}
-				class="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)] transition-colors {isCompleted
-					? 'bg-[var(--color-success)] text-[var(--color-bg-pure)]'
-					: 'bg-[var(--color-bg-surface)] hover:bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)]'}"
+				class="button-ghost"
+				class:active={isCompleted}
+				aria-pressed={isCompleted}
 			>
 				<CheckCircle2 size={16} />
 				{isCompleted ? 'Completed!' : 'Mark as Complete'}
@@ -237,10 +246,11 @@
 		</section>
 
 		<!-- Navigation -->
-		<nav class="flex items-center justify-between pt-8 border-t border-[var(--color-border-default)]">
+		<nav class="flex items-center justify-between pt-8 border-t border-[var(--color-border-default)]" aria-label="Lesson navigation">
 			{#if previousLesson}
 				<a
 					href="/paths/{path.id}/{previousLesson.id}"
+					rel="prev"
 					class="flex items-center gap-2 text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
 				>
 					<ArrowLeft size={16} />
@@ -256,6 +266,7 @@
 			{#if nextLesson}
 				<a
 					href="/paths/{path.id}/{nextLesson.id}"
+					rel="next"
 					class="flex items-center gap-2 text-right text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
 				>
 					<div>
