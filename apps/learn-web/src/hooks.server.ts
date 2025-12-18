@@ -49,7 +49,8 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	// Protected routes - require authentication
-	const protectedPaths = ['/progress', '/paths/'];
+	// Note: /paths/ is public for SEO, only /progress requires auth
+	const protectedPaths = ['/progress'];
 	const isProtected = protectedPaths.some((path) => event.url.pathname.startsWith(path));
 
 	if (isProtected && !event.locals.user) {
