@@ -399,6 +399,19 @@ export async function runSession(
 }
 
 /**
+ * Kill any running bd daemons to prevent beads file conflicts.
+ * The daemon auto-syncs SQLite to JSONL every 5 seconds, which can
+ * overwrite harness-created issues.
+ */
+async function killBdDaemons(): Promise<void> {
+  try {
+    await execAsync('pkill -f "bd daemon" 2>/dev/null || true');
+  } catch {
+    // Ignore errors - daemon might not be running
+  }
+}
+
+/**
  * Run Claude Code CLI with a prompt.
  * Uses stdin pipe for prompt delivery (more reliable for long prompts).
  *
@@ -410,6 +423,9 @@ async function runClaudeCode(
   prompt: string,
   cwd: string
 ): Promise<{ output: string; exitCode: number; contextUsed: number }> {
+  // Kill any bd daemons before each session to prevent beads file conflicts
+  await killBdDaemons();
+
   return new Promise((resolve) => {
     // Disable hooks to prevent bd auto-sync from overwriting harness beads
     // The SessionStart hook runs `bd prime` which can trigger auto-import
