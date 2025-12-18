@@ -331,6 +331,9 @@ export async function runSession(
   context: PrimingContext,
   options: { cwd: string; dryRun?: boolean }
 ): Promise<SessionResult> {
+  // Kill any bd daemons at session start to ensure clean state
+  await killBdDaemons();
+
   const startTime = Date.now();
   const startCommit = await getHeadCommit(options.cwd);
 
@@ -376,6 +379,10 @@ export async function runSession(
     // Detect outcome from output
     const outcome = detectOutcome(result.output, result.exitCode);
 
+    // Kill any bd daemons before returning to runner
+    // This ensures the runner can safely update beads without interference
+    await killBdDaemons();
+
     return {
       issueId: issue.id,
       outcome,
@@ -386,6 +393,9 @@ export async function runSession(
       error: outcome === 'failure' ? extractError(result.output) : null,
     };
   } catch (error) {
+    // Kill any bd daemons before returning to runner
+    await killBdDaemons();
+
     return {
       issueId: issue.id,
       outcome: 'failure',
@@ -480,8 +490,13 @@ async function runClaudeCode(
       });
     }, 30 * 60 * 1000);
 
-    child.on('close', (code) => {
+    child.on('close', async (code) => {
       clearTimeout(timeoutId);
+
+      // Kill any bd daemons that may have started during the session
+      // This prevents the daemon from overwriting beads before the runner can update them
+      await killBdDaemons();
+
       // Try to extract context usage from output
       const contextMatch = output.match(/context[:\s]+(\d+)/i);
       const contextUsed = contextMatch ? parseInt(contextMatch[1], 10) : 0;

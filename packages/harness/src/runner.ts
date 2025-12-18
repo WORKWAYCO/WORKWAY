@@ -44,6 +44,23 @@ import {
   requiresImmediateAction,
   logRedirect,
 } from './redirect.js';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
+
+const execAsync = promisify(exec);
+
+/**
+ * Kill any running bd daemons to prevent beads file conflicts.
+ * The daemon auto-syncs SQLite to JSONL every 5 seconds, which can
+ * overwrite harness-created issues.
+ */
+async function killBdDaemons(): Promise<void> {
+  try {
+    await execAsync('pkill -f "bd daemon" 2>/dev/null || true');
+  } catch {
+    // Ignore errors - daemon might not be running
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Initialization
@@ -56,6 +73,9 @@ export async function initializeHarness(
   options: StartOptions,
   cwd: string
 ): Promise<{ harnessState: HarnessState; featureMap: Map<string, string> }> {
+  // Kill any bd daemons before initialization to prevent conflicts
+  await killBdDaemons();
+
   console.log(`\n🚀 Initializing harness from spec: ${options.specFile}\n`);
   console.log(`   Mode: ${options.mode}`);
 
@@ -210,6 +230,9 @@ export async function runHarness(
   harnessState: HarnessState,
   options: { cwd: string; dryRun?: boolean }
 ): Promise<void> {
+  // Kill any bd daemons at harness start
+  await killBdDaemons();
+
   const store = new BeadsStore(options.cwd);
   const checkpointTracker = createCheckpointTracker();
   let beadsSnapshot = await takeSnapshot(options.cwd);
@@ -337,6 +360,9 @@ export async function runHarness(
 
     // 5. Handle session result
     recordSession(checkpointTracker, sessionResult);
+
+    // Kill any bd daemons before BeadsStore operations to prevent race conditions
+    await killBdDaemons();
 
     if (sessionResult.outcome === 'success') {
       await store.closeIssue(nextIssue.id);
