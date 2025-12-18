@@ -401,16 +401,25 @@ export async function runSession(
 /**
  * Run Claude Code CLI with a prompt.
  * Uses stdin pipe for prompt delivery (more reliable for long prompts).
+ *
+ * IMPORTANT: We disable hooks in spawned sessions to prevent auto-sync behavior
+ * from overwriting the harness's beads file. The global `bd` command has
+ * auto-import/auto-sync features that can conflict with harness operations.
  */
 async function runClaudeCode(
   prompt: string,
   cwd: string
 ): Promise<{ output: string; exitCode: number; contextUsed: number }> {
   return new Promise((resolve) => {
+    // Disable hooks to prevent bd auto-sync from overwriting harness beads
+    // The SessionStart hook runs `bd prime` which can trigger auto-import
+    const harnessSettings = JSON.stringify({ hooks: {} });
+
     const args = [
       '-p',
       '--dangerously-skip-permissions',
       '--output-format', 'json',
+      '--settings', harnessSettings,
     ];
 
     const child = spawn('claude', args, {
