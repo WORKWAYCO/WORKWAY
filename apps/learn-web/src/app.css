@@ -3,131 +3,26 @@
 @import 'tailwindcss/utilities';
 
 /* ==========================================================================
-   CREATE SOMETHING Design System - Canonical Tokens
+   CREATE SOMETHING Design System - App Overrides
    "Weniger, aber besser" - Dieter Rams
 
-   Aligned with /workway-platform/apps/web/src/styles.css
+   Base tokens are served from CDN: https://cdn.workway.co/tokens.css
+   This file contains only app-specific overrides and extensions.
    ========================================================================== */
 
 :root {
 	/* ==========================================================================
-	   CREATE SOMETHING Canonical Color System
-	   Colors serve function, not decoration.
+	   Additional tokens not in CDN (app-specific extensions)
 	   ========================================================================== */
-
-	/* Background - Pure to near-black */
-	--color-bg-pure: #000000;
-	--color-bg-elevated: #0a0a0a;
-	--color-bg-surface: #111111;
-	--color-bg-subtle: #1a1a1a;
-
-	/* Foreground - White with semantic opacity */
-	--color-fg-primary: #ffffff;
-	--color-fg-secondary: rgba(255, 255, 255, 0.8);
-	--color-fg-tertiary: rgba(255, 255, 255, 0.6);
-	--color-fg-muted: rgba(255, 255, 255, 0.4);
-	--color-fg-subtle: rgba(255, 255, 255, 0.2);
-
-	/* Borders - Subtle separation */
-	--color-border-default: rgba(255, 255, 255, 0.1);
-	--color-border-emphasis: rgba(255, 255, 255, 0.2);
-	--color-border-strong: rgba(255, 255, 255, 0.3);
-
-	/* Functional accents - Muted, purposeful */
-	--color-success: #44aa44;
-	--color-success-muted: rgba(68, 170, 68, 0.2);
-	--color-error: #cc4444;
-	--color-error-muted: rgba(204, 68, 68, 0.2);
-	--color-warning: #aa8844;
-	--color-warning-muted: rgba(170, 136, 68, 0.2);
-	--color-info: #4477aa;
-	--color-info-muted: rgba(68, 119, 170, 0.2);
-
-	/* Interactive states */
-	--color-hover: rgba(255, 255, 255, 0.05);
-	--color-active: rgba(255, 255, 255, 0.1);
-	--color-focus: rgba(255, 255, 255, 0.2);
-
-	/* ==========================================================================
-	   CREATE SOMETHING Canonical Shadow System
-	   ========================================================================== */
+	--space-3xl: 11.089rem; /* ~177px - φ⁵ */
 	--shadow-none: none;
-	--shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
-	--shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
-	--shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
-	--shadow-glow-sm: 0 0 10px rgba(255, 255, 255, 0.05);
-	--shadow-glow-md: 0 0 20px rgba(255, 255, 255, 0.1);
-
-	/* ==========================================================================
-	   CREATE SOMETHING Canonical Radius System
-	   ========================================================================== */
 	--radius-none: 0px;
-	--radius-sm: 6px;
-	--radius-md: 8px;
-	--radius-lg: 12px;
-	--radius-xl: 16px;
-	--radius-full: 9999px;
-
-	/* ==========================================================================
-	   CREATE SOMETHING Canonical Animation System
-	   "Good design is unobtrusive" - Dieter Rams
-	   ========================================================================== */
-	--ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-	--duration-micro: 200ms;
-	--duration-standard: 300ms;
-	--duration-complex: 500ms;
-
-	/* ==========================================================================
-	   CREATE SOMETHING Canonical Typography System
-	   ========================================================================== */
-	--font-sans: 'Stack Sans Notch', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui,
-		sans-serif;
-	--font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', monospace;
-
-	/* Font weights */
-	--font-regular: 400;
-	--font-medium: 500;
-	--font-semibold: 600;
-	--font-bold: 700;
-
-	/* Line heights */
-	--leading-tight: 1.25;
-	--leading-snug: 1.375;
-	--leading-normal: 1.5;
-	--leading-relaxed: 1.625;
-
-	/* Letter spacing */
-	--tracking-tighter: -0.025em;
-	--tracking-tight: -0.015em;
-	--tracking-normal: 0;
-
-	/* Fluid type scale */
-	--text-display-xl: clamp(3.5rem, 5vw + 2rem, 7rem);
-	--text-display: clamp(2.5rem, 4vw + 1.5rem, 5rem);
-	--text-h1: clamp(2rem, 3vw + 1rem, 3.5rem);
-	--text-h2: clamp(1.5rem, 2vw + 0.75rem, 2.25rem);
-	--text-h3: clamp(1.25rem, 1.5vw + 0.5rem, 1.75rem);
-	--text-h4: clamp(1.125rem, 1vw + 0.5rem, 1.5rem);
 	--text-h5: clamp(1rem, 0.5vw + 0.75rem, 1.25rem);
 	--text-h6: clamp(0.875rem, 0.25vw + 0.75rem, 1rem);
-	--text-body-lg: 1.125rem;
-	--text-body: 1rem;
-	--text-body-sm: 0.875rem;
-	--text-caption: 0.75rem;
 
 	/* ==========================================================================
-	   CREATE SOMETHING Golden Ratio Spacing Scale
-	   Scale based on φ (phi) = 1.618
+	   Legacy brand aliases - For compatibility with existing components
 	   ========================================================================== */
-	--space-xs: 0.5rem; /* 8px - φ⁻¹ */
-	--space-sm: 1rem; /* 16px - φ⁰ (base unit) */
-	--space-md: 1.618rem; /* ~26px - φ¹ */
-	--space-lg: 2.618rem; /* ~42px - φ² */
-	--space-xl: 4.236rem; /* ~68px - φ³ */
-	--space-2xl: 6.854rem; /* ~110px - φ⁴ */
-	--space-3xl: 11.089rem; /* ~177px - φ⁵ */
-
-	/* Legacy brand aliases for compatibility */
 	--brand-bg: var(--color-bg-pure);
 	--brand-surface: var(--color-bg-surface);
 	--brand-surface-elevated: var(--color-bg-elevated);
@@ -142,7 +37,7 @@
 }
 
 /* ==========================================================================
-   Base Styles
+   Base Styles - Overrides for CDN base styles
    ========================================================================== */
 
 html {
@@ -150,15 +45,8 @@ html {
 }
 
 body {
-	margin: 0;
-	font-family: var(--font-sans);
-	font-optical-sizing: auto;
-	text-rendering: optimizeLegibility;
-	-webkit-font-smoothing: antialiased;
-	-moz-osx-font-smoothing: grayscale;
-	letter-spacing: var(--tracking-tight);
-	background-color: var(--color-bg-surface);
-	color: var(--color-fg-primary);
+	/* Pure black canvas - canonical WORKWAY background (CDN uses this too) */
+	background-color: var(--color-bg-pure);
 	font-feature-settings: 'kern' 1, 'liga' 1, 'calt' 1;
 	min-height: 100vh;
 }
@@ -218,18 +106,6 @@ code,
 pre,
 .font-mono {
 	font-family: var(--font-mono);
-}
-
-/* ==========================================================================
-   Links - Canonical CREATE SOMETHING micro-interactions
-   ========================================================================== */
-
-a {
-	transition: opacity var(--duration-micro) var(--ease-standard);
-}
-
-a:hover {
-	opacity: 0.7;
 }
 
 /* ==========================================================================
@@ -299,7 +175,7 @@ a:hover {
 }
 
 /* ==========================================================================
-   Focus states - Accessibility
+   Focus states - Square corners per WORKWAY design system
    ========================================================================== */
 
 *:focus-visible {
