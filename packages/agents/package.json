@@ -1,0 +1,54 @@
+{
+  "name": "@workwayco/agents",
+  "version": "0.1.0",
+  "description": "Multi-agent coordination layer for WORKWAY. Work stealing, priority management, and health monitoring.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts --clean",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@workwayco/beads": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "tsup": "^8.0.1",
+    "typescript": "^5.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": {
+    "name": "WORKWAY",
+    "url": "https://workway.co"
+  },
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/workwayco/workway.git",
+    "directory": "packages/agents"
+  },
+  "keywords": [
+    "workway",
+    "agents",
+    "coordination",
+    "multi-agent",
+    "work-stealing",
+    "priority",
+    "health-monitoring",
+    "ai",
+    "zuhandenheit"
+  ]
+}
