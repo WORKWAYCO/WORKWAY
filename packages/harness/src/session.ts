@@ -331,8 +331,8 @@ export async function runSession(
   context: PrimingContext,
   options: { cwd: string; dryRun?: boolean }
 ): Promise<SessionResult> {
-  // Kill any bd daemons at session start to ensure clean state
-  await killBdDaemons();
+  // Stop bd daemon at session start to ensure clean state
+  await stopBdDaemon();
 
   const startTime = Date.now();
   const startCommit = await getHeadCommit(options.cwd);
@@ -381,7 +381,7 @@ export async function runSession(
 
     // Kill any bd daemons before returning to runner
     // This ensures the runner can safely update beads without interference
-    await killBdDaemons();
+    await stopBdDaemon();
 
     return {
       issueId: issue.id,
@@ -394,7 +394,7 @@ export async function runSession(
     };
   } catch (error) {
     // Kill any bd daemons before returning to runner
-    await killBdDaemons();
+    await stopBdDaemon();
 
     return {
       issueId: issue.id,
@@ -409,12 +409,17 @@ export async function runSession(
 }
 
 /**
- * Kill any running bd daemons to prevent beads file conflicts.
+ * Stop the bd daemon to prevent beads file conflicts.
  * The daemon auto-syncs SQLite to JSONL every 5 seconds, which can
  * overwrite harness-created issues.
+ *
+ * Uses both `bd daemon --stop` and pkill for thorough cleanup.
  */
-async function killBdDaemons(): Promise<void> {
+async function stopBdDaemon(): Promise<void> {
   try {
+    // First try the clean stop
+    await execAsync('bd daemon --stop 2>/dev/null || true');
+    // Then force kill any remaining processes
     await execAsync('pkill -f "bd daemon" 2>/dev/null || true');
   } catch {
     // Ignore errors - daemon might not be running
@@ -433,8 +438,8 @@ async function runClaudeCode(
   prompt: string,
   cwd: string
 ): Promise<{ output: string; exitCode: number; contextUsed: number }> {
-  // Kill any bd daemons before each session to prevent beads file conflicts
-  await killBdDaemons();
+  // Stop bd daemon before each session to prevent beads file conflicts
+  await stopBdDaemon();
 
   return new Promise((resolve) => {
     // Disable hooks to prevent bd auto-sync from overwriting harness beads
@@ -495,7 +500,7 @@ async function runClaudeCode(
 
       // Kill any bd daemons that may have started during the session
       // This prevents the daemon from overwriting beads before the runner can update them
-      await killBdDaemons();
+      await stopBdDaemon();
 
       // Try to extract context usage from output
       const contextMatch = output.match(/context[:\s]+(\d+)/i);

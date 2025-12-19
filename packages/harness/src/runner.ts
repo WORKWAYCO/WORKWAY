@@ -50,12 +50,17 @@ import { promisify } from 'node:util';
 const execAsync = promisify(exec);
 
 /**
- * Kill any running bd daemons to prevent beads file conflicts.
+ * Stop the bd daemon to prevent beads file conflicts.
  * The daemon auto-syncs SQLite to JSONL every 5 seconds, which can
  * overwrite harness-created issues.
+ *
+ * We use `bd daemon --stop` for a clean stop, with pkill as fallback.
  */
-async function killBdDaemons(): Promise<void> {
+async function stopBdDaemon(): Promise<void> {
   try {
+    // First try the clean stop
+    await execAsync('bd daemon --stop 2>/dev/null || true');
+    // Then force kill any remaining processes
     await execAsync('pkill -f "bd daemon" 2>/dev/null || true');
   } catch {
     // Ignore errors - daemon might not be running
@@ -73,8 +78,8 @@ export async function initializeHarness(
   options: StartOptions,
   cwd: string
 ): Promise<{ harnessState: HarnessState; featureMap: Map<string, string> }> {
-  // Kill any bd daemons before initialization to prevent conflicts
-  await killBdDaemons();
+  // Stop bd daemon before initialization to prevent beads conflicts
+  await stopBdDaemon();
 
   console.log(`\n🚀 Initializing harness from spec: ${options.specFile}\n`);
   console.log(`   Mode: ${options.mode}`);
@@ -230,8 +235,8 @@ export async function runHarness(
   harnessState: HarnessState,
   options: { cwd: string; dryRun?: boolean }
 ): Promise<void> {
-  // Kill any bd daemons at harness start
-  await killBdDaemons();
+  // Stop bd daemon at harness start to prevent beads conflicts
+  await stopBdDaemon();
 
   const store = new BeadsStore(options.cwd);
   const checkpointTracker = createCheckpointTracker();
@@ -247,6 +252,10 @@ export async function runHarness(
   console.log(`${'═'.repeat(63)}\n`);
 
   while (harnessState.status === 'running') {
+    // Stop bd daemon at every iteration to prevent beads corruption
+    // The daemon can restart during sessions and corrupt the beads file
+    await stopBdDaemon();
+
     // 1. Check for redirects
     const redirectCheck = await checkForRedirects(
       beadsSnapshot,
@@ -361,8 +370,8 @@ export async function runHarness(
     // 5. Handle session result
     recordSession(checkpointTracker, sessionResult);
 
-    // Kill any bd daemons before BeadsStore operations to prevent race conditions
-    await killBdDaemons();
+    // Stop bd daemon before BeadsStore operations to prevent race conditions
+    await stopBdDaemon();
 
     if (sessionResult.outcome === 'success') {
       await store.closeIssue(nextIssue.id);
