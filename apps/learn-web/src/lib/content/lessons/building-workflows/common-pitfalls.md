@@ -1,10 +1,11 @@
-# Common Pitfalls and Solutions
+# Common Pitfalls & Solutions
 
 ## Learning Objectives
 
 By the end of this lesson, you will be able to:
 
-- Recognize and avoid the most common mistakes when building WORKWAY workflows
+- Understand what you CAN do inside WORKWAY workflows (significant flexibility)
+- Understand what you CANNOT do (runtime constraints)
 - Replace Node.js patterns with Workers-compatible alternatives
 - Debug runtime errors caused by incompatible npm packages
 - Handle OAuth token expiration and authentication failures gracefully
@@ -14,6 +15,193 @@ By the end of this lesson, you will be able to:
 ---
 
 Every developer hits the same walls when starting with WORKWAY. This lesson documents the pitfalls we see repeatedly—and the solutions that work.
+
+But first, let's be clear about what you CAN do. WORKWAY workflows are TypeScript-based with more flexibility than you might expect.
+
+## What You CAN Do
+
+Inside `defineWorkflow()`, you have significant power:
+
+### Call `fetch()` Directly
+
+You can make HTTP requests to any API without a pre-built integration:
+
+```typescript
+export default defineWorkflow({
+  async execute({ inputs }) {
+    // Direct fetch() works for any HTTP API
+    const response = await fetch('https://api.weather.com/forecast', {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${inputs.apiKey}` }
+    });
+    const weather = await response.json();
+
+    return { success: true, temperature: weather.current.temp };
+  }
+});
+```
+
+This is your escape hatch when pre-built integrations don't exist.
+
+### Write Custom Helper Functions
+
+Define helper functions at module level and use them in your workflow:
+
+```typescript
+// Helper function - full TypeScript
+function detectSentiment(text: string): 'positive' | 'negative' | 'neutral' {
+  const positiveWords = ['good', 'great', 'excellent', 'thanks'];
+  const hasPositive = positiveWords.some(w => text.toLowerCase().includes(w));
+  return hasPositive ? 'positive' : 'neutral';
+}
+
+async function analyzeContent(text: string) {
+  const chunks = text.split('\n\n');
+  return chunks.map(chunk => ({
+    content: chunk,
+    wordCount: chunk.split(' ').length,
+    sentiment: detectSentiment(chunk)
+  }));
+}
+
+export default defineWorkflow({
+  async execute({ trigger }) {
+    // Use your custom helpers
+    const analysis = await analyzeContent(trigger.data.content);
+    return { success: true, analysis };
+  }
+});
+```
+
+### Use Workers AI
+
+Access Cloudflare Workers AI for text generation, summarization, and more:
+
+```typescript
+export default defineWorkflow({
+  async execute({ integrations }) {
+    const result = await integrations.ai.generateText({
+      model: '@cf/meta/llama-3-8b-instruct',
+      prompt: 'Summarize this meeting transcript...',
+      max_tokens: 500
+    });
+
+    return { success: true, summary: result.data?.response };
+  }
+});
+```
+
+### Use Persistent Storage
+
+Store and retrieve state across workflow executions:
+
+```typescript
+export default defineWorkflow({
+  async execute({ storage, trigger }) {
+    // Get previous state
+    const previousRuns = await storage.get('runHistory') || [];
+
+    // Update state
+    previousRuns.push({
+      timestamp: new Date().toISOString(),
+      triggerId: trigger.id
+    });
+
+    await storage.put('runHistory', previousRuns);
+
+    return { success: true, totalRuns: previousRuns.length };
+  }
+});
+```
+
+### Use Standard JavaScript APIs
+
+All standard JavaScript/TypeScript APIs work:
+
+```typescript
+export default defineWorkflow({
+  async execute({ trigger }) {
+    // Array methods
+    const sorted = trigger.data.items.sort((a, b) => a.score - b.score);
+
+    // JSON parsing
+    const parsed = JSON.parse(trigger.data.rawJson);
+
+    // Date manipulation
+    const now = new Date();
+    const formatted = now.toISOString();
+
+    // Regular expressions
+    const emails = trigger.data.text.match(/[\w.-]+@[\w.-]+\.\w+/g);
+
+    // Map, Set, etc.
+    const uniqueItems = [...new Set(trigger.data.items)];
+
+    return { success: true, sorted, parsed, formatted, emails, uniqueItems };
+  }
+});
+```
+
+### Complex Control Flow
+
+Write arbitrary business logic:
+
+```typescript
+export default defineWorkflow({
+  async execute({ trigger, integrations }) {
+    const { meetingType, attendees, transcript } = trigger.data;
+
+    // Conditional logic
+    if (meetingType === 'sales') {
+      await integrations.hubspot.createDeal({
+        name: `Meeting with ${attendees[0]}`,
+        stage: 'qualification'
+      });
+    } else if (meetingType === 'support') {
+      await integrations.linear.createIssue({
+        title: `Support follow-up: ${attendees[0]}`,
+        priority: 2
+      });
+    }
+
+    // Loops
+    for (const attendee of attendees) {
+      await integrations.gmail.sendEmail({
+        to: attendee.email,
+        subject: 'Meeting follow-up',
+        body: `Thanks for joining the ${meetingType} meeting.`
+      });
+    }
+
+    // Error handling
+    try {
+      await integrations.slack.sendMessage({
+        channel: '#meetings',
+        text: `Meeting completed: ${attendees.length} attendees`
+      });
+    } catch (error) {
+      console.log('Slack notification failed, continuing...');
+    }
+
+    return { success: true, processed: attendees.length };
+  }
+});
+```
+
+### Quick Reference: What Works
+
+| Capability | Status | Example |
+|------------|--------|---------|
+| `fetch()` | ✅ Works | Call any HTTP API |
+| Custom functions | ✅ Works | Define at module level |
+| Workers AI | ✅ Works | Via `integrations.ai` |
+| Storage | ✅ Works | Via `storage.get/put` |
+| Standard JS | ✅ Works | Array, Date, JSON, etc. |
+| Complex logic | ✅ Works | if/else, loops, try/catch |
+
+---
+
+Now let's look at what doesn't work—and how to avoid these common pitfalls.
 
 ## Step-by-Step: Diagnose and Fix Common Issues
 
@@ -630,7 +818,20 @@ workway logs --tail
 
 ---
 
-## Quick Reference Card
+## The Honest Summary
+
+### What Works
+
+| Capability | Status | Notes |
+|------------|--------|-------|
+| `fetch()` | ✅ Works | Use for any HTTP API |
+| Custom functions | ✅ Works | Define at module level |
+| Workers AI | ✅ Works | Via `integrations.ai` |
+| Storage | ✅ Works | Via `storage.get/put` |
+| Standard JS | ✅ Works | Array, Date, JSON, Map, Set, RegExp |
+| Complex logic | ✅ Works | if/else, loops, try/catch |
+
+### What Doesn't Work
 
 | Pitfall | Symptom | Solution |
 |---------|---------|----------|
@@ -640,8 +841,30 @@ workway logs --tail
 | Rate limits | 429 errors | Batch with delays |
 | Silent failures | "It just doesn't work" | Log at every catch block |
 | Missing payload fields | `Cannot read property of undefined` | Validate with optional chaining or Zod |
-| State leakage | Counts keep increasing | Use `context.storage` for persistence |
+| State leakage | Counts keep increasing | Use `storage` for persistence |
 | Execution timeout | Workflow never completes | Use triggers, not loops |
+
+### The Escape Hatch
+
+When pre-built integrations don't exist for your API, use `fetch()` directly:
+
+```typescript
+// For APIs without pre-built integrations
+const response = await fetch('https://api.custom-service.com/data', {
+  headers: { 'Authorization': `Bearer ${inputs.apiKey}` }
+});
+return await response.json();
+```
+
+For heavy computation that would exceed Workers limits, call an external service:
+
+```typescript
+// Offload heavy processing to your own API
+const result = await fetch('https://my-processing-service.com/analyze', {
+  method: 'POST',
+  body: JSON.stringify({ data: trigger.data.largeDataset })
+});
+```
 
 ---
 

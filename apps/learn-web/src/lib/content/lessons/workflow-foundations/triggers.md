@@ -1,4 +1,4 @@
-# Triggers: When Workflows Run
+# Triggers: Webhooks, Cron, Manual
 
 ## Learning Objectives
 
@@ -108,6 +108,17 @@ curl http://localhost:8787/execute \
 | Schedule | Scheduled time (daily, hourly, etc.) |
 | Manual | User clicks "Run" or API call |
 | Poll | Periodic API checks |
+
+### Choosing the Right Trigger
+
+| Scenario | Trigger | Why |
+|----------|---------|-----|
+| Payment received | Webhook | Real-time, event-driven |
+| Daily digest email | Schedule | Fixed time, no external event |
+| On-demand report | Manual | User-initiated |
+| Check for new leads | Poll | Service lacks webhooks |
+| Meeting just ended | Webhook | Immediate processing needed |
+| Weekly cleanup | Schedule | Routine maintenance |
 
 ## Trigger Helpers
 
@@ -320,20 +331,45 @@ Manual triggers show a "Run" button in the dashboard.
 Periodically check an API for new data when webhooks aren't available:
 
 ```typescript
+// From: packages/workflows/src/feedback-analyzer/index.ts
 import { defineWorkflow, poll } from '@workwayco/sdk';
 
 export default defineWorkflow({
-  name: 'Check for New Emails',
+  name: 'Customer Feedback Analyzer',
+  description: 'AI analyzes customer feedback and extracts insights',
 
+  inputs: {
+    emailQuery: {
+      type: 'string',
+      label: 'Gmail Search Query',
+      default: 'subject:(feedback OR review) is:unread',
+    },
+    pollInterval: {
+      type: 'select',
+      label: 'Check Frequency',
+      options: ['5min', '15min', '30min', '1hour'],
+      default: '15min',
+    },
+  },
+
+  // User-configurable poll interval via template interpolation
   trigger: poll({
-    service: 'gmail',
-    endpoint: 'messages.list',
-    interval: 300, // 5 minutes (minimum 60 seconds)
-    filter: { q: 'is:unread' },
+    interval: '{{inputs.pollInterval}}',
   }),
 
-  async execute({ trigger }) {
-    // Process new data
+  async execute({ inputs, integrations }) {
+    // Search for feedback emails
+    const emails = await integrations.gmail.messages.list({
+      q: inputs.emailQuery,
+      maxResults: 10,
+    });
+
+    if (!emails.success || !emails.data?.length) {
+      return { success: true, processed: 0, message: 'No new feedback' };
+    }
+
+    // Process each email...
+    return { success: true, processed: emails.data.length };
   },
 });
 ```
@@ -653,6 +689,11 @@ trigger: cron({
 webhooks: [
   webhook({ service: 'zoom', event: 'recording.completed' }),
 ],
+
+// Poll: packages/workflows/src/feedback-analyzer/index.ts
+trigger: poll({
+  interval: '{{inputs.pollInterval}}',  // User-configurable: '5min', '15min', etc.
+}),
 ```
 
 Practice writing cron expressions:

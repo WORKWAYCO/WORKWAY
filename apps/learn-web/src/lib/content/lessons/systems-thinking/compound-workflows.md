@@ -14,6 +14,17 @@ By the end of this lesson, you will be able to:
 
 Single automations move data A → B. Compound workflows orchestrate complete outcomes across multiple services, creating results greater than the sum of their parts.
 
+## WORKWAY vs Traditional Automation
+
+| Aspect | Zapier/Make | WORKWAY Compound |
+|--------|-------------|------------------|
+| Architecture | Step-by-step chains | Parallel + sequential orchestration |
+| Failure handling | Entire chain fails | Partial success with graceful degradation |
+| AI integration | Separate AI zaps | Native Workers AI, same execution |
+| State management | Stateless | Persistent storage across runs |
+| Customization | Visual builder limits | Full TypeScript flexibility |
+| Execution model | Per-step pricing | Single workflow execution |
+
 ## Step-by-Step: Design a Compound Workflow
 
 ### Step 1: Map the Complete Outcome
@@ -174,6 +185,67 @@ workway logs --tail
 
 ---
 
+## Strategic Context
+
+Compound workflows are WORKWAY's primary competitive differentiator. Understanding why matters for building workflows that deliver genuine value.
+
+### The Automation Gap
+
+Most automation tools (Zapier, Make, n8n) excel at point-to-point connections:
+
+```
+A → B  (one service to another)
+```
+
+But real work doesn't happen in isolation. A meeting ends and you need:
+- Notes saved to Notion
+- Summary posted to Slack
+- Follow-up email drafted
+- CRM record updated
+- Next meeting scheduled
+
+Traditional tools require five separate automations, each with its own failure modes, no shared context, and separate billing.
+
+### WORKWAY's Compound Approach
+
+WORKWAY orchestrates the **complete outcome** in a single execution:
+
+```
+Trigger → Sequential Processing → Parallel Fanout → Result
+            (AI summary)         (Notion + Slack + Email + CRM)
+```
+
+| Aspect | Point-to-Point | Compound |
+|--------|----------------|----------|
+| Executions | 5 separate | 1 unified |
+| Error handling | Each fails independently | Partial success patterns |
+| AI context | Lost between steps | Shared across all outputs |
+| Debugging | 5 different logs | Single execution trace |
+| Cost | 5× trigger fees | 1× execution fee |
+
+### Why This Matters for Developers
+
+Building compound workflows creates defensible value:
+
+1. **Higher perceived value** - Users pay for complete outcomes, not individual connections
+2. **Stickier usage** - Multi-service workflows are harder to replace
+3. **AI leverage** - Process once, distribute to many outputs
+
+From `docs/PLATFORM_THESIS.md`:
+
+> "WORKWAY doesn't just move data A → B. We orchestrate the **full workflow**... This is what competitors (Transkriptor, Zapier) don't do."
+
+### The Zuhandenheit Test
+
+A well-designed compound workflow achieves true ready-to-hand invisibility:
+
+- **Wrong**: "It syncs my Zoom to Notion, posts to Slack, drafts an email, and updates HubSpot"
+- **Right**: "My meetings handle their own follow-up"
+
+The user describes the outcome, not the mechanism. All five services recede into a single experience.
+
+---
+
 ## The Compound Advantage
 
 Simple workflow:
@@ -194,6 +266,14 @@ Meeting ends →
 Five services. One trigger. Complete outcome.
 
 ## Orchestration Patterns
+
+| Pattern | When to Use | Trade-offs |
+|---------|-------------|------------|
+| Sequential | Each step needs previous result | Slower, but data flows naturally |
+| Parallel | Independent outputs | Faster, but requires error isolation |
+| Mixed | Sequential core + parallel fanout | Best of both, more complex |
+| Fan-out | One input → multiple outputs | Scales well, needs aggregation |
+| Saga | All-or-nothing transactions | Safe rollback, more code |
 
 ### Sequential Steps
 

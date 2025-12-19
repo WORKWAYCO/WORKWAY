@@ -1,4 +1,4 @@
-# Error Handling & Retries
+# Error Handling & Retry Patterns
 
 ## Learning Objectives
 
@@ -200,31 +200,54 @@ async execute({ trigger, integrations }) {
 
 ### Typed Error Handling
 
+The SDK provides `IntegrationError` with standardized error codes and built-in helpers:
+
 ```typescript
-import { IntegrationError, ErrorCode } from '@workwayco/sdk';
+import {
+  IntegrationError,
+  ErrorCode,
+  ErrorCategory,
+  isIntegrationError,
+  toIntegrationError,
+} from '@workwayco/sdk';
 
 async execute({ integrations }) {
   try {
     // ... workflow logic
   } catch (error) {
-    if (error instanceof IntegrationError) {
-      // Known integration failure
-      if (error.code === ErrorCode.RATE_LIMITED) {
-        // Will be retried automatically
+    if (isIntegrationError(error)) {
+      // Use built-in helper methods
+      if (error.isRetryable()) {
+        // Let WORKWAY retry automatically
         throw error;
       }
-      if (error.code === ErrorCode.AUTH_EXPIRED || error.code === ErrorCode.AUTH_INVALID) {
+
+      if (error.requiresReauth()) {
+        // AUTH_MISSING, AUTH_INVALID, AUTH_INSUFFICIENT_SCOPE
         return {
           success: false,
-          error: 'Please reconnect your account',
+          error: error.getUserMessage(),  // User-friendly message
           requiresAction: true,
         };
       }
+
+      if (error.isRateLimited()) {
+        const retryAfter = error.getRetryAfterMs();
+        console.warn(`Rate limited, retry after ${retryAfter}ms`);
+        throw error;  // WORKWAY handles retry
+      }
+
+      // Log with full context
+      console.error('Integration error', error.toJSON());
     }
 
-    // Unknown error
-    console.error('Unexpected error', { error });
-    return { success: false, error: 'An unexpected error occurred' };
+    // Convert unknown errors to IntegrationError
+    const integrationError = toIntegrationError(error, {
+      integration: 'zoom',
+      action: 'getMeeting',
+    });
+
+    return { success: false, error: integrationError.getUserMessage() };
   }
 }
 ```
@@ -293,69 +316,105 @@ WORKWAY automatically retries certain failures:
 | Error Type | Retried? | Max Attempts |
 |------------|----------|--------------|
 | Rate limit (429) | Yes | 3 |
-| Server error (500-503) | Yes | 3 |
+| Server error (500-503) | Yes | 5 |
 | Timeout | Yes | 2 |
-| Authentication (401) | No | - |
+| Network error | Yes | 5 |
+| Authentication (401) | Yes (refresh) | 1 |
 | Not found (404) | No | - |
 | Validation (400) | No | - |
 
-### Manual Retry Logic
+### SDK Retry Utilities
 
-For custom retry behavior:
+The WORKWAY SDK provides built-in retry utilities with exponential backoff:
 
 ```typescript
-async function withRetry<T>(
-  fn: () => Promise<T>,
-  options: { maxAttempts: number; delayMs: number }
-): Promise<T> {
-  let lastError: Error;
+import { withRetry, fetchWithRetry, RetryOptions } from '@workwayco/sdk';
 
-  for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-
-      if (attempt < options.maxAttempts) {
-        // Exponential backoff
-        const delay = options.delayMs * Math.pow(2, attempt - 1);
-        await sleep(delay);
-      }
-    }
-  }
-
-  throw lastError;
-}
-
-// Usage
+// withRetry - wrap any async function
 const meeting = await withRetry(
-  () => zoom.getMeeting(meetingId),
-  { maxAttempts: 3, delayMs: 1000 }
+  async (context) => {
+    console.log(`Attempt ${context.attempt} of ${context.maxAttempts}`);
+    const result = await integrations.zoom.getMeeting(meetingId);
+    if (!result.success) throw new Error(result.error);
+    return result.data;
+  },
+  {
+    maxAttempts: 3,
+    backoff: 'exponential',  // 'exponential' | 'linear' | 'constant'
+    initialDelay: 1000,
+    maxDelay: 30000,
+    jitter: 0.1,  // Randomize delay to prevent thundering herd
+    onRetry: (error, attempt, delay) => {
+      console.warn(`Retry ${attempt}: waiting ${delay}ms`, error);
+    },
+  }
+);
+
+// fetchWithRetry - for direct HTTP calls with automatic timeout
+const response = await fetchWithRetry(
+  'https://api.custom-service.com/data',
+  {
+    method: 'POST',
+    headers: { 'Authorization': `Bearer ${token}` },
+    body: JSON.stringify(data),
+  },
+  {
+    maxAttempts: 3,
+    timeout: 10000,  // Request timeout in ms
+  }
+);
+```
+
+### Rate Limit Handling
+
+The SDK provides helpers for respecting `Retry-After` headers:
+
+```typescript
+import {
+  parseRetryAfter,
+  createRateLimitAwareRetry
+} from '@workwayco/sdk';
+
+// Parse Retry-After header from response
+const retryAfterMs = parseRetryAfter(response);  // Returns ms or null
+
+// Create a rate-limit-aware retry function
+const rateLimitAwareRetry = createRateLimitAwareRetry({
+  maxWait: 60000,  // Don't wait more than 60s
+  onRateLimit: (waitMs) => {
+    console.log(`Rate limited, waiting ${waitMs}ms`);
+  },
+});
+
+// Use with withRetry
+const result = await withRetry(
+  () => integrations.slack.chat.postMessage({ channel, text }),
+  { shouldRetry: rateLimitAwareRetry }
 );
 ```
 
 ### Conditional Retries
 
 ```typescript
-async function fetchWithConditionalRetry(
-  fn: () => Promise<any>,
-  shouldRetry: (error: Error) => boolean
-) {
-  try {
-    return await fn();
-  } catch (error) {
-    if (shouldRetry(error)) {
-      await sleep(1000);
-      return await fn();
-    }
-    throw error;
-  }
-}
+import { withRetry, defaultShouldRetry } from '@workwayco/sdk';
 
-// Only retry network errors
-const result = await fetchWithConditionalRetry(
+// Custom retry logic for specific errors
+const result = await withRetry(
   () => externalApi.call(),
-  (error) => error.code === 'ECONNRESET' || error.code === 'ETIMEDOUT'
+  {
+    maxAttempts: 3,
+    shouldRetry: (error, attempt) => {
+      // Only retry network errors and 5xx
+      if (error instanceof Response) {
+        return error.status >= 500 || error.status === 429;
+      }
+      // Retry on fetch network errors
+      if (error instanceof TypeError) {
+        return true;
+      }
+      return false;
+    },
+  }
 );
 ```
 
@@ -528,34 +587,43 @@ return { success: errors.length === 0, errors };
 
 ### User-Friendly Errors
 
+`IntegrationError` provides user-friendly messages out of the box:
+
 ```typescript
-import { IntegrationError, ErrorCode } from '@workwayco/sdk';
+import {
+  IntegrationError,
+  isIntegrationError,
+  toIntegrationError,
+} from '@workwayco/sdk';
 
-function getUserFriendlyError(error: Error): string {
-  // Use IntegrationError's built-in helper when available
-  if (error instanceof IntegrationError) {
-    return error.getUserMessage();
-  }
+function getUserFriendlyError(error: unknown): string {
+  // Convert to IntegrationError if needed
+  const integrationError = isIntegrationError(error)
+    ? error
+    : toIntegrationError(error);
 
-  // Fallback for non-integration errors
-  return 'Something went wrong. Please try again.';
+  // Built-in user-friendly messages based on error code
+  return integrationError.getUserMessage();
+
+  // Example messages returned by getUserMessage():
+  // AUTH_MISSING: "Please connect your Gmail to continue."
+  // AUTH_EXPIRED: "Your Zoom connection has expired. We're refreshing it automatically."
+  // AUTH_INVALID: "Your Slack connection is no longer valid. Please reconnect."
+  // RATE_LIMITED: "We're hitting rate limits. Your workflow will retry in 30 seconds."
+  // PERMISSION_DENIED: "You don't have permission to perform this action."
+  // PROVIDER_DOWN: "Notion appears to be down. We'll retry automatically."
 }
 
-// Or handle specific error codes manually:
-function getErrorMessage(error: IntegrationError): string {
-  switch (error.code) {
-    case ErrorCode.RATE_LIMITED:
-      return 'Too many requests. Please try again in a few minutes.';
-    case ErrorCode.AUTH_EXPIRED:
-    case ErrorCode.AUTH_INVALID:
-      return 'Your connection expired. Please reconnect your account.';
-    case ErrorCode.NOT_FOUND:
-      return 'The requested item no longer exists.';
-    case ErrorCode.VALIDATION_ERROR:
-      return 'The data provided was invalid.';
-    default:
-      return error.getUserMessage();
-  }
+// Check specific error conditions with helper methods:
+function handleError(error: IntegrationError): void {
+  if (error.isUnauthorized()) { /* 401 or AUTH_EXPIRED */ }
+  if (error.isForbidden()) { /* 403 or PERMISSION_DENIED */ }
+  if (error.isNotFound()) { /* 404 or NOT_FOUND */ }
+  if (error.isRateLimited()) { /* 429 or RATE_LIMITED */ }
+  if (error.isNetworkError()) { /* NETWORK_ERROR or PROVIDER_DOWN */ }
+  if (error.isServerError()) { /* 5xx status codes */ }
+  if (error.requiresReauth()) { /* AUTH_MISSING/INVALID/INSUFFICIENT_SCOPE */ }
+  if (error.shouldNotifyUser()) { /* Non-retryable errors needing user action */ }
 }
 ```
 
@@ -594,10 +662,41 @@ const circuitBreaker = {
 };
 ```
 
+## Error Code Reference
+
+The SDK provides standardized error codes for intelligent handling:
+
+| Category | Error Codes | Retryable | Action |
+|----------|-------------|-----------|--------|
+| **Authentication** | `AUTH_MISSING`, `AUTH_EXPIRED`, `AUTH_INVALID`, `AUTH_INSUFFICIENT_SCOPE` | `AUTH_EXPIRED` only | Refresh token or reconnect |
+| **Rate Limiting** | `RATE_LIMITED`, `QUOTA_EXCEEDED` | `RATE_LIMITED` only | Backoff retry |
+| **Configuration** | `INVALID_CONFIG`, `MISSING_REQUIRED_FIELD`, `INVALID_INPUT` | No | Fix user config |
+| **API** | `API_ERROR`, `NOT_FOUND`, `PERMISSION_DENIED`, `CONFLICT` | No | Check inputs |
+| **Network** | `NETWORK_ERROR`, `PROVIDER_DOWN`, `TIMEOUT` | Yes | Auto-retry |
+
+```typescript
+import { ErrorCode, ErrorCategory } from '@workwayco/sdk';
+
+// Check error category for broad handling
+if (error.category === ErrorCategory.AUTHENTICATION) {
+  // Handle all auth errors
+}
+
+if (error.category === ErrorCategory.RATE_LIMIT) {
+  // Handle rate limiting
+}
+```
+
 ## Complete Example
 
 ```typescript
-import { defineWorkflow, webhook, IntegrationError, ErrorCode } from '@workwayco/sdk';
+import {
+  defineWorkflow,
+  webhook,
+  withRetry,
+  IntegrationError,
+  isIntegrationError,
+} from '@workwayco/sdk';
 
 export default defineWorkflow({
   name: 'Resilient Meeting Notes',
@@ -624,29 +723,39 @@ export default defineWorkflow({
     const { zoom, notion, slack } = integrations;
     const meetingId = trigger.data?.object?.id;
 
-    // Validate input
+    // Validate input early
     if (!meetingId) {
       console.error('Invalid trigger payload', { payload: trigger.data });
       return { success: false, error: 'Missing meeting ID' };
     }
 
-    // Get meeting with retry
+    // Get meeting with SDK retry utility
     let meeting;
     try {
-      const meetingResult = await withRetry(
-        () => zoom.getMeeting(meetingId),
-        { maxAttempts: 3, delayMs: 1000 }
+      meeting = await withRetry(
+        async (context) => {
+          const result = await zoom.getMeeting(meetingId);
+          if (!result.success) throw new Error(result.error);
+          return result.data;
+        },
+        {
+          maxAttempts: 3,
+          backoff: 'exponential',
+          initialDelay: 1000,
+          onRetry: (error, attempt, delay) => {
+            console.warn(`Retry ${attempt} for meeting fetch, waiting ${delay}ms`);
+          },
+        }
       );
-      meeting = meetingResult.data;
     } catch (error) {
       console.error('Failed to fetch meeting after retries', {
         meetingId,
-        error: (error as Error).message,
+        error: isIntegrationError(error) ? error.toJSON() : error,
       });
       return { success: false, error: 'Could not retrieve meeting data' };
     }
 
-    // Create Notion page (required)
+    // Create Notion page (required step)
     let pageId;
     try {
       const page = await notion.pages.create({
@@ -658,34 +767,48 @@ export default defineWorkflow({
       });
       pageId = page.data?.id;
     } catch (error) {
-      if (error instanceof IntegrationError && error.code === ErrorCode.RATE_LIMITED) {
-        throw error; // Let WORKWAY retry
+      if (isIntegrationError(error)) {
+        if (error.isRetryable()) {
+          throw error;  // Let WORKWAY platform retry
+        }
+        console.error('Notion error', error.toJSON());
+        return { success: false, error: error.getUserMessage() };
       }
-      console.error('Failed to create Notion page', { error: (error as Error).message });
       return { success: false, error: 'Failed to save meeting notes' };
     }
 
-    // Notify Slack (optional)
-    try {
-      if (inputs.slackChannel) {
+    // Notify Slack (optional step - graceful degradation)
+    let slackSent = false;
+    if (inputs.slackChannel) {
+      try {
         await slack.chat.postMessage({
           channel: inputs.slackChannel,
           text: `Meeting "${meeting.topic}" notes saved`,
         });
+        slackSent = true;
+      } catch (error) {
+        // Log but continue - optional step failure doesn't fail workflow
+        console.warn('Slack notification failed', {
+          channel: inputs.slackChannel,
+          error: isIntegrationError(error) ? error.getUserMessage() : error,
+        });
       }
-    } catch (error) {
-      console.warn('Slack notification failed', {
-        error: (error as Error).message,
-        channel: inputs.slackChannel,
-      });
-      // Continue - don't fail workflow for notification failure
     }
 
     return {
       success: true,
       pageId,
       meetingTopic: meeting.topic,
+      notifications: { slack: slackSent },
     };
+  },
+
+  // Workflow-level error handler for unhandled errors
+  onError: async ({ error, trigger, inputs }) => {
+    console.error('Workflow failed', {
+      meetingId: trigger.data?.object?.id,
+      error: isIntegrationError(error) ? error.toJSON() : error,
+    });
   },
 });
 ```

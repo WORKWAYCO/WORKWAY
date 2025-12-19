@@ -25,6 +25,35 @@ WORKWAY workflows operate the same way. When working correctly, you don't think 
 
 The workflow recedes. The outcome remains.
 
+### Real Example: Meeting Intelligence
+
+Here's how Zuhandenheit manifests in an actual WORKWAY workflow. The `meeting-intelligence` workflow header captures this philosophy:
+
+```typescript
+/**
+ * Meeting Intelligence Workflow
+ *
+ * ZUHANDENHEIT: The tool recedes, the outcome remains.
+ * User thinks: "My meetings are documented and follow-up is automatic"
+ */
+```
+
+The user never thinks about:
+- Zoom OAuth tokens
+- Transcript API endpoints
+- Notion block construction
+- Slack user ID lookups
+
+They only experience: "My meetings document themselves."
+
+### The Carpenter Analogy
+
+When a carpenter builds a cabinet, they don't think "I am gripping a hammer with my right hand, applying 15 pounds of force at a 45-degree angle." They think "I'm joining these boards."
+
+When a professional uses a WORKWAY workflow, they don't think "The webhook triggered, the API fetched the transcript, the AI extracted action items, the Notion page was created." They think "My meeting notes are ready."
+
+This is the difference between a tool that works *for* you versus a tool that demands your attention.
+
 ## Two Ways to Describe a Workflow
 
 | Wrong (Mechanism-Focused) | Right (Outcome-Focused) |
@@ -74,6 +103,50 @@ When designing a workflow, start from the end:
 3. **What do you stop thinking about?**
    - The best workflows remove entire categories of thought
 
+### Real Outcome Mapping: From WORKWAY Workflows
+
+WORKWAY workflows declare their outcomes explicitly using pathway metadata. Here are real examples from production workflows:
+
+**Meeting Intelligence** (Zoom → Notion + Slack + CRM):
+```typescript
+pathway: {
+  outcomeStatement: {
+    suggestion: 'Want meeting notes in Notion automatically?',
+    explanation: 'After Zoom meetings, we\'ll create a Notion page with transcript, action items, and AI summary.',
+    outcome: 'Meeting notes in Notion',
+  },
+  primaryPair: {
+    from: 'zoom',
+    to: 'notion',
+    outcome: 'Zoom meetings that write their own notes',
+  },
+}
+```
+
+**Calendar Meeting Prep** (Calendar → Notion + Slack):
+```typescript
+pathway: {
+  outcomeStatement: {
+    suggestion: 'Want meeting briefs automatically?',
+    explanation: 'Before each meeting, we gather context from Notion and surface talking points in Slack.',
+    outcome: 'Meetings that brief themselves',
+  },
+}
+```
+
+**Client Onboarding** (Stripe → Notion + Todoist + Slack):
+```typescript
+pathway: {
+  outcomeStatement: {
+    suggestion: 'Automate client onboarding?',
+    explanation: 'When payments complete, we\'ll set up the client in Notion, create onboarding tasks, and notify your team.',
+    outcome: 'New clients onboarded automatically',
+  },
+}
+```
+
+Notice the pattern: Every outcome statement answers "What happens?" not "How does it work?"
+
 ## The Compound Advantage
 
 Simple automations move data A → B.
@@ -99,12 +172,98 @@ Workflows become visible when they fail:
 - The Notion page is empty
 - The CRM field is wrong
 
-Good workflow design minimizes Vorhandenheit:
-- Clear error handling
-- Graceful degradation
-- Meaningful failure messages
+### The Visibility Spectrum
+
+| Zuhandenheit (Invisible) | Vorhandenheit (Visible) |
+|--------------------------|-------------------------|
+| "My meeting notes are always there" | "I need to check if the Zoom sync ran" |
+| "Follow-ups happen automatically" | "Let me see what the workflow logged" |
+| "I never think about data entry" | "The automation failed again" |
+
+### Designing to Minimize Vorhandenheit
+
+Good workflow design keeps the tool invisible even when things go wrong:
+
+**1. Clear error handling** - Tell users what happened in human terms:
+```typescript
+// ❌ Exposes mechanism
+return { success: false, error: error.message };
+
+// ✅ Stays invisible
+if (error.code === 'AUTH_EXPIRED') {
+  return {
+    success: false,
+    error: 'Your Zoom connection expired. Reconnect at workway.co/settings',
+    actionUrl: 'https://workway.co/settings/integrations',
+  };
+}
+```
+
+**2. Graceful degradation** - When optional features fail, the core outcome still works:
+```typescript
+// From client-onboarding workflow
+let aiRecommendations: string[] = [];
+if (inputs.enableAIRecommendations && env.AI) {
+  aiRecommendations = await generateOnboardingRecommendations(env.AI, customer);
+}
+// AI failure doesn't break onboarding - it gracefully continues without recommendations
+```
+
+**3. Silent success, loud failure** - Don't demand attention when things work:
+```typescript
+// ❌ Obtrusive: Notifies on every run
+await slack.postMessage({ text: '✅ Workflow ran successfully!' });
+
+// ✅ Unobtrusive: Only notifies when action needed
+if (!results.success) {
+  await slack.postMessage({ text: `⚠️ Meeting sync failed: ${results.error}` });
+}
+```
 
 When something goes wrong, the user should understand what happened and what to do—not debug API responses.
+
+## Measuring Zuhandenheit
+
+WORKWAY workflows explicitly measure how well they achieve Zuhandenheit through metadata:
+
+```typescript
+pathway: {
+  zuhandenheit: {
+    timeToValue: 3,           // Minutes to first outcome
+    worksOutOfBox: true,      // Works with just essential fields
+    gracefulDegradation: true, // Optional integrations handled gracefully
+    automaticTrigger: true,   // Webhook-triggered, no manual invocation
+  },
+}
+```
+
+**Time to Value** - How quickly does the user experience the outcome? The `meeting-intelligence` workflow achieves value in 3 minutes: connect Zoom, pick a Notion database, done.
+
+**Works Out of Box** - Can the workflow deliver value with minimal configuration? Good workflows identify their "essential fields" (usually 1-2) and use smart defaults for everything else.
+
+**Graceful Degradation** - When optional features fail, does the core outcome still work? The best workflows mark integrations as `optional` and continue without them.
+
+**Automatic Trigger** - Does the user need to remember to run the workflow? Webhook-triggered workflows (Zoom recording completed, Stripe payment received) achieve higher Zuhandenheit than manual ones.
+
+### The Essential Fields Pattern
+
+The most Zuhandenheit-optimized workflows minimize setup decisions:
+
+```typescript
+// From meeting-intelligence workflow
+pathway: {
+  smartDefaults: {
+    syncMode: { value: 'both' },
+    lookbackDays: { value: 1 },
+    transcriptMode: { value: 'prefer_speakers' },
+    enableAI: { value: true },
+    analysisDepth: { value: 'standard' },
+  },
+  essentialFields: ['notionDatabaseId'],  // Only 1 required decision
+}
+```
+
+The user makes ONE decision (which Notion database). Everything else has tested optimal defaults.
 
 ## Step-by-Step: Apply the Outcome Test
 

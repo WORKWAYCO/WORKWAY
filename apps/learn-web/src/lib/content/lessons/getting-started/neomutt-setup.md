@@ -9,10 +9,11 @@ By the end of this lesson, you will be able to:
 - Generate and use a Gmail App Password for secure authentication
 - Navigate emails using Neomutt's vim-style keyboard shortcuts (`j/k`, `/`, `r`, `m`)
 - Understand how terminal email enables workflow-triggered automations
+- Connect email patterns to WORKWAY workflow triggers
 
 ---
 
-Email is a workflow trigger. Neomutt brings email into your terminal, where it can integrate with your development flow.
+Email is a workflow trigger. Neomutt brings email into your terminal, where it can integrate with your development flow and—more importantly—help you recognize the patterns that become automated workflows.
 
 ## Why Terminal Email?
 
@@ -138,26 +139,166 @@ neomutt
 
 First sync may take a few minutes depending on mailbox size.
 
-## Workflow Integration
+## Workflow Integration Patterns
 
-Neomutt enables email-driven workflows:
+Understanding email patterns in Neomutt helps you design WORKWAY workflows. Here's how terminal email concepts map to automation.
+
+### Pattern 1: Label-Based Triggers
+
+In Neomutt, you search and tag emails. In WORKWAY, labels become triggers:
 
 ```bash
-# Pipe email to a script
-| workflow-trigger
-
-# Search for workflow-relevant emails
+# Neomutt: search for meeting notes
 /~s "meeting notes"
 
-# Tag emails for batch processing
-t (tag) then ; (apply action to tagged)
+# WORKWAY equivalent: Gmail API query
+const emails = await gmail.listMessages({
+  query: 'label:meeting-notes is:unread',
+  maxResults: 50,
+});
 ```
+
+**Workflow pattern**: Create a Gmail label like "Log to Notion", then use it as your trigger. When you label an email, the workflow runs.
+
+### Pattern 2: Email Parsing for Actions
+
+In Neomutt, you read headers to decide what to do. In WORKWAY, you parse programmatically:
+
+```bash
+# Neomutt: check who sent the email
+# (visible in index view)
+
+# WORKWAY equivalent: extract headers
+const headers = email.payload?.headers || [];
+const from = headers.find(h => h.name === 'From')?.value;
+const subject = headers.find(h => h.name === 'Subject')?.value;
+
+// Route based on sender
+if (from.includes('@client.com')) {
+  await notion.createPage({ /* ... */ });
+}
+```
+
+**Workflow pattern**: Different email sources can trigger different actions—client emails create CRM entries, internal emails create tasks.
+
+### Pattern 3: Piping to Scripts
+
+Neomutt's pipe command (`|`) connects email to any shell script. This is the conceptual foundation for WORKWAY's fetch-based integrations:
+
+```bash
+# Neomutt: pipe email to a script
+| process-email.sh
+
+# WORKWAY equivalent: direct API call in execute()
+export default defineWorkflow({
+  async execute({ integrations }) {
+    const gmail = integrations.gmail;
+
+    // Fetch emails (the "pipe in")
+    const emails = await gmail.listMessages({ query: 'is:starred' });
+
+    // Process (the "script")
+    for (const email of emails) {
+      const full = await gmail.getMessage(email.id);
+      // Your processing logic here
+    }
+  }
+});
+```
+
+**Workflow pattern**: Every email operation you do manually in Neomutt can become an automated workflow step.
+
+### Pattern 4: Batch Operations with Tags
+
+Neomutt's tagging (`t`) and batch operations (`;`) map directly to batch processing in workflows:
+
+```bash
+# Neomutt: tag messages, then save all to folder
+t (on each message)
+;s +archive
+
+# WORKWAY equivalent: batch processing
+const emails = await gmail.listMessages({ query: 'label:to-archive' });
+for (const email of emails) {
+  await processEmail(email);
+  // Mark as processed (remove label)
+  await gmail.modifyMessage(email.id, {
+    removeLabelIds: ['to-archive'],
+    addLabelIds: ['archived'],
+  });
+}
+```
+
+**Workflow pattern**: WORKWAY workflows process emails in batches, just like your manual tagging workflow.
+
+### Pattern 5: The Outcome Test
+
+Every email action you take manually is a candidate for automation. Apply the Outcome Test:
+
+| Manual Action in Neomutt | Outcome Statement (No Tech) |
+|--------------------------|---------------------------|
+| `/~s "meeting" ; s +meetings` | Meeting emails organize themselves |
+| `r` (reply to client) | Clients receive acknowledgment |
+| `\| extract-invoice.sh` | Invoices become Notion entries |
+| `d` (delete newsletters) | Newsletter noise disappears |
+
+The workflow opportunity: Which of these actions could run without you?
+
+### Email as Workflow Trigger vs. Workflow Action
+
+Email plays two roles in WORKWAY:
+
+**Email as Trigger** (workflow starts from email):
+```typescript
+// Poll for new labeled emails
+trigger: schedule({
+  cron: '*/15 * * * *',  // Check every 15 minutes
+}),
+
+async execute({ integrations }) {
+  const emails = await integrations.gmail.listMessages({
+    query: 'label:process-me',
+  });
+  // Process each email...
+}
+```
+
+**Email as Action** (workflow sends email):
+```typescript
+// Workflow sends email after other events
+async execute({ trigger, integrations }) {
+  // Meeting ended (trigger from Zoom)
+  const transcript = trigger.data.transcript;
+
+  // Email the summary
+  await integrations.gmail.sendMessage({
+    to: 'team@company.com',
+    subject: 'Meeting Summary: ' + trigger.data.meetingTitle,
+    body: transcript.summary,
+  });
+}
+```
+
+## Neomutt Commands for Workflow Thinking
+
+When exploring email in Neomutt, think about automation patterns:
+
+| Key | Action | Workflow Translation |
+|-----|--------|---------------------|
+| `/` | Search | Gmail API query filter |
+| `t` | Tag | Label assignment |
+| `;` | Apply to tagged | Batch processing loop |
+| `\|` | Pipe | Workflow execute() |
+| `c` | Change folder | Different label triggers |
+| `$` | Sync | Poll-based trigger |
 
 ## Praxis
 
 Install Neomutt and configure it for your Gmail account:
 
 > **Praxis**: Ask Claude Code: "Help me install Neomutt and configure it for Gmail with an app password"
+
+### Part 1: Setup
 
 Follow these steps:
 1. Install Neomutt via your package manager
@@ -171,9 +312,34 @@ Launch Neomutt and practice:
 - Search with `/`
 - Return to index with `q`
 
-Note: This is an optional setup. If you prefer your current email client, that's fine—the goal is understanding how terminal tools can integrate into workflows.
+### Part 2: Workflow Pattern Recognition
+
+Once Neomutt is running, identify email patterns for automation:
+
+1. **Search for recurring patterns**:
+   ```
+   /~s "invoice"      # Find all invoices
+   /~s "meeting"      # Find meeting-related emails
+   /~f @client.com    # Find emails from a specific domain
+   ```
+
+2. **Notice your actions**: What do you do with these emails?
+   - Do you forward them?
+   - Copy content elsewhere?
+   - File them in folders?
+
+3. **Write one outcome statement**: Pick a pattern you found and describe it without technology:
+   - "Invoices from suppliers become accounting entries"
+   - "Meeting confirmations appear in my calendar summary"
+   - "Client questions get logged for follow-up"
+
+This outcome statement is the seed for a WORKWAY workflow.
+
+Note: This is an optional setup. If you prefer your current email client, that's fine—the goal is understanding how terminal tools connect to workflow thinking.
 
 ## Reflection
 
 - How does managing email in your terminal change your relationship with email?
 - What email patterns could trigger useful automations?
+- Which of your repetitive email tasks could a workflow handle?
+- What emails arrive that you wish would auto-process themselves?

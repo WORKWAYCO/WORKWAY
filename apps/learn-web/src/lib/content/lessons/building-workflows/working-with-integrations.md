@@ -5,10 +5,11 @@
 By the end of this lesson, you will be able to:
 
 - Chain multiple integrations in a single workflow (Zoom → Notion → Slack)
-- Use Slack's Block Kit for rich message formatting
-- Access Zoom meeting data, recordings, and transcripts
-- Create and update Notion pages with complex property types
+- Use Slack messaging with threading and search capabilities
+- Access Zoom meeting data, recordings, clips, and transcripts
+- Create and update Notion pages using document templates
 - Handle integration-specific conventions (Stripe cents, Gmail query syntax)
+- Implement error isolation for optional workflow steps
 
 ---
 
@@ -70,8 +71,8 @@ async execute({ trigger, inputs, integrations }) {
   });
 
   // Create destination record
-  const page = await notion.pages.create({
-    parent: { database_id: inputs.notionDatabase },
+  const page = await notion.createPage({
+    parentDatabaseId: inputs.notionDatabase,
     properties: {
       Name: { title: [{ text: { content: trigger.data.object.topic } }] },
       Date: { date: { start: new Date().toISOString().split('T')[0] } },
@@ -97,7 +98,7 @@ async execute({ trigger, inputs, integrations }) {
 
   // Notify (optional - don't fail workflow if this fails)
   if (slack && inputs.slackChannel) {
-    const notifyResult = await slack.chat.postMessage({
+    const notifyResult = await slack.sendMessage({
       channel: inputs.slackChannel,
       text: `Meeting notes ready: ${page.data?.url}`,
     });
@@ -131,6 +132,16 @@ curl localhost:8787/execute -d '{"object": {"id": "123", "topic": "Test"}}'
 
 ## Integration Basics
 
+### ActionResult Pattern
+
+All integration methods return `ActionResult` objects:
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `success` | `boolean` | Whether the call succeeded |
+| `data` | `T \| undefined` | The response data if successful |
+| `error` | `string \| undefined` | Error message if failed |
+
 All integrations share common patterns:
 
 ```typescript
@@ -155,119 +166,174 @@ async execute({ integrations }) {
 
 ## Slack Integration
 
+The Slack integration (`packages/integrations/src/slack/`) provides methods for messaging, channels, and user lookup.
+
 ### Posting Messages
 
 ```typescript
 // Simple message
-await slack.chat.postMessage({
+const result = await slack.sendMessage({
   channel: inputs.slackChannel,
   text: 'Meeting notes are ready!',
 });
 
-// Rich formatted message
-await slack.chat.postMessage({
+if (result.success) {
+  console.log('Sent message:', result.data.ts);
+}
+
+// With threading support
+await slack.sendMessage({
   channel: inputs.slackChannel,
-  blocks: [
-    {
-      type: 'header',
-      text: { type: 'plain_text', text: 'Meeting Summary' },
-    },
-    {
-      type: 'section',
-      text: { type: 'mrkdwn', text: '*Topic:* Weekly Standup' },
-    },
-    {
-      type: 'section',
-      fields: [
-        { type: 'mrkdwn', text: '*Duration:* 45 min' },
-        { type: 'mrkdwn', text: '*Attendees:* 5' },
-      ],
-    },
-    {
-      type: 'actions',
-      elements: [
-        {
-          type: 'button',
-          text: { type: 'plain_text', text: 'View Notes' },
-          url: notionPageUrl,
-        },
-      ],
-    },
-  ],
+  text: 'Follow-up comment',
+  thread_ts: parentMessageTs,  // Reply in thread
+  reply_broadcast: true,       // Also post to channel
 });
 ```
 
 ### Channel Operations
 
 ```typescript
-// Get all channels
-const channels = await slack.getChannels();
-
-// Get channel history
-const messages = await slack.getChannelHistory(channelId, {
+// List channels the bot has access to
+const channelsResult = await slack.listChannels({
   limit: 100,
-  oldest: timestamp,
+  excludeArchived: true,
+  types: 'public_channel,private_channel',
 });
 
-// Update a message
-await slack.updateMessage({
+if (channelsResult.success) {
+  for (const channel of channelsResult.data) {
+    console.log(channel.name, channel.id);
+  }
+}
+
+// Get messages from a channel with human-friendly since
+const messagesResult = await slack.getMessages({
   channel: channelId,
-  ts: messageTimestamp,
-  text: 'Updated content',
+  since: '24h',     // Last 24 hours
+  humanOnly: true,  // Filter out bots and system messages
+});
+
+// Get messages since a specific date
+const weekMessages = await slack.getMessages({
+  channel: channelId,
+  since: '7d',  // Last 7 days
+});
+
+// Search messages across channels
+const searchResult = await slack.searchMessages('project update', {
+  count: 20,
+  sort: 'timestamp',
 });
 ```
 
 ### User Lookup
 
 ```typescript
-// Get user by email
-const user = await slack.getUserByEmail('user@example.com');
+// Get user by ID
+const userResult = await slack.getUser({ user: userId });
 
-// Direct message a user
-await slack.postMessage({
-  channel: user.id,  // User ID as channel for DM
+if (userResult.success) {
+  console.log(userResult.data.real_name);
+  console.log(userResult.data.profile?.email);
+}
+
+// Direct message a user (use user ID as channel)
+await slack.sendMessage({
+  channel: userResult.data.id,
   text: 'Your report is ready',
 });
 ```
 
 ## Zoom Integration
 
+The Zoom integration (`packages/integrations/src/zoom/`) provides methods for meetings, recordings, clips, and transcripts.
+
 ### Meeting Data
 
 ```typescript
-// Get user's meetings
-const meetings = await zoom.getMeetings();
+// Get user's recent meetings (last N days)
+const meetingsResult = await zoom.getMeetings({ days: 7 });
+
+if (meetingsResult.success) {
+  for (const meeting of meetingsResult.data) {
+    console.log(meeting.topic, meeting.start_time);
+  }
+}
 
 // Get specific meeting
-const meeting = await zoom.getMeeting(meetingId);
-// Returns: { id, topic, start_time, duration, participants }
+const meetingResult = await zoom.getMeeting({ meetingId: '123456789' });
+// Returns: { id, topic, start_time, duration, host_id, join_url }
 
 // Get meeting recordings
-const recordings = await zoom.getMeetingRecordings(meetingId);
-// Returns: { download_url, recording_type, file_size }
-```
-
-### Participant Information
-
-```typescript
-// Get meeting participants
-const participants = await zoom.getMeetingParticipants(meetingId);
-
-for (const participant of participants) {
-  console.log(participant.name, participant.join_time, participant.duration);
+const recordingsResult = await zoom.getRecordings({ meetingId: '123456789' });
+if (recordingsResult.success && recordingsResult.data) {
+  const recording = recordingsResult.data;
+  console.log('Share URL:', recording.share_url);
+  for (const file of recording.recording_files) {
+    console.log(file.file_type, file.download_url);
+  }
 }
 ```
 
 ### Meeting Transcripts
 
 ```typescript
-// Get transcript (if available)
-const transcript = await zoom.getMeetingTranscript(meetingId);
-// Returns: { text, speaker_segments }
+// Get transcript (OAuth API - may lack speaker names)
+const transcriptResult = await zoom.getTranscript({ meetingId: '123456789' });
 
-// Transcript segments have speaker attribution
-for (const segment of transcript.speaker_segments) {
-  console.log(`${segment.speaker}: ${segment.text}`);
+if (transcriptResult.success && transcriptResult.data) {
+  const transcript = transcriptResult.data;
+  console.log('Source:', transcript.source);  // 'oauth_api' or 'browser_scraper'
+  console.log('Has speakers:', transcript.has_speaker_attribution);
+  console.log('Text:', transcript.transcript_text);
+
+  if (transcript.speakers) {
+    console.log('Speakers:', transcript.speakers.join(', '));
+  }
+}
+
+// Get transcript with browser fallback for speaker attribution
+const transcriptWithSpeakers = await zoom.getTranscript({
+  meetingId: '123456789',
+  fallbackToBrowser: true,
+  shareUrl: recording.share_url,  // Required for browser fallback
+});
+```
+
+### Zoom Clips
+
+```typescript
+// Get user's clips
+const clipsResult = await zoom.getClips({ days: 30 });
+
+if (clipsResult.success) {
+  for (const clip of clipsResult.data) {
+    console.log(clip.title, clip.duration, clip.share_url);
+  }
+}
+
+// Get clip transcript (requires browser scraper)
+const clipTranscript = await zoom.getClipTranscript({
+  shareUrl: clip.share_url,
+});
+```
+
+### Compound Method: Meetings with Transcripts
+
+```typescript
+// Get meetings and their transcripts in one call
+const result = await zoom.getMeetingsWithTranscripts({
+  days: 1,
+  fallbackToBrowser: false,
+});
+
+if (result.success) {
+  for (const { meeting, transcript } of result.data) {
+    console.log('Meeting:', meeting.topic);
+    if (transcript) {
+      console.log('Transcript length:', transcript.transcript_text.length);
+    }
+  }
 }
 ```
 
@@ -291,56 +357,122 @@ async execute({ trigger }) {
 
 ## Stripe Integration
 
+The Stripe integration (`packages/integrations/src/stripe/`) provides methods for payments, customers, and subscriptions. **Important:** Stripe uses cents, not dollars.
+
 ### Customer Operations
 
 ```typescript
-// Get customer
-const customer = await stripe.getCustomer(customerId);
+// Get customer by ID
+const customerResult = await stripe.getCustomer('cus_xxx');
 
-// Search customers
-const customers = await stripe.searchCustomers({
-  query: 'email:"user@example.com"',
+if (customerResult.success) {
+  console.log(customerResult.data.email, customerResult.data.name);
+}
+
+// List customers (with optional filters)
+const customersResult = await stripe.listCustomers({
+  limit: 10,
+  email: 'user@example.com',
 });
 
 // Create customer
-const newCustomer = await stripe.createCustomer({
+const newCustomerResult = await stripe.createCustomer({
   email: 'new@example.com',
   name: 'New User',
-  metadata: { source: 'workflow' },
+  description: 'Created via workflow',
+  metadata: { source: 'workway' },
 });
 ```
 
-### Payment Data
+### Payment Intents
 
 ```typescript
-// Get recent payments
-const payments = await stripe.getPaymentIntents({
-  limit: 10,
-  created: { gte: startOfMonth },
+// Create a payment intent ($20.00 = 2000 cents)
+const paymentResult = await stripe.createPaymentIntent({
+  amount: 2000,         // Always in cents!
+  currency: 'usd',
+  customer: 'cus_xxx',
+  description: 'Order #123',
+  metadata: { order_id: '123' },
+  automatic_payment_methods: { enabled: true },
 });
 
+if (paymentResult.success) {
+  console.log('Payment ID:', paymentResult.data.id);
+  console.log('Status:', paymentResult.data.status);
+  console.log('Client Secret:', paymentResult.data.client_secret);
+}
+
 // Get specific payment
-const payment = await stripe.getPaymentIntent(paymentId);
-// Returns: { id, amount, currency, status, customer }
+const payment = await stripe.getPaymentIntent('pi_xxx');
+
+// List payment intents
+const paymentsResult = await stripe.listPaymentIntents({
+  limit: 10,
+  customer: 'cus_xxx',
+});
 ```
 
 ### Subscription Management
 
 ```typescript
-// Get subscription
-const subscription = await stripe.getSubscription(subscriptionId);
+// Create subscription
+const subResult = await stripe.createSubscription({
+  customer: 'cus_xxx',
+  priceId: 'price_xxx',
+  quantity: 1,
+  trial_period_days: 14,
+  metadata: { plan: 'pro' },
+});
 
-// List customer subscriptions
-const subscriptions = await stripe.getSubscriptions({
-  customer: customerId,
+// Get subscription
+const subscription = await stripe.getSubscription('sub_xxx');
+if (subscription.success) {
+  console.log('Status:', subscription.data.status);
+  console.log('Current period end:', subscription.data.current_period_end);
+}
+
+// List subscriptions by customer
+const subsResult = await stripe.listSubscriptions({
+  customer: 'cus_xxx',
   status: 'active',
 });
 
-// Cancel subscription
-await stripe.cancelSubscription(subscriptionId);
+// Cancel subscription (at period end or immediately)
+await stripe.cancelSubscription('sub_xxx', { cancel_at_period_end: true });
 ```
 
-### Webhook Events
+### Charges (Legacy)
+
+```typescript
+// List charges
+const chargesResult = await stripe.listCharges({
+  limit: 10,
+  customer: 'cus_xxx',
+});
+
+// Get specific charge
+const charge = await stripe.getCharge('ch_xxx');
+```
+
+### Webhook Verification
+
+```typescript
+// Parse and verify webhook signature
+const eventResult = await stripe.parseWebhookEvent(
+  rawBody,           // Raw request body string
+  signatureHeader,   // Stripe-Signature header
+  webhookSecret      // Your endpoint secret
+);
+
+if (eventResult.success) {
+  const event = eventResult.data;
+  console.log('Event type:', event.type);  // e.g., 'payment_intent.succeeded'
+  console.log('Event data:', event.data.object);
+}
+```
+
+### Webhook Events in Workflows
 
 ```typescript
 import { defineWorkflow, webhook } from '@workwayco/sdk';
@@ -354,22 +486,26 @@ trigger: webhook({
 
 async execute({ trigger }) {
   const payment = trigger.data.data.object;
-  const amount = payment.amount / 100;  // Convert cents to dollars
-  const customer = payment.customer;
+  const amountDollars = payment.amount / 100;  // Convert cents to dollars!
+  const customerId = payment.customer;
+
+  console.log(`Payment of $${amountDollars} received from ${customerId}`);
 }
 ```
 
 ## Notion Integration
 
+The Notion integration (`packages/integrations/src/notion/`) provides methods for pages, databases, and content blocks.
+
 ### Database Operations
 
 ```typescript
 // Query database with filter
-const result = await notion.databases.query({
-  database_id: databaseId,
+const result = await notion.queryDatabase({
+  databaseId: databaseId,
   filter: {
     property: 'Status',
-    select: { equals: 'In Progress' },
+    status: { equals: 'In Progress' },
   },
   sorts: [
     { property: 'Created', direction: 'descending' },
@@ -377,29 +513,49 @@ const result = await notion.databases.query({
 });
 
 if (result.success) {
-  const pages = result.data;
+  for (const page of result.data) {
+    console.log(page.id, page.properties);
+  }
 }
 
-// Create database entry
-await notion.pages.create({
-  parent: { database_id: databaseId },
+// Get database schema
+const dbResult = await notion.getDatabase(databaseId);
+if (dbResult.success) {
+  console.log('Properties:', Object.keys(dbResult.data.properties));
+}
+
+// Search across pages and databases
+const searchResult = await notion.search({
+  query: 'Project',
+  filter: { property: 'object', value: 'page' },
+});
+```
+
+### Creating Pages
+
+```typescript
+// Create page in database
+const pageResult = await notion.createPage({
+  parentDatabaseId: databaseId,
   properties: {
     Name: { title: [{ text: { content: 'New Item' } }] },
-    Status: { select: { name: 'New' } },
+    Status: { status: { name: 'New' } },
     Priority: { number: 1 },
     Tags: { multi_select: [{ name: 'urgent' }] },
     DueDate: { date: { start: '2024-01-20' } },
   },
 });
-```
 
-### Page Content
+if (pageResult.success) {
+  console.log('Created page:', pageResult.data.url);
+}
 
-```typescript
-// Create page with blocks
-await notion.pages.create({
-  parent: { database_id: databaseId },
-  properties: { /* ... */ },
+// Create page with content blocks
+await notion.createPage({
+  parentDatabaseId: databaseId,
+  properties: {
+    Name: { title: [{ text: { content: 'Meeting Notes' } }] },
+  },
   children: [
     {
       type: 'heading_1',
@@ -407,15 +563,11 @@ await notion.pages.create({
     },
     {
       type: 'paragraph',
-      paragraph: {
-        rich_text: [{ text: { content: 'Details here...' } }]
-      },
+      paragraph: { rich_text: [{ text: { content: 'Details here...' } }] },
     },
     {
       type: 'bulleted_list_item',
-      bulleted_list_item: {
-        rich_text: [{ text: { content: 'First point' } }],
-      },
+      bulleted_list_item: { rich_text: [{ text: { content: 'First point' } }] },
     },
     {
       type: 'code',
@@ -426,16 +578,28 @@ await notion.pages.create({
     },
   ],
 });
+```
 
-// Append blocks to existing page
-await notion.blocks.children.append({
-  block_id: pageId,
-  children: [
-    {
-      type: 'paragraph',
-      paragraph: { rich_text: [{ text: { content: 'Added content' } }] },
+### Document Templates (Zuhandenheit)
+
+```typescript
+// Create structured documents from templates
+// Developer thinks "create meeting notes" not "construct 100 block objects"
+const docResult = await notion.createDocument({
+  database: databaseId,
+  template: 'meeting',  // 'summary', 'report', 'notes', 'article', 'meeting', 'feedback'
+  data: {
+    title: 'Weekly Standup - 2024-01-15',
+    summary: 'Team discussed Q1 priorities and blockers.',
+    date: '2024-01-15',
+    mood: 'positive',
+    sections: {
+      decisions: ['Approved new feature spec', 'Delayed launch by 1 week'],
+      actionItems: ['Review PR #123', 'Schedule design review'],
+      keyTopics: ['Performance improvements', 'User feedback'],
     },
-  ],
+    content: fullTranscriptText,  // Optional: raw content in toggle
+  },
 });
 ```
 
@@ -443,18 +607,26 @@ await notion.blocks.children.append({
 
 ```typescript
 // Update page properties
-await notion.pages.update({
-  page_id: pageId,
+const updateResult = await notion.updatePage({
+  pageId: pageId,
   properties: {
-    Status: { select: { name: 'Complete' } },
+    Status: { status: { name: 'Complete' } },
   },
 });
 
 // Archive page
-await notion.pages.update({
-  page_id: pageId,
+await notion.updatePage({
+  pageId: pageId,
   archived: true,
 });
+
+// Get page content blocks
+const blocksResult = await notion.getBlockChildren({ blockId: pageId });
+if (blocksResult.success) {
+  for (const block of blocksResult.data) {
+    console.log(block.type);
+  }
+}
 ```
 
 ## Gmail Integration
@@ -523,23 +695,27 @@ await gmail.markAsRead(messageId);
 async execute({ trigger, inputs, integrations }) {
   const { zoom, notion, slack } = integrations;
 
-  // 1. Get meeting from Zoom
+  // 1. Get meeting data from Zoom
   const meetingId = trigger.data.object.id;
   const transcriptResult = await zoom.getTranscript({ meetingId });
 
-  // 2. Save to Notion
-  const page = await notion.pages.create({
-    parent: { database_id: inputs.notionDatabase },
-    properties: {
-      Name: { title: [{ text: { content: trigger.data.object.topic } }] },
+  // 2. Save to Notion using document template
+  const page = await notion.createDocument({
+    database: inputs.notionDatabase,
+    template: 'meeting',
+    data: {
+      title: trigger.data.object.topic,
+      summary: transcriptResult.success ? 'Meeting transcript captured' : 'No transcript',
+      date: new Date().toISOString().split('T')[0],
+      sections: transcriptResult.success && transcriptResult.data.speakers
+        ? { speakers: transcriptResult.data.speakers }
+        : {},
+      content: transcriptResult.data?.transcript_text,
     },
-    children: transcriptResult.success
-      ? formatTranscript(transcriptResult.data.transcript_text)
-      : [],
   });
 
   // 3. Notify via Slack
-  await slack.chat.postMessage({
+  await slack.sendMessage({
     channel: inputs.slackChannel,
     text: `Meeting notes ready: ${page.data?.url}`,
   });
@@ -555,11 +731,16 @@ async execute({ inputs, integrations }) {
   const { notion, slack } = integrations;
 
   // Always save to Notion
-  const page = await notion.pages.create(/* ... */);
+  const page = await notion.createPage({
+    parentDatabaseId: inputs.notionDatabase,
+    properties: {
+      Name: { title: [{ text: { content: 'New Entry' } }] },
+    },
+  });
 
   // Optionally notify Slack
   if (inputs.enableSlackNotification && inputs.slackChannel) {
-    await slack.chat.postMessage({
+    await slack.sendMessage({
       channel: inputs.slackChannel,
       text: `New entry: ${page.data?.url}`,
     });
@@ -575,10 +756,19 @@ async execute({ inputs, integrations }) {
 async execute({ integrations }) {
   const { notion, slack } = integrations;
 
-  const page = await notion.pages.create(/* ... */);
+  const page = await notion.createPage({
+    parentDatabaseId: inputs.notionDatabase,
+    properties: {
+      Name: { title: [{ text: { content: 'Entry' } }] },
+    },
+  });
 
   // Slack failure shouldn't fail the whole workflow
-  const slackResult = await slack.chat.postMessage(/* ... */);
+  const slackResult = await slack.sendMessage({
+    channel: inputs.slackChannel,
+    text: `Page created: ${page.data?.url}`,
+  });
+
   if (!slackResult.success) {
     console.warn('Slack notification failed:', slackResult.error);
   }
@@ -634,33 +824,28 @@ await notion.pages.create({
 });
 ```
 
-### Slack Block Builder Mistakes
+### Slack Message Options
 
-Slack blocks have strict structure requirements:
+Always provide fallback text for notifications:
 
 ```typescript
-// Wrong - missing required fields
-await slack.chat.postMessage({
+// sendMessage requires channel and text
+const result = await slack.sendMessage({
   channel: channelId,
-  blocks: [
-    {
-      type: 'section',
-      text: 'Hello world',  // Wrong: needs mrkdwn/plain_text object
-    },
-  ],
+  text: 'Hello world',
 });
 
-// Right - complete block structure
-await slack.chat.postMessage({
+// With threading
+await slack.sendMessage({
   channel: channelId,
-  blocks: [
-    {
-      type: 'section',
-      text: { type: 'mrkdwn', text: 'Hello world' },
-    },
-  ],
-  text: 'Hello world',  // Fallback for notifications
+  text: 'Reply to thread',
+  thread_ts: originalMessageTs,  // Thread parent timestamp
 });
+
+// Common mistake: forgetting to check success
+if (!result.success) {
+  console.error('Slack send failed:', result.error);
+}
 ```
 
 ### Stripe Amount in Wrong Units
@@ -700,22 +885,28 @@ One failure shouldn't break everything:
 ```typescript
 // Wrong - entire chain fails if Slack fails
 async execute({ integrations }) {
-  const meeting = await integrations.zoom.getMeeting(id);
-  const page = await integrations.notion.pages.create(data);
-  await integrations.slack.postMessage(notification);  // If this fails, no return
+  const meeting = await integrations.zoom.getMeeting({ meetingId: id });
+  const page = await integrations.notion.createPage({
+    parentDatabaseId: dbId,
+    properties: { /* ... */ },
+  });
+  await integrations.slack.sendMessage({ channel, text });  // If this fails, no return
   return { success: true, pageId: page.data.id };
 }
 
 // Right - isolate optional steps
 async execute({ integrations }) {
-  const meeting = await integrations.zoom.getMeeting(id);
+  const meeting = await integrations.zoom.getMeeting({ meetingId: id });
   if (!meeting.success) return { success: false, error: meeting.error };
 
-  const page = await integrations.notion.pages.create(data);
+  const page = await integrations.notion.createPage({
+    parentDatabaseId: dbId,
+    properties: { /* ... */ },
+  });
   if (!page.success) return { success: false, error: page.error };
 
   // Slack is optional - don't fail workflow if it fails
-  const slackResult = await integrations.slack.postMessage(notification);
+  const slackResult = await integrations.slack.sendMessage({ channel, text });
   if (!slackResult.success) {
     console.warn('Slack notification failed:', slackResult.error);
   }
@@ -732,14 +923,15 @@ Transcripts aren't immediately available after meetings:
 // Wrong - expects transcript right after meeting ends
 trigger: webhook({ service: 'zoom', event: 'meeting.ended' }),
 async execute({ trigger, integrations }) {
-  const transcript = await integrations.zoom.getTranscript(meetingId);
+  const transcript = await integrations.zoom.getTranscript({ meetingId });
   // Often fails: transcript not yet processed
 }
 
 // Right - wait for recording.completed event
 trigger: webhook({ service: 'zoom', event: 'recording.completed' }),
 async execute({ trigger, integrations }) {
-  const transcript = await integrations.zoom.getTranscript(meetingId);
+  const meetingId = trigger.data.object.id;
+  const transcript = await integrations.zoom.getTranscript({ meetingId });
   // Transcript available after recording processed
 }
 ```
@@ -760,16 +952,20 @@ async execute({ trigger, inputs, integrations }) {
   const meetingId = trigger.data.object.id;
   const transcriptResult = await zoom.getTranscript({ meetingId });
 
-  // 2. Transform and save
-  const page = await notion.pages.create({
-    parent: { database_id: inputs.notionDatabase },
-    properties: {
-      Name: { title: [{ text: { content: trigger.data.object.topic } }] },
+  // 2. Transform and save using document template
+  const page = await notion.createDocument({
+    database: inputs.notionDatabase,
+    template: 'meeting',
+    data: {
+      title: trigger.data.object.topic,
+      summary: transcriptResult.success ? 'Transcript captured' : 'No transcript available',
+      date: new Date().toISOString().split('T')[0],
+      content: transcriptResult.data?.transcript_text,
     },
   });
 
   // 3. Notify (with error isolation)
-  const slackResult = await slack.chat.postMessage({
+  const slackResult = await slack.sendMessage({
     channel: inputs.slackChannel,
     text: `Meeting notes ready: ${page.data?.url}`,
   });

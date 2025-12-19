@@ -1,4 +1,4 @@
-# Private Workflows
+# Private Workflows & BYOO Patterns
 
 ## Learning Objectives
 
@@ -13,6 +13,55 @@ By the end of this lesson, you will be able to:
 ---
 
 Not every workflow belongs in the marketplace. Private workflows serve specific organizations with custom requirements while leveraging the full WORKWAY platform.
+
+## Real Example: Gmail to Notion Private
+
+Here's how the production `gmail-to-notion-private` workflow configures private visibility and access grants:
+
+```typescript
+// From packages/workflows/src/gmail-to-notion-private/index.ts
+
+/**
+ * Workflow metadata - Private workflow for @halfdozen.co
+ */
+export const metadata = {
+  id: 'gmail-to-notion-private',
+  category: 'productivity',
+  featured: false,
+
+  // Private workflow - requires WORKWAY login
+  visibility: 'private' as const,
+  accessGrants: [{ type: 'email_domain' as const, value: 'halfdozen.co' }],
+
+  // Honest flags (matches meeting-intelligence-private pattern)
+  experimental: true,
+  requiresCustomInfrastructure: true,
+  canonicalAlternative: 'gmail-to-notion', // Future public version
+
+  // Why this exists
+  workaroundReason: 'Gmail OAuth scopes require Google app verification for public apps',
+  infrastructureRequired: ['BYOO Google OAuth app', 'Arc for Gmail worker'],
+
+  // Upgrade path (when Google verification completes)
+  upgradeTarget: 'gmail-to-notion',
+  upgradeCondition: 'When WORKWAY Gmail OAuth app is verified',
+
+  // Analytics URL - unified at workway.co/workflows
+  analyticsUrl: 'https://workway.co/workflows/private/gmail-to-notion-private/analytics',
+
+  // Setup URL - initial BYOO connection setup
+  setupUrl: 'https://arc.halfdozen.co/setup',
+
+  stats: { rating: 0, users: 0, reviews: 0 },
+};
+```
+
+Key patterns to notice:
+
+1. **`visibility: 'private' as const`** - TypeScript literal type for compile-time safety
+2. **`accessGrants`** - Array of access rules (email_domain, email, organization)
+3. **`experimental` and `requiresCustomInfrastructure`** - Honest flags about workflow requirements
+4. **`canonicalAlternative` and `upgradeTarget`** - Points users to the standard path when available
 
 ## Step-by-Step: Create Your First Private Workflow
 
@@ -180,26 +229,29 @@ export const metadata = {
 
 ## Access Control
 
+Access grants determine who can install and use your private workflow. All grants use TypeScript const assertions for type safety.
+
 ### Email Domain
 
 Allow anyone from a company domain:
 
 ```typescript
+// From gmail-to-notion-private - restricts to @halfdozen.co team
 accessGrants: [
-  { type: 'email_domain', value: 'acmecorp.com' },
+  { type: 'email_domain' as const, value: 'halfdozen.co' },
 ]
 ```
 
-Anyone with `@acmecorp.com` email can install and use the workflow.
+Anyone with `@halfdozen.co` email can install and use the workflow.
 
 ### Specific Emails
 
-Grant access to specific individuals:
+Grant access to specific individuals (useful for external collaborators):
 
 ```typescript
 accessGrants: [
-  { type: 'email', value: 'alice@example.com' },
-  { type: 'email', value: 'bob@contractor.io' },
+  { type: 'email' as const, value: 'alice@example.com' },
+  { type: 'email' as const, value: 'bob@contractor.io' },
 ]
 ```
 
@@ -209,21 +261,36 @@ Link to WORKWAY organization:
 
 ```typescript
 accessGrants: [
-  { type: 'organization', value: 'org_abc123' },
+  { type: 'organization' as const, value: 'org_abc123' },
 ]
 ```
 
 All members of the organization can access.
 
-### Combined Access
+### Combined Access (Real Pattern)
+
+From the production `gmail-to-notion-private` workflow header comments:
 
 ```typescript
-accessGrants: [
-  { type: 'email_domain', value: 'acmecorp.com' },     // Company employees
-  { type: 'email', value: 'auditor@pwc.com' },         // External auditor
-  { type: 'organization', value: 'org_partner123' },   // Partner org
-]
+// Real-world example: Company + external auditor
+export const metadata = {
+  id: 'acme-meeting-processor',
+  visibility: 'private' as const,
+  accessGrants: [
+    { type: 'email_domain' as const, value: 'acmecorp.com' },  // Company employees
+    { type: 'email' as const, value: 'auditor@external.com' }, // External auditor
+  ],
+  // ... other metadata
+};
 ```
+
+### Access Grant Types Reference
+
+| Type | Value | Who Gets Access |
+|------|-------|-----------------|
+| `email_domain` | `'company.com'` | Anyone with @company.com email |
+| `email` | `'user@any.com'` | That specific email only |
+| `organization` | `'org_abc123'` | All WORKWAY org members |
 
 ## BYOO: Bring Your Own OAuth
 
@@ -498,99 +565,145 @@ metadata: {
 
 ## Complete Example
 
+This example shows the complete private workflow pattern, including all metadata fields used in production workflows:
+
 ```typescript
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { defineWorkflow, cron } from '@workwayco/sdk';
+
+// Organization-specific constants (hardcoded for internal workflows)
+const INTERNAL_DATABASE_ID = '27a019187ac580b797fec563c98afbbc';
+const INTERNAL_DOMAINS = ['acmecorp.com'];
 
 export default defineWorkflow({
   name: 'ACME Meeting Processor',
-  description: 'Process meetings for ACME Corp with custom CRM sync',
+  description: 'Internal workflow for @acmecorp.com. Meetings sync to central database.',
   version: '1.2.0',
 
-  integrations: [
-    { service: 'zoom', scopes: ['meeting:read'] },
-    { service: 'notion', scopes: ['read_pages', 'write_pages'], optional: true },
-  ],
-
-  inputs: {
-    crmEndpoint: {
-      type: 'text',
-      label: 'Internal CRM API Endpoint',
-      required: true,
+  // Pathway metadata for discovery (optional but recommended)
+  pathway: {
+    outcomeFrame: 'after_meetings',
+    outcomeStatement: {
+      suggestion: 'Want meetings to document themselves?',
+      explanation: 'After every meeting, a Notion page appears with notes and action items.',
+      outcome: 'Meetings that document themselves',
     },
-    crmApiKey: {
-      type: 'text',
-      label: 'CRM API Key',
-      required: true,
-    },
-    notionDatabase: {
-      type: 'text',
-      label: 'Backup Database ID',
-      description: 'Optional: Notion database for backup',
+    zuhandenheit: {
+      timeToValue: 5, // Minutes - be honest about setup time
+      worksOutOfBox: false, // Requires custom setup
+      gracefulDegradation: true,
+      automaticTrigger: false,
     },
   },
 
-  trigger: webhook({
-    service: 'zoom',
-    event: 'meeting.ended',
+  pricing: {
+    model: 'usage',
+    pricePerExecution: 0.05,
+    freeExecutions: 50,
+    description: 'Per meeting processed',
+  },
+
+  integrations: [
+    { service: 'zoom', scopes: ['meeting:read'] },
+    { service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
+  ],
+
+  inputs: {
+    connectionId: {
+      type: 'string',
+      label: 'Connection ID',
+      required: true,
+      description: 'Your unique identifier (set during setup)',
+    },
+  },
+
+  // Cron trigger - runs every 5 minutes
+  trigger: cron({
+    schedule: '*/5 * * * *',
+    timezone: 'UTC',
   }),
 
-  async execute({ trigger, inputs, integrations }) {
-    const { zoom, notion } = integrations;
+  async execute({ inputs, integrations, env }) {
+    const startTime = Date.now();
 
-    const meetingResult = await zoom.getMeeting(trigger.data.object.id);
-    const meeting = meetingResult.data;
+    // Get meetings and process them
+    const meetings = await integrations.zoom.listMeetings({ type: 'past' });
 
-    // Sync to internal CRM
-    await fetch(inputs.crmEndpoint, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${inputs.crmApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        meetingId: meeting.id,
-        topic: meeting.topic,
-        duration: meeting.duration,
-        date: meeting.start_time,
-      }),
-    });
-
-    // Backup to Notion if configured
-    if (inputs.notionDatabase) {
-      await notion.pages.create({
-        parent: { database_id: inputs.notionDatabase },
+    for (const meeting of meetings.data || []) {
+      // Create Notion page (using hardcoded internal database)
+      await integrations.notion.pages.create({
+        parent: { database_id: INTERNAL_DATABASE_ID },
         properties: {
           Name: { title: [{ text: { content: meeting.topic } }] },
+          Date: { date: { start: meeting.start_time } },
+          Type: { select: { name: 'Meeting' } },
         },
       });
     }
 
-    console.log('Meeting processed', {
-      meetingId: meeting.id,
-      crmSynced: true,
-      notionBackup: !!inputs.notionDatabase,
+    console.log('Meetings processed', {
+      count: meetings.data?.length || 0,
+      executionTimeMs: Date.now() - startTime,
     });
 
-    return { success: true };
+    return {
+      success: true,
+      processed: meetings.data?.length || 0,
+      analyticsUrl: 'https://workway.co/workflows/private/acme-meeting-processor/analytics',
+    };
+  },
+
+  onError: async ({ error, inputs }) => {
+    console.error(`Workflow failed for ${inputs.connectionId}:`, error);
   },
 });
 
-// Private workflow metadata
+// Private workflow metadata - CRITICAL: This is what makes it private
 export const metadata = {
   id: 'acme-meeting-processor',
+  category: 'productivity',
+  featured: false,
+
+  // REQUIRED for private workflows
   visibility: 'private' as const,
   accessGrants: [
     { type: 'email_domain' as const, value: 'acmecorp.com' },
     { type: 'email' as const, value: 'auditor@external.com' },
   ],
-  byoo: {
-    enabled: true,
-    providers: ['zoom'],
-    instructions: 'Use your corporate Zoom OAuth app.',
-  },
+
+  // Honest flags about requirements
+  experimental: true,
+  requiresCustomInfrastructure: true,
+  canonicalAlternative: 'meeting-intelligence', // Public version
+
+  // Why this private version exists
+  workaroundReason: 'Organization requires internal database and custom auth',
+  infrastructureRequired: ['BYOO OAuth app', 'Internal Notion database'],
+
+  // Upgrade path when no longer needed
+  upgradeTarget: 'meeting-intelligence',
+  upgradeCondition: 'When org approves shared infrastructure',
+
+  // URLs for the unified workflows page
   analyticsUrl: 'https://workway.co/workflows/private/acme-meeting-processor/analytics',
+  setupUrl: 'https://acme-setup.workway.co/setup',
+
+  stats: { rating: 0, users: 0, reviews: 0 },
 };
 ```
+
+### Key Metadata Fields Explained
+
+| Field | Purpose | Required |
+|-------|---------|----------|
+| `visibility: 'private'` | Hides from marketplace, requires auth | Yes |
+| `accessGrants` | Who can install | Yes |
+| `experimental` | Honest flag about stability | Recommended |
+| `requiresCustomInfrastructure` | Needs non-standard setup | Recommended |
+| `canonicalAlternative` | Points to public version | Recommended |
+| `workaroundReason` | Documents why private exists | Recommended |
+| `upgradeTarget` | Public version to migrate to | Recommended |
+| `analyticsUrl` | Dashboard URL | Optional |
+| `setupUrl` | Custom setup page | Optional |
 
 ## Praxis
 
@@ -598,29 +711,43 @@ Design a private workflow for your organization or a client:
 
 > **Praxis**: Ask Claude Code: "Help me create a private workflow with access controls for [organization/client]"
 
-Define the access and security model:
+Create the complete private workflow metadata with all recommended fields:
 
 ```typescript
-metadata: {
+// Your private workflow metadata
+export const metadata = {
   id: 'my-private-workflow',
-  visibility: 'private',
+  category: 'productivity',
+  featured: false,
 
+  // REQUIRED: Private visibility
+  visibility: 'private' as const,
+
+  // REQUIRED: Who can access
   accessGrants: [
-    { type: 'email_domain', value: 'yourcompany.com' },
-    { type: 'email', value: 'external-contractor@example.com' },
+    { type: 'email_domain' as const, value: 'yourcompany.com' },
+    { type: 'email' as const, value: 'external-contractor@example.com' },
   ],
 
-  analytics: {
-    enabled: true,
-    retention: '90d',
-  },
+  // RECOMMENDED: Honest flags
+  experimental: true,
+  requiresCustomInfrastructure: true,
+  canonicalAlternative: 'public-workflow-id',
 
-  audit: {
-    enabled: true,
-    events: ['execute', 'config_change'],
-    retention: '365d',
-  },
-},
+  // RECOMMENDED: Document why this exists
+  workaroundReason: 'Describe why private version is needed',
+  infrastructureRequired: ['List', 'of', 'requirements'],
+
+  // RECOMMENDED: Upgrade path
+  upgradeTarget: 'public-workflow-id',
+  upgradeCondition: 'When X condition is met',
+
+  // OPTIONAL: URLs
+  analyticsUrl: 'https://workway.co/workflows/private/my-private-workflow/analytics',
+  setupUrl: 'https://your-worker.workway.co/setup',
+
+  stats: { rating: 0, users: 0, reviews: 0 },
+};
 ```
 
 Walk through the deployment and onboarding:
@@ -631,8 +758,19 @@ Walk through the deployment and onboarding:
 4. **Configure**: Connect integrations and set options
 5. **Monitor**: Check analytics dashboard
 
+### Validation Checklist
+
+Your praxis will be validated for these patterns:
+
+- [ ] `visibility: 'private' as const` - TypeScript literal type
+- [ ] `accessGrants` array with at least one grant
+- [ ] `type: 'email_domain' as const` or `type: 'email' as const` patterns
+- [ ] Honest flags (`experimental`, `requiresCustomInfrastructure`)
+- [ ] Upgrade path documented (`canonicalAlternative`, `upgradeTarget`)
+
 ## Reflection
 
 - What workflows in your organization should be private?
 - How does BYOO change the trust model with clients?
 - What audit requirements do your clients have?
+- When would you use `email_domain` vs `email` vs `organization` grants?

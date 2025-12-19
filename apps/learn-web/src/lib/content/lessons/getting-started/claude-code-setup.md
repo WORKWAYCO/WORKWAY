@@ -235,23 +235,61 @@ Once connected, Claude Code gains access to these learning tools:
 
 | Tool | Description |
 |------|-------------|
-| `learn_status` | Check your learning progress |
-| `learn_lesson` | Fetch lesson content |
-| `learn_complete` | Mark lessons complete |
-| `learn_praxis` | Submit workflow exercises |
-| `learn_coach` | Get real-time guidance |
-| `learn_analyze` | Analyze workflow code |
-| `learn_recommend` | Get personalized recommendations |
-| `learn_digest` | Generate weekly summaries |
+| `learn_status` | Get learning progress overview including paths, lessons, and recommendations |
+| `learn_lesson` | Fetch lesson content from WORKWAY Learn with offline caching |
+| `learn_complete` | Mark a lesson as complete with optional reflection |
+| `learn_praxis` | Execute workflow building exercises with pattern validation |
+| `learn_coach` | Get real-time WORKWAY pattern guidance and explanations |
+| `learn_analyze` | Analyze workflow code against WORKWAY patterns and Zuhandenheit principles |
+| `learn_recommend` | Get personalized lesson recommendations based on your progress and skill gaps |
+| `learn_digest` | Generate a weekly or monthly learning summary with achievements and goals |
+| `learn_ethos` | Manage personal workflow principles (Zuhandenheit, outcome focus, simplicity, resilience, honesty) |
+| `learn_authenticate` | Authenticate with WORKWAY Learn to sync progress across devices |
 
-Example usage:
+### Tool Usage Examples
 
+**Check your progress:**
 ```
 > Show me my learning progress
+> What lessons have I completed?
+```
 
+**Fetch lesson content:**
+```
 > Get the lesson on defineWorkflow()
+> Show me the triggers lesson
+```
 
-> Help me complete the first workflow praxis
+**Complete a lesson with reflection:**
+```
+> Mark the claude-code-setup lesson as complete
+> I finished the first-workflow lesson. My reflection: Understanding how integrations work was key.
+```
+
+**Validate your workflow code:**
+```
+> Analyze my workflow in packages/workflows/src/my-workflow/index.ts
+> Check if this code follows WORKWAY patterns: [paste code]
+```
+
+**Get coaching on patterns:**
+```
+> How do I use integrations in a workflow?
+> Explain the Zuhandenheit principle
+> Help me debug this error: [paste error]
+```
+
+**Manage your ethos (workflow principles):**
+```
+> Show me my workflow principles
+> Suggest improvements for my ethos
+> Reflect on my Zuhandenheit principle
+```
+
+**Get recommendations:**
+```
+> What should I learn next?
+> Recommend lessons for improving my integration skills
 ```
 
 ## WORKWAY Skills (Slash Commands)
@@ -264,13 +302,26 @@ When working in the WORKWAY codebase, these skills are available:
 
 | Skill | Description | When to Use |
 |-------|-------------|-------------|
-| `/heidegger-design` | Apply Zuhandenheit and Dieter Rams principles | Architecture decisions, UI/UX choices |
-| `/workway-integrations` | Build integrations using BaseAPIClient | Creating new service integrations |
+| `/heidegger-design` | Apply Zuhandenheit, Geworfenheit, and Dieter Rams' principles | Architecture decisions, UI/UX choices, naming conventions |
+| `/workway-integrations` | Build integrations using BaseAPIClient pattern | Creating new service integrations (Zoom, Notion, Slack, etc.) |
 
-### Using Skills
+### /heidegger-design Skill
 
-Invoke a skill by typing its name:
+This skill applies Heideggerian design philosophy to your code and design decisions:
 
+**Core Concepts:**
+- **Zuhandenheit (Ready-to-hand)**: The tool disappears during use—users think about their goal, not the mechanism
+- **Vorhandenheit (Present-at-hand)**: When a tool breaks, it becomes visible—minimize this through graceful error handling
+- **Geworfenheit (Thrownness)**: Users arrive mid-task with existing context—meet them where they are
+
+**Practical Checklist:**
+1. Will the user notice this, or will it fade into their workflow?
+2. If this breaks, does the user smoothly return to flow?
+3. Does this respect the user's existing context?
+4. Can this be removed without loss of function?
+5. Is this making a real promise or a marketing promise?
+
+**Example Usage:**
 ```
 > /heidegger-design
 
@@ -281,6 +332,28 @@ your current work, asking questions like:
 - What would Dieter Rams remove?
 ```
 
+### /workway-integrations Skill
+
+This skill guides you through building integrations using the canonical patterns:
+
+**Directory Structure:**
+```
+packages/integrations/src/{service}/
+├── index.ts           # Main export
+├── {service}.types.ts # TypeScript interfaces
+├── {service}.ts       # API client (extends BaseAPIClient)
+└── {service}.test.ts  # Tests
+```
+
+**What the Skill Provides:**
+- Proper directory structure setup
+- BaseAPIClient extension pattern
+- Type definitions template
+- OAuth token refresh handling
+- Error handling patterns
+- Test scaffolding
+
+**Example Usage:**
 ```
 > /workway-integrations
 

@@ -45,15 +45,18 @@ export async function loadLesson(pathId: string, lessonId: string): Promise<stri
 				import('./building-workflows/working-with-integrations.md?raw'),
 			'workers-ai': () => import('./building-workflows/workers-ai.md?raw'),
 			'error-handling': () => import('./building-workflows/error-handling.md?raw'),
+			'common-pitfalls': () => import('./building-workflows/common-pitfalls.md?raw'),
 			'local-testing': () => import('./building-workflows/local-testing.md?raw')
 		},
 		'systems-thinking': {
 			'compound-workflows': () => import('./systems-thinking/compound-workflows.md?raw'),
+			'worker-patterns': () => import('./systems-thinking/worker-patterns.md?raw'),
 			'private-workflows': () => import('./systems-thinking/private-workflows.md?raw'),
 			'agency-patterns': () => import('./systems-thinking/agency-patterns.md?raw'),
 			'performance-rate-limiting': () =>
 				import('./systems-thinking/performance-rate-limiting.md?raw'),
-			'monitoring-debugging': () => import('./systems-thinking/monitoring-debugging.md?raw')
+			'monitoring-debugging': () => import('./systems-thinking/monitoring-debugging.md?raw'),
+			'design-philosophy': () => import('./systems-thinking/design-philosophy.md?raw')
 		}
 	};
 

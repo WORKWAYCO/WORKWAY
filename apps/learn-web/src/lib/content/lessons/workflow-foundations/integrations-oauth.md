@@ -1,9 +1,10 @@
-# Integrations & OAuth
+# Integrations & OAuth Providers
 
 ## Learning Objectives
 
 By the end of this lesson, you will be able to:
 
+- Understand the BaseAPIClient pattern that powers all WORKWAY integrations
 - Declare integrations with proper OAuth scopes in the `integrations` array
 - Use the extended format for optional integrations and credential aliasing
 - Handle `ActionResult` responses with `success`, `data`, and `error` checking
@@ -157,16 +158,40 @@ WORKWAY handles steps 2-6. Your workflow just uses the integration.
 
 ## Available Integrations
 
+WORKWAY provides 20+ production integrations. Here are the most commonly used:
+
 | Integration | Capabilities |
 |-------------|--------------|
-| `zoom` | Meetings, recordings, transcripts |
-| `notion` | Pages, databases, blocks |
-| `slack` | Messages, channels, users |
-| `gmail` | Send, read, search emails |
-| `google-calendar` | Events, calendars |
+| `zoom` | Meetings, recordings, clips |
+| `notion` | Pages, databases, blocks, tasks |
+| `slack` | Messages, channels, users, threads |
+| `google-sheets` | Read, write, format spreadsheets |
 | `stripe` | Payments, customers, subscriptions |
 | `hubspot` | Contacts, deals, companies |
-| `salesforce` | Objects, records, queries |
+| `linear` | Issues, projects, teams |
+| `github` | Repos, issues, PRs, commits |
+| `airtable` | Bases, tables, records |
+| `discord` | Messages, channels, guilds |
+| `calendly` | Events, scheduling |
+| `typeform` | Forms, responses |
+| `todoist` | Tasks, projects |
+
+**Industry-Specific:**
+
+| Integration | Use Case |
+|-------------|----------|
+| `procore` | Construction management |
+| `sikka` | Dental practice management |
+| `nexhealth` | Healthcare scheduling |
+| `follow-up-boss` | Real estate CRM |
+| `quickbooks` | Accounting |
+| `docusign` | Document signing |
+
+**AI Integration:**
+
+| Integration | Capabilities |
+|-------------|--------------|
+| `workers-ai` | Text generation, summarization, classification |
 
 ## Using Integrations
 
@@ -198,23 +223,365 @@ Users see which services they need to connect before installing.
 
 ## The BaseAPIClient Pattern
 
-All WORKWAY integrations extend BaseAPIClient, which provides:
+All WORKWAY integrations extend BaseAPIClient from `packages/integrations/src/core/base-client.ts`. This eliminates ~120-180 lines of duplicate code per integration.
+
+**Weniger, aber besser**: One HTTP implementation for all integrations.
 
 ```typescript
-class BaseAPIClient {
-  // Automatic token refresh
-  protected async request(endpoint: string, options?: RequestOptions) {
-    // Checks token expiry
-    // Refreshes if needed
-    // Retries on 401
-    // Handles rate limits
+// From packages/integrations/src/core/base-client.ts
+import {
+  IntegrationError,
+  ErrorCode,
+  createErrorFromResponse,
+} from '@workwayco/sdk';
+
+export interface TokenRefreshHandler {
+  refreshToken: string;
+  tokenEndpoint: string;
+  clientId: string;
+  clientSecret: string;
+  onTokenRefreshed: (newAccessToken: string, newRefreshToken?: string) => void | Promise<void>;
+}
+
+export interface BaseClientConfig {
+  accessToken: string;
+  apiUrl: string;
+  timeout?: number;
+  tokenRefresh?: TokenRefreshHandler;
+}
+
+export abstract class BaseAPIClient {
+  protected accessToken: string;
+  protected readonly apiUrl: string;
+  protected readonly timeout: number;
+  protected readonly tokenRefresh?: TokenRefreshHandler;
+
+  constructor(config: BaseClientConfig) {
+    this.accessToken = config.accessToken;
+    this.apiUrl = config.apiUrl;
+    this.timeout = config.timeout ?? 30000;
+    this.tokenRefresh = config.tokenRefresh;
   }
 
-  // Consistent error handling
-  protected handleError(error: Error) {
-    // Wraps API errors in consistent format
-    // Logs for debugging
-    // Returns user-friendly messages
+  /**
+   * Make an authenticated HTTP request
+   * - Automatic token refresh on 401
+   * - Timeout handling
+   * - Consistent error wrapping
+   */
+  protected async request(
+    path: string,
+    options: RequestInit = {},
+    additionalHeaders: Record<string, string> = {},
+    isRetry = false
+  ): Promise<Response> {
+    const url = `${this.apiUrl}${path}`;
+    const headers = new Headers(options.headers);
+
+    // Standard headers
+    headers.set('Authorization', `Bearer ${this.accessToken}`);
+    headers.set('Content-Type', 'application/json');
+
+    // Integration-specific headers (e.g., Notion-Version, Stripe-Version)
+    for (const [key, value] of Object.entries(additionalHeaders)) {
+      headers.set(key, value);
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+
+      // Handle 401 Unauthorized - attempt token refresh if configured
+      if (response.status === 401 && !isRetry && this.tokenRefresh) {
+        clearTimeout(timeoutId);
+        await this.refreshAccessToken();
+        // Retry the request once with the new token
+        return this.request(path, options, additionalHeaders, true);
+      }
+
+      return response;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new IntegrationError(ErrorCode.TIMEOUT,
+          `Request timed out after ${this.timeout}ms`,
+          { retryable: true });
+      }
+      throw new IntegrationError(ErrorCode.NETWORK_ERROR,
+        `Network request failed: ${error}`,
+        { retryable: true });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
+  // Convenience methods for common HTTP verbs
+  protected get(path: string, headers?: Record<string, string>): Promise<Response>;
+  protected post(path: string, body?: unknown, headers?: Record<string, string>): Promise<Response>;
+  protected patch(path: string, body?: unknown, headers?: Record<string, string>): Promise<Response>;
+  protected put(path: string, body?: unknown, headers?: Record<string, string>): Promise<Response>;
+  protected delete(path: string, headers?: Record<string, string>): Promise<Response>;
+
+  // JSON helpers that combine request + parsing + error handling
+  protected async getJson<T>(path: string, headers?: Record<string, string>): Promise<T>;
+  protected async postJson<T>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T>;
+  protected async patchJson<T>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T>;
+}
+
+/**
+ * Build a query string from an object, filtering out undefined/null values
+ */
+export function buildQueryString(
+  params: Record<string, string | number | boolean | undefined | null>
+): string {
+  const search = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== null && value !== '') {
+      search.set(key, String(value));
+    }
+  }
+  const str = search.toString();
+  return str ? `?${str}` : '';
+}
+```
+
+### How Integrations Extend BaseAPIClient
+
+```typescript
+// From packages/integrations/src/slack/index.ts
+import {
+  ActionResult,
+  createActionResult,
+  IntegrationError,
+  ErrorCode,
+} from '@workwayco/sdk';
+import {
+  BaseAPIClient,
+  validateAccessToken,
+  createErrorHandler,
+  assertResponseOk,
+} from '../core/index.js';
+
+/** Error handler bound to Slack integration */
+const handleError = createErrorHandler('slack');
+
+export class Slack extends BaseAPIClient {
+  constructor(config: SlackConfig) {
+    validateAccessToken(config.accessToken, 'slack');
+    super({
+      accessToken: config.accessToken,
+      apiUrl: config.apiUrl || 'https://slack.com/api',
+      timeout: config.timeout,
+    });
+  }
+
+  async listChannels(options: ListChannelsOptions = {}): Promise<ActionResult<SlackChannel[]>> {
+    const { limit = 100, cursor, excludeArchived = true } = options;
+
+    try {
+      const params = new URLSearchParams({
+        limit: Math.min(limit, 1000).toString(),
+        exclude_archived: excludeArchived.toString(),
+        types: 'public_channel,private_channel',
+      });
+      if (cursor) params.set('cursor', cursor);
+
+      const response = await this.get(`/conversations.list?${params}`);
+      await assertResponseOk(response, { integration: 'slack', action: 'list-channels' });
+
+      const data = await response.json() as { ok: boolean; error?: string; channels?: SlackChannel[] };
+
+      if (!data.ok) {
+        throw this.createSlackError(data.error || 'Unknown error', 'list-channels');
+      }
+
+      return createActionResult({
+        data: data.channels || [],
+        integration: 'slack',
+        action: 'list-channels',
+        schema: 'slack.channel-list.v1',
+      });
+    } catch (error) {
+      return handleError(error, 'list-channels');
+    }
+  }
+
+  /** Map Slack error codes to IntegrationError */
+  private createSlackError(error: string, action: string): IntegrationError {
+    const errorMap: Record<string, ErrorCode> = {
+      not_authed: ErrorCode.AUTH_MISSING,
+      invalid_auth: ErrorCode.AUTH_INVALID,
+      token_expired: ErrorCode.AUTH_EXPIRED,
+      ratelimited: ErrorCode.RATE_LIMITED,
+      channel_not_found: ErrorCode.NOT_FOUND,
+    };
+    const code = errorMap[error] || ErrorCode.API_ERROR;
+    return new IntegrationError(code, `Slack API error: ${error}`, {
+      integration: 'slack', action, providerCode: error,
+      retryable: code === ErrorCode.RATE_LIMITED,
+    });
+  }
+}
+```
+
+Here's another example showing Notion with version headers:
+
+```typescript
+// From packages/integrations/src/notion/index.ts
+export class Notion extends BaseAPIClient {
+  private notionVersion: string;
+
+  constructor(config: NotionConfig) {
+    validateAccessToken(config.accessToken, 'notion');
+    super({
+      accessToken: config.accessToken,
+      apiUrl: config.apiUrl || 'https://api.notion.com/v1',
+      timeout: config.timeout,
+    });
+    this.notionVersion = config.notionVersion || '2022-06-28';
+  }
+
+  /** Notion requires version header on all requests */
+  private get notionHeaders(): Record<string, string> {
+    return { 'Notion-Version': this.notionVersion };
+  }
+
+  async getPage(options: GetPageOptions): Promise<ActionResult<NotionPage>> {
+    if (!options.pageId) {
+      return ActionResult.error('Page ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+        integration: 'notion', action: 'get-page',
+      });
+    }
+
+    try {
+      const response = await this.get(`/pages/${options.pageId}`, this.notionHeaders);
+      await assertResponseOk(response, { integration: 'notion', action: 'get-page' });
+      const page = await response.json() as NotionPage;
+
+      return createActionResult({
+        data: page,
+        integration: 'notion',
+        action: 'get-page',
+        schema: 'notion.page.v1',
+      });
+    } catch (error) {
+      return handleError(error, 'get-page');
+    }
+  }
+}
+```
+
+### Error Handler Pattern
+
+```typescript
+// From packages/integrations/src/core/error-handler.ts
+import {
+  ActionResult,
+  IntegrationError,
+  ErrorCode,
+  createErrorFromResponse,
+} from '@workwayco/sdk';
+
+/**
+ * Create an error handler bound to a specific integration
+ */
+export function createErrorHandler(integrationName: string) {
+  return function handleError<T>(error: unknown, action: string): ActionResult<T> {
+    if (error instanceof IntegrationError) {
+      return ActionResult.error(error.message, error.code, {
+        integration: integrationName,
+        action,
+      });
+    }
+    const errMessage = error instanceof Error ? error.message : String(error);
+    return ActionResult.error(
+      `Failed to ${action.replace(/-/g, ' ')}: ${errMessage}`,
+      ErrorCode.API_ERROR,
+      { integration: integrationName, action }
+    );
+  };
+}
+
+/**
+ * Assert response is OK, throw IntegrationError if not
+ */
+export async function assertResponseOk(
+  response: Response,
+  context: { integration: string; action: string }
+): Promise<void> {
+  if (!response.ok) {
+    throw await createErrorFromResponse(response, context);
+  }
+}
+
+/**
+ * Validate that access token is provided
+ */
+export function validateAccessToken(
+  token: unknown,
+  integrationName: string
+): asserts token is string {
+  if (!token || (typeof token === 'string' && token.trim() === '')) {
+    throw new IntegrationError(
+      ErrorCode.AUTH_MISSING,
+      `${integrationName} access token is required`,
+      { integration: integrationName, retryable: false }
+    );
+  }
+}
+
+// Usage in integration methods:
+const handleError = createErrorHandler('notion');
+
+async createPage(options: CreatePageOptions): Promise<ActionResult<NotionPage>> {
+  try {
+    // ... implementation
+    const response = await this.post('/pages', body, this.notionHeaders);
+    await assertResponseOk(response, { integration: 'notion', action: 'create-page' });
+    const page = await response.json() as NotionPage;
+    return createActionResult({ data: page, integration: 'notion', action: 'create-page' });
+  } catch (error) {
+    return handleError(error, 'create-page');
+  }
+}
+```
+
+### Using buildQueryString (Zoom Example)
+
+```typescript
+// From packages/integrations/src/zoom/index.ts
+import { buildQueryString } from '../core/index.js';
+
+async getMeetings(options: GetMeetingsOptions = {}): Promise<ActionResult<ZoomMeeting[]>> {
+  const { userId = 'me', type = 'previous_meetings', days, pageSize = 300 } = options;
+  let { from, to } = options;
+
+  // Calculate date range if days is specified (Zuhandenheit: "last 7 days" not timestamp math)
+  if (days && !from && !to) {
+    const now = new Date();
+    to = now;
+    from = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
+  }
+
+  try {
+    // buildQueryString filters out undefined values automatically
+    const query = buildQueryString({
+      type,
+      page_size: Math.min(pageSize, 300),
+      from: from ? this.formatDate(from) : undefined,  // Won't appear if undefined
+      to: to ? this.formatDate(to) : undefined,
+    });
+
+    const response = await this.get(`/users/${userId}/meetings${query}`);
+    await assertResponseOk(response, { integration: 'zoom', action: 'get-meetings' });
+    // ...
+  } catch (error) {
+    return handleError(error, 'get-meetings');
   }
 }
 ```
@@ -223,73 +590,114 @@ class BaseAPIClient {
 
 | Feature | What It Does |
 |---------|--------------|
-| Token Refresh | Automatically refreshes expired tokens |
-| Retry Logic | Retries failed requests with backoff |
-| Rate Limiting | Respects API rate limits |
-| Error Wrapping | Consistent error format across integrations |
-| Logging | Built-in request/response logging |
+| Token Refresh | Automatically refreshes expired tokens via OAuth |
+| Retry on 401 | One retry with fresh token before failing |
+| Timeout | Configurable timeout (default: 30s) |
+| Error Wrapping | Consistent `IntegrationError` format |
+| Version Headers | Per-integration headers (Notion-Version, Stripe-Version) |
+| JSON Helpers | `getJson()`, `postJson()` combine request + parsing |
+| buildQueryString | Filters undefined/null, builds clean query strings |
 
 ## Integration Methods
 
-### Zoom
+All methods return `ActionResult<T>` with `success`, `data`, and `error` properties.
+
+### Notion (from packages/integrations/src/notion/index.ts)
 
 ```typescript
-// Meetings
-await zoom.getMeetings();
-await zoom.getMeeting(meetingId);
-await zoom.getMeetingRecordings(meetingId);
-
-// Users
-await zoom.getUser();
-await zoom.getUserSettings();
-```
-
-### Notion
-
-```typescript
-// Databases
-await notion.getDatabases();
-await notion.queryDatabase(databaseId, filter);
-
 // Pages
-await notion.createPage(pageData);
-await notion.updatePage(pageId, properties);
-await notion.getPage(pageId);
+const page = await notion.getPage({ pageId: 'abc123' });
+const created = await notion.createPage({
+  parentDatabaseId: 'db123',
+  properties: { Name: { title: [{ text: { content: 'New Page' } }] } },
+  children: [/* blocks */]
+});
+const updated = await notion.updatePage({ pageId: 'abc123', properties: {...} });
 
-// Blocks
-await notion.appendBlocks(pageId, blocks);
-await notion.getBlocks(blockId);
+// Databases
+const database = await notion.getDatabase('db123');
+const items = await notion.queryDatabase({
+  databaseId: 'db123',
+  filter: { property: 'Status', select: { equals: 'Done' } },
+  sorts: [{ property: 'Created', direction: 'descending' }],
+  page_size: 100
+});
+
+// Search
+const results = await notion.search({ query: 'Project' });
+
+// Blocks (page content)
+const blocks = await notion.getBlockChildren({ blockId: 'page123' });
+
+// Document templates (Zuhandenheit: think "create summary" not "construct blocks")
+const doc = await notion.createDocument({
+  database: 'db123',
+  template: 'meeting',  // 'summary' | 'report' | 'notes' | 'article' | 'meeting' | 'feedback'
+  data: {
+    title: 'Team Standup - 2024-01-15',
+    summary: 'Sprint progress on API work',
+    sections: {
+      actionItems: ['Review PR #123', 'Deploy staging'],
+      decisions: ['Use Workers AI for summarization'],
+    }
+  }
+});
 ```
 
-### Slack
+### Slack (from packages/integrations/src/slack/index.ts)
 
 ```typescript
-// Messages
-await slack.postMessage(channel, text, options);
-await slack.updateMessage(channel, ts, text);
-
 // Channels
-await slack.getChannels();
-await slack.getChannelHistory(channel);
+const channels = await slack.listChannels({ limit: 20, excludeArchived: true });
+
+// Messages with Zuhandenheit time parsing
+// Developer thinks "last 24 hours" not "convert milliseconds to Unix seconds"
+const messages = await slack.getMessages({
+  channel: 'C123456',
+  since: '24h',        // Duration string: "1h", "24h", "7d"
+  humanOnly: true      // Exclude bots and system messages
+});
+
+// Or use specific dates
+const weekMessages = await slack.getMessages({
+  channel: 'C123456',
+  since: new Date('2024-01-01')
+});
+
+// Send message
+const sent = await slack.sendMessage({
+  channel: 'C123456',
+  text: 'Hello from WORKWAY!',
+  thread_ts: 'optional-thread-ts'  // For threading
+});
 
 // Users
-await slack.getUsers();
-await slack.getUserInfo(userId);
+const user = await slack.getUser({ user: 'U123456' });
+
+// Search messages
+const results = await slack.searchMessages('budget meeting');
 ```
 
-### Gmail
+**Zuhandenheit in action**: The `humanOnly` parameter lets developers think "get what people said" instead of "filter by bot_id, subtype, and type". The `since: '24h'` syntax lets them think in human time, not Unix timestamps.
+
+### Workers AI (from packages/integrations/src/workers-ai/index.ts)
 
 ```typescript
-// Send
-await gmail.sendEmail({ to, subject, body });
+// Text generation
+const response = await ai.generateText({
+  prompt: 'Summarize this meeting transcript...',
+  maxTokens: 500
+});
 
-// Read
-await gmail.getMessages(query);
-await gmail.getMessage(messageId);
-
-// Labels
-await gmail.getLabels();
-await gmail.addLabel(messageId, labelId);
+// Structured extraction
+const data = await ai.extractStructured({
+  text: meetingTranscript,
+  schema: {
+    actionItems: 'string[]',
+    decisions: 'string[]',
+    sentiment: 'positive | neutral | negative'
+  }
+});
 ```
 
 ## Custom API Calls

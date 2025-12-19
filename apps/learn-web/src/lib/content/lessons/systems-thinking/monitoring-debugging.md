@@ -4,15 +4,127 @@
 
 By the end of this lesson, you will be able to:
 
+- Use Cloudflare's native debugging tools (`wrangler tail`, Dashboard analytics)
+- Add structured logging with `console.log/warn/error` in Workers
 - Use `workway executions` and `workway logs` to identify failing workflows
-- Add structured logging with context (`context.log.info/warn/error`)
-- Reproduce failures locally by exporting and replaying trigger payloads
+- Reproduce failures locally with `wrangler dev` and payload replay
 - Configure alerts for error rate spikes, latency issues, and stale workflows
 - Implement health checks and integration status monitoring
 
 ---
 
 Workflows in production need visibility. When something goes wrong—and it will—you need the tools to understand what happened and fix it fast.
+
+WORKWAY workflows run on Cloudflare Workers, which means you have access to Cloudflare's native debugging tools alongside WORKWAY's workflow-specific monitoring.
+
+## Cloudflare Workers Logging
+
+Cloudflare Workers use the standard Web Console API for logging. In the V8 isolate runtime, `console.log`, `console.warn`, and `console.error` are your primary logging tools.
+
+### Console API in Workers
+
+```typescript
+export default defineWorkflow({
+  name: 'meeting-notes',
+
+  async execute({ trigger, integrations }) {
+    // Standard console methods work in Workers
+    console.log('Workflow started', { triggerId: trigger.id });
+    console.warn('Potential issue detected');
+    console.error('Critical failure', { error: 'details' });
+
+    // Objects are automatically serialized
+    console.log({
+      nested: {
+        data: trigger.data,
+        timestamp: new Date().toISOString()
+      }
+    });
+
+    return { success: true };
+  }
+});
+```
+
+### Viewing Logs with `wrangler tail`
+
+For real-time log streaming from deployed Workers:
+
+```bash
+# Stream logs from a deployed Worker
+wrangler tail meeting-intelligence-private
+
+# Filter by status
+wrangler tail --status error
+
+# Filter by sampling rate (for high-traffic workers)
+wrangler tail --sampling-rate 0.1
+
+# JSON output for parsing
+wrangler tail --format json
+```
+
+Example output:
+```
+[2024-01-15 10:00:01] GET https://workway.co/webhooks/zoom
+[2024-01-15 10:00:01] (log) Workflow started { triggerId: "wh_abc123" }
+[2024-01-15 10:00:02] (log) Meeting fetched { meetingId: "123", duration: 45 }
+[2024-01-15 10:00:03] (error) Failed to create Notion page { error: "Rate limited" }
+[2024-01-15 10:00:03] (log) Retrying with backoff...
+[2024-01-15 10:00:05] (log) Workflow completed { pageId: "page_456" }
+```
+
+### Local Development Logging
+
+During `wrangler dev`, logs appear directly in your terminal:
+
+```bash
+# Start local dev server
+wrangler dev
+
+# In another terminal, trigger the workflow
+curl -X POST localhost:8787/execute \
+  -H "Content-Type: application/json" \
+  -d '{"meetingId": "123"}'
+```
+
+All `console.log` output streams to your terminal in real-time.
+
+## Cloudflare Dashboard Analytics
+
+The Cloudflare Dashboard provides aggregate analytics for your Workers:
+
+### Workers Analytics (dashboard.cloudflare.com)
+
+Navigate to **Workers & Pages → Your Worker → Analytics**:
+
+| Metric | Description |
+|--------|-------------|
+| **Requests** | Total invocations over time |
+| **Success rate** | Percentage of non-error responses |
+| **Median CPU time** | Typical CPU usage per request |
+| **P99 CPU time** | Worst-case CPU usage |
+| **Duration** | Wall-clock execution time |
+| **Errors** | Breakdown by error type |
+
+### Useful Dashboard Views
+
+1. **Request chart**: Identify traffic patterns and spikes
+2. **Error chart**: Spot failure rate trends
+3. **CPU time distribution**: Find performance outliers
+4. **Geographic distribution**: Understand where requests originate
+
+### Invocation Logs
+
+For detailed per-request logs:
+
+1. Go to **Workers & Pages → Your Worker → Logs**
+2. Click any log entry to see:
+   - Request headers and body
+   - Response status and body
+   - All `console.log` output
+   - Execution duration
+   - Error stack traces (if failed)
 
 ## Step-by-Step: Debug a Failing Workflow
 

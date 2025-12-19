@@ -1,36 +1,82 @@
-# Local Testing & Debugging
+# Testing Workflows Locally
 
 ## Learning Objectives
 
 By the end of this lesson, you will be able to:
 
-- Start the local development server with `workway dev` and hot reloading
+- Start the local development server with `wrangler dev` and understand Cloudflare Workers runtime
 - Test workflows using `curl` with custom JSON payloads
-- Create mock data files for integration testing
-- Write unit tests using the `@workway/testing` utilities
-- Debug workflows using console logging and VS Code debugger
+- Create mock integrations using Vitest patterns from the codebase
+- Write unit tests with proper mocking of storage, integrations, and AI
+- Debug workflows using `wrangler tail` and structured logging
 
 ---
 
-Test before deploy. Find bugs locally, not in production. The WORKWAY CLI brings the full execution environment to your machine.
+Test before deploy. Find bugs locally, not in production. Wrangler brings the Cloudflare Workers environment to your machine.
 
 ## Step-by-Step: Test Your Workflow Locally
 
 ### Step 1: Start the Development Server
 
+WORKWAY workflows run on Cloudflare Workers. Use `wrangler dev` to start locally:
+
 ```bash
-cd my-workflow
-workway dev
+cd packages/workers/my-worker
+wrangler dev
 ```
 
 You'll see:
 ```
-✓ Workflow loaded
-✓ Dev server running at http://localhost:8787
-✓ Watching for file changes...
+⎔ Starting local server...
+[wrangler] Ready on http://localhost:8787
 ```
 
-### Step 2: Trigger a Basic Execution
+### Step 2: Configure wrangler.toml
+
+Every worker needs a `wrangler.toml` configuration:
+
+```toml
+name = "my-workflow"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Environment variables (non-secret)
+[vars]
+WORKER_URL = "https://my-workflow.workway.co"
+
+# Durable Objects for stateful workflows
+[[durable_objects.bindings]]
+name = "SESSIONS"
+class_name = "UserSession"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["UserSession"]
+
+# Cron triggers
+[triggers]
+crons = ["0 7 * * *"]  # Daily at 7 AM UTC
+```
+
+### Step 3: Set Up Environment Variables
+
+Create `.dev.vars` for local secrets (gitignored):
+
+```env
+# OAuth credentials for development
+ZOOM_CLIENT_ID=your_dev_client_id
+ZOOM_CLIENT_SECRET=your_dev_client_secret
+
+# API secrets
+API_SECRET=your_dev_secret
+UPLOAD_SECRET=your_dev_upload_secret
+
+# Optional: Use real APIs instead of mocks
+USE_REAL_APIS=false
+```
+
+### Step 4: Trigger a Test Execution
 
 In a new terminal:
 
@@ -40,7 +86,7 @@ curl http://localhost:8787/execute
 
 Check the dev server terminal for execution logs.
 
-### Step 3: Test with Custom Payload
+### Step 5: Test with Custom Payload
 
 Simulate a webhook event:
 
@@ -56,88 +102,231 @@ curl http://localhost:8787/execute \
   }'
 ```
 
-### Step 4: Create Custom Mock Data
+### Step 6: View Live Logs
 
-Create `mocks/zoom.ts` in your project:
-
-```typescript
-export default {
-  getMeeting: (meetingId: string) => ({
-    success: true,
-    data: {
-      id: meetingId,
-      topic: 'Mock Team Standup',
-      duration: 30,
-      participants: ['Alice', 'Bob'],
-    },
-  }),
-  getTranscript: () => ({
-    success: true,
-    data: {
-      transcript_text: 'Alice: Good morning everyone...',
-    },
-  }),
-};
-```
-
-### Step 5: Test Error Handling
-
-Send invalid data to verify error handling:
+Monitor real-time logs from your deployed worker:
 
 ```bash
-# Missing required fields
-curl http://localhost:8787/execute -d '{}'
+# Stream all logs
+wrangler tail
 
-# Invalid meeting ID
-curl http://localhost:8787/execute \
-  -d '{"object": {"id": "nonexistent"}}'
+# Filter by status
+wrangler tail --status error
+
+# JSON format for parsing
+wrangler tail --format json
 ```
 
-### Step 6: Check Execution Logs
+### Step 7: Hot Reload Development
 
-View detailed logs:
-
-```bash
-workway logs --tail
-```
-
-Or check the dev server output for:
-- Request received
-- Integration calls
-- Errors and warnings
-- Execution result
-
-### Step 7: Iterate and Hot Reload
-
-Edit your workflow code. The dev server automatically reloads:
+Edit your workflow code. Wrangler automatically reloads:
 
 ```
-✓ File changed: src/index.ts
-✓ Workflow reloaded
-```
-
-Test again without restarting:
-
-```bash
-curl http://localhost:8787/execute -d '{"object": {"id": "123"}}'
+[wrangler] Detected changes, restarting...
+[wrangler] Ready on http://localhost:8787
 ```
 
 ---
 
-## Development Server
+## Mocking Patterns for Testing
+
+WORKWAY uses Vitest for testing with mock patterns from the codebase.
+
+### Creating Mock Storage
+
+From `packages/workflows/src/notion-two-way-sync/index.test.ts`:
+
+```typescript
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+function createMockStorage() {
+  const store = new Map<string, unknown>();
+
+  return {
+    get: vi.fn(async <T>(key: string): Promise<T | undefined> => {
+      return store.get(key) as T | undefined;
+    }),
+    set: vi.fn(async (key: string, value: unknown): Promise<void> => {
+      store.set(key, value);
+    }),
+    delete: vi.fn(async (key: string): Promise<void> => {
+      store.delete(key);
+    }),
+    // Test helpers
+    _store: store,
+    _clear: () => store.clear(),
+  };
+}
+```
+
+### Creating Mock Integration Clients
+
+```typescript
+function createMockNotionClient() {
+  return {
+    getPage: vi.fn().mockResolvedValue({
+      success: true,
+      data: {
+        id: 'page-123',
+        properties: {
+          Name: { title: [{ text: { content: 'Test Item' } }] },
+          Status: { status: { name: 'New' } },
+        },
+      },
+    }),
+    createPage: vi.fn().mockResolvedValue({
+      success: true,
+      data: { id: 'new-page-456' },
+    }),
+    updatePage: vi.fn().mockResolvedValue({
+      success: true,
+      data: { id: 'page-123' },
+    }),
+  };
+}
+
+function createMockAI() {
+  return {
+    generateText: vi.fn().mockResolvedValue({
+      success: true,
+      data: { response: 'AI-generated summary of the content.' },
+    }),
+  };
+}
+```
+
+### Complete Test Setup
+
+```typescript
+describe('My Workflow', () => {
+  let storage: ReturnType<typeof createMockStorage>;
+  let notion: ReturnType<typeof createMockNotionClient>;
+  let ai: ReturnType<typeof createMockAI>;
+
+  beforeEach(() => {
+    storage = createMockStorage();
+    notion = createMockNotionClient();
+    ai = createMockAI();
+  });
+
+  it('should create page from webhook event', async () => {
+    const trigger = {
+      data: {
+        type: 'meeting.ended',
+        object: { id: 'meeting-123', topic: 'Team Standup' },
+      },
+    };
+
+    const result = await executeWorkflow({
+      trigger,
+      storage,
+      integrations: { notion, ai },
+    });
+
+    expect(result.success).toBe(true);
+    expect(notion.createPage).toHaveBeenCalled();
+  });
+});
+```
+
+### Testing Idempotency
+
+Prevent duplicate processing:
+
+```typescript
+it('should skip duplicate events within window', async () => {
+  const timestamp = '2024-01-15T10:30:00.000Z';
+
+  // Simulate recent processing
+  storage._store.set(`sync:page-123:${timestamp}`, {
+    syncedAt: Date.now(),
+  });
+
+  const trigger = {
+    data: {
+      page_id: 'page-123',
+      timestamp,
+    },
+  };
+
+  const result = await executeWorkflow({ trigger, storage, integrations });
+
+  expect(result.success).toBe(true);
+  expect(result.skipped).toBe(true);
+  expect(result.reason).toContain('loop prevention');
+});
+```
+
+### Testing Error Scenarios
+
+```typescript
+it('should handle missing mapping gracefully', async () => {
+  // No mapping exists for this page
+  const trigger = {
+    data: { page_id: 'orphan-page', type: 'page.updated' },
+  };
+
+  const result = await executeWorkflow({ trigger, storage, integrations });
+
+  expect(result.success).toBe(false);
+  expect(result.error).toContain('No mapping found');
+  expect(result.hint).toBeDefined();
+});
+
+it('should handle API failures', async () => {
+  notion.createPage.mockResolvedValue({
+    success: false,
+    error: 'Database not found',
+  });
+
+  const result = await executeWorkflow({ trigger, storage, integrations });
+
+  expect(result.success).toBe(false);
+  expect(result.error).toContain('Failed to create');
+});
+```
+
+---
+
+## Development Server Commands
 
 ### Start Local Development
 
 ```bash
-workway dev
+wrangler dev
 ```
 
 This starts:
 - Local HTTP server on `localhost:8787`
 - Hot reload on file changes
-- Mocked integration clients
-- Local D1 database
+- Simulated Cloudflare Workers runtime
+- Access to Durable Objects (local mode)
 - Request/response logging
+
+### Common Wrangler Commands
+
+```bash
+# Start dev server
+wrangler dev
+
+# Start on specific port
+wrangler dev --port 3000
+
+# Deploy to production
+wrangler deploy
+
+# View live logs
+wrangler tail
+
+# Create D1 database
+wrangler d1 create my-database
+
+# Create KV namespace
+wrangler kv:namespace create MY_KV
+
+# Set secrets (production)
+wrangler secret put API_SECRET
+```
 
 ### Trigger Test Execution
 
@@ -156,84 +345,66 @@ curl http://localhost:8787/execute?trigger=webhook \
   -d '{"event": "meeting.ended", "payload": {"object": {"id": "123"}}}'
 ```
 
-## Mocking Integrations
+## Environment Variables
 
-### Default Mocks
+### .dev.vars (Local Development)
 
-In development, integrations return mock data:
+Create `.dev.vars` in your worker directory:
+
+```env
+# OAuth credentials
+GOOGLE_CLIENT_ID=your_client_id
+GOOGLE_CLIENT_SECRET=your_client_secret
+NOTION_CLIENT_ID=your_client_id
+NOTION_CLIENT_SECRET=your_client_secret
+
+# API secrets
+JWT_SECRET=your_dev_jwt_secret
+API_SECRET=your_dev_api_secret
+
+# Feature flags
+USE_REAL_APIS=true
+DEBUG=true
+```
+
+### Production Secrets
+
+Set production secrets via Wrangler:
+
+```bash
+wrangler secret put JWT_SECRET
+# Enter your secret when prompted
+
+wrangler secret put GOOGLE_CLIENT_SECRET
+wrangler secret put API_SECRET
+```
+
+### Accessing Environment Variables
+
+In your workflow code:
 
 ```typescript
-// In dev mode, this returns mock meeting data
-const meeting = await integrations.zoom.getMeeting('123');
-// Returns: { id: '123', topic: 'Mock Meeting', duration: 30 }
-```
+async execute({ env }) {
+  // Access vars from wrangler.toml [vars]
+  const workerUrl = env.WORKER_URL;
 
-### Custom Mock Data
+  // Access secrets from .dev.vars or wrangler secret
+  const apiSecret = env.API_SECRET;
 
-Create `mocks/` directory for custom responses:
-
-```
-my-workflow/
-├── src/
-│   └── index.ts
-├── mocks/
-│   └── zoom.ts
-└── package.json
-```
-
-```typescript
-// mocks/zoom.ts
-export default {
-  getMeeting: (meetingId: string) => ({
-    id: meetingId,
-    topic: 'Custom Mock Meeting',
-    start_time: '2024-01-15T10:00:00Z',
-    duration: 45,
-    participants: [
-      { name: 'Alice', email: 'alice@example.com' },
-      { name: 'Bob', email: 'bob@example.com' },
-    ],
-  }),
-
-  getMeetingTranscript: (meetingId: string) => ({
-    text: 'This is a mock transcript for testing purposes.',
-    speaker_segments: [
-      { speaker: 'Alice', text: 'Hello everyone.' },
-      { speaker: 'Bob', text: 'Hi Alice.' },
-    ],
-  }),
-};
-```
-
-### Mock Environment Variable
-
-Toggle real API calls in development:
-
-```typescript
-async execute({ integrations, context }) {
-  const { zoom } = integrations;
-
-  // Check if using real APIs
-  const useRealApis = context.env.USE_REAL_APIS === 'true';
+  // Feature flag check
+  const useRealApis = env.USE_REAL_APIS === 'true';
 
   if (useRealApis) {
-    context.log.info('Using real Zoom API');
+    console.log('Using real API calls');
   }
-
-  const meeting = await zoom.getMeeting(meetingId);
 }
-```
-
-Set in `.dev.vars`:
-```
-USE_REAL_APIS=true
 ```
 
 ## Testing Strategies
 
-### Unit Testing
+### Unit Testing with Vitest
 
-Test individual functions:
+Test individual helper functions:
 
 ```typescript
 // src/utils.ts
@@ -242,70 +413,90 @@ export function formatMeetingTitle(topic: string, date: Date): string {
 }
 
 // src/utils.test.ts
+import { describe, it, expect } from 'vitest';
 import { formatMeetingTitle } from './utils';
 
-test('formatMeetingTitle includes topic and date', () => {
-  const result = formatMeetingTitle('Standup', new Date('2024-01-15'));
-  expect(result).toBe('Standup - 1/15/2024');
+describe('formatMeetingTitle', () => {
+  it('includes topic and date', () => {
+    const result = formatMeetingTitle('Standup', new Date('2024-01-15'));
+    expect(result).toBe('Standup - 1/15/2024');
+  });
 });
 ```
 
 Run tests:
 ```bash
-npm test
-# or
-workway test
+pnpm test
 ```
 
-### Integration Testing
+### Integration Testing with Mocks
 
-Test complete workflow execution:
+Test complete workflow execution using the mock patterns shown above:
 
 ```typescript
 // src/index.test.ts
-import { testWorkflow } from '@workway/testing';
-import workflow from './index';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-test('creates Notion page from meeting', async () => {
-  const result = await testWorkflow(workflow, {
-    trigger: {
-      type: 'webhook',
-      payload: {
-        event: 'meeting.ended',
-        object: { id: '123', topic: 'Test Meeting' },
-      },
-    },
-    config: {
-      notionDatabase: 'db-123',
-    },
-    mocks: {
-      zoom: {
-        getMeeting: () => ({ id: '123', topic: 'Test Meeting', duration: 30 }),
-      },
-      notion: {
-        createPage: jest.fn().mockResolvedValue({ id: 'page-456' }),
-      },
-    },
+describe('Meeting to Notion Workflow', () => {
+  let storage: ReturnType<typeof createMockStorage>;
+  let notion: ReturnType<typeof createMockNotionClient>;
+  let zoom: ReturnType<typeof createMockZoomClient>;
+  let ai: ReturnType<typeof createMockAI>;
+
+  beforeEach(() => {
+    storage = createMockStorage();
+    notion = createMockNotionClient();
+    zoom = createMockZoomClient();
+    ai = createMockAI();
   });
 
-  expect(result.success).toBe(true);
-  expect(result.pageId).toBe('page-456');
+  it('creates Notion page from meeting webhook', async () => {
+    const trigger = {
+      data: {
+        event: 'meeting.ended',
+        object: { id: 'meeting-123', topic: 'Team Standup' },
+      },
+    };
+
+    const result = await executeWorkflow({
+      trigger,
+      storage,
+      integrations: { notion, zoom, ai },
+      inputs: { notionDatabaseId: 'db-123' },
+    });
+
+    expect(result.success).toBe(true);
+    expect(notion.createPage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        parentDatabaseId: 'db-123',
+      })
+    );
+  });
 });
 ```
 
-### Snapshot Testing
+### Testing with Assertions
 
-Verify output structure:
+Verify specific API call patterns:
 
 ```typescript
-test('meeting page structure', async () => {
-  const { notion } = await testWorkflow(workflow, { /* config */ });
+it('passes meeting data to Notion correctly', async () => {
+  zoom.getMeeting.mockResolvedValue({
+    success: true,
+    data: {
+      id: '123',
+      topic: 'Planning Session',
+      duration: 45,
+      start_time: '2024-01-15T10:00:00Z',
+    },
+  });
+
+  await executeWorkflow({ trigger, storage, integrations });
 
   expect(notion.createPage).toHaveBeenCalledWith(
     expect.objectContaining({
       properties: expect.objectContaining({
-        Name: expect.any(Object),
-        Date: expect.any(Object),
+        Name: { title: [{ text: { content: 'Planning Session' } }] },
       }),
     })
   );
@@ -314,76 +505,97 @@ test('meeting page structure', async () => {
 
 ## Debugging
 
-### Console Logging
+### Structured Console Logging
+
+Use console methods that show in `wrangler tail`:
 
 ```typescript
-async execute({ context }) {
-  context.log.debug('Starting execution');
-  context.log.info('Processing meeting', { meetingId });
-  context.log.warn('Transcript not available');
-  context.log.error('Failed to create page', { error: error.message });
+async execute({ trigger, env }) {
+  const triggerId = crypto.randomUUID().slice(0, 8);
+
+  console.log('[START]', { triggerId, event: trigger.type });
+
+  try {
+    const meeting = await fetchMeeting(trigger.data.meetingId);
+    console.log('[MEETING]', { triggerId, meetingId: meeting.id });
+
+    const page = await createNotionPage(meeting);
+    console.log('[SUCCESS]', { triggerId, pageId: page.id });
+
+    return { success: true, pageId: page.id };
+  } catch (error) {
+    console.error('[ERROR]', { triggerId, error: error.message });
+    throw error;
+  }
 }
 ```
 
-View logs in terminal where `workway dev` is running.
+### Using wrangler tail
 
-### Breakpoints
+Monitor deployed worker logs in real-time:
 
-Use `debugger` statement:
-
-```typescript
-async execute({ integrations }) {
-  const meeting = await integrations.zoom.getMeeting(meetingId);
-
-  debugger; // Execution pauses here in Node debugger
-
-  const page = await integrations.notion.createPage(/* ... */);
-}
-```
-
-Start with debugging:
 ```bash
-workway dev --inspect
+# Stream all logs
+wrangler tail
+
+# Filter errors only
+wrangler tail --status error
+
+# JSON format for piping to jq
+wrangler tail --format json | jq '.logs[]'
+
+# Sample 10% of requests (for high-traffic workers)
+wrangler tail --sampling-rate 0.1
 ```
 
-Then attach VS Code or Chrome DevTools.
+### Local Debugging with VS Code
 
-### VS Code Debug Configuration
+Create `.vscode/launch.json`:
 
-`.vscode/launch.json`:
 ```json
 {
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug Worker",
       "type": "node",
-      "request": "attach",
-      "name": "Attach to WORKWAY",
-      "port": 9229,
-      "restart": true
+      "request": "launch",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["wrangler", "dev", "--local"],
+      "skipFiles": ["<node_internals>/**"],
+      "cwd": "${workspaceFolder}/packages/workers/my-worker"
     }
   ]
 }
 ```
 
-### Inspect Integration Calls
+### Debug Logging in wrangler.toml
 
-Log all integration requests:
+Enable verbose logging:
 
-```typescript
-// wrangler.toml
+```toml
 [dev]
 log_level = "debug"
 ```
 
-Or in code:
-```typescript
-async execute({ integrations, context }) {
-  const { zoom } = integrations;
+### Inspecting Request/Response
 
-  context.log.debug('Fetching meeting', { meetingId });
-  const meeting = await zoom.getMeeting(meetingId);
-  context.log.debug('Meeting fetched', { meeting });
+Log integration calls for debugging:
+
+```typescript
+async function debugFetch(url: string, options: RequestInit) {
+  console.log('[FETCH]', { url, method: options.method });
+
+  const response = await fetch(url, options);
+  const data = await response.json();
+
+  console.log('[RESPONSE]', {
+    url,
+    status: response.status,
+    dataPreview: JSON.stringify(data).slice(0, 200),
+  });
+
+  return data;
 }
 ```
 
@@ -397,40 +609,52 @@ Your mock doesn't cover the method being called:
 // If you call zoom.getMeetingTranscript() but only mock getMeeting()
 // Error: Integration method not mocked: zoom.getMeetingTranscript
 
-// Fix: Add missing mock
-mocks: {
-  zoom: {
-    getMeeting: () => ({ /* ... */ }),
-    getMeetingTranscript: () => ({ text: 'Mock transcript' }), // Add this
-  },
+// Fix: Add missing mock method
+function createMockZoomClient() {
+  return {
+    getMeeting: vi.fn().mockResolvedValue({ success: true, data: {} }),
+    getMeetingTranscript: vi.fn().mockResolvedValue({
+      success: true,
+      data: { text: 'Mock transcript' },
+    }), // Add missing method
+  };
 }
 ```
 
 ### "Cannot connect to localhost:8787"
 
 Development server not running:
-```bash
-# Terminal 1
-workway dev
 
-# Terminal 2 (test commands)
+```bash
+# Terminal 1: Start wrangler
+cd packages/workers/my-worker
+wrangler dev
+
+# Terminal 2: Test commands
 curl localhost:8787/execute
 ```
 
-### "Config value undefined"
+### "Durable Object not found"
 
-Config not provided in test:
+Missing migration in `wrangler.toml`:
 
-```typescript
-// Your workflow expects config.notionDatabase
-// But test doesn't provide it
+```toml
+# Add migration for new Durable Object classes
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["UserSession"]
+```
 
-// Fix:
-const result = await testWorkflow(workflow, {
-  config: {
-    notionDatabase: 'db-123', // Provide required config
-  },
-});
+### "Secret not found in .dev.vars"
+
+Environment variable missing:
+
+```bash
+# Check .dev.vars exists and has the variable
+cat .dev.vars
+
+# Should contain:
+# API_SECRET=your_secret
 ```
 
 ### "TypeScript errors on mock"
@@ -442,17 +666,16 @@ Mock doesn't match interface:
 // Your mock is missing required fields
 
 // Fix: Match the full interface
-mocks: {
-  zoom: {
-    getMeeting: () => ({
-      id: '123',
-      topic: 'Test',
-      start_time: new Date().toISOString(), // Required field
-      duration: 30,
-      participants: [], // Required field
-    }),
+zoom.getMeeting.mockResolvedValue({
+  success: true,
+  data: {
+    id: '123',
+    topic: 'Test',
+    start_time: new Date().toISOString(), // Required field
+    duration: 30,
+    participants: [], // Required field
   },
-}
+});
 ```
 
 ## Test Fixtures
@@ -501,71 +724,131 @@ const shortMeeting = createMeeting({ duration: 10 });
 const longMeeting = createMeeting({ duration: 120, topic: 'Planning' });
 ```
 
+### Event Factory Functions
+
+```typescript
+// tests/fixtures/events.ts
+export function createPageCreatedEvent(
+  pageId: string,
+  databaseId: string,
+  timestamp?: string
+) {
+  return {
+    type: 'page.created',
+    page_id: pageId,
+    id: pageId,
+    parent: { database_id: databaseId },
+    timestamp: timestamp || new Date().toISOString(),
+  };
+}
+
+export function createWebhookEvent(type: string, data: object) {
+  return {
+    type,
+    timestamp: new Date().toISOString(),
+    ...data,
+  };
+}
+```
+
 ## Pre-Deploy Checklist
 
-Before `workway deploy`:
+Before `wrangler deploy`:
 
-- [ ] All tests pass (`workway test`)
-- [ ] No TypeScript errors (`tsc --noEmit`)
+- [ ] All tests pass (`pnpm test`)
+- [ ] No TypeScript errors (`pnpm tsc --noEmit`)
 - [ ] Tested with realistic mock data
 - [ ] Error cases handled
-- [ ] Logging added for debugging
-- [ ] Config schema matches execute usage
+- [ ] Structured logging added for debugging
+- [ ] Secrets configured (`wrangler secret put`)
+- [ ] wrangler.toml configured correctly
 
 ```bash
 # Full check
-workway test && tsc --noEmit && workway deploy
+pnpm test && pnpm tsc --noEmit && wrangler deploy
 ```
 
 ## Praxis
 
 Set up a complete local testing environment:
 
-> **Praxis**: Ask Claude Code: "Help me set up local testing with mocks for my workflow"
+> **Praxis**: Create a test file with mocked storage and integrations for your workflow
 
-Create a test suite:
+Create a test suite using Vitest and the mock patterns:
 
 ```typescript
 // src/index.test.ts
-import { testWorkflow } from '@workway/testing';
-import workflow from './index';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
-test('creates Notion page from meeting', async () => {
-  const result = await testWorkflow(workflow, {
-    trigger: {
-      type: 'webhook',
-      payload: { object: { id: '123', topic: 'Test' } },
-    },
-    config: { notionDatabase: 'db-123' },
-    mocks: {
-      zoom: {
-        getMeeting: () => ({ id: '123', topic: 'Test', duration: 30 }),
-      },
-      notion: {
-        createPage: jest.fn().mockResolvedValue({ id: 'page-456' }),
-      },
-    },
+// Mock factories (copy from above)
+function createMockStorage() { /* ... */ }
+function createMockNotionClient() { /* ... */ }
+function createMockAI() { /* ... */ }
+
+describe('My Workflow', () => {
+  let storage: ReturnType<typeof createMockStorage>;
+  let notion: ReturnType<typeof createMockNotionClient>;
+  let ai: ReturnType<typeof createMockAI>;
+
+  beforeEach(() => {
+    storage = createMockStorage();
+    notion = createMockNotionClient();
+    ai = createMockAI();
   });
 
-  expect(result.success).toBe(true);
+  it('creates page from webhook event', async () => {
+    const trigger = {
+      data: { type: 'meeting.ended', object: { id: '123' } },
+    };
+
+    const result = await executeWorkflow({
+      trigger,
+      storage,
+      integrations: { notion, ai },
+    });
+
+    expect(result.success).toBe(true);
+    expect(notion.createPage).toHaveBeenCalled();
+  });
+
+  it('handles API failures gracefully', async () => {
+    notion.createPage.mockResolvedValue({
+      success: false,
+      error: 'Database not found',
+    });
+
+    const result = await executeWorkflow({
+      trigger,
+      storage,
+      integrations: { notion, ai },
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toBeDefined();
+  });
 });
 ```
 
 Run the development flow:
 
 ```bash
-# Terminal 1: Start dev server
-workway dev
+# Terminal 1: Start wrangler dev
+cd packages/workers/my-worker
+wrangler dev
 
 # Terminal 2: Run tests
-workway test
+pnpm test
 
 # Terminal 3: Manual testing
 curl localhost:8787/execute -d '{"test": true}'
+
+# Monitor deployed logs
+wrangler tail
 ```
 
 ## Reflection
 
-- How does local testing change your development confidence?
+- How does local testing with wrangler change your development confidence?
 - What edge cases should your workflow handle?
 - When should you use real APIs vs. mocks in development?
+- How do Durable Objects affect your testing strategy?

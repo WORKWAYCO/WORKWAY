@@ -27,6 +27,7 @@ export const paths: Path[] = [
 		id: 'getting-started',
 		title: 'Getting Started',
 		description: 'Get your development environment ready in under 2 hours. Install WezTerm, Claude Code, and WORKWAY CLI—everything needed to start building workflows.',
+		introduction: 'Your terminal is the cockpit for building workflows that run themselves. In this path, you will configure WezTerm for distraction-free development, install Claude Code as your AI pair programmer, set up terminal email with Neomutt, and master the WORKWAY CLI. By the end, you will have a professional development environment where tools recede and outcomes remain.',
 		icon: 'terminal',
 		difficulty: 'beginner',
 		estimatedHours: 2,
@@ -72,6 +73,7 @@ export const paths: Path[] = [
 		id: 'workflow-foundations',
 		title: 'Workflow Foundations',
 		description: 'Understand the building blocks that make automations work. Learn patterns for connecting services, handling OAuth, and triggering workflows reliably.',
+		introduction: 'Before you build, you need to understand what makes workflows invisible. This path covers the Zuhandenheit philosophy—designing tools that recede from attention—and the technical patterns that make it possible. You will learn the defineWorkflow() structure, connect services through OAuth, design configuration schemas, and set up triggers. These foundations appear in every workflow you will build.',
 		icon: 'workflow',
 		difficulty: 'beginner',
 		estimatedHours: 3,
@@ -117,6 +119,7 @@ export const paths: Path[] = [
 		id: 'building-workflows',
 		title: 'Building Workflows',
 		description: 'Build real automations: sync Gmail to Notion, summarize meetings with AI, connect Slack with your tools. Five hours of hands-on projects you can ship.',
+		introduction: 'Theory becomes practice. In this path, you will build real workflows from scratch—starting with a Gmail to Notion sync and progressing to multi-service integrations with Workers AI. Each lesson produces working code you can deploy. You will also learn the patterns that separate fragile automations from production-ready systems: error handling, retry logic, and local testing.',
 		icon: 'code',
 		difficulty: 'intermediate',
 		estimatedHours: 5,
@@ -155,6 +158,13 @@ export const paths: Path[] = [
 				praxis: 'Add comprehensive error handling with granular try/catch, retry wrapper, and graceful degradation for optional steps.'
 			},
 			{
+				id: 'common-pitfalls',
+				title: 'Common Pitfalls & Solutions',
+				description: 'Avoid the most common mistakes when building WORKWAY workflows.',
+				duration: '25 min',
+				praxis: 'Create a workflow with an intentional pitfall (Node.js API, rate limiting, or missing validation), observe the error, then apply the fix.'
+			},
+			{
 				id: 'local-testing',
 				title: 'Testing Workflows Locally',
 				description: 'Use wrangler dev and mocking for local development.',
@@ -183,6 +193,13 @@ export const paths: Path[] = [
 					name: 'Meeting Intelligence',
 					description: 'Full meeting workflow with transcripts and follow-ups'
 				}
+			},
+			{
+				id: 'worker-patterns',
+				title: 'Worker Patterns',
+				description: 'Master the Cloudflare Workers V8 runtime: Web APIs, package compatibility, and execution limits.',
+				duration: '30 min',
+				praxis: 'Create a content deduplication helper using crypto.subtle for hashing. Apply batch processing patterns within the 50-subrequest limit.'
 			},
 			{
 				id: 'private-workflows',

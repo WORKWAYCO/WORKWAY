@@ -5,14 +5,171 @@
 By the end of this lesson, you will be able to:
 
 - Identify performance bottlenecks using timing instrumentation
+- Use the SDK's built-in retry utilities (`withRetry`, `fetchWithRetry`)
 - Implement in-memory caching for repeated lookups within a single execution
 - Process items in rate-limited chunks using `processInChunks()` patterns
-- Handle API rate limits with exponential backoff and retry logic
+- Handle API rate limits with exponential backoff using `createRateLimitAwareRetry`
 - Use checkpointing for long-running operations that might timeout
 
 ---
 
-Workflows run in the real world of API limits, execution timeouts, and finite resources. Understanding these constraints leads to robust, efficient workflows.
+Workflows run in the real world of API limits, execution timeouts, and finite resources. WORKWAY's SDK provides built-in utilities for handling these constraints, so you don't have to reinvent retry logic.
+
+## SDK Rate Limiting Utilities
+
+WORKWAY integrations use the **BaseAPIClient** pattern, which provides automatic rate limiting and retry logic. When you use `integrations.zoom`, `integrations.notion`, or any other integration, rate limiting is handled automatically.
+
+### Built-in Retry with `withRetry`
+
+For custom API calls, use the SDK's `withRetry` utility:
+
+```typescript
+import { withRetry, type RetryOptions } from '@workwayco/sdk';
+
+async execute({ config }) {
+  const result = await withRetry(
+    async (context) => {
+      // context.attempt tells you which attempt this is (1, 2, 3...)
+      const response = await fetch('https://api.custom-service.com/data', {
+        headers: { 'Authorization': `Bearer ${config.apiKey}` }
+      });
+
+      if (!response.ok) throw response;
+      return response.json();
+    },
+    {
+      maxAttempts: 3,           // Retry up to 3 times
+      backoff: 'exponential',   // 1s, 2s, 4s delays
+      initialDelay: 1000,       // Start with 1 second
+      maxDelay: 30000,          // Cap at 30 seconds
+      jitter: 0.1,              // Add 10% randomness to prevent thundering herd
+    }
+  );
+
+  return { success: true, data: result };
+}
+```
+
+### Fetch with Automatic Retry
+
+For HTTP requests specifically, use `fetchWithRetry`:
+
+```typescript
+import { fetchWithRetry } from '@workwayco/sdk';
+
+async execute({ config }) {
+  // Automatically retries on 5xx errors and 429 rate limits
+  const response = await fetchWithRetry(
+    'https://api.custom-service.com/data',
+    {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${config.apiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ data: 'value' })
+    },
+    {
+      maxAttempts: 3,
+      timeout: 10000,  // 10 second timeout per attempt
+    }
+  );
+
+  return await response.json();
+}
+```
+
+### Rate Limit Aware Retry
+
+For APIs with `Retry-After` headers, use `createRateLimitAwareRetry`:
+
+```typescript
+import { withRetry, createRateLimitAwareRetry } from '@workwayco/sdk';
+
+async execute({ context }) {
+  const shouldRetry = createRateLimitAwareRetry({
+    maxWait: 60000,  // Don't wait more than 60 seconds
+    onRateLimit: (waitMs) => {
+      context.log.info(`Rate limited, waiting ${waitMs}ms`);
+    }
+  });
+
+  const result = await withRetry(
+    async () => {
+      const response = await fetch('https://api.notion.com/v1/pages', {
+        // ... request config
+      });
+      if (!response.ok) throw response;
+      return response.json();
+    },
+    { shouldRetry }
+  );
+
+  return result;
+}
+```
+
+### Parsing Rate Limit Headers
+
+Extract rate limit info from API responses:
+
+```typescript
+import { parseRetryAfter, extractRateLimitInfo } from '@workwayco/sdk';
+
+async execute({ context }) {
+  const response = await fetch('https://api.example.com/data');
+
+  // Parse Retry-After header (returns milliseconds or null)
+  const retryAfterMs = parseRetryAfter(response);
+  if (retryAfterMs) {
+    context.log.info(`Should retry after ${retryAfterMs}ms`);
+  }
+
+  // Extract full rate limit info from common header patterns
+  const rateLimitInfo = extractRateLimitInfo(response.headers);
+  // { limit: 100, remaining: 42, resetAt: Date, retryAfter: number | null }
+
+  if (rateLimitInfo.remaining < 10) {
+    context.log.warn('Approaching rate limit', rateLimitInfo);
+  }
+
+  return await response.json();
+}
+```
+
+### BaseAPIClient: The Foundation
+
+All WORKWAY integrations extend `BaseAPIClient`, which provides:
+
+| Feature | Description |
+|---------|-------------|
+| Automatic token injection | Bearer token added to all requests |
+| Timeout handling | Configurable per-request timeouts via AbortController |
+| OAuth refresh | Automatic token refresh on 401 responses |
+| JSON helpers | `getJson()`, `postJson()` with automatic parsing |
+| Error mapping | HTTP errors mapped to `IntegrationError` with proper codes |
+
+When building custom integrations, extend `BaseAPIClient`:
+
+```typescript
+import { BaseAPIClient, type BaseClientConfig } from '@workwayco/integrations';
+
+export class CustomServiceClient extends BaseAPIClient {
+  constructor(config: BaseClientConfig) {
+    super({
+      ...config,
+      errorContext: { integration: 'custom-service' }
+    });
+  }
+
+  async getResource(id: string) {
+    // Uses inherited getJson() with automatic error handling
+    return this.getJson(`/resources/${id}`);
+  }
+}
+```
+
+---
 
 ## Step-by-Step: Optimize Your Workflow Performance
 

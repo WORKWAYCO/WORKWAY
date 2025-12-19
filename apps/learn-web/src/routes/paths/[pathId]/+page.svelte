@@ -144,6 +144,10 @@
 			<h1>{path.title}</h1>
 			<p class="text-[var(--color-fg-muted)] text-lg mt-md mb-md">{path.description}</p>
 
+			{#if path.introduction}
+				<p class="text-[var(--color-fg-secondary)] leading-relaxed mb-md">{path.introduction}</p>
+			{/if}
+
 			<div class="flex items-center gap-md text-sm text-[var(--color-fg-subtle)]">
 				<span>{path.lessons.length} lessons</span>
 				<span>{path.estimatedHours} hours</span>

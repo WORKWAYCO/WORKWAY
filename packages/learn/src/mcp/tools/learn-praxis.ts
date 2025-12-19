@@ -409,50 +409,101 @@ function validateConfigurationExercise(praxisId: string, code?: string, evidence
 
 		case 'triggers':
 			// Check for trigger patterns
-			if (/cron\s*\(|schedule\s*:/i.test(content)) {
-				score += 35;
-				result.strengths.push('Cron trigger defined');
+			if (/cron\s*\(|schedule\s*\(/i.test(content)) {
+				score += 30;
+				result.strengths.push('Schedule/cron trigger defined');
 			}
 			if (/webhook\s*\(|webhooks\s*:/i.test(content)) {
-				score += 35;
+				score += 30;
 				result.strengths.push('Webhook trigger defined');
 			}
 			if (/manual\s*\(/i.test(content)) {
-				score += 30;
+				score += 25;
 				result.strengths.push('Manual trigger defined');
+			}
+			if (/poll\s*\(/i.test(content)) {
+				score += 25;
+				result.strengths.push('Poll trigger defined');
 			}
 			if (/\d+\s+\d+\s+\*|\*\/\d+/i.test(content)) {
 				score += 20;
 				result.strengths.push('Valid cron expression');
 			}
+			if (/timezone\s*:/i.test(content)) {
+				score += 10;
+				result.strengths.push('Timezone specified (best practice)');
+			}
+			if (/trigger\.type\s*===?\s*['"`](webhook|schedule|manual|poll)['"`]/i.test(content)) {
+				score += 15;
+				result.strengths.push('Differentiates trigger types in execute');
+			}
 			break;
 
 		case 'performance-rate-limiting':
+			// SDK retry utilities (preferred patterns)
+			if (/withRetry|fetchWithRetry|@workwayco\/sdk.*retry/i.test(content)) {
+				score += 30;
+				result.strengths.push('Uses SDK retry utilities (withRetry/fetchWithRetry)');
+			}
+			if (/createRateLimitAwareRetry|parseRetryAfter/i.test(content)) {
+				score += 25;
+				result.strengths.push('Rate limit header handling with SDK utilities');
+			}
+			if (/extractRateLimitInfo/i.test(content)) {
+				score += 15;
+				result.strengths.push('Extracts rate limit info from headers');
+			}
+			// BaseAPIClient pattern
+			if (/BaseAPIClient|extends.*BaseAPIClient/i.test(content)) {
+				score += 20;
+				result.strengths.push('Uses BaseAPIClient pattern (automatic rate limiting)');
+			}
+			// Caching patterns
 			if (/cache|storage\.get|storage\.put/i.test(content)) {
-				score += 35;
+				score += 25;
 				result.strengths.push('Caching implemented');
 			}
-			if (/chunk|batch|rate.*limit/i.test(content)) {
-				score += 35;
+			// Manual rate limiting (acceptable but less preferred)
+			if (/chunk|batch|rate.*limit|processInChunks/i.test(content)) {
+				score += 20;
 				result.strengths.push('Rate limiting/batching considered');
 			}
-			if (/metric|duration|performance/i.test(content)) {
-				score += 30;
+			// Performance metrics
+			if (/metric|duration|performance|Date\.now\(\)|timings/i.test(content)) {
+				score += 15;
 				result.strengths.push('Performance metrics included');
+			}
+			// Exponential backoff
+			if (/exponential|backoff|jitter|maxDelay/i.test(content)) {
+				score += 15;
+				result.strengths.push('Exponential backoff configured');
 			}
 			break;
 
 		case 'monitoring-debugging':
-			if (/console\.(log|error|warn)|structured.*log/i.test(content)) {
-				score += 40;
-				result.strengths.push('Logging implemented');
+			// Cloudflare-native logging
+			if (/console\.(log|error|warn|info)/i.test(content)) {
+				score += 25;
+				result.strengths.push('Console logging implemented');
 			}
-			if (/context|runId|userId/i.test(content)) {
-				score += 30;
+			// Wrangler tail usage
+			if (/wrangler\s+tail|--status\s+error|--format\s+json/i.test(content)) {
+				score += 25;
+				result.strengths.push('Wrangler tail for live debugging');
+			}
+			// Structured context in logs
+			if (/triggerId|meetingId|userId|executionId|context/i.test(content)) {
+				score += 20;
 				result.strengths.push('Context included in logs');
 			}
-			if (/alert|threshold|error.*rate/i.test(content)) {
-				score += 30;
+			// Cloudflare Dashboard or analytics reference
+			if (/dashboard|analytics|workers.*pages|cpu.*time|success.*rate/i.test(content)) {
+				score += 15;
+				result.strengths.push('Cloudflare analytics referenced');
+			}
+			// Alerting configuration
+			if (/alert|threshold|error.*rate|latency/i.test(content)) {
+				score += 15;
 				result.strengths.push('Alerting considered');
 			}
 			break;
@@ -790,22 +841,119 @@ function validateWorkflowCode(code: string): ValidationResult {
 	}
 
 	// ====================
-	// ERROR HANDLING (5 points)
+	// ERROR HANDLING (15 points)
 	// ====================
 
 	// Check for onError handler (WORKWAY pattern)
 	const hasOnError = /onError\s*:\s*async/i.test(code);
 	const hasTryCatch = /try\s*\{[\s\S]*catch\s*\(/i.test(code);
 
+	// SDK retry utilities (preferred patterns)
+	const hasWithRetry = /withRetry\s*\(/i.test(code);
+	const hasFetchWithRetry = /fetchWithRetry\s*\(/i.test(code);
+	const hasRetryImport = /import\s*\{[^}]*(?:withRetry|fetchWithRetry)[^}]*\}\s*from\s*['"]@workwayco\/sdk['"]/i.test(code);
+
+	// IntegrationError handling
+	const hasIntegrationError = /IntegrationError/i.test(code);
+	const hasIsIntegrationError = /isIntegrationError\s*\(/i.test(code);
+	const hasErrorCode = /ErrorCode\./i.test(code);
+	const hasIsRetryable = /\.isRetryable\s*\(\)/i.test(code);
+	const hasGetUserMessage = /\.getUserMessage\s*\(\)/i.test(code);
+
+	// Graceful degradation patterns
+	const hasOptionalStep = /optional.*step|continue.*don't fail|log.*but continue/i.test(code);
+	const hasGracefulDegradation = /graceful|degrad|fallback/i.test(code);
+
 	if (hasOnError) {
 		score += 5;
-		result.strengths.push('Has onError handler');
-	} else if (hasTryCatch) {
+		result.strengths.push('Has onError handler for workflow-level errors');
+	}
+
+	if (hasTryCatch) {
 		score += 3;
-		result.strengths.push('Uses try/catch in execute');
-		result.improvements.push('Consider adding onError handler for graceful failure notifications');
-	} else {
+		result.strengths.push('Uses try/catch for granular error handling');
+	}
+
+	if (hasWithRetry || hasFetchWithRetry) {
+		score += 5;
+		result.strengths.push('Uses SDK retry utilities (withRetry/fetchWithRetry)');
+	}
+
+	if (hasIntegrationError || hasIsIntegrationError) {
+		score += 3;
+		result.strengths.push('Uses IntegrationError for typed error handling');
+	}
+
+	if (hasIsRetryable || hasGetUserMessage) {
+		score += 2;
+		result.strengths.push('Uses IntegrationError helper methods');
+	}
+
+	if (hasOptionalStep || hasGracefulDegradation) {
+		score += 2;
+		result.strengths.push('Implements graceful degradation for optional steps');
+	}
+
+	// Suggest improvements based on what's missing
+	if (!hasOnError && !hasTryCatch) {
 		result.improvements.push('Add error handling (onError handler or try/catch)');
+	} else if (!hasOnError) {
+		result.improvements.push('Consider adding onError handler for workflow-level error notifications');
+	}
+
+	if (!hasWithRetry && !hasFetchWithRetry) {
+		result.improvements.push('Consider using withRetry() for transient failures');
+	}
+
+	if (!hasIntegrationError && !hasIsIntegrationError) {
+		result.improvements.push('Use isIntegrationError() for typed error handling');
+	}
+
+	// ====================
+	// AGENCY PATTERNS (bonus points for agency-patterns praxis)
+	// ====================
+
+	const agencyIndicators = {
+		// Template factory pattern (function that returns workflow)
+		hasTemplateFactory: /function\s+\w+\([^)]*\)\s*\{[\s\S]*defineWorkflow/i.test(code),
+		// Private visibility
+		hasPrivateVisibility: /visibility\s*:\s*['"`]private['"`]/i.test(code),
+		// Access grants for email domain
+		hasAccessGrants: /accessGrants\s*:\s*\[/i.test(code),
+		hasEmailDomainGrant: /type\s*:\s*['"`]email_domain['"`]/i.test(code),
+		// Agency tagging
+		hasAgencyTags: /tags\s*:\s*\[[\s\S]*agency:/i.test(code),
+		hasClientTags: /tags\s*:\s*\[[\s\S]*client:/i.test(code),
+		// Parameterized client name
+		hasClientNameParam: /clientName|client.*name/i.test(code),
+		// Pricing configuration
+		hasPricing: /pricing\s*:\s*\{/i.test(code),
+	};
+
+	// Award bonus points for agency-specific patterns
+	if (agencyIndicators.hasTemplateFactory) {
+		score += 5;
+		result.strengths.push('Uses template factory pattern (agency best practice)');
+	}
+
+	if (agencyIndicators.hasPrivateVisibility) {
+		score += 3;
+		result.strengths.push('Configures private visibility for client workflows');
+	}
+
+	if (agencyIndicators.hasAccessGrants && agencyIndicators.hasEmailDomainGrant) {
+		score += 3;
+		result.strengths.push('Uses email domain access grants');
+	}
+
+	if (agencyIndicators.hasAgencyTags || agencyIndicators.hasClientTags) {
+		score += 2;
+		result.strengths.push('Uses agency/client tagging for portfolio management');
+	}
+
+	if (agencyIndicators.hasPricing) {
+		score += 2;
+		result.strengths.push('Configures pricing model');
 	}
 
 	// ====================

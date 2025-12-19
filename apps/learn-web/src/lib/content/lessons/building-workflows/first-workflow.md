@@ -1,4 +1,4 @@
-# Your First Workflow: Gmail to Notion
+# Your First Workflow
 
 ## Learning Objectives
 
@@ -52,6 +52,7 @@ Open `src/index.ts` and replace the contents:
 
 ```typescript
 import { defineWorkflow, schedule } from '@workwayco/sdk';
+import type { GmailIntegration, NotionIntegration } from '@workwayco/sdk';
 
 export default defineWorkflow({
   name: 'Gmail to Notion',
@@ -79,13 +80,17 @@ export default defineWorkflow({
   }),
 
   async execute({ inputs, integrations, storage }) {
-    const { gmail, notion } = integrations;
+    // Type the integrations for better autocomplete
+    const gmail = integrations.gmail as GmailIntegration;
+    const notion = integrations.notion as NotionIntegration;
 
     // Get starred emails since last check
-    const lastCheck = await storage.get('lastCheck') || new Date(0).toISOString();
+    const lastCheck = await storage.get<string>('lastCheck') || new Date(0).toISOString();
 
-    const emailsResult = await gmail.getMessages({
+    // Use listMessages with query filter
+    const emailsResult = await gmail.listMessages({
       query: `is:starred after:${lastCheck}`,
+      maxResults: 50,
     });
 
     if (!emailsResult.success) {
@@ -96,28 +101,40 @@ export default defineWorkflow({
     console.log(`Found ${emails.length} new starred emails`);
 
     for (const email of emails) {
-      // Get full email content
+      // Get full email content with getMessage
       const fullEmailResult = await gmail.getMessage(email.id);
       if (!fullEmailResult.success) continue;
 
       const fullEmail = fullEmailResult.data;
 
-      // Create Notion page
-      await notion.pages.create({
-        parent: { database_id: inputs.notionDatabase },
+      // Extract email headers
+      const headers = fullEmail.payload?.headers || [];
+      const getHeader = (name: string) =>
+        headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+
+      const subject = getHeader('Subject') || '(No Subject)';
+      const from = getHeader('From');
+      const date = fullEmail.internalDate
+        ? new Date(parseInt(fullEmail.internalDate)).toISOString()
+        : new Date().toISOString();
+
+      // Create Notion page using createPage with parentDatabaseId
+      const pageResult = await notion.createPage({
+        parentDatabaseId: inputs.notionDatabase,
         properties: {
           Name: {
-            title: [{ text: { content: fullEmail.subject } }]
+            title: [{ text: { content: subject } }]
           },
           From: {
-            rich_text: [{ text: { content: fullEmail.from } }]
+            rich_text: [{ text: { content: from } }]
           },
           Date: {
-            date: { start: fullEmail.date }
+            date: { start: date }
           },
         },
         children: [
           {
+            object: 'block',
             type: 'paragraph',
             paragraph: {
               rich_text: [{ text: { content: fullEmail.snippet } }],
@@ -126,7 +143,9 @@ export default defineWorkflow({
         ],
       });
 
-      console.log('Created Notion page:', fullEmail.subject);
+      if (pageResult.success) {
+        console.log('Created Notion page:', subject);
+      }
     }
 
     // Update last check time
@@ -150,7 +169,18 @@ integrations: [
 ],
 ```
 
-Users must connect both Gmail and Notion before installing.
+Users must connect both Gmail and Notion before installing. The `scopes` array declares what permissions are needed.
+
+### Type-Safe Integration Access
+```typescript
+import type { GmailIntegration, NotionIntegration } from '@workwayco/sdk';
+
+// In execute:
+const gmail = integrations.gmail as GmailIntegration;
+const notion = integrations.notion as NotionIntegration;
+```
+
+Casting integrations provides autocomplete and type checking for API calls.
 
 ### Inputs
 ```typescript
@@ -179,12 +209,42 @@ trigger: schedule('*/15 * * * *'),  // Every 15 minutes UTC
 
 Runs automatically every 15 minutes.
 
+### Gmail API Pattern
+```typescript
+// List messages with a query filter
+const emailsResult = await gmail.listMessages({
+  query: `is:starred after:${lastCheck}`,
+  maxResults: 50,
+});
+
+// Get full message content by ID
+const fullEmailResult = await gmail.getMessage(email.id);
+
+// Extract headers from the message payload
+const headers = fullEmail.payload?.headers || [];
+const subject = headers.find(h => h.name === 'Subject')?.value;
+```
+
+The Gmail integration uses `listMessages` to search and `getMessage` for full content.
+
+### Notion API Pattern
+```typescript
+const pageResult = await notion.createPage({
+  parentDatabaseId: inputs.notionDatabase,  // Not parent: { database_id: ... }
+  properties: { /* ... */ },
+  children: [ /* blocks */ ],
+});
+```
+
+Use `parentDatabaseId` (not nested `parent` object) for the WORKWAY SDK.
+
 ### Execute Logic
 ```typescript
 async execute({ inputs, integrations, storage }) {
-  // 1. Get new starred emails
-  // 2. For each email, create Notion page
-  // 3. Remember when we last checked (using storage)
+  // 1. Get new starred emails using listMessages
+  // 2. For each email, get full content with getMessage
+  // 3. Extract headers and create Notion page
+  // 4. Remember when we last checked (using storage)
 }
 ```
 
@@ -259,18 +319,38 @@ The email should appear as a new page.
 
 ### Add Email Body
 
-Include the full email body:
+Include the full email body by decoding the base64 content:
 
 ```typescript
+// Helper to decode base64url encoded content
+function decodeBase64Url(str: string): string {
+  let base64 = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (base64.length % 4) base64 += '=';
+  return atob(base64);
+}
+
+// Extract body from payload
+function extractBody(payload: any): string {
+  if (payload.body?.data) return decodeBase64Url(payload.body.data);
+  if (payload.parts) {
+    const textPart = payload.parts.find((p: any) => p.mimeType === 'text/plain');
+    if (textPart?.body?.data) return decodeBase64Url(textPart.body.data);
+  }
+  return '';
+}
+
+// In the children array:
 children: [
   {
+    object: 'block',
     type: 'heading_2',
     heading_2: { rich_text: [{ text: { content: 'Email Content' } }] },
   },
   {
+    object: 'block',
     type: 'paragraph',
     paragraph: {
-      rich_text: [{ text: { content: fullEmail.body } }],
+      rich_text: [{ text: { content: extractBody(fullEmail.payload) } }],
     },
   },
 ],
@@ -291,8 +371,9 @@ inputs: {
 },
 
 // In execute:
-const emails = await gmail.getMessages({
+const emailsResult = await gmail.listMessages({
   query: `label:${inputs.gmailLabel} after:${lastCheck}`,
+  maxResults: 50,
 });
 ```
 
@@ -315,6 +396,7 @@ Instead of polling, use Gmail push notifications:
 
 ```typescript
 import { defineWorkflow, webhook } from '@workwayco/sdk';
+import type { GmailIntegration, NotionIntegration } from '@workwayco/sdk';
 
 export default defineWorkflow({
   name: 'Gmail to Notion (Real-time)',
@@ -324,6 +406,14 @@ export default defineWorkflow({
     { service: 'notion', scopes: ['write_pages'] },
   ],
 
+  inputs: {
+    notionDatabase: {
+      type: 'text',
+      label: 'Notion Database ID',
+      required: true,
+    },
+  },
+
   // Webhook trigger for real-time processing
   trigger: webhook({
     service: 'gmail',
@@ -331,13 +421,26 @@ export default defineWorkflow({
   }),
 
   async execute({ trigger, inputs, integrations }) {
-    const email = trigger.data;
+    const gmail = integrations.gmail as GmailIntegration;
+    const notion = integrations.notion as NotionIntegration;
 
-    if (email.labels?.includes('STARRED')) {
-      await integrations.notion.pages.create({
-        parent: { database_id: inputs.notionDatabase },
+    const messageId = trigger.data.messageId;
+
+    // Get full message
+    const msgResult = await gmail.getMessage(messageId);
+    if (!msgResult.success) return { success: false };
+
+    const email = msgResult.data;
+    const headers = email.payload?.headers || [];
+    const getHeader = (name: string) =>
+      headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+
+    // Check if starred
+    if (email.labelIds?.includes('STARRED')) {
+      await notion.createPage({
+        parentDatabaseId: inputs.notionDatabase,
         properties: {
-          Name: { title: [{ text: { content: email.subject } }] },
+          Name: { title: [{ text: { content: getHeader('Subject') } }] },
         },
       });
     }

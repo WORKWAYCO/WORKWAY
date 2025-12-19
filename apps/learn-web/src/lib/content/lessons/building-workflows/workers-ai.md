@@ -1,4 +1,4 @@
-# Workers AI: Adding Intelligence
+# Using Workers AI for Intelligence
 
 ## Learning Objectives
 
@@ -168,6 +168,133 @@ async execute({ integrations }) {
 }
 ```
 
+## Real Examples from the WORKWAY Codebase
+
+These examples are taken directly from production WORKWAY workflows.
+
+### Customer Feedback Analysis
+
+From `packages/workflows/src/feedback-analyzer/index.ts` — This workflow analyzes customer feedback emails and extracts structured insights:
+
+```typescript
+// AI Analysis with structured JSON output
+const analysis = await integrations.ai.generateText({
+  model: AIModels.LLAMA_3_8B,
+  system: `Analyze customer feedback and return JSON:
+{
+  "sentiment": "positive" | "neutral" | "negative",
+  "sentimentScore": 0-1 (1 = very positive, 0 = very negative),
+  "category": "bug" | "feature_request" | "praise" | "complaint" | "question" | "other",
+  "summary": "one sentence summary",
+  "keyPoints": ["point1", "point2"],
+  "suggestedAction": "what to do about this feedback",
+  "priority": "low" | "medium" | "high" | "urgent"
+}`,
+  prompt: `Analyze this customer feedback:\n\nFrom: ${from}\nSubject: ${subject}\n\n${body}`,
+  temperature: 0.3,
+  max_tokens: 400,
+});
+
+let parsed;
+try {
+  parsed = JSON.parse(analysis.data?.response || '{}');
+} catch {
+  // Fallback when JSON parsing fails
+  parsed = {
+    sentiment: 'neutral',
+    sentimentScore: 0.5,
+    category: 'other',
+    summary: 'Unable to analyze',
+    keyPoints: [],
+    suggestedAction: 'Manual review required',
+    priority: 'medium',
+  };
+}
+```
+
+**Key patterns:**
+- Uses `temperature: 0.3` for consistent structured output
+- Provides explicit JSON schema in system prompt
+- Has fallback values when parsing fails
+
+### Support Ticket Classification
+
+From `packages/workflows/src/support-ticket-router/index.ts` — This workflow routes support tickets to the right team:
+
+```typescript
+// AI Classification for ticket routing
+const classification = await integrations.ai.generateText({
+  model: AIModels.LLAMA_3_8B,
+  system: `You are a support ticket classifier. Analyze the message and return JSON:
+{
+  "category": "billing" | "technical" | "sales" | "general",
+  "urgency": "low" | "medium" | "high" | "critical",
+  "summary": "one sentence summary",
+  "suggestedResponse": "brief suggested response"
+}`,
+  prompt: `Classify this support message:\n\n${message.text}`,
+  temperature: 0.3,
+  max_tokens: 200,
+});
+
+let parsed;
+try {
+  parsed = JSON.parse(classification.data?.response || '{}');
+} catch {
+  parsed = { category: 'general', urgency: 'medium', summary: 'Unable to classify' };
+}
+
+const { category, urgency, summary, suggestedResponse } = parsed;
+
+// Route based on classification
+const targetChannel = inputs.routingChannels[category] || inputs.routingChannels.general;
+```
+
+**Key patterns:**
+- Limited output categories for reliable routing decisions
+- Generates both classification AND suggested response in one call
+- Falls back to safe defaults ('general', 'medium')
+
+### Meeting Notes Summarization
+
+From `packages/workflows/src/meeting-summarizer/index.ts` — This workflow summarizes meeting notes and extracts action items:
+
+```typescript
+// AI Analysis with configurable summary length
+const lengthInstructions = {
+  brief: 'Keep the summary to 2-3 sentences.',
+  standard: 'Provide a thorough summary in 4-6 sentences.',
+  detailed: 'Provide a comprehensive summary with all key points.',
+};
+
+const analysis = await integrations.ai.generateText({
+  model: AIModels.LLAMA_3_8B,
+  system: `You are a meeting notes analyst. Analyze meeting notes and extract:
+1. Summary: ${lengthInstructions[inputs.summaryLength]}
+2. Key Decisions: List any decisions made (bullet points)
+3. Action Items: List tasks with assignees if mentioned (format: "- [ ] Task (@person if mentioned)")
+4. Next Steps: What needs to happen next
+
+Return as JSON:
+{
+  "summary": "...",
+  "decisions": ["..."],
+  "actionItems": [{"task": "...", "assignee": "..." or null}],
+  "nextSteps": ["..."]
+}`,
+  prompt: `Analyze these meeting notes:\n\nTitle: ${pageTitle}\n\n${textContent}`,
+  temperature: 0.3,
+  max_tokens: 800,
+});
+```
+
+**Key patterns:**
+- User-configurable output length via input options
+- Extracts multiple structured data types in one call
+- Action items include optional assignee detection
+
+---
+
 ## Common Use Cases
 
 ### Text Summarization
@@ -245,6 +372,17 @@ async function analyzeSentiment(text: string, ai: any) {
 ```
 
 ## Available Models
+
+### Model Selection Guide
+
+| Task | Recommended Model | Why |
+|------|------------------|-----|
+| Meeting summaries | `LLAMA_3_8B` | Best balance of quality and speed |
+| Action item extraction | `LLAMA_3_8B` + low temp | Deterministic structured output |
+| Code generation | `CODE_LLAMA` | Trained on code, better syntax |
+| Email classification | `LLAMA_3_8B` + temp 0.1 | Single-word responses need consistency |
+| Semantic search | `BGE_BASE` | High-quality embeddings |
+| Quick embeddings | `BGE_SMALL` | Faster, slightly lower quality |
 
 WORKWAY provides model constants via `AIModels`:
 

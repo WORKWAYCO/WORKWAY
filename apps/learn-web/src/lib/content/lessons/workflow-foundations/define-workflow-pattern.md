@@ -113,6 +113,8 @@ curl http://localhost:8787/execute -d '{}'
 
 ## Anatomy of a Workflow
 
+This is the actual `stripe-to-notion` workflow from `packages/workflows/src/stripe-to-notion/index.ts` (simplified for clarity):
+
 ```typescript
 // From: packages/workflows/src/stripe-to-notion/index.ts
 import { defineWorkflow, webhook } from '@workwayco/sdk';
@@ -143,6 +145,12 @@ export default defineWorkflow({
       default: true,
       description: 'Also log refunds to the database',
     },
+    currencyFormat: {
+      type: 'select',
+      label: 'Currency Display',
+      options: ['symbol', 'code', 'both'],
+      default: 'symbol',
+    },
   },
 
   // When to run: webhook from Stripe
@@ -153,19 +161,44 @@ export default defineWorkflow({
 
   // What happens when the workflow runs
   async execute({ trigger, inputs, integrations }) {
-    // Your workflow logic here
     const event = trigger.data;
+    const isRefund = event.type === 'charge.refunded';
+
+    // Skip refunds if not configured
+    if (isRefund && !inputs.includeRefunds) {
+      return { success: true, skipped: true, reason: 'Refunds disabled' };
+    }
+
+    // Extract payment details
     const paymentData = event.data.object;
+    const amount = paymentData.amount / 100;
+    const currency = paymentData.currency.toUpperCase();
 
     // Create Notion page
-    const page = await integrations.notion.pages.create({
+    const notionPage = await integrations.notion.pages.create({
       parent: { database_id: inputs.notionDatabaseId },
       properties: {
-        Name: { title: [{ text: { content: `Payment: ${paymentData.amount / 100}` } }] },
+        Name: {
+          title: [{ text: { content: `${isRefund ? 'Refund' : 'Payment'}: $${amount}` } }],
+        },
+        Amount: { number: isRefund ? -amount : amount },
+        Currency: { select: { name: currency } },
+        Status: { select: { name: isRefund ? 'Refunded' : 'Completed' } },
+        'Payment ID': { rich_text: [{ text: { content: paymentData.id } }] },
+        Date: { date: { start: new Date(paymentData.created * 1000).toISOString() } },
       },
     });
 
-    return { success: true, pageId: page.data?.id };
+    if (!notionPage.success) {
+      throw new Error(`Failed to create Notion page: ${notionPage.error?.message}`);
+    }
+
+    return {
+      success: true,
+      paymentId: paymentData.id,
+      notionPageId: notionPage.data.id,
+      type: isRefund ? 'refund' : 'payment',
+    };
   },
 });
 ```
@@ -229,32 +262,43 @@ inputs: {
 
 ### 4. Trigger
 
-Define when the workflow runs using trigger helpers:
+Define when the workflow runs using trigger helpers. These examples are from actual production workflows:
 
 ```typescript
-import { webhook, schedule, cron, manual, poll } from '@workwayco/sdk';
+import { webhook, schedule, cron, manual } from '@workwayco/sdk';
 
-// Webhook trigger - single event
-trigger: webhook({ service: 'zoom', event: 'recording.completed' }),
-
-// Webhook trigger - multiple events (from stripe-to-notion workflow)
+// Webhook trigger - multiple events
+// From: packages/workflows/src/stripe-to-notion/index.ts
 trigger: webhook({
   service: 'stripe',
   events: ['payment_intent.succeeded', 'charge.refunded'],
 }),
 
-// Schedule trigger - cron expression (both patterns work)
-trigger: schedule('0 9 * * *'),  // Daily at 9 AM UTC
+// Webhook trigger - GitHub events
+// From: packages/workflows/src/github-to-linear/index.ts
+trigger: webhook({
+  service: 'github',
+  events: ['issues.opened', 'issues.edited', 'issues.closed', 'issues.reopened', 'issue_comment.created'],
+}),
 
-// Schedule with timezone (from standup-bot workflow)
+// Schedule with dynamic cron from user inputs
+// From: packages/workflows/src/standup-bot/index.ts
 trigger: schedule({
-  cron: '0 9 * * 1-5',  // Weekdays at 9 AM
-  timezone: 'America/New_York',
+  cron: '0 {{inputs.standupTime.hour}} * * 1-5',  // Weekdays at user-configured time
+  timezone: '{{inputs.timezone}}',
+}),
+
+// Schedule with fixed cron
+// From: packages/workflows/src/payment-reminders/index.ts
+trigger: schedule({
+  cron: '0 {{inputs.checkTime.hour}} * * *',  // Daily at configured time
+  timezone: '{{inputs.timezone}}',
 }),
 
 // cron() is an alias for schedule()
+// From: packages/workflows/src/meeting-intelligence/index.ts
 trigger: cron({
-  schedule: '0 7 * * *',
+  schedule: '0 7 * * *',  // 7 AM UTC daily
   timezone: 'UTC',
 }),
 
@@ -264,7 +308,13 @@ trigger: manual({ description: 'Generate report' }),
 
 ### 5. Execute Function
 
-The execute function contains your workflow logic:
+The execute function contains your workflow logic. Inside `execute()`, you have significant flexibility:
+
+- **`fetch()`** - Call any HTTP API directly
+- **Custom functions** - Define helpers at module level
+- **Workers AI** - Generate text, summarize, classify
+- **Standard JS** - Arrays, dates, regex, JSON, Map, Set
+- **Complex logic** - if/else, loops, try/catch
 
 ```typescript
 async execute({ trigger, inputs, integrations, storage }) {
@@ -290,6 +340,8 @@ async execute({ trigger, inputs, integrations, storage }) {
   return { success: true, meetingId: meeting.id };
 }
 ```
+
+See the [Common Pitfalls lesson](/paths/building-workflows/lessons/common-pitfalls) for full details on what works and what doesn't.
 
 ### 6. Return Value
 
@@ -354,22 +406,49 @@ await slack.chat.postMessage({ ... });
 
 ### storage
 
-Persistent key-value storage (survives across executions):
+Persistent key-value storage (survives across executions). From `github-to-linear/index.ts`:
 
 ```typescript
-// Get value
-const lastProcessedId = await storage.get('lastProcessedId');
+// From: packages/workflows/src/github-to-linear/index.ts
+async execute({ trigger, inputs, integrations, storage }) {
+  const event = trigger.data;
+  const issue = event.issue;
+  const repo = event.repository;
 
-// Set value
-await storage.put('lastProcessedId', meeting.id);
+  // Generate storage key for tracking synced issues
+  const storageKey = `github-issue:${repo.full_name}:${issue.number}`;
 
-// Delete value
-await storage.delete('lastProcessedId');
+  // Idempotency check: see if we've already synced this issue
+  const existingSync = await storage.get(storageKey);
+  if (existingSync?.linearIssueId) {
+    return {
+      success: true,
+      skipped: true,
+      reason: 'Issue already synced (idempotency check)',
+      linearIssueId: existingSync.linearIssueId,
+    };
+  }
+
+  // Create Linear issue...
+  const linearIssue = await integrations.linear.issues.create({ /* ... */ });
+
+  // Store mapping for future updates
+  await storage.set(storageKey, {
+    linearIssueId: linearIssue.data.id,
+    linearIdentifier: linearIssue.data.identifier,
+    githubIssue: issue.number,
+    createdAt: Date.now(),
+  });
+
+  return { success: true, linearIssueId: linearIssue.data.id };
+}
 ```
 
-## Complete Example
+## Complete Examples from the Codebase
 
-This example is based on the real `stripe-to-notion` workflow in `packages/workflows/src/stripe-to-notion/index.ts`:
+### Example 1: Webhook-Triggered Workflow
+
+This example is from `packages/workflows/src/stripe-to-notion/index.ts`:
 
 ```typescript
 // Real workflow: packages/workflows/src/stripe-to-notion/index.ts
@@ -480,6 +559,104 @@ export default defineWorkflow({
 });
 ```
 
+### Example 2: Schedule-Triggered Workflow
+
+This example is from `packages/workflows/src/standup-bot/index.ts`:
+
+```typescript
+// From: packages/workflows/src/standup-bot/index.ts
+import { defineWorkflow, schedule } from '@workwayco/sdk';
+
+export default defineWorkflow({
+  name: 'Standup Reminder Bot',
+  description: 'Collect and share daily standups in Slack',
+  version: '1.0.0',
+
+  integrations: [
+    { service: 'slack', scopes: ['send_messages', 'read_messages'] },
+    { service: 'notion', scopes: ['write_pages', 'read_databases'] },
+  ],
+
+  inputs: {
+    standupChannel: {
+      type: 'text',
+      label: 'Standup Channel',
+      required: true,
+      description: 'Channel for daily standups',
+    },
+    standupTime: {
+      type: 'time',
+      label: 'Standup Prompt Time',
+      default: '09:00',
+    },
+    timezone: {
+      type: 'timezone',
+      label: 'Timezone',
+      default: 'America/New_York',
+    },
+    promptQuestions: {
+      type: 'array',
+      label: 'Standup Questions',
+      items: { type: 'string' },
+      default: [
+        "What did you accomplish yesterday?",
+        "What are you working on today?",
+        "Any blockers or things you need help with?",
+      ],
+    },
+  },
+
+  trigger: schedule({
+    cron: '0 {{inputs.standupTime.hour}} * * 1-5',  // Weekdays
+    timezone: '{{inputs.timezone}}',
+  }),
+
+  async execute({ inputs, integrations }) {
+    const today = new Date();
+    const dateStr = today.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'short',
+      day: 'numeric',
+    });
+
+    // Build standup prompt
+    const questionsFormatted = inputs.promptQuestions
+      .map((q: string, i: number) => `${i + 1}. ${q}`)
+      .join('\n');
+
+    // Post standup prompt
+    const promptMessage = await integrations.slack.chat.postMessage({
+      channel: inputs.standupChannel,
+      text: `Good morning! Time for standup - ${dateStr}`,
+      blocks: [
+        {
+          type: 'header',
+          text: { type: 'plain_text', text: `Daily Standup - ${dateStr}` },
+        },
+        {
+          type: 'section',
+          text: {
+            type: 'mrkdwn',
+            text: `Good morning team! Please share your standup update.\n\n*Today's questions:*\n${questionsFormatted}`,
+          },
+        },
+      ],
+    });
+
+    if (!promptMessage.success) {
+      throw new Error('Failed to post standup prompt');
+    }
+
+    return {
+      success: true,
+      date: dateStr,
+      promptPosted: true,
+      threadTs: promptMessage.data?.ts,
+    };
+  },
+});
+```
+
 ## Common Pitfalls
 
 ### Missing Return Statement
@@ -583,9 +760,14 @@ async execute({ integrations }) {
 
 ## Praxis
 
-Study the defineWorkflow() pattern in real code:
+Study the defineWorkflow() pattern in real production workflows:
 
-> **Praxis**: Ask Claude Code: "Show me 3 different workflow examples from packages/workflows/ and highlight what's common across all of them"
+> **Praxis**: Ask Claude Code: "Compare these three workflows in packages/workflows/src/: stripe-to-notion, standup-bot, and github-to-linear. What patterns do they have in common?"
+
+These workflows demonstrate:
+- **stripe-to-notion**: Webhook trigger, Notion page creation, idempotency checks
+- **standup-bot**: Schedule trigger with user-configurable time, Slack blocks
+- **github-to-linear**: Multi-event webhook, storage for tracking synced issues
 
 After reviewing the examples, create a minimal workflow skeleton:
 

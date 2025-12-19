@@ -14,6 +14,72 @@ By the end of this lesson, you will be able to:
 
 Config schemas define what users customize. Good schemas make workflows flexible without overwhelming users.
 
+## Real-World Example: Meeting Intelligence Workflow
+
+Here's how a production workflow (`packages/workflows/src/meeting-intelligence/index.ts`) defines its inputs:
+
+```typescript
+// From meeting-intelligence/index.ts
+inputs: {
+  // Core configuration - only these are truly required
+  notionDatabaseId: {
+    type: 'text',
+    label: 'Meeting Notes Database',
+    required: true,
+    description: 'Where to store meeting notes',
+  },
+  slackChannel: {
+    type: 'text',
+    label: 'Meeting Summaries Channel',
+    required: true,
+    description: 'Where to post meeting summaries',
+  },
+
+  // Sync settings - sensible defaults make these optional
+  syncMode: {
+    type: 'select',
+    label: 'What to Sync',
+    options: ['meetings_only', 'clips_only', 'both'],
+    default: 'both',
+    description: 'Sync meetings, clips, or both',
+  },
+  lookbackDays: {
+    type: 'number',
+    label: 'Days to Look Back',
+    default: 1,
+    description: 'How many days of meetings to sync (for daily cron)',
+  },
+
+  // AI settings - boolean with sensible default
+  enableAI: {
+    type: 'boolean',
+    label: 'AI Analysis',
+    default: true,
+    description: 'Extract action items, decisions, and key topics',
+  },
+  analysisDepth: {
+    type: 'select',
+    label: 'Analysis Depth',
+    options: ['brief', 'standard', 'detailed'],
+    default: 'standard',
+  },
+
+  // Optional features - disabled by default
+  updateCRM: {
+    type: 'boolean',
+    label: 'Update CRM (HubSpot)',
+    default: false,
+    description: 'Log meeting activity and update deals in HubSpot',
+  },
+},
+```
+
+**Notice the pattern:**
+1. Only 2 required fields (`notionDatabaseId`, `slackChannel`)
+2. Everything else has sensible defaults
+3. Optional features default to `false`
+4. Clear, outcome-focused descriptions
+
 ## Step-by-Step: Design Your Config Schema
 
 ### Step 1: Identify Required vs Optional
@@ -439,53 +505,224 @@ slackChannel: {
 }
 ```
 
-## Complete Example
+## Complete Examples from Production Workflows
+
+### Stripe to Notion Invoice Tracker
+
+From `packages/workflows/src/stripe-to-notion/index.ts`:
 
 ```typescript
-configSchema: {
-  // Primary settings (required)
-  notionDatabase: {
-    type: 'picker',
-    pickerType: 'notion:database',
-    label: 'Meeting Notes Database',
-    description: 'Select where to save your meeting notes',
+inputs: {
+  notionDatabaseId: {
+    type: 'text',
+    label: 'Notion Database for Payments',
     required: true,
+    description: 'Select the database where payments will be logged',
   },
-
-  // Content options (with defaults)
-  includeTranscript: {
+  includeRefunds: {
     type: 'boolean',
-    label: 'Include Full Transcript',
-    description: 'Add the complete meeting transcript',
+    label: 'Track Refunds',
     default: true,
+    description: 'Also log refunds to the database',
   },
-
-  summaryFormat: {
+  currencyFormat: {
     type: 'select',
-    label: 'Summary Format',
-    options: [
-      { value: 'brief', label: 'Brief (2-3 sentences)' },
-      { value: 'detailed', label: 'Detailed (full summary)' },
-      { value: 'bullets', label: 'Bullet Points' },
-    ],
-    default: 'bullets',
+    label: 'Currency Display',
+    options: ['symbol', 'code', 'both'],
+    default: 'symbol',
   },
-
-  // Notifications (optional)
-  enableNotifications: {
-    type: 'boolean',
-    label: 'Send Notifications',
-    default: false,
-  },
-
-  slackChannel: {
-    type: 'picker',
-    pickerType: 'slack:channel',
-    label: 'Notification Channel',
-    showIf: { enableNotifications: true },
-  },
-}
+},
 ```
+
+**Why it works:**
+- Only 1 required field (the database)
+- `includeRefunds` defaults to `true` because most users want this
+- Simple select options instead of complex object arrays
+
+### Client Onboarding Pipeline
+
+From `packages/workflows/src/client-onboarding/index.ts`:
+
+```typescript
+inputs: {
+  notionDatabaseId: {
+    type: 'text',
+    label: 'Client Database',
+    required: true,
+    description: 'Notion database to track clients',
+  },
+  todoistProjectId: {
+    type: 'text',
+    label: 'Onboarding Tasks Project',
+    required: true,
+    description: 'Todoist project for onboarding task checklists',
+  },
+  slackChannel: {
+    type: 'text',
+    label: 'Team Notifications Channel',
+    required: true,
+    description: 'Channel for new client alerts',
+  },
+  onboardingTemplate: {
+    type: 'select',
+    label: 'Onboarding Template',
+    required: true,
+    options: [
+      { value: 'standard', label: 'Standard (5 tasks)' },
+      { value: 'enterprise', label: 'Enterprise (12 tasks)' },
+      { value: 'quick-start', label: 'Quick Start (3 tasks)' },
+    ],
+    default: 'standard',
+    description: 'Task template to use for new clients',
+  },
+  enableAIRecommendations: {
+    type: 'boolean',
+    label: 'AI Onboarding Recommendations',
+    default: true,
+    description: 'Use AI to generate custom onboarding steps based on client profile',
+  },
+  assigneeEmail: {
+    type: 'email',
+    label: 'Default Account Manager',
+    required: false,
+    description: 'Email of team member to assign onboarding tasks',
+  },
+},
+```
+
+**Notice:**
+- Select options use `{ value, label }` format for clarity
+- Optional fields like `assigneeEmail` use `required: false`
+- AI features default to `true` (users can disable if needed)
+
+### Dental Appointment Autopilot
+
+From `packages/workflows/src/dental-appointment-autopilot/index.ts`:
+
+```typescript
+inputs: {
+  practiceId: {
+    type: 'text',
+    label: 'Sikka Practice ID',
+    required: true,
+    description: 'Your practice ID from Sikka portal',
+  },
+  slackChannel: {
+    type: 'text',
+    label: 'Staff Notification Channel',
+    required: false,
+    description: 'Channel for staff alerts (cancellations, no-show risks)',
+  },
+  reminder48h: {
+    type: 'boolean',
+    label: '48-Hour Reminder',
+    default: true,
+    description: 'Send reminder 48 hours before appointment',
+  },
+  reminder24h: {
+    type: 'boolean',
+    label: '24-Hour Reminder',
+    default: true,
+    description: 'Send reminder 24 hours before appointment',
+  },
+  reminder2h: {
+    type: 'boolean',
+    label: '2-Hour Reminder',
+    default: true,
+    description: 'Send reminder 2 hours before appointment',
+  },
+  enableWaitlistBackfill: {
+    type: 'boolean',
+    label: 'Waitlist Backfill',
+    default: true,
+    description: 'Automatically offer canceled slots to waitlist patients',
+  },
+  highRiskThreshold: {
+    type: 'number',
+    label: 'No-Show Risk Threshold',
+    default: 70,
+    description: 'Alert staff when no-show probability exceeds this % (based on history)',
+  },
+  messageTemplate: {
+    type: 'textarea',
+    label: 'Reminder Message Template',
+    default: 'Hi {{firstName}}, this is a reminder of your dental appointment...',
+    description: 'Template for SMS/email reminders. Use {{placeholders}}.',
+  },
+},
+```
+
+**Pattern insights:**
+- Boolean groups for related features (reminder48h, reminder24h, reminder2h)
+- `textarea` type for multi-line template content
+- Number with business-meaningful default (70% threshold)
+- Template placeholders documented in description
+
+## Smart Defaults Pattern (Zuhandenheit)
+
+Production workflows use the `pathway.smartDefaults` and `pathway.essentialFields` pattern to minimize required configuration:
+
+```typescript
+// From meeting-intelligence/index.ts
+pathway: {
+  // Only these 1-2 fields are required for first activation
+  essentialFields: ['notionDatabaseId'],
+
+  // Smart defaults - infer from context, don't ask
+  smartDefaults: {
+    syncMode: { value: 'both' },
+    lookbackDays: { value: 1 },
+    transcriptMode: { value: 'prefer_speakers' },
+    enableAI: { value: true },
+    analysisDepth: { value: 'standard' },
+    postToSlack: { value: true },
+    updateCRM: { value: false },
+  },
+
+  zuhandenheit: {
+    timeToValue: 3, // Minutes to first outcome
+    worksOutOfBox: true, // Works with just essential fields
+    gracefulDegradation: true, // Optional integrations handled gracefully
+    automaticTrigger: true, // Webhook-triggered, no manual invocation
+  },
+},
+```
+
+**The philosophy:**
+- `essentialFields` defines what users MUST configure
+- `smartDefaults` pre-fills everything else
+- `zuhandenheit.worksOutOfBox: true` means the workflow functions immediately
+
+From `packages/workflows/src/sales-lead-pipeline/index.ts`:
+
+```typescript
+// Weniger, aber besser: Only 2 essential fields
+// Smart defaults handle enableCRM, enableAIScoring, followUpDays
+// Optional integrations auto-detected from connected services
+inputs: {
+  typeformId: {
+    type: 'text',
+    label: 'Lead Capture Form',
+    required: true,
+    description: 'Select the Typeform that captures leads',
+  },
+  slackChannel: {
+    type: 'text',
+    label: 'Sales Notifications Channel',
+    required: true,
+    description: 'Channel where lead alerts will be posted',
+  },
+  // Optional: Only shown if Todoist connected and user wants to customize
+  todoistProjectId: {
+    type: 'text',
+    label: 'Follow-up Tasks Project',
+    required: false,
+    description: 'Auto-detects first project if not specified',
+  },
+},
+```
+
+**Key insight:** The workflow auto-detects the first Todoist project if none specified. The tool recedes; the outcome remains.
 
 ## Common Pitfalls
 
