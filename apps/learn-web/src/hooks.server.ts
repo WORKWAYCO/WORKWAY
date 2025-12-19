@@ -2,7 +2,7 @@ import type { Handle } from '@sveltejs/kit';
 import { redirect } from '@sveltejs/kit';
 
 interface TokenPayload {
-	userId: string;
+	sub: string;
 	email: string;
 	displayName?: string;
 	exp: number;
@@ -32,7 +32,7 @@ async function validateAccessToken(
 	}
 
 	return {
-		id: payload.userId,
+		id: payload.sub,
 		email: payload.email,
 		displayName: payload.displayName
 	};
