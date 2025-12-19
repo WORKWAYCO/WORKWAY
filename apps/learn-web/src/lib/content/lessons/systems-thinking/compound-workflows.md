@@ -1,5 +1,17 @@
 # Compound Workflows
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Design compound workflows that orchestrate 4+ services in a single execution
+- Map dependencies between workflow steps (sequential vs parallel)
+- Use `Promise.allSettled()` for parallel execution with independent error handling
+- Implement partial success patterns where optional steps can fail gracefully
+- Calculate the multiplicative value of compound workflows vs simple integrations
+
+---
+
 Single automations move data A → B. Compound workflows orchestrate complete outcomes across multiple services, creating results greater than the sum of their parts.
 
 ## Step-by-Step: Design a Compound Workflow

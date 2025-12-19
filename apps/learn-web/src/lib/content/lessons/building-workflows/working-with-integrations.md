@@ -1,5 +1,17 @@
 # Working with Integrations
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Chain multiple integrations in a single workflow (Zoom → Notion → Slack)
+- Use Slack's Block Kit for rich message formatting
+- Access Zoom meeting data, recordings, and transcripts
+- Create and update Notion pages with complex property types
+- Handle integration-specific conventions (Stripe cents, Gmail query syntax)
+
+---
+
 Master the integration patterns for Slack, Zoom, Stripe, and more. Each service has its own conventions.
 
 ## Step-by-Step: Chain Multiple Integrations

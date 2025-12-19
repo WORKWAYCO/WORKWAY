@@ -1,5 +1,17 @@
 # Your First Workflow: Gmail to Notion
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Create a complete Gmail to Notion workflow from scratch
+- Initialize a project with `workway init` and configure integrations
+- Implement polling-based email checking with star filtering
+- Create Notion database entries with proper property formatting
+- Deploy your workflow and verify it works in production
+
+---
+
 Build a real workflow that saves important emails to Notion. By the end, you'll have a working automation.
 
 ## What We're Building

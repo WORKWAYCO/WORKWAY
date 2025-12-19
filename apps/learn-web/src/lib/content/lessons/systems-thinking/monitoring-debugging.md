@@ -1,5 +1,17 @@
 # Monitoring & Debugging
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Use `workway executions` and `workway logs` to identify failing workflows
+- Add structured logging with context (`context.log.info/warn/error`)
+- Reproduce failures locally by exporting and replaying trigger payloads
+- Configure alerts for error rate spikes, latency issues, and stale workflows
+- Implement health checks and integration status monitoring
+
+---
+
 Workflows in production need visibility. When something goes wrong—and it will—you need the tools to understand what happened and fix it fast.
 
 ## Step-by-Step: Debug a Failing Workflow

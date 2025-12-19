@@ -1,5 +1,17 @@
 # Local Testing & Debugging
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Start the local development server with `workway dev` and hot reloading
+- Test workflows using `curl` with custom JSON payloads
+- Create mock data files for integration testing
+- Write unit tests using the `@workway/testing` utilities
+- Debug workflows using console logging and VS Code debugger
+
+---
+
 Test before deploy. Find bugs locally, not in production. The WORKWAY CLI brings the full execution environment to your machine.
 
 ## Step-by-Step: Test Your Workflow Locally

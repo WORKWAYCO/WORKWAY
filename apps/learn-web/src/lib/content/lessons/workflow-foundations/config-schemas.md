@@ -1,5 +1,17 @@
 # Configuration Schemas
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Define workflow inputs using the modern `inputs` pattern
+- Use appropriate input types: `text`, `number`, `boolean`, `select`, `picker`
+- Create dynamic pickers for Notion databases, Slack channels, and other resources
+- Provide sensible defaults that make workflows work out of the box
+- Group related inputs for better user experience
+
+---
+
 Config schemas define what users customize. Good schemas make workflows flexible without overwhelming users.
 
 ## Step-by-Step: Design Your Config Schema

@@ -1,5 +1,17 @@
 # Error Handling & Retries
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Implement try-catch blocks for required vs optional workflow steps
+- Create a `withRetry()` helper with exponential backoff for transient failures
+- Build a circuit breaker pattern to prevent cascading failures
+- Use the `onError` handler for workflow-level error handling
+- Return informative error responses for debugging and monitoring
+
+---
+
 Workflows fail. APIs go down, rate limits trigger, data is malformed. Good error handling makes the difference between a workflow that works and one that works reliably.
 
 ## Step-by-Step: Add Comprehensive Error Handling

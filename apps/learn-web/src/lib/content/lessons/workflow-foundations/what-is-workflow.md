@@ -1,5 +1,17 @@
 # What is a Workflow?
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Explain Zuhandenheit ("ready-to-hand") and how it applies to workflow design
+- Distinguish between mechanism-focused and outcome-focused workflow descriptions
+- Apply the Outcome Test to evaluate workflow ideas
+- Think backwards from desired outcomes to technical implementation
+- Identify compound workflows that create more value than single integrations
+
+---
+
 A workflow is an outcome that happens automatically. Not a sequence of API calls. Not a data pipeline. An outcome.
 
 ## The Tool Should Recede

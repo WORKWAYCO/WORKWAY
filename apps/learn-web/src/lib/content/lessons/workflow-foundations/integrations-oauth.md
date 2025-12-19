@@ -1,5 +1,17 @@
 # Integrations & OAuth
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Declare integrations with proper OAuth scopes in the `integrations` array
+- Use the extended format for optional integrations and credential aliasing
+- Handle `ActionResult` responses with `success`, `data`, and `error` checking
+- Implement graceful degradation when optional integrations fail
+- Understand how WORKWAY handles token refresh and rate limiting automatically
+
+---
+
 WORKWAY handles OAuth complexity so your workflows can focus on outcomes. Connect once, use everywhere.
 
 ## Step-by-Step: Add Your First Integration

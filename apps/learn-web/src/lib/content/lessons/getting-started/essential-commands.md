@@ -1,5 +1,17 @@
 # Essential Commands & Shortcuts
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Navigate directories efficiently using `cd`, `pushd/popd`, and shell shortcuts
+- Use essential Git commands for version control: `status`, `add -p`, `commit`, `stash`
+- Configure shell aliases for faster WORKWAY development workflows
+- Use keyboard shortcuts for line editing (`Ctrl+A/E/U/K`) and history search (`Ctrl+R`)
+- Execute the complete development flow: `workway dev` → test → commit → deploy
+
+---
+
 Master these commands to move efficiently through your workflow development cycle. The goal: muscle memory that lets the tools recede.
 
 ## Quick Start: Set Up Your Environment

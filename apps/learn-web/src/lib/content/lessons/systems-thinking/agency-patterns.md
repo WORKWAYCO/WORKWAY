@@ -1,5 +1,17 @@
 # Agency Patterns
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Conduct workflow discovery interviews with clients using outcome-focused questions
+- Identify patterns across client projects that can become marketplace workflows
+- Apply the "Build Once, Deploy Many" strategy for workflow reusability
+- Structure client engagements with scoping, building, and maintenance phases
+- Price workflows using hybrid models (implementation fee + per-execution)
+
+---
+
 Agencies building workflows for clients sit at a strategic leverage point. Build once, deploy many. Turn client projects into platform assets.
 
 ## Step-by-Step: Build Your First Client Workflow

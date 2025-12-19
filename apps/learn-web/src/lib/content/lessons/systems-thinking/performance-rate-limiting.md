@@ -1,5 +1,17 @@
 # Performance & Rate Limiting
 
+## Learning Objectives
+
+By the end of this lesson, you will be able to:
+
+- Identify performance bottlenecks using timing instrumentation
+- Implement in-memory caching for repeated lookups within a single execution
+- Process items in rate-limited chunks using `processInChunks()` patterns
+- Handle API rate limits with exponential backoff and retry logic
+- Use checkpointing for long-running operations that might timeout
+
+---
+
 Workflows run in the real world of API limits, execution timeouts, and finite resources. Understanding these constraints leads to robust, efficient workflows.
 
 ## Step-by-Step: Optimize Your Workflow Performance
