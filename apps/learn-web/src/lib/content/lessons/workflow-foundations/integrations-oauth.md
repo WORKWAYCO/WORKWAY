@@ -329,21 +329,25 @@ Users connect once in their WORKWAY dashboard. Workflows receive pre-authenticat
 ## Handling Integration Errors
 
 ```typescript
+import { IntegrationError, ErrorCode } from '@workwayco/sdk';
+
 async execute({ integrations, context }) {
   const { notion } = integrations;
 
   try {
     await notion.createPage(pageData);
   } catch (error) {
-    if (error.code === 'unauthorized') {
-      // User needs to reconnect
-      context.log.error('Notion connection expired');
-      return { success: false, error: 'Please reconnect Notion' };
-    }
+    if (error instanceof IntegrationError) {
+      if (error.code === ErrorCode.AUTH_EXPIRED || error.code === ErrorCode.AUTH_INVALID) {
+        // User needs to reconnect
+        context.log.error('Notion connection expired');
+        return { success: false, error: 'Please reconnect Notion' };
+      }
 
-    if (error.code === 'rate_limited') {
-      // Will be retried automatically
-      throw error;
+      if (error.code === ErrorCode.RATE_LIMITED) {
+        // Will be retried automatically
+        throw error;
+      }
     }
 
     // Unknown error
@@ -382,6 +386,8 @@ async execute({ integrations }) {
 OAuth tokens expire. The BaseAPIClient handles refresh automatically, but your code should handle reconnection prompts:
 
 ```typescript
+import { ErrorCode } from '@workwayco/sdk';
+
 // Wrong - ignoring auth errors
 async execute({ integrations }) {
   const result = await integrations.zoom.getMeetings();
@@ -391,7 +397,10 @@ async execute({ integrations }) {
 // Right - surface reconnection needs
 async execute({ integrations }) {
   const result = await integrations.zoom.getMeetings();
-  if (!result.success && result.error?.code === 'UNAUTHORIZED') {
+  if (!result.success && (
+    result.error?.code === ErrorCode.AUTH_EXPIRED ||
+    result.error?.code === ErrorCode.AUTH_INVALID
+  )) {
     return {
       success: false,
       error: 'Please reconnect your Zoom account',

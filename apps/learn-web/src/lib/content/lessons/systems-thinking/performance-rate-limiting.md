@@ -269,11 +269,13 @@ Every external API has limits:
 ### Detecting Rate Limits
 
 ```typescript
+import { IntegrationError, ErrorCode } from '@workwayco/sdk';
+
 async execute({ integrations, context }) {
   try {
     await integrations.notion.createPage(/* ... */);
   } catch (error) {
-    if (error.code === 'RATE_LIMITED') {
+    if (error instanceof IntegrationError && error.code === ErrorCode.RATE_LIMITED) {
       // Automatic retry with backoff
       throw error;  // WORKWAY handles retry
     }

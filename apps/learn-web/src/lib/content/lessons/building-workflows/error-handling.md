@@ -201,7 +201,7 @@ async execute({ trigger, integrations }) {
 ### Typed Error Handling
 
 ```typescript
-import { IntegrationError } from '@workwayco/sdk';
+import { IntegrationError, ErrorCode } from '@workwayco/sdk';
 
 async execute({ integrations }) {
   try {
@@ -209,11 +209,11 @@ async execute({ integrations }) {
   } catch (error) {
     if (error instanceof IntegrationError) {
       // Known integration failure
-      if (error.code === 'RATE_LIMITED') {
+      if (error.code === ErrorCode.RATE_LIMITED) {
         // Will be retried automatically
         throw error;
       }
-      if (error.code === 'UNAUTHORIZED') {
+      if (error.code === ErrorCode.AUTH_EXPIRED || error.code === ErrorCode.AUTH_INVALID) {
         return {
           success: false,
           error: 'Please reconnect your account',
@@ -529,15 +529,33 @@ return { success: errors.length === 0, errors };
 ### User-Friendly Errors
 
 ```typescript
-function getUserFriendlyError(error: Error): string {
-  const errorMap: Record<string, string> = {
-    RATE_LIMITED: 'Too many requests. Please try again in a few minutes.',
-    UNAUTHORIZED: 'Your connection expired. Please reconnect your account.',
-    NOT_FOUND: 'The requested item no longer exists.',
-    VALIDATION_ERROR: 'The data provided was invalid.',
-  };
+import { IntegrationError, ErrorCode } from '@workwayco/sdk';
 
-  return errorMap[error.code] || 'Something went wrong. Please try again.';
+function getUserFriendlyError(error: Error): string {
+  // Use IntegrationError's built-in helper when available
+  if (error instanceof IntegrationError) {
+    return error.getUserMessage();
+  }
+
+  // Fallback for non-integration errors
+  return 'Something went wrong. Please try again.';
+}
+
+// Or handle specific error codes manually:
+function getErrorMessage(error: IntegrationError): string {
+  switch (error.code) {
+    case ErrorCode.RATE_LIMITED:
+      return 'Too many requests. Please try again in a few minutes.';
+    case ErrorCode.AUTH_EXPIRED:
+    case ErrorCode.AUTH_INVALID:
+      return 'Your connection expired. Please reconnect your account.';
+    case ErrorCode.NOT_FOUND:
+      return 'The requested item no longer exists.';
+    case ErrorCode.VALIDATION_ERROR:
+      return 'The data provided was invalid.';
+    default:
+      return error.getUserMessage();
+  }
 }
 ```
 
@@ -579,7 +597,7 @@ const circuitBreaker = {
 ## Complete Example
 
 ```typescript
-import { defineWorkflow, webhook, IntegrationError } from '@workwayco/sdk';
+import { defineWorkflow, webhook, IntegrationError, ErrorCode } from '@workwayco/sdk';
 
 export default defineWorkflow({
   name: 'Resilient Meeting Notes',
@@ -640,7 +658,7 @@ export default defineWorkflow({
       });
       pageId = page.data?.id;
     } catch (error) {
-      if (error instanceof IntegrationError && error.code === 'RATE_LIMITED') {
+      if (error instanceof IntegrationError && error.code === ErrorCode.RATE_LIMITED) {
         throw error; // Let WORKWAY retry
       }
       console.error('Failed to create Notion page', { error: (error as Error).message });

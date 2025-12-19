@@ -617,11 +617,13 @@ async execute({ inputs, integrations }) {
 }
 
 // Right - handle missing/invalid
+import { ErrorCode } from '@workwayco/sdk';
+
 async execute({ inputs, integrations }) {
   const result = await integrations.notion.pages.create({
     parent: { database_id: inputs.notionDatabase },
   });
-  if (!result.success && result.error?.code === 'NOT_FOUND') {
+  if (!result.success && result.error?.code === ErrorCode.NOT_FOUND) {
     return {
       success: false,
       error: 'The selected database no longer exists. Please reconfigure.',
