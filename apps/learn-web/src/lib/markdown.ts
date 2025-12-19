@@ -96,10 +96,11 @@ export async function renderMarkdown(markdown: string): Promise<string> {
 	let blockIndex = 0;
 
 	// Replace code blocks with placeholders
+	// Use HTML comment syntax to prevent markdown from processing the placeholder
 	const markdownWithPlaceholders = contentWithoutTitle.replace(
 		/```(\w+)?\n([\s\S]*?)```/g,
 		(_, lang, code) => {
-			const placeholder = `__CODE_BLOCK_${blockIndex}__`;
+			const placeholder = `<!--CODE_BLOCK_${blockIndex}-->`;
 			codeBlocks.push({ placeholder, code: code.trim(), lang: lang || 'typescript' });
 			blockIndex++;
 			return placeholder;
@@ -131,7 +132,7 @@ export async function renderMarkdown(markdown: string): Promise<string> {
 	// Highlight code blocks and replace placeholders
 	for (const block of codeBlocks) {
 		const highlightedCode = await highlightCode(block.code, block.lang);
-		html = html.replace(`<p>${block.placeholder}</p>`, highlightedCode);
+		// HTML comments pass through marked unchanged, so just replace directly
 		html = html.replace(block.placeholder, highlightedCode);
 	}
 
