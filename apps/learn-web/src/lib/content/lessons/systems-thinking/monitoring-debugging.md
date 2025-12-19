@@ -2,6 +2,159 @@
 
 Workflows in production need visibility. When something goes wrong—and it will—you need the tools to understand what happened and fix it fast.
 
+## Step-by-Step: Debug a Failing Workflow
+
+### Step 1: Identify the Failure
+
+Check recent executions:
+
+```bash
+workway executions --status failed --limit 10
+```
+
+Output:
+```
+ID          TRIGGER     STATUS    DURATION   TIME
+ex_abc123   webhook     failed    0.8s       10:15
+ex_def456   webhook     failed    1.2s       10:12
+ex_ghi789   webhook     success   2.3s       10:10
+```
+
+### Step 2: Get Execution Details
+
+Inspect a specific failure:
+
+```bash
+workway execution ex_abc123
+```
+
+Output:
+```
+Execution: ex_abc123
+Status: failed
+Duration: 0.8s
+Trigger: webhook (recording.completed)
+
+Steps:
+1. ✓ zoom.getMeeting (0.3s)
+2. ✓ ai.summarize (0.4s)
+3. ✗ notion.createPage (0.1s)
+   Error: API rate limited (429)
+
+Logs:
+[10:15:01] INFO Starting workflow...
+[10:15:02] INFO Meeting fetched: mtg-123
+[10:15:03] ERROR Notion rate limited - retry in 60s
+```
+
+### Step 3: Reproduce Locally
+
+Export the trigger payload and test locally:
+
+```bash
+# Get the original payload
+workway execution ex_abc123 --output-payload > payload.json
+
+# Start local dev server
+workway dev
+
+# Replay the execution
+curl localhost:8787/execute -d @payload.json
+```
+
+### Step 4: Add Diagnostic Logging
+
+Enhance your workflow with detailed logs:
+
+```typescript
+async execute({ trigger, context, integrations }) {
+  const start = Date.now();
+  context.log.info('Workflow started', {
+    triggerId: trigger.id,
+    meetingId: trigger.data?.object?.id,
+  });
+
+  // Step 1
+  const stepStart = Date.now();
+  const meeting = await integrations.zoom.getMeeting(trigger.data.object.id);
+  context.log.info('Step: Fetch meeting', {
+    duration: Date.now() - stepStart,
+    success: meeting.success,
+  });
+
+  // Step 2
+  const notionStart = Date.now();
+  const page = await integrations.notion.pages.create({ /* ... */ });
+  context.log.info('Step: Create page', {
+    duration: Date.now() - notionStart,
+    success: page.success,
+    pageId: page.data?.id,
+  });
+
+  context.log.info('Workflow complete', {
+    totalDuration: Date.now() - start,
+  });
+
+  return { success: true };
+}
+```
+
+### Step 5: Fix the Issue
+
+Based on the error (rate limiting), add retry logic:
+
+```typescript
+import { withRetry } from './utils';
+
+async execute({ trigger, inputs, integrations }) {
+  // ... previous steps ...
+
+  // Add retry for rate-limited API
+  const page = await withRetry(
+    () => integrations.notion.pages.create({
+      parent: { database_id: inputs.notionDatabase },
+      properties: { /* ... */ },
+    }),
+    { maxAttempts: 3, delayMs: 2000 }
+  );
+
+  return { success: true, pageId: page.data?.id };
+}
+```
+
+### Step 6: Deploy and Verify
+
+```bash
+# Deploy the fix
+workway deploy
+
+# Monitor logs in real-time
+workway logs --tail --level info
+
+# Watch for new executions
+workway executions --limit 5 --watch
+```
+
+### Step 7: Set Up Alerts
+
+Configure alerts to catch future issues:
+
+```bash
+# In your workflow metadata
+metadata: {
+  alerts: [
+    {
+      name: 'High error rate',
+      condition: 'error_rate > 0.05',
+      window: '5m',
+      channels: ['slack:alerts'],
+    },
+  ],
+}
+```
+
+---
+
 ## The Observability Stack
 
 | Layer | What It Shows |

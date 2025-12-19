@@ -12,6 +12,63 @@ This learning path is different. You won't passively read tutorials. You'll:
 
 The tool recedes. The learning remains.
 
+## Quick Start: Get Running in 3 Minutes
+
+### Step 1: Install Claude Code
+
+```bash
+npm install -g @anthropic-ai/claude-code
+```
+
+### Step 2: Verify Installation
+
+```bash
+claude --version
+```
+
+### Step 3: Authenticate
+
+```bash
+claude
+```
+
+Your browser will open. Sign in with your Claude account.
+
+### Step 4: Start Your First Session
+
+```bash
+cd your-project
+claude
+```
+
+Try these prompts:
+```
+> What is this project?
+> What patterns are used in this codebase?
+```
+
+### Step 5: (Optional) Add WORKWAY MCP Server
+
+Create `.mcp.json` in your project directory:
+
+```json
+{
+  "mcpServers": {
+    "workway-learn": {
+      "command": "npx",
+      "args": ["@workway/learn", "--server"]
+    }
+  }
+}
+```
+
+Restart Claude Code and verify:
+```
+> What learning tools are available via MCP?
+```
+
+---
+
 ## Recommended: Claude Max Plan
 
 For the best experience building workflows, we recommend the **Claude Max plan**:

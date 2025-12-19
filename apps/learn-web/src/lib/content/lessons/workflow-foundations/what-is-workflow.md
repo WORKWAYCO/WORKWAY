@@ -94,6 +94,55 @@ Good workflow design minimizes Vorhandenheit:
 
 When something goes wrong, the user should understand what happened and what to do—not debug API responses.
 
+## Step-by-Step: Apply the Outcome Test
+
+### Step 1: List Your Manual Tasks
+
+Open a notes app or text file. Write down 3-5 repetitive tasks you do regularly:
+
+```
+- After calls, I update the CRM with notes
+- Every meeting, I send a summary to the team
+- Weekly, I compile data from multiple sources into a report
+```
+
+### Step 2: Identify the Mechanism
+
+For each task, write the technical description (how you do it):
+
+```
+Task: Update CRM after calls
+Mechanism: "I open Salesforce, find the contact, paste my notes from Google Docs, save"
+```
+
+### Step 3: Reframe as Outcome
+
+Convert each mechanism to what disappears from your to-do list:
+
+```
+Mechanism: "I open Salesforce, find the contact, paste notes, save"
+Outcome: "Client conversations stay documented without my involvement"
+```
+
+### Step 4: Apply the Outcome Test
+
+For each outcome, verify it passes the test:
+
+✅ **Pass**: "Client conversations stay documented" - No technology mentioned
+❌ **Fail**: "Salesforce gets updated automatically" - Still mentions the tool
+
+### Step 5: Validate with Others
+
+Describe the outcome to a non-technical colleague:
+
+```
+"After we talk to clients, the notes just... appear. We don't do anything."
+```
+
+If they understand the value without asking about tools, you've found a real outcome.
+
+---
+
 ## Praxis
 
 Apply the Outcome Test to your own work:

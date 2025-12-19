@@ -2,6 +2,92 @@
 
 A workflow without a trigger is just code. Triggers define when your workflow springs into action.
 
+## Step-by-Step: Add a Trigger to Your Workflow
+
+### Step 1: Import the Trigger Helper
+
+```typescript
+import { defineWorkflow, webhook } from '@workwayco/sdk';
+// or: schedule, manual, poll
+```
+
+### Step 2: Add the Trigger Property
+
+Add a trigger to your workflow definition:
+
+```typescript
+export default defineWorkflow({
+  name: 'My Workflow',
+
+  trigger: webhook({
+    service: 'zoom',
+    event: 'meeting.ended',
+  }),
+
+  async execute({ trigger }) {
+    // trigger.data contains the webhook payload
+  },
+});
+```
+
+### Step 3: Access Trigger Data
+
+In your execute function, use the trigger object:
+
+```typescript
+async execute({ trigger }) {
+  // Check trigger type
+  console.log('Trigger type:', trigger.type);  // 'webhook'
+  console.log('Triggered at:', trigger.timestamp);
+
+  // Access webhook payload
+  if (trigger.type === 'webhook') {
+    const meetingId = trigger.data.object.id;
+    const topic = trigger.data.object.topic;
+  }
+
+  return { success: true };
+}
+```
+
+### Step 4: Add Idempotency Protection
+
+Prevent duplicate processing:
+
+```typescript
+async execute({ trigger, storage }) {
+  const eventId = trigger.data?.object?.id;
+
+  // Skip if already processed
+  const processedKey = `processed:${eventId}`;
+  if (await storage.get(processedKey)) {
+    return { success: true, skipped: true };
+  }
+
+  // Process the event
+  await processEvent(trigger.data);
+
+  // Mark as processed
+  await storage.put(processedKey, Date.now());
+
+  return { success: true };
+}
+```
+
+### Step 5: Test Your Trigger
+
+```bash
+# Start dev server
+workway dev
+
+# Simulate a webhook (terminal 2)
+curl http://localhost:8787/execute \
+  -H "Content-Type: application/json" \
+  -d '{"object": {"id": "test-123", "topic": "Test Meeting"}}'
+```
+
+---
+
 ## Trigger Types
 
 | Type | When It Fires |

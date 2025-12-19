@@ -2,6 +2,101 @@
 
 Config schemas define what users customize. Good schemas make workflows flexible without overwhelming users.
 
+## Step-by-Step: Design Your Config Schema
+
+### Step 1: Identify Required vs Optional
+
+List everything your workflow needs. Mark each as required or optional:
+
+```
+Required:
+- Notion database to save to
+- Zoom account connected
+
+Optional (has sensible default):
+- Include transcript (default: true)
+- Summary format (default: bullets)
+- Slack notifications (default: off)
+```
+
+### Step 2: Start with Required Fields Only
+
+Add only the essential fields to your schema:
+
+```typescript
+inputs: {
+  notionDatabase: {
+    type: 'picker',
+    pickerType: 'notion:database',
+    label: 'Meeting Notes Database',
+    description: 'Where your meeting notes will be saved',
+    required: true,
+  },
+},
+```
+
+### Step 3: Add Optional Fields with Defaults
+
+Add optional fields with sensible defaults so the workflow works immediately:
+
+```typescript
+inputs: {
+  notionDatabase: {
+    type: 'picker',
+    pickerType: 'notion:database',
+    label: 'Meeting Notes Database',
+    required: true,
+  },
+  includeTranscript: {
+    type: 'boolean',
+    label: 'Include Full Transcript',
+    default: true,
+  },
+  summaryFormat: {
+    type: 'select',
+    label: 'Summary Style',
+    options: [
+      { value: 'bullets', label: 'Bullet Points' },
+      { value: 'brief', label: 'Brief Summary' },
+      { value: 'detailed', label: 'Detailed Summary' },
+    ],
+    default: 'bullets',
+  },
+},
+```
+
+### Step 4: Add Conditional Fields
+
+Use `showIf` to reveal advanced options only when needed:
+
+```typescript
+inputs: {
+  // ... existing fields
+  enableNotifications: {
+    type: 'boolean',
+    label: 'Send Slack Notifications',
+    default: false,
+  },
+  slackChannel: {
+    type: 'picker',
+    pickerType: 'slack:channel',
+    label: 'Notification Channel',
+    showIf: { enableNotifications: true },
+  },
+},
+```
+
+### Step 5: Test the User Experience
+
+Review your schema from the user's perspective:
+
+1. How many clicks to get started? (aim for 1-2)
+2. Are labels clear without technical jargon?
+3. Do defaults make sense for most users?
+4. Is optional configuration hidden until needed?
+
+---
+
 ## The Config Schema
 
 ```typescript

@@ -11,6 +11,58 @@ The terminal is where workflows come to life. WezTerm provides a modern, GPU-acc
 | Multiplexing | Built-in tabs/panes, no tmux needed |
 | Cross-platform | Same config on macOS, Linux, Windows |
 
+## Quick Start: 5-Minute Setup
+
+Follow these steps to get WezTerm running with WORKWAY configuration:
+
+### Step 1: Install WezTerm
+
+**macOS:**
+```bash
+brew install --cask wezterm
+```
+
+**Linux:**
+```bash
+curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
+echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list
+sudo apt update && sudo apt install wezterm
+```
+
+**Windows:**
+```powershell
+winget install wez.wezterm
+```
+
+### Step 2: Create Configuration Directory
+
+```bash
+mkdir -p ~/.config/wezterm
+```
+
+### Step 3: Create Configuration File
+
+```bash
+touch ~/.config/wezterm/wezterm.lua
+```
+
+### Step 4: Add WORKWAY Configuration
+
+Copy the complete configuration from the "Minimal Config" and "WORKWAY-Specific Keybindings" sections below into your `wezterm.lua` file.
+
+### Step 5: Verify Installation
+
+```bash
+wezterm --version
+```
+
+Launch WezTerm and test:
+1. `Cmd+Shift+C` (macOS) or `Ctrl+Shift+Alt+C` (Linux/Windows) - Should open Claude Code
+2. `Cmd+D` - Should split the terminal horizontally
+3. `Cmd+H/J/K/L` - Should navigate between panes
+
+---
+
 ## Installation
 
 ### macOS (Homebrew)

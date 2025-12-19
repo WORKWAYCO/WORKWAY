@@ -2,6 +2,103 @@
 
 Every WORKWAY workflow follows the same structure. Learn this pattern once, build any workflow.
 
+## Step-by-Step: Create Your First Workflow
+
+### Step 1: Create the Project Structure
+
+```bash
+mkdir my-workflow
+cd my-workflow
+pnpm init
+pnpm add @workwayco/sdk
+mkdir src
+```
+
+### Step 2: Create the Workflow File
+
+Create `src/index.ts`:
+
+```bash
+touch src/index.ts
+```
+
+### Step 3: Add the Basic Structure
+
+Copy this minimal workflow into `src/index.ts`:
+
+```typescript
+import { defineWorkflow, manual } from '@workwayco/sdk';
+
+export default defineWorkflow({
+  name: 'My First Workflow',
+  description: 'Learning the WORKWAY pattern',
+  version: '1.0.0',
+
+  integrations: [],
+
+  inputs: {},
+
+  trigger: manual(),
+
+  async execute() {
+    console.log('Workflow executed!');
+    return { success: true };
+  },
+});
+```
+
+### Step 4: Add an Integration
+
+Update the workflow to use Notion:
+
+```typescript
+integrations: [
+  { service: 'notion', scopes: ['read_pages', 'write_pages'] },
+],
+```
+
+### Step 5: Add User Inputs
+
+Define what users can configure:
+
+```typescript
+inputs: {
+  notionDatabaseId: {
+    type: 'text',
+    label: 'Notion Database ID',
+    required: true,
+  },
+},
+```
+
+### Step 6: Implement the Execute Function
+
+Add the business logic:
+
+```typescript
+async execute({ inputs, integrations }) {
+  const { notion } = integrations;
+
+  const page = await notion.pages.create({
+    parent: { database_id: inputs.notionDatabaseId },
+    properties: {
+      Name: { title: [{ text: { content: 'Test Page' } }] },
+    },
+  });
+
+  return { success: true, pageId: page.data?.id };
+},
+```
+
+### Step 7: Test Locally
+
+```bash
+workway dev
+curl http://localhost:8787/execute -d '{}'
+```
+
+---
+
 ## Anatomy of a Workflow
 
 ```typescript

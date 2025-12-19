@@ -2,6 +2,67 @@
 
 Master these commands to move efficiently through your workflow development cycle. The goal: muscle memory that lets the tools recede.
 
+## Quick Start: Set Up Your Environment
+
+### Step 1: Add WORKWAY Aliases to Your Shell
+
+Open your shell config file:
+
+```bash
+# For zsh (macOS default)
+nano ~/.zshrc
+
+# For bash
+nano ~/.bashrc
+```
+
+### Step 2: Paste These Aliases
+
+```bash
+# WORKWAY Development
+alias wd="workway dev"
+alias wdp="workway deploy"
+alias wl="workway logs --tail"
+
+# Git shortcuts
+alias gs="git status"
+alias ga="git add -p"
+alias gc="git commit"
+alias gp="git push"
+
+# Claude Code
+alias cc="claude"
+alias ccc="claude -c"
+```
+
+### Step 3: Reload Your Shell
+
+```bash
+source ~/.zshrc  # or ~/.bashrc
+```
+
+### Step 4: Test the Aliases
+
+```bash
+wd --help    # Should show workway dev help
+cc --version # Should show claude version
+gs           # Should show git status
+```
+
+### Step 5: Practice the Development Flow
+
+Run this sequence in your WORKWAY project:
+
+```bash
+wd            # Start dev server (Terminal 1)
+cc            # Start Claude Code (Terminal 2)
+wl            # Tail logs (Terminal 3)
+```
+
+Now you're ready for rapid development.
+
+---
+
 ## Terminal Navigation
 
 ### Directory Movement

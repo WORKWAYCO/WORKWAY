@@ -2,6 +2,222 @@
 
 Workflows run in the real world of API limits, execution timeouts, and finite resources. Understanding these constraints leads to robust, efficient workflows.
 
+## Step-by-Step: Optimize Your Workflow Performance
+
+### Step 1: Identify Bottlenecks
+
+Add timing to your workflow:
+
+```typescript
+async execute({ trigger, inputs, integrations, context }) {
+  const timings: Record<string, number> = {};
+  const start = Date.now();
+
+  // Time each step
+  const zoomStart = Date.now();
+  const meeting = await integrations.zoom.getMeeting(trigger.data.object.id);
+  timings.zoom = Date.now() - zoomStart;
+
+  const aiStart = Date.now();
+  const summary = await integrations.ai.generateText({ /* ... */ });
+  timings.ai = Date.now() - aiStart;
+
+  const notionStart = Date.now();
+  const page = await integrations.notion.pages.create({ /* ... */ });
+  timings.notion = Date.now() - notionStart;
+
+  timings.total = Date.now() - start;
+
+  context.log.info('Performance metrics', timings);
+  // Output: { zoom: 320, ai: 890, notion: 210, total: 1420 }
+
+  return { success: true };
+}
+```
+
+### Step 2: Add Caching for Repeated Lookups
+
+Cache data used multiple times:
+
+```typescript
+async execute({ trigger, inputs, integrations }) {
+  // Create in-memory cache for this execution
+  const cache = new Map<string, unknown>();
+
+  async function getCachedUser(userId: string) {
+    if (!cache.has(userId)) {
+      const user = await integrations.slack.getUserInfo(userId);
+      cache.set(userId, user.data);
+    }
+    return cache.get(userId);
+  }
+
+  // Multiple lookups hit cache
+  const host = await getCachedUser(trigger.data.object.host_id);
+  const host2 = await getCachedUser(trigger.data.object.host_id);  // Cached!
+
+  return { success: true };
+}
+```
+
+### Step 3: Batch API Calls
+
+Instead of many single calls, batch when possible:
+
+```typescript
+// SLOW: 100 separate API calls
+for (const item of items) {
+  await integrations.notion.pages.create({ /* item */ });
+}
+
+// FAST: Process in rate-limited chunks
+async function processInChunks<T, R>(
+  items: T[],
+  processFn: (item: T) => Promise<R>,
+  chunkSize: number,
+  delayMs: number
+): Promise<R[]> {
+  const results: R[] = [];
+
+  for (let i = 0; i < items.length; i += chunkSize) {
+    const chunk = items.slice(i, i + chunkSize);
+    const chunkResults = await Promise.all(chunk.map(processFn));
+    results.push(...chunkResults);
+
+    // Delay between chunks to respect rate limits
+    if (i + chunkSize < items.length) {
+      await new Promise(r => setTimeout(r, delayMs));
+    }
+  }
+
+  return results;
+}
+
+// Process 3 items at a time, 1s between batches
+const pages = await processInChunks(
+  items,
+  item => integrations.notion.pages.create({ /* item */ }),
+  3,    // chunk size
+  1000  // delay ms
+);
+```
+
+### Step 4: Add Retry with Exponential Backoff
+
+Handle transient failures:
+
+```typescript
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: { maxAttempts: number; baseDelayMs: number }
+): Promise<T> {
+  let lastError: Error;
+
+  for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+
+      // Check if retryable
+      if ((error as {status?: number}).status === 429) {
+        const delay = options.baseDelayMs * Math.pow(2, attempt - 1);
+        await new Promise(r => setTimeout(r, delay));
+        continue;
+      }
+
+      throw error;  // Non-retryable, fail immediately
+    }
+  }
+
+  throw lastError!;
+}
+
+// Usage
+const page = await withRetry(
+  () => integrations.notion.pages.create(data),
+  { maxAttempts: 3, baseDelayMs: 1000 }
+);
+```
+
+### Step 5: Use Persistent Cache for Cross-Execution Data
+
+Cache expensive lookups across workflow runs:
+
+```typescript
+async execute({ inputs, integrations, storage }) {
+  const cacheKey = 'notion-databases';
+  const cacheTTL = 60 * 60 * 1000;  // 1 hour
+
+  // Check cache
+  let databases = await storage.get(cacheKey);
+
+  if (!databases || databases.expiry < Date.now()) {
+    // Cache miss or expired - fetch fresh
+    const result = await integrations.notion.getDatabases();
+    databases = {
+      data: result.data,
+      expiry: Date.now() + cacheTTL,
+    };
+    await storage.put(cacheKey, databases);
+  }
+
+  // Use cached data
+  const targetDb = databases.data.find(
+    db => db.title === inputs.databaseName
+  );
+
+  return { success: true };
+}
+```
+
+### Step 6: Checkpoint Long Operations
+
+For workflows that might timeout:
+
+```typescript
+async execute({ trigger, storage }) {
+  // Resume from checkpoint if exists
+  const checkpoint = await storage.get('checkpoint');
+  const startIndex = checkpoint?.lastProcessed || 0;
+
+  const items = trigger.payload.items.slice(startIndex);
+
+  for (let i = 0; i < items.length; i++) {
+    await processItem(items[i]);
+
+    // Checkpoint every 10 items
+    if (i % 10 === 0) {
+      await storage.put('checkpoint', {
+        lastProcessed: startIndex + i,
+        timestamp: Date.now(),
+      });
+    }
+  }
+
+  // Clear checkpoint on success
+  await storage.delete('checkpoint');
+  return { success: true };
+}
+```
+
+### Step 7: Measure and Compare
+
+Before and after metrics:
+
+```bash
+# Test before optimization
+workway dev
+time curl localhost:8787/execute -d @test-payload.json
+# real 4.2s
+
+# Apply optimizations, test again
+time curl localhost:8787/execute -d @test-payload.json
+# real 1.8s (57% faster)
+```
+
+---
+
 ## Cloudflare Workers Constraints
 
 WORKWAY runs on Cloudflare Workers. Know the limits:

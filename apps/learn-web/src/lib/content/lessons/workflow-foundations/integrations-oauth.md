@@ -2,6 +2,101 @@
 
 WORKWAY handles OAuth complexity so your workflows can focus on outcomes. Connect once, use everywhere.
 
+## Step-by-Step: Add Your First Integration
+
+### Step 1: Declare the Integration
+
+Add the integration to your workflow's `integrations` array:
+
+```typescript
+integrations: [
+  { service: 'zoom', scopes: ['meeting:read', 'recording:read'] },
+],
+```
+
+### Step 2: Destructure in Execute
+
+Access the integration client in your execute function:
+
+```typescript
+async execute({ integrations }) {
+  const { zoom } = integrations;
+  // zoom is now a fully authenticated client
+}
+```
+
+### Step 3: Call Integration Methods
+
+Use the integration's methods:
+
+```typescript
+async execute({ integrations }) {
+  const { zoom } = integrations;
+
+  const meetingsResult = await zoom.getMeetings();
+
+  if (!meetingsResult.success) {
+    return { success: false, error: meetingsResult.error };
+  }
+
+  console.log('Found meetings:', meetingsResult.data);
+  return { success: true, meetings: meetingsResult.data };
+}
+```
+
+### Step 4: Add a Second Integration
+
+Extend your workflow to use multiple services:
+
+```typescript
+integrations: [
+  { service: 'zoom', scopes: ['meeting:read'] },
+  { service: 'slack', scopes: ['chat:write'] },
+],
+
+async execute({ integrations }) {
+  const { zoom, slack } = integrations;
+
+  const meetingsResult = await zoom.getMeetings();
+
+  await slack.chat.postMessage({
+    channel: '#meetings',
+    text: `Found ${meetingsResult.data?.length || 0} recent meetings`,
+  });
+
+  return { success: true };
+}
+```
+
+### Step 5: Handle Optional Integrations
+
+Mark integrations as optional and check before use:
+
+```typescript
+integrations: [
+  { service: 'zoom', scopes: ['meeting:read'] },
+  { service: 'slack', scopes: ['chat:write'], optional: true },
+],
+
+async execute({ integrations }) {
+  const { zoom, slack } = integrations;
+
+  const meetingsResult = await zoom.getMeetings();
+
+  // Only post to Slack if connected
+  if (slack) {
+    await slack.chat.postMessage({
+      channel: '#meetings',
+      text: `Found ${meetingsResult.data?.length || 0} meetings`,
+    });
+  }
+
+  return { success: true };
+}
+```
+
+---
+
 ## The Integration Problem
 
 Every SaaS API requires authentication. Without abstraction:

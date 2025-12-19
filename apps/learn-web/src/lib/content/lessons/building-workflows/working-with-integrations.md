@@ -2,6 +2,121 @@
 
 Master the integration patterns for Slack, Zoom, Stripe, and more. Each service has its own conventions.
 
+## Step-by-Step: Chain Multiple Integrations
+
+### Step 1: Define Your Integration Flow
+
+Plan the data flow between services:
+
+```
+Zoom (trigger) → AI (transform) → Notion (save) → Slack (notify)
+```
+
+### Step 2: Declare All Integrations
+
+Add all required integrations to your workflow:
+
+```typescript
+integrations: [
+  { service: 'zoom', scopes: ['meeting:read', 'recording:read'] },
+  { service: 'notion', scopes: ['read_pages', 'write_pages'] },
+  { service: 'slack', scopes: ['chat:write'], optional: true },
+],
+```
+
+### Step 3: Get Source Data
+
+Fetch data from the triggering service:
+
+```typescript
+async execute({ trigger, integrations }) {
+  const { zoom } = integrations;
+
+  const meetingId = trigger.data.object.id;
+  const transcriptResult = await zoom.getTranscript({ meetingId });
+
+  if (!transcriptResult.success) {
+    console.warn('No transcript available');
+    // Continue without transcript
+  }
+
+  const transcript = transcriptResult.data?.transcript_text || '';
+}
+```
+
+### Step 4: Transform and Save
+
+Process the data and save to your destination:
+
+```typescript
+async execute({ trigger, inputs, integrations }) {
+  const { zoom, notion } = integrations;
+
+  // Get source data
+  const transcriptResult = await zoom.getTranscript({
+    meetingId: trigger.data.object.id,
+  });
+
+  // Create destination record
+  const page = await notion.pages.create({
+    parent: { database_id: inputs.notionDatabase },
+    properties: {
+      Name: { title: [{ text: { content: trigger.data.object.topic } }] },
+      Date: { date: { start: new Date().toISOString().split('T')[0] } },
+    },
+    children: transcriptResult.success
+      ? [{ type: 'paragraph', paragraph: { rich_text: [{ text: { content: transcriptResult.data.transcript_text } }] } }]
+      : [],
+  });
+
+  return { success: true, pageId: page.data?.id };
+}
+```
+
+### Step 5: Add Optional Notification
+
+Notify users without failing the workflow:
+
+```typescript
+async execute({ trigger, inputs, integrations }) {
+  const { zoom, notion, slack } = integrations;
+
+  // ... previous steps ...
+
+  // Notify (optional - don't fail workflow if this fails)
+  if (slack && inputs.slackChannel) {
+    const notifyResult = await slack.chat.postMessage({
+      channel: inputs.slackChannel,
+      text: `Meeting notes ready: ${page.data?.url}`,
+    });
+
+    if (!notifyResult.success) {
+      console.warn('Slack notification failed:', notifyResult.error);
+    }
+  }
+
+  return { success: true, pageId: page.data?.id };
+}
+```
+
+### Step 6: Test Each Integration Separately
+
+Before combining:
+
+```bash
+# Test Zoom integration
+workway dev
+curl localhost:8787/test-zoom -d '{"meetingId": "123"}'
+
+# Test Notion integration
+curl localhost:8787/test-notion -d '{"title": "Test Page"}'
+
+# Test full chain
+curl localhost:8787/execute -d '{"object": {"id": "123", "topic": "Test"}}'
+```
+
+---
+
 ## Integration Basics
 
 All integrations share common patterns:

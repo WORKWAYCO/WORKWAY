@@ -2,6 +2,116 @@
 
 Test before deploy. Find bugs locally, not in production. The WORKWAY CLI brings the full execution environment to your machine.
 
+## Step-by-Step: Test Your Workflow Locally
+
+### Step 1: Start the Development Server
+
+```bash
+cd my-workflow
+workway dev
+```
+
+You'll see:
+```
+✓ Workflow loaded
+✓ Dev server running at http://localhost:8787
+✓ Watching for file changes...
+```
+
+### Step 2: Trigger a Basic Execution
+
+In a new terminal:
+
+```bash
+curl http://localhost:8787/execute
+```
+
+Check the dev server terminal for execution logs.
+
+### Step 3: Test with Custom Payload
+
+Simulate a webhook event:
+
+```bash
+curl http://localhost:8787/execute \
+  -H "Content-Type: application/json" \
+  -d '{
+    "object": {
+      "id": "test-meeting-123",
+      "topic": "Test Meeting",
+      "duration": 45
+    }
+  }'
+```
+
+### Step 4: Create Custom Mock Data
+
+Create `mocks/zoom.ts` in your project:
+
+```typescript
+export default {
+  getMeeting: (meetingId: string) => ({
+    success: true,
+    data: {
+      id: meetingId,
+      topic: 'Mock Team Standup',
+      duration: 30,
+      participants: ['Alice', 'Bob'],
+    },
+  }),
+  getTranscript: () => ({
+    success: true,
+    data: {
+      transcript_text: 'Alice: Good morning everyone...',
+    },
+  }),
+};
+```
+
+### Step 5: Test Error Handling
+
+Send invalid data to verify error handling:
+
+```bash
+# Missing required fields
+curl http://localhost:8787/execute -d '{}'
+
+# Invalid meeting ID
+curl http://localhost:8787/execute \
+  -d '{"object": {"id": "nonexistent"}}'
+```
+
+### Step 6: Check Execution Logs
+
+View detailed logs:
+
+```bash
+workway logs --tail
+```
+
+Or check the dev server output for:
+- Request received
+- Integration calls
+- Errors and warnings
+- Execution result
+
+### Step 7: Iterate and Hot Reload
+
+Edit your workflow code. The dev server automatically reloads:
+
+```
+✓ File changed: src/index.ts
+✓ Workflow reloaded
+```
+
+Test again without restarting:
+
+```bash
+curl http://localhost:8787/execute -d '{"object": {"id": "123"}}'
+```
+
+---
+
 ## Development Server
 
 ### Start Local Development

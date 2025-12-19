@@ -2,6 +2,133 @@
 
 Transform raw data into insights. Workers AI runs on Cloudflare's global network—no external API keys needed.
 
+## Step-by-Step: Add AI to Your Workflow
+
+### Step 1: Access the AI Integration
+
+The AI integration is built-in—just destructure it:
+
+```typescript
+async execute({ integrations }) {
+  const { ai } = integrations;
+  // ai is ready to use
+}
+```
+
+### Step 2: Generate Your First AI Response
+
+Add a basic text generation call:
+
+```typescript
+async execute({ integrations }) {
+  const { ai } = integrations;
+
+  const result = await ai.generateText({
+    prompt: 'What are the key takeaways from a successful meeting?',
+  });
+
+  console.log('AI response:', result.data?.response);
+  return { success: true, output: result.data?.response };
+}
+```
+
+### Step 3: Add a System Prompt
+
+Guide the AI's behavior with a system prompt:
+
+```typescript
+async execute({ trigger, integrations }) {
+  const { ai } = integrations;
+  const transcript = trigger.data.transcript;
+
+  const result = await ai.generateText({
+    system: 'You are a professional meeting summarizer. Extract key decisions, action items, and highlights. Be concise.',
+    prompt: `Summarize this meeting transcript:\n\n${transcript}`,
+    temperature: 0.3,  // Lower = more deterministic
+    max_tokens: 500,   // Limit response length
+  });
+
+  return { success: true, summary: result.data?.response };
+}
+```
+
+### Step 4: Parse Structured Output
+
+When you need structured data, guide the AI and parse:
+
+```typescript
+async execute({ trigger, integrations }) {
+  const { ai } = integrations;
+
+  const result = await ai.generateText({
+    system: 'You extract action items as JSON. Return ONLY a valid JSON array, no other text.',
+    prompt: `Extract action items from this text:\n\n${trigger.data.notes}`,
+    temperature: 0.1,
+  });
+
+  // Parse the JSON response
+  let actionItems = [];
+  try {
+    actionItems = JSON.parse(result.data?.response || '[]');
+  } catch (error) {
+    console.warn('Failed to parse AI response as JSON');
+  }
+
+  return { success: true, actionItems };
+}
+```
+
+### Step 5: Integrate AI with Other Services
+
+Chain AI output to other integrations:
+
+```typescript
+async execute({ trigger, inputs, integrations }) {
+  const { ai, notion, slack } = integrations;
+
+  // 1. Generate summary with AI
+  const summaryResult = await ai.generateText({
+    system: 'Summarize meetings in 3-5 bullet points.',
+    prompt: `Summarize:\n\n${trigger.data.transcript}`,
+  });
+
+  // 2. Save to Notion with AI-generated summary
+  const page = await notion.pages.create({
+    parent: { database_id: inputs.notionDatabase },
+    properties: {
+      Name: { title: [{ text: { content: trigger.data.topic } }] },
+    },
+    children: [{
+      type: 'paragraph',
+      paragraph: {
+        rich_text: [{ text: { content: summaryResult.data?.response || '' } }],
+      },
+    }],
+  });
+
+  // 3. Notify Slack
+  await slack.chat.postMessage({
+    channel: inputs.slackChannel,
+    text: `Meeting summary ready: ${page.data?.url}`,
+  });
+
+  return { success: true };
+}
+```
+
+### Step 6: Test AI Responses Locally
+
+```bash
+workway dev
+
+# Test with sample transcript
+curl localhost:8787/execute \
+  -H "Content-Type: application/json" \
+  -d '{"transcript": "Alice: Lets launch the new feature next week. Bob: Agreed, I will prepare the deployment plan."}'
+```
+
+---
+
 ## Why Workers AI?
 
 | Traditional AI APIs | Workers AI |

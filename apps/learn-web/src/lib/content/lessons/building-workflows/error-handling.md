@@ -2,6 +2,158 @@
 
 Workflows fail. APIs go down, rate limits trigger, data is malformed. Good error handling makes the difference between a workflow that works and one that works reliably.
 
+## Step-by-Step: Add Comprehensive Error Handling
+
+### Step 1: Wrap Critical Steps in Try-Catch
+
+Start with the basic pattern:
+
+```typescript
+async execute({ trigger, integrations }) {
+  try {
+    const result = await integrations.zoom.getMeeting(trigger.data.object.id);
+    return { success: true, data: result.data };
+  } catch (error) {
+    console.error('Workflow failed:', (error as Error).message);
+    return { success: false, error: (error as Error).message };
+  }
+}
+```
+
+### Step 2: Separate Required from Optional Steps
+
+Identify which steps must succeed vs. which can fail gracefully:
+
+```typescript
+async execute({ trigger, inputs, integrations }) {
+  const { zoom, notion, slack } = integrations;
+
+  // REQUIRED: Get meeting data
+  let meeting;
+  try {
+    const result = await zoom.getMeeting(trigger.data.object.id);
+    if (!result.success) throw new Error(result.error);
+    meeting = result.data;
+  } catch (error) {
+    return { success: false, error: 'Failed to fetch meeting data' };
+  }
+
+  // REQUIRED: Save to Notion
+  let page;
+  try {
+    page = await notion.pages.create({ /* ... */ });
+    if (!page.success) throw new Error(page.error);
+  } catch (error) {
+    return { success: false, error: 'Failed to save meeting notes' };
+  }
+
+  // OPTIONAL: Notify Slack
+  try {
+    await slack.chat.postMessage({ /* ... */ });
+  } catch (error) {
+    console.warn('Slack notification failed:', (error as Error).message);
+    // Continue - don't fail workflow
+  }
+
+  return { success: true, pageId: page.data?.id };
+}
+```
+
+### Step 3: Add a Retry Wrapper
+
+Create a reusable retry function:
+
+```typescript
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: { maxAttempts: number; delayMs: number }
+): Promise<T> {
+  let lastError: Error;
+
+  for (let attempt = 1; attempt <= options.maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error as Error;
+      console.warn(`Attempt ${attempt} failed:`, lastError.message);
+
+      if (attempt < options.maxAttempts) {
+        const delay = options.delayMs * Math.pow(2, attempt - 1);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
+  }
+
+  throw lastError!;
+}
+```
+
+### Step 4: Apply Retry to Flaky Operations
+
+Use the retry wrapper for operations that may transiently fail:
+
+```typescript
+async execute({ trigger, inputs, integrations }) {
+  const { zoom, notion } = integrations;
+
+  // Retry meeting fetch with exponential backoff
+  const meeting = await withRetry(
+    () => zoom.getMeeting(trigger.data.object.id),
+    { maxAttempts: 3, delayMs: 1000 }
+  );
+
+  // Create Notion page (also with retry)
+  const page = await withRetry(
+    () => notion.pages.create({
+      parent: { database_id: inputs.notionDatabase },
+      properties: { /* ... */ },
+    }),
+    { maxAttempts: 3, delayMs: 1000 }
+  );
+
+  return { success: true, pageId: page.data?.id };
+}
+```
+
+### Step 5: Return Detailed Error Information
+
+Include context in error responses:
+
+```typescript
+async execute({ trigger, inputs, integrations }) {
+  try {
+    // ... workflow logic
+  } catch (error) {
+    return {
+      success: false,
+      error: (error as Error).message,
+      context: {
+        meetingId: trigger.data?.object?.id,
+        step: 'notion_create',
+        timestamp: new Date().toISOString(),
+      },
+    };
+  }
+}
+```
+
+### Step 6: Test Error Scenarios
+
+Simulate failures in development:
+
+```bash
+# Test with invalid meeting ID
+curl localhost:8787/execute -d '{"object": {"id": "invalid-123"}}'
+
+# Test with missing required fields
+curl localhost:8787/execute -d '{}'
+
+# Check logs for error handling
+workway logs --tail
+```
+
+---
+
 ## The Error Reality
 
 Every external call can fail:

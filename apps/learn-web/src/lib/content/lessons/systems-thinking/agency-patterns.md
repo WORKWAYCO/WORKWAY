@@ -2,6 +2,153 @@
 
 Agencies building workflows for clients sit at a strategic leverage point. Build once, deploy many. Turn client projects into platform assets.
 
+## Step-by-Step: Build Your First Client Workflow
+
+### Step 1: Conduct Discovery
+
+Ask the client these questions:
+
+```
+1. What manual processes take the most time?
+2. What data moves between systems repeatedly?
+3. What notifications would help your team?
+4. What breaks when someone is out of office?
+```
+
+Document the answers in outcome format (not technology):
+```
+Manual process: "After every sales call, I update the CRM, send a summary to the team, and schedule a follow-up"
+Outcome needed: "Sales calls that handle their own aftermath"
+```
+
+### Step 2: Map the Technical Requirements
+
+Translate outcomes to workflow components:
+
+```
+Outcome: "Sales calls handle their own aftermath"
+
+Trigger: Zoom meeting ends
+Steps:
+  1. Get meeting transcript (Zoom API)
+  2. Generate summary (AI)
+  3. Update CRM record (Salesforce)
+  4. Notify team (Slack)
+  5. Create follow-up task (CRM/Calendar)
+
+Integrations needed: zoom, salesforce, slack, google-calendar
+```
+
+### Step 3: Create the Private Workflow
+
+Set up the project structure:
+
+```bash
+mkdir client-acme-meeting-sync
+cd client-acme-meeting-sync
+pnpm init
+pnpm add @workwayco/sdk
+mkdir src
+touch src/index.ts
+```
+
+Configure as private:
+
+```typescript
+export const metadata = {
+  id: 'acme-meeting-intelligence',
+  name: 'Acme Meeting Intelligence',
+  visibility: 'private' as const,
+  accessGrants: [
+    { type: 'email_domain' as const, value: 'acme.com' },
+  ],
+};
+```
+
+### Step 4: Build the Core Workflow
+
+Implement the client's requirements:
+
+```typescript
+import { defineWorkflow, webhook } from '@workwayco/sdk';
+
+export default defineWorkflow({
+  name: 'Acme Meeting Intelligence',
+  description: 'Automatic meeting summaries, CRM updates, and team notifications',
+  version: '1.0.0',
+
+  integrations: [
+    { service: 'zoom', scopes: ['meeting:read', 'recording:read'] },
+    { service: 'salesforce', scopes: ['api', 'refresh_token'] },
+    { service: 'slack', scopes: ['chat:write'] },
+  ],
+
+  inputs: {
+    salesforceObjectType: { type: 'text', default: 'Opportunity' },
+    slackChannel: { type: 'picker', pickerType: 'slack:channel' },
+  },
+
+  trigger: webhook({ service: 'zoom', event: 'recording.completed' }),
+
+  async execute({ trigger, inputs, integrations }) {
+    // Implementation here
+  },
+});
+```
+
+### Step 5: Test with Client Data
+
+Create mock data that matches client scenarios:
+
+```typescript
+// mocks/zoom.ts
+export default {
+  getMeeting: () => ({
+    success: true,
+    data: {
+      id: 'mtg-123',
+      topic: 'Acme Corp - Q1 Review',
+      participants: ['sales@acme.com', 'client@prospect.com'],
+    },
+  }),
+};
+```
+
+### Step 6: Deploy for Client
+
+Deploy as private workflow:
+
+```bash
+workway deploy --visibility private
+
+# Output:
+# ✓ Deployed: acme-meeting-intelligence
+# ✓ Access: acme.com email domain only
+# ✓ URL: workway.co/workflows/private/acme-meeting-intelligence
+```
+
+### Step 7: Document for Handoff
+
+Create client-facing documentation:
+
+```markdown
+## Acme Meeting Intelligence
+
+### What it does
+After every Zoom meeting with a recording, this workflow:
+1. Extracts the transcript
+2. Generates an AI summary
+3. Updates the related Salesforce opportunity
+4. Posts a summary to #sales-updates in Slack
+
+### Setup required
+1. Connect your Zoom account
+2. Connect Salesforce (needs API access)
+3. Select your Slack notification channel
+```
+
+---
+
 ## The Agency Opportunity
 
 Traditional agency model:

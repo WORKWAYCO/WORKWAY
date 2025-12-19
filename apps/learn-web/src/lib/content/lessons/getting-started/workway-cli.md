@@ -2,6 +2,65 @@
 
 The WORKWAY CLI connects your local development environment to the WORKWAY platform. Deploy, test, and manage workflows from your terminal.
 
+## Quick Start: Your First Workflow in 5 Minutes
+
+### Step 1: Install the CLI
+
+```bash
+pnpm add -g @workwayco/cli
+# or: npm install -g @workwayco/cli
+```
+
+### Step 2: Authenticate
+
+```bash
+workway login
+```
+
+A browser window opens. Sign in with your WORKWAY account.
+
+### Step 3: Verify Authentication
+
+```bash
+workway whoami
+```
+
+You should see your email and organization.
+
+### Step 4: Create a New Project
+
+```bash
+mkdir my-first-workflow
+cd my-first-workflow
+workway init
+```
+
+### Step 5: Start Development Server
+
+```bash
+workway dev
+```
+
+### Step 6: Test Your Workflow
+
+In a new terminal:
+
+```bash
+curl http://localhost:8787/execute -d '{}'
+```
+
+### Step 7: Deploy to Production
+
+When ready:
+
+```bash
+workway deploy
+```
+
+Your workflow is now live.
+
+---
+
 ## Installation
 
 ### Via npm

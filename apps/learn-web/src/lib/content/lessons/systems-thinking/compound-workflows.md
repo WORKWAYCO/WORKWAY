@@ -2,6 +2,166 @@
 
 Single automations move data A → B. Compound workflows orchestrate complete outcomes across multiple services, creating results greater than the sum of their parts.
 
+## Step-by-Step: Design a Compound Workflow
+
+### Step 1: Map the Complete Outcome
+
+Write down everything that should happen when your trigger fires:
+
+```
+Trigger: Zoom meeting ends
+
+Outcomes needed:
+1. Meeting notes saved to Notion
+2. AI summary generated
+3. Team notified in Slack
+4. Follow-up email drafted
+5. CRM record updated
+```
+
+### Step 2: Identify Dependencies
+
+Determine which steps depend on others:
+
+```
+                    Meeting Data
+                         │
+                    ┌────┴────┐
+                    │         │
+               Transcript  Metadata
+                    │         │
+                    ▼         │
+               AI Summary     │
+                    │         │
+                    ├─────────┤
+                    │         │
+              ┌─────┼─────┐   │
+              ▼     ▼     ▼   ▼
+           Notion Slack  Email CRM
+           (sequential)  (parallel)
+```
+
+### Step 3: Implement Sequential Steps
+
+Add dependent steps that must run in order:
+
+```typescript
+async execute({ trigger, inputs, integrations }) {
+  const { zoom, ai, notion } = integrations;
+
+  // Sequential: Each step needs the previous result
+  const meetingResult = await zoom.getMeeting(trigger.data.object.id);
+
+  const transcriptResult = await zoom.getTranscript({
+    meetingId: meetingResult.data?.id,
+  });
+
+  const summaryResult = await ai.generateText({
+    system: 'Summarize meeting highlights in 3-5 bullets.',
+    prompt: transcriptResult.data?.transcript_text || '',
+  });
+
+  const page = await notion.pages.create({
+    parent: { database_id: inputs.notionDatabase },
+    properties: {
+      Name: { title: [{ text: { content: meetingResult.data?.topic || 'Meeting' } }] },
+    },
+    children: [{
+      type: 'paragraph',
+      paragraph: { rich_text: [{ text: { content: summaryResult.data?.response || '' } }] },
+    }],
+  });
+
+  return { success: true, pageId: page.data?.id };
+}
+```
+
+### Step 4: Add Parallel Steps
+
+Use `Promise.all()` for independent operations:
+
+```typescript
+async execute({ trigger, inputs, integrations }) {
+  const { zoom, ai, notion, slack, gmail } = integrations;
+
+  // Get data (sequential)
+  const meeting = await zoom.getMeeting(trigger.data.object.id);
+  const summary = await ai.generateText({ /* ... */ });
+
+  // Dispatch to multiple services (parallel)
+  const [notionResult, slackResult, emailResult] = await Promise.all([
+    notion.pages.create({ /* ... */ }),
+    slack.chat.postMessage({
+      channel: inputs.slackChannel,
+      text: `Meeting "${meeting.data?.topic}" complete`,
+    }),
+    gmail.sendEmail({
+      to: meeting.data?.host_email,
+      subject: `Follow-up: ${meeting.data?.topic}`,
+      body: `Draft follow-up for your meeting...\n\n${summary.data?.response}`,
+    }),
+  ]);
+
+  return {
+    success: true,
+    pageId: notionResult.data?.id,
+    slackSent: slackResult.success,
+    emailDrafted: emailResult.success,
+  };
+}
+```
+
+### Step 5: Isolate Failures
+
+Prevent one failure from breaking everything:
+
+```typescript
+async execute({ trigger, inputs, integrations }) {
+  const { notion, slack, gmail } = integrations;
+  const results = { notion: null, slack: null, email: null, errors: [] };
+
+  // Required step
+  const notionResult = await notion.pages.create({ /* ... */ });
+  if (!notionResult.success) {
+    return { success: false, error: 'Failed to save meeting notes' };
+  }
+  results.notion = notionResult.data?.id;
+
+  // Optional steps - don't fail workflow
+  try {
+    const slackResult = await slack.chat.postMessage({ /* ... */ });
+    results.slack = slackResult.success ? 'sent' : 'failed';
+  } catch (e) {
+    results.errors.push('Slack notification failed');
+  }
+
+  try {
+    const emailResult = await gmail.sendEmail({ /* ... */ });
+    results.email = emailResult.success ? 'sent' : 'failed';
+  } catch (e) {
+    results.errors.push('Email draft failed');
+  }
+
+  return { success: true, ...results };
+}
+```
+
+### Step 6: Test the Complete Flow
+
+```bash
+workway dev
+
+# Test with all steps
+curl localhost:8787/execute \
+  -H "Content-Type: application/json" \
+  -d '{"object": {"id": "123", "topic": "Sprint Planning", "host_email": "host@example.com"}}'
+
+# Check logs for all service calls
+workway logs --tail
+```
+
+---
+
 ## The Compound Advantage
 
 Simple workflow:
