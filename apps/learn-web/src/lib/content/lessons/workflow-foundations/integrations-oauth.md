@@ -246,6 +246,121 @@ async execute({ integrations, context }) {
 }
 ```
 
+## Common Pitfalls
+
+### Wrong Scopes Declared
+
+OAuth fails if you request scopes not granted:
+
+```typescript
+// Wrong - using methods that need more scopes
+integrations: [
+  { service: 'notion', scopes: ['read_pages'] },  // Read only
+],
+async execute({ integrations }) {
+  await integrations.notion.pages.create(/* ... */);  // Fails: needs write_pages
+}
+
+// Right - declare all needed scopes
+integrations: [
+  { service: 'notion', scopes: ['read_pages', 'write_pages'] },  // Read + Write
+],
+async execute({ integrations }) {
+  await integrations.notion.pages.create(/* ... */);  // Works
+}
+```
+
+### Not Handling Token Expiration
+
+OAuth tokens expire. The BaseAPIClient handles refresh automatically, but your code should handle reconnection prompts:
+
+```typescript
+// Wrong - ignoring auth errors
+async execute({ integrations }) {
+  const result = await integrations.zoom.getMeetings();
+  // Continues even if user needs to reconnect
+}
+
+// Right - surface reconnection needs
+async execute({ integrations }) {
+  const result = await integrations.zoom.getMeetings();
+  if (!result.success && result.error?.code === 'UNAUTHORIZED') {
+    return {
+      success: false,
+      error: 'Please reconnect your Zoom account',
+      requiresAction: true,
+    };
+  }
+}
+```
+
+### Assuming Integration Availability
+
+Optional integrations may not be connected:
+
+```typescript
+// Wrong - crashes if Slack not connected
+integrations: [
+  { service: 'notion', scopes: ['write_pages'] },
+  { service: 'slack', scopes: ['chat:write'], optional: true },
+],
+async execute({ integrations }) {
+  await integrations.slack.postMessage(/* ... */);  // undefined.postMessage
+}
+
+// Right - check before using
+async execute({ integrations }) {
+  if (integrations.slack) {
+    await integrations.slack.postMessage(/* ... */);
+  }
+}
+```
+
+### Hardcoding API URLs
+
+Use integration clients, not raw fetch:
+
+```typescript
+// Wrong - bypasses token management
+async execute({ config }) {
+  const response = await fetch('https://api.zoom.us/v2/meetings', {
+    headers: { 'Authorization': `Bearer ${config.zoomToken}` },
+  });
+}
+
+// Right - use the integration client
+async execute({ integrations }) {
+  const result = await integrations.zoom.getMeetings();
+  // Token refresh, rate limiting handled automatically
+}
+```
+
+### Ignoring Rate Limits
+
+APIs have rate limits. The BaseAPIClient handles backoff, but batch operations need care:
+
+```typescript
+// Wrong - rapid fire requests hit rate limits
+async execute({ integrations }) {
+  const pages = await getPageIds();  // 100 pages
+  for (const id of pages) {
+    await integrations.notion.pages.update(id, data);  // 100 requests at once
+  }
+}
+
+// Right - batch or throttle
+async execute({ integrations }) {
+  const pages = await getPageIds();
+  // Process in batches of 10
+  for (let i = 0; i < pages.length; i += 10) {
+    const batch = pages.slice(i, i + 10);
+    await Promise.all(batch.map(id =>
+      integrations.notion.pages.update(id, data)
+    ));
+  }
+}
+```
+
 ## Praxis
 
 Explore the integration patterns in the WORKWAY codebase:

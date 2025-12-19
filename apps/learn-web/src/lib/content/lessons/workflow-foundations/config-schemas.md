@@ -380,6 +380,149 @@ configSchema: {
 }
 ```
 
+## Common Pitfalls
+
+### Too Many Required Fields
+
+Every required field is friction. Users abandon complex setups:
+
+```typescript
+// Wrong - overwhelming setup
+inputs: {
+  notionDatabase: { type: 'picker', required: true },
+  slackChannel: { type: 'picker', required: true },
+  emailRecipient: { type: 'text', required: true },
+  scheduleTime: { type: 'text', required: true },
+  timezone: { type: 'select', required: true },
+  format: { type: 'select', required: true },
+}
+
+// Right - essential only, smart defaults for rest
+inputs: {
+  notionDatabase: { type: 'picker', required: true },  // Essential
+  slackChannel: { type: 'picker', required: false, description: 'Optional notifications' },
+  format: { type: 'select', default: 'bullets' },  // Has default
+}
+```
+
+### Missing Default Values
+
+Force users to make decisions they shouldn't need to:
+
+```typescript
+// Wrong - requires user to choose
+maxResults: {
+  type: 'number',
+  label: 'Maximum Results',
+  required: true,  // User must pick a number
+}
+
+// Right - sensible default
+maxResults: {
+  type: 'number',
+  label: 'Maximum Results',
+  default: 10,  // Works out of the box
+  description: 'Adjust if needed',
+}
+```
+
+### Jargon in Labels
+
+Use outcome-focused language, not technical terms:
+
+```typescript
+// Wrong - developer speak
+{
+  label: 'Notion DB UUID',
+  description: 'The database_id parameter for page creation',
+}
+
+// Right - user outcome
+{
+  label: 'Meeting Notes Database',
+  description: 'Where your meeting summaries will appear',
+}
+```
+
+### Type Mismatch in Execute
+
+Config values have specific types - don't assume:
+
+```typescript
+// Wrong - assumes string is number
+inputs: {
+  maxItems: { type: 'text', label: 'Max Items' },
+}
+async execute({ inputs }) {
+  for (let i = 0; i < inputs.maxItems; i++) {  // "10" !== 10
+    // ...
+  }
+}
+
+// Right - use number type
+inputs: {
+  maxItems: { type: 'number', label: 'Max Items', default: 10 },
+}
+async execute({ inputs }) {
+  for (let i = 0; i < inputs.maxItems; i++) {  // 10 is number
+    // ...
+  }
+}
+```
+
+### Forgetting showIf Dependencies
+
+Conditional fields need their dependency to exist:
+
+```typescript
+// Wrong - showIf references non-existent field
+inputs: {
+  slackChannel: {
+    type: 'picker',
+    showIf: { enableNotifications: true },  // enableNotifications not defined!
+  },
+}
+
+// Right - define the controlling field
+inputs: {
+  enableNotifications: {
+    type: 'boolean',
+    label: 'Enable Notifications',
+    default: false,
+  },
+  slackChannel: {
+    type: 'picker',
+    showIf: { enableNotifications: true },  // Now works
+  },
+}
+```
+
+### Not Validating Picker Values
+
+Pickers return IDs that might become invalid:
+
+```typescript
+// Wrong - assumes picker value always valid
+async execute({ inputs, integrations }) {
+  await integrations.notion.pages.create({
+    parent: { database_id: inputs.notionDatabase },  // What if deleted?
+  });
+}
+
+// Right - handle missing/invalid
+async execute({ inputs, integrations }) {
+  const result = await integrations.notion.pages.create({
+    parent: { database_id: inputs.notionDatabase },
+  });
+  if (!result.success && result.error?.code === 'NOT_FOUND') {
+    return {
+      success: false,
+      error: 'The selected database no longer exists. Please reconfigure.',
+    };
+  }
+}
+```
+
 ## Praxis
 
 Design a config schema for one of your outcome statements from the earlier lesson:

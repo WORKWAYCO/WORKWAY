@@ -436,6 +436,165 @@ if (!summary) {
 }
 ```
 
+## Common Pitfalls
+
+### Not Handling AI Failures
+
+AI calls can fail - always have fallbacks:
+
+```typescript
+// Wrong - crashes if AI unavailable
+async execute({ integrations }) {
+  const result = await integrations.ai.generateText({ prompt });
+  return { summary: result.data.response };  // Crashes if failed
+}
+
+// Right - graceful degradation
+async execute({ integrations }) {
+  const result = await integrations.ai.generateText({ prompt });
+
+  if (!result.success) {
+    console.warn('AI summarization failed:', result.error);
+    return { summary: 'Summary unavailable', raw: transcript };
+  }
+
+  return { summary: result.data?.response || 'No response generated' };
+}
+```
+
+### Transcript Too Long
+
+Workers AI has token limits - truncate long inputs:
+
+```typescript
+// Wrong - sends entire transcript
+const result = await ai.generateText({
+  prompt: `Summarize: ${transcript}`,  // 50,000 characters = error
+});
+
+// Right - truncate to safe limit
+const MAX_INPUT = 8000;  // Characters, not tokens
+const truncated = transcript.length > MAX_INPUT
+  ? transcript.slice(0, MAX_INPUT) + '...[truncated]'
+  : transcript;
+
+const result = await ai.generateText({
+  prompt: `Summarize: ${truncated}`,
+});
+```
+
+### Expecting Consistent JSON
+
+LLMs don't guarantee valid JSON output:
+
+```typescript
+// Wrong - assumes valid JSON
+const result = await ai.generateText({ prompt: 'Return JSON: {items: [...]}' });
+const data = JSON.parse(result.data.response);  // Crashes on invalid JSON
+
+// Right - extract and validate
+const result = await ai.generateText({ prompt: 'Return JSON: {items: [...]}' });
+
+let data = null;
+try {
+  const jsonMatch = result.data?.response?.match(/\{[\s\S]*\}/);
+  if (jsonMatch) {
+    data = JSON.parse(jsonMatch[0]);
+  }
+} catch {
+  console.warn('Failed to parse AI response as JSON');
+}
+
+// Use data safely with fallback
+const items = data?.items || [];
+```
+
+### Vague Prompts
+
+Unclear prompts get inconsistent results:
+
+```typescript
+// Wrong - vague, inconsistent output
+const result = await ai.generateText({
+  prompt: 'Summarize this meeting',
+});
+
+// Right - specific constraints
+const result = await ai.generateText({
+  system: 'You are a meeting summarizer. Be concise.',
+  prompt: `Summarize in exactly 3 bullet points, max 20 words each.
+Focus on: 1) decisions made, 2) action items, 3) next steps.
+
+Meeting transcript:
+${transcript}`,
+  temperature: 0.3,  // Lower = more consistent
+});
+```
+
+### Wrong Temperature Setting
+
+High temperature = creative but inconsistent; low = predictable:
+
+```typescript
+// Wrong - high temperature for structured extraction
+const result = await ai.generateText({
+  prompt: 'Extract: {"name": "...", "email": "..."}',
+  temperature: 0.9,  // Too creative for extraction
+});
+
+// Right - low temperature for structured tasks
+const result = await ai.generateText({
+  prompt: 'Extract: {"name": "...", "email": "..."}',
+  temperature: 0.1,  // Deterministic for extraction
+});
+
+// Use higher temperature for creative tasks
+const creative = await ai.generateText({
+  prompt: 'Write a friendly follow-up email',
+  temperature: 0.7,  // More variety in phrasing
+});
+```
+
+### Not Using extractStructured
+
+Manual JSON prompting is error-prone:
+
+```typescript
+// Wrong - manual JSON extraction
+const result = await ai.generateText({
+  prompt: 'Return JSON with actionItems array',
+});
+const items = JSON.parse(result.data.response).actionItems;
+
+// Right - use SDK's structured extraction
+const result = await ai.extractStructured(transcript, {
+  actionItems: 'string[]',
+  decisions: 'string[]',
+  nextMeeting: 'string',
+});
+
+// Typed and validated automatically
+const items = result.data?.actionItems || [];
+```
+
+### Ignoring Model Capabilities
+
+Different models have different strengths:
+
+```typescript
+// Wrong - using general model for code
+const result = await ai.generateText({
+  model: AIModels.LLAMA_3_8B,
+  prompt: 'Generate TypeScript function',
+});
+
+// Right - use code-specialized model
+const result = await ai.generateText({
+  model: AIModels.CODE_LLAMA,  // Specialized for code
+  prompt: 'Generate TypeScript function',
+});
+```
+
 ## Praxis
 
 Add AI intelligence to your meeting notes workflow:

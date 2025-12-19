@@ -301,6 +301,107 @@ export default defineWorkflow({
 });
 ```
 
+## Common Pitfalls
+
+### Missing Return Statement
+
+Every `execute` function must return a result object:
+
+```typescript
+// Wrong - no return
+async execute({ integrations }) {
+  await integrations.notion.pages.create(/* ... */);
+}
+
+// Right - explicit return
+async execute({ integrations }) {
+  const page = await integrations.notion.pages.create(/* ... */);
+  return { success: true, pageId: page.data?.id };
+}
+```
+
+### Incorrect Integration Declaration
+
+Integrations must be declared in the `integrations` array before use:
+
+```typescript
+// Wrong - using undeclared integration
+integrations: [
+  { service: 'notion', scopes: ['write_pages'] },
+],
+async execute({ integrations }) {
+  const { notion, slack } = integrations;  // slack not declared!
+  await slack.postMessage(/* ... */);  // Runtime error
+}
+
+// Right - all integrations declared
+integrations: [
+  { service: 'notion', scopes: ['write_pages'] },
+  { service: 'slack', scopes: ['chat:write'] },  // Declared
+],
+async execute({ integrations }) {
+  const { notion, slack } = integrations;  // Both available
+}
+```
+
+### Destructuring Before Checking Success
+
+Integration methods return `ActionResult` objects that should be checked:
+
+```typescript
+// Wrong - assumes success
+async execute({ integrations }) {
+  const result = await integrations.zoom.getMeeting(id);
+  const topic = result.data.topic;  // Crashes if request failed
+}
+
+// Right - check success first
+async execute({ integrations }) {
+  const result = await integrations.zoom.getMeeting(id);
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+  const topic = result.data.topic;  // Safe access
+}
+```
+
+### Using Node.js APIs
+
+Cloudflare Workers don't have Node.js built-ins:
+
+```typescript
+// Wrong - Node.js APIs unavailable
+import fs from 'fs';
+import path from 'path';
+
+async execute() {
+  const data = fs.readFileSync('file.txt');  // Runtime error
+}
+
+// Right - use Workers-compatible APIs
+async execute({ storage }) {
+  const data = await storage.get('key');  // KV storage works
+}
+```
+
+### Forgetting Async/Await
+
+Integration methods are async - missing `await` causes issues:
+
+```typescript
+// Wrong - missing await
+async execute({ integrations }) {
+  const page = integrations.notion.pages.create(/* ... */);  // Returns Promise
+  return { success: true, pageId: page.id };  // undefined
+}
+
+// Right - await the promise
+async execute({ integrations }) {
+  const page = await integrations.notion.pages.create(/* ... */);
+  return { success: true, pageId: page.data?.id };
+}
+```
+
 ## Praxis
 
 Study the defineWorkflow() pattern in real code:

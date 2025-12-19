@@ -344,6 +344,154 @@ async execute({ trigger, inputs, integrations, storage }) {
 }
 ```
 
+## Common Pitfalls
+
+### Missing Idempotency Check
+
+Webhooks can fire multiple times for the same event:
+
+```typescript
+// Wrong - processes duplicate events
+async execute({ trigger }) {
+  const meetingId = trigger.data.object.id;
+  await createNotionPage(meetingId);  // Creates duplicates
+}
+
+// Right - check if already processed
+async execute({ trigger, storage }) {
+  const eventId = trigger.data.object.id;
+  const processedKey = `processed:${eventId}`;
+
+  if (await storage.get(processedKey)) {
+    return { success: true, skipped: true, reason: 'Already processed' };
+  }
+
+  await createNotionPage(eventId);
+  await storage.put(processedKey, Date.now());
+
+  return { success: true };
+}
+```
+
+### Invalid Cron Expression
+
+Cron syntax errors cause silent failures:
+
+```typescript
+// Wrong - invalid syntax
+trigger: schedule('9 AM every day'),  // Not cron format
+
+// Right - valid cron expression
+trigger: schedule('0 9 * * *'),  // 9 AM daily
+
+// Common patterns:
+// Every hour:     '0 * * * *'
+// Daily at 9 AM:  '0 9 * * *'
+// Weekdays noon:  '0 12 * * 1-5'
+// Every 15 min:   '*/15 * * * *'
+```
+
+### Not Handling Missing Webhook Data
+
+Webhook payloads can be incomplete:
+
+```typescript
+// Wrong - assumes data exists
+async execute({ trigger }) {
+  const meetingId = trigger.data.object.id;  // Crashes if object undefined
+  const topic = trigger.data.object.topic;
+}
+
+// Right - validate before use
+async execute({ trigger }) {
+  const meetingId = trigger.data?.object?.id;
+  if (!meetingId) {
+    return { success: false, error: 'Invalid webhook payload: missing meeting ID' };
+  }
+  const topic = trigger.data.object.topic || 'Untitled';
+}
+```
+
+### Wrong Webhook Event Name
+
+Event names must match the provider's format exactly:
+
+```typescript
+// Wrong - incorrect event name
+trigger: webhook({
+  service: 'zoom',
+  event: 'meeting_ended',  // Underscore instead of dot
+}),
+
+// Right - exact event name from provider docs
+trigger: webhook({
+  service: 'zoom',
+  event: 'meeting.ended',  // Correct format
+}),
+```
+
+### Schedule Without Timezone
+
+Cron runs in UTC by default, which surprises users:
+
+```typescript
+// Wrong - runs at 9 AM UTC, not user's timezone
+trigger: schedule('0 9 * * *'),
+
+// Right - specify timezone
+trigger: schedule({
+  cron: '0 9 * * *',
+  timezone: 'America/New_York',  // Explicit timezone
+}),
+```
+
+### Polling Too Frequently
+
+Poll triggers have minimum intervals:
+
+```typescript
+// Wrong - too frequent, hits rate limits
+trigger: poll({
+  service: 'gmail',
+  endpoint: 'messages.list',
+  interval: 10,  // 10 seconds - too frequent
+}),
+
+// Right - respect minimum interval (60s)
+trigger: poll({
+  service: 'gmail',
+  endpoint: 'messages.list',
+  interval: 300,  // 5 minutes - reasonable
+}),
+```
+
+### Not Differentiating Trigger Types
+
+Multiple triggers need different handling:
+
+```typescript
+// Wrong - same logic for all triggers
+async execute({ trigger }) {
+  const meeting = trigger.data.object;  // Breaks on schedule trigger
+}
+
+// Right - handle each trigger type
+async execute({ trigger, integrations, storage }) {
+  if (trigger.type === 'webhook') {
+    // Real-time: process single event
+    await processMeeting(trigger.data.object);
+  } else if (trigger.type === 'schedule') {
+    // Batch: process since last run
+    const lastRun = await storage.get('lastRun');
+    const meetings = await integrations.zoom.getMeetings({ since: lastRun });
+    for (const meeting of meetings.data) {
+      await processMeeting(meeting);
+    }
+    await storage.put('lastRun', new Date().toISOString());
+  }
+}
+```
+
 ## Praxis
 
 Add triggers to your workflow and understand the different types:

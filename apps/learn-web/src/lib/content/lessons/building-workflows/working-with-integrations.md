@@ -460,6 +460,163 @@ async execute({ integrations }) {
 }
 ```
 
+## Common Pitfalls
+
+### Not Checking ActionResult Success
+
+All integration methods return `ActionResult` - ignoring it causes crashes:
+
+```typescript
+// Wrong - assumes success
+async execute({ integrations }) {
+  const result = await integrations.zoom.getMeetings();
+  const meetings = result.data;  // undefined if failed
+  console.log(`Found ${meetings.length} meetings`);  // Crashes
+}
+
+// Right - check before accessing data
+async execute({ integrations }) {
+  const result = await integrations.zoom.getMeetings();
+  if (!result.success) {
+    return { success: false, error: result.error };
+  }
+  const meetings = result.data || [];
+  console.log(`Found ${meetings.length} meetings`);
+}
+```
+
+### Wrong Property Names for Notion
+
+Notion's API has specific property formats:
+
+```typescript
+// Wrong - incorrect property structure
+await notion.pages.create({
+  properties: {
+    Name: 'Meeting Notes',  // Wrong: needs title array
+    Date: '2024-01-15',     // Wrong: needs date object
+  },
+});
+
+// Right - correct Notion property format
+await notion.pages.create({
+  properties: {
+    Name: { title: [{ text: { content: 'Meeting Notes' } }] },
+    Date: { date: { start: '2024-01-15' } },
+  },
+});
+```
+
+### Slack Block Builder Mistakes
+
+Slack blocks have strict structure requirements:
+
+```typescript
+// Wrong - missing required fields
+await slack.chat.postMessage({
+  channel: channelId,
+  blocks: [
+    {
+      type: 'section',
+      text: 'Hello world',  // Wrong: needs mrkdwn/plain_text object
+    },
+  ],
+});
+
+// Right - complete block structure
+await slack.chat.postMessage({
+  channel: channelId,
+  blocks: [
+    {
+      type: 'section',
+      text: { type: 'mrkdwn', text: 'Hello world' },
+    },
+  ],
+  text: 'Hello world',  // Fallback for notifications
+});
+```
+
+### Stripe Amount in Wrong Units
+
+Stripe uses cents, not dollars:
+
+```typescript
+// Wrong - $10 becomes $1000
+const payment = await stripe.createPaymentIntent({
+  amount: 10,  // This is 10 cents, not $10
+});
+
+// Right - convert to cents
+const payment = await stripe.createPaymentIntent({
+  amount: 10 * 100,  // $10.00 = 1000 cents
+});
+```
+
+### Gmail Query Syntax Errors
+
+Gmail search uses specific operators:
+
+```typescript
+// Wrong - natural language query
+await gmail.getMessages({ query: 'emails from john last week' });
+
+// Right - Gmail search operators
+await gmail.getMessages({
+  query: 'from:john@example.com after:2024/01/08 is:unread',
+});
+```
+
+### Chaining Without Error Isolation
+
+One failure shouldn't break everything:
+
+```typescript
+// Wrong - entire chain fails if Slack fails
+async execute({ integrations }) {
+  const meeting = await integrations.zoom.getMeeting(id);
+  const page = await integrations.notion.pages.create(data);
+  await integrations.slack.postMessage(notification);  // If this fails, no return
+  return { success: true, pageId: page.data.id };
+}
+
+// Right - isolate optional steps
+async execute({ integrations }) {
+  const meeting = await integrations.zoom.getMeeting(id);
+  if (!meeting.success) return { success: false, error: meeting.error };
+
+  const page = await integrations.notion.pages.create(data);
+  if (!page.success) return { success: false, error: page.error };
+
+  // Slack is optional - don't fail workflow if it fails
+  const slackResult = await integrations.slack.postMessage(notification);
+  if (!slackResult.success) {
+    console.warn('Slack notification failed:', slackResult.error);
+  }
+
+  return { success: true, pageId: page.data.id };
+}
+```
+
+### Zoom Transcript Timing
+
+Transcripts aren't immediately available after meetings:
+
+```typescript
+// Wrong - expects transcript right after meeting ends
+trigger: webhook({ service: 'zoom', event: 'meeting.ended' }),
+async execute({ trigger, integrations }) {
+  const transcript = await integrations.zoom.getTranscript(meetingId);
+  // Often fails: transcript not yet processed
+}
+
+// Right - wait for recording.completed event
+trigger: webhook({ service: 'zoom', event: 'recording.completed' }),
+async execute({ trigger, integrations }) {
+  const transcript = await integrations.zoom.getTranscript(meetingId);
+  // Transcript available after recording processed
+}
+```
+
 ## Praxis
 
 Build a workflow that chains multiple integrations:
