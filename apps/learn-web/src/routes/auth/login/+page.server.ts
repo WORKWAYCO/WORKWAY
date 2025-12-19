@@ -15,7 +15,7 @@ export const actions: Actions = {
 		const identityUrl = platform?.env?.IDENTITY_WORKER_URL || 'https://id.createsomething.space';
 
 		try {
-			const response = await fetch(`${identityUrl}/api/auth/login`, {
+			const response = await fetch(`${identityUrl}/v1/auth/login`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({ email, password })
@@ -26,7 +26,9 @@ export const actions: Actions = {
 				return fail(response.status, { error: error.message || 'Invalid credentials' });
 			}
 
-			const { accessToken, refreshToken } = await response.json();
+			const data = await response.json() as { access_token: string; refresh_token: string };
+			const accessToken = data.access_token;
+			const refreshToken = data.refresh_token;
 
 			// Set cookies
 			cookies.set('learn_access_token', accessToken, {
