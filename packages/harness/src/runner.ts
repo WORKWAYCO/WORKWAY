@@ -67,6 +67,56 @@ async function stopBdDaemon(): Promise<void> {
   }
 }
 
+/**
+ * Disable git hooks that run bd commands.
+ * The pre-commit and post-merge hooks run `bd sync` and `bd import`
+ * which export SQLite to JSONL, overwriting harness issues.
+ *
+ * Returns a function to restore the hooks.
+ */
+async function disableGitHooks(cwd: string): Promise<() => Promise<void>> {
+  const hooksDir = `${cwd}/.git/hooks`;
+  const disabledHooks: string[] = [];
+
+  try {
+    // Disable pre-commit hook
+    try {
+      await execAsync(`mv "${hooksDir}/pre-commit" "${hooksDir}/pre-commit.harness-disabled" 2>/dev/null`);
+      disabledHooks.push('pre-commit');
+    } catch {
+      // Hook doesn't exist
+    }
+
+    // Disable post-merge hook
+    try {
+      await execAsync(`mv "${hooksDir}/post-merge" "${hooksDir}/post-merge.harness-disabled" 2>/dev/null`);
+      disabledHooks.push('post-merge');
+    } catch {
+      // Hook doesn't exist
+    }
+
+    if (disabledHooks.length > 0) {
+      console.log(`   Disabled git hooks: ${disabledHooks.join(', ')}`);
+    }
+  } catch {
+    // Ignore errors
+  }
+
+  // Return restore function
+  return async () => {
+    for (const hook of disabledHooks) {
+      try {
+        await execAsync(`mv "${hooksDir}/${hook}.harness-disabled" "${hooksDir}/${hook}" 2>/dev/null`);
+      } catch {
+        // Ignore errors
+      }
+    }
+    if (disabledHooks.length > 0) {
+      console.log(`   Restored git hooks: ${disabledHooks.join(', ')}`);
+    }
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Initialization
 // ─────────────────────────────────────────────────────────────────────────────
@@ -237,6 +287,10 @@ export async function runHarness(
 ): Promise<void> {
   // Stop bd daemon at harness start to prevent beads conflicts
   await stopBdDaemon();
+
+  // Disable git hooks that run bd commands (pre-commit, post-merge)
+  // These hooks export SQLite to JSONL which overwrites harness issues
+  const restoreGitHooks = await disableGitHooks(options.cwd);
 
   const store = new BeadsStore(options.cwd);
   const checkpointTracker = createCheckpointTracker();
@@ -443,6 +497,9 @@ export async function runHarness(
       await sleep(2000);
     }
   }
+
+  // Restore git hooks before exiting
+  await restoreGitHooks();
 
   // Final summary
   console.log(`\n${'═'.repeat(63)}`);
