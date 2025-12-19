@@ -70,6 +70,54 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+/**
+ * Format duration in human-readable form.
+ */
+function formatDuration(ms: number): string {
+  const seconds = Math.floor(ms / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+
+  if (hours > 0) {
+    return `${hours}h ${minutes % 60}m`;
+  } else if (minutes > 0) {
+    return `${minutes}m ${seconds % 60}s`;
+  }
+  return `${seconds}s`;
+}
+
+/**
+ * Display success feedback when harness completes successfully.
+ */
+function displaySuccessFeedback(state: HarnessState, startTime: Date): void {
+  const duration = Date.now() - startTime.getTime();
+  const successRate = state.featuresTotal > 0
+    ? ((state.featuresCompleted / state.featuresTotal) * 100).toFixed(0)
+    : '100';
+
+  console.log('');
+  console.log(chalk.green.bold('╔════════════════════════════════════════════════════════════════╗'));
+  console.log(chalk.green.bold('║                                                                ║'));
+  console.log(chalk.green.bold('║                    🎉 HARNESS COMPLETE 🎉                      ║'));
+  console.log(chalk.green.bold('║                                                                ║'));
+  console.log(chalk.green.bold('╚════════════════════════════════════════════════════════════════╝'));
+  console.log('');
+  console.log(chalk.green(`  ✅ All ${state.featuresCompleted} tasks completed successfully!`));
+  console.log('');
+  console.log(chalk.white('  Summary:'));
+  console.log(chalk.white(`    • Features completed: ${state.featuresCompleted}/${state.featuresTotal}`));
+  console.log(chalk.white(`    • Sessions run: ${state.sessionsCompleted}`));
+  console.log(chalk.white(`    • Success rate: ${successRate}%`));
+  console.log(chalk.white(`    • Duration: ${formatDuration(duration)}`));
+  console.log(chalk.white(`    • Branch: ${state.gitBranch}`));
+  console.log('');
+  console.log(chalk.cyan('  Next steps:'));
+  console.log(chalk.cyan('    1. Review changes: git diff main'));
+  console.log(chalk.cyan('    2. Run tests: pnpm test'));
+  console.log(chalk.cyan('    3. Merge to main: git checkout main && git merge ' + state.gitBranch));
+  console.log('');
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Daemon Management
 // ─────────────────────────────────────────────────────────────────────────────
@@ -231,6 +279,7 @@ export async function runHarness(
   let beadsSnapshot = await takeSnapshot(options.cwd);
   let lastCheckpoint: Checkpoint | null = null;
   let redirectNotes: string[] = [];
+  const startTime = new Date();
 
   console.log(`\n${'═'.repeat(63)}`);
   console.log(`  HARNESS RUNNING: ${harnessState.id}`);
@@ -285,13 +334,9 @@ export async function runHarness(
     const harnessIssues = await getHarnessReadyIssues(harnessState.id, options.cwd);
 
     if (harnessIssues.length === 0) {
-      // No more work - debug why
-      const allIssues = await readAllIssues(options.cwd);
-      const allWithLabel = allIssues.filter(i => i.labels?.includes(`harness:${harnessState.id}`));
-      console.log(`DEBUG: Total issues: ${allIssues.length}, with harness label: ${allWithLabel.length}`);
-      console.log(`DEBUG: By status: open=${allWithLabel.filter(i => i.status === 'open').length}, closed=${allWithLabel.filter(i => i.status === 'closed').length}, in_progress=${allWithLabel.filter(i => i.status === 'in_progress').length}`);
+      // No more work - all tasks completed
       harnessState.status = 'completed';
-      console.log('\n✅ All tasks completed!');
+      displaySuccessFeedback(harnessState, startTime);
       break;
     }
 
@@ -407,16 +452,18 @@ export async function runHarness(
     }
   }
 
-  // Final summary
-  console.log(`\n${'═'.repeat(63)}`);
-  console.log(`  HARNESS ${harnessState.status.toUpperCase()}`);
-  console.log(`  Sessions: ${harnessState.sessionsCompleted}`);
-  console.log(`  Features: ${harnessState.featuresCompleted}/${harnessState.featuresTotal} completed`);
-  console.log(`  Failed: ${harnessState.featuresFailed}`);
-  if (harnessState.pauseReason) {
-    console.log(`  Pause Reason: ${harnessState.pauseReason}`);
+  // Final summary (only for non-completed states - success already shown above)
+  if (harnessState.status !== 'completed') {
+    console.log(`\n${'═'.repeat(63)}`);
+    console.log(`  HARNESS ${harnessState.status.toUpperCase()}`);
+    console.log(`  Sessions: ${harnessState.sessionsCompleted}`);
+    console.log(`  Features: ${harnessState.featuresCompleted}/${harnessState.featuresTotal} completed`);
+    console.log(`  Failed: ${harnessState.featuresFailed}`);
+    if (harnessState.pauseReason) {
+      console.log(`  Pause Reason: ${harnessState.pauseReason}`);
+    }
+    console.log(`${'═'.repeat(63)}\n`);
   }
-  console.log(`${'═'.repeat(63)}\n`);
 
   // CRITICAL: Restart bd daemon now that harness is done
   console.log('   Restarting bd daemon...');
