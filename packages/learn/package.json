@@ -1,6 +1,6 @@
 {
   "name": "@workway/learn",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "MCP server and CLI for learning WORKWAY workflow development with Claude Code. Build automations that recede—outcomes remain.",
   "type": "module",
   "main": "dist/index.js",
