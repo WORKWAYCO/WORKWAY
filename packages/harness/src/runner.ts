@@ -7,6 +7,7 @@
  */
 
 import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import chalk from 'chalk';
 import { BeadsStore } from '@workwayco/beads';
 import type { Issue } from '@workwayco/beads';
@@ -134,13 +135,17 @@ export async function initializeHarness(
   console.log(`\n🚀 Initializing harness from spec: ${options.specFile}\n`);
   console.log(`   Mode: ${options.mode}`);
 
-  const store = new BeadsStore(cwd);
+  // Use harness-specific beads directory to avoid conflicts with global bd CLI
+  // The global bd CLI uses SQLite with JSONL sync, which conflicts with
+  // BeadsStore's direct JSONL writes. Using .harness/.beads avoids this.
+  const harnessRoot = join(cwd, '.harness');
+  const store = new BeadsStore(harnessRoot);
 
   // Ensure Beads is initialized
   const initialized = await store.isInitialized();
   if (!initialized) {
     await store.init();
-    console.log('   Initialized .beads directory');
+    console.log('   Initialized .harness/.beads directory');
   }
 
   // Read and parse spec
@@ -200,11 +205,11 @@ export async function initializeHarness(
   // DEBUG: Verify issues were written to file
   const verifyIssues = await store.getAllIssues();
   const harnessLabelIssues = verifyIssues.filter(i => i.labels.includes(`harness:${harnessIssue.id}`));
-  console.log(`DEBUG: Store root: ${cwd}`);
+  console.log(`DEBUG: Store root: ${harnessRoot}`);
   console.log(`DEBUG: Total issues in store: ${verifyIssues.length}, with harness label: ${harnessLabelIssues.length}`);
 
   // Double-check by reading file directly
-  const directContent = await readFile(`${cwd}/.beads/issues.jsonl`, 'utf-8');
+  const directContent = await readFile(`${harnessRoot}/.beads/issues.jsonl`, 'utf-8');
   const directLines = directContent.trim().split('\n').filter(Boolean);
   console.log(`DEBUG: Direct file read: ${directLines.length} lines\n`);
 
@@ -292,7 +297,9 @@ export async function runHarness(
   // These hooks export SQLite to JSONL which overwrites harness issues
   const restoreGitHooks = await disableGitHooks(options.cwd);
 
-  const store = new BeadsStore(options.cwd);
+  // Use harness-specific beads directory (same as in initializeHarness)
+  const harnessRoot = join(options.cwd, '.harness');
+  const store = new BeadsStore(harnessRoot);
   const checkpointTracker = createCheckpointTracker();
   let beadsSnapshot = await takeSnapshot(options.cwd);
   let lastCheckpoint: Checkpoint | null = null;
@@ -404,8 +411,8 @@ export async function runHarness(
     harnessState.currentSession++;
     console.log(`\n🤖 Starting session #${harnessState.currentSession}...`);
 
-    // DEBUG: Check file before session
-    const beforeSession = await readFile(`${options.cwd}/.beads/issues.jsonl`, 'utf-8');
+    // DEBUG: Check file before session (using harness beads directory)
+    const beforeSession = await readFile(`${harnessRoot}/.beads/issues.jsonl`, 'utf-8');
     const beforeLines = beforeSession.trim().split('\n').filter(Boolean);
     const beforeHarness = beforeLines.filter(l => l.includes(`harness:${harnessState.id}`));
     console.log(`   DEBUG BEFORE: ${beforeLines.length} issues, ${beforeHarness.length} with harness label`);
@@ -415,8 +422,8 @@ export async function runHarness(
       dryRun: options.dryRun,
     });
 
-    // DEBUG: Check file after session
-    const afterSession = await readFile(`${options.cwd}/.beads/issues.jsonl`, 'utf-8');
+    // DEBUG: Check file after session (using harness beads directory)
+    const afterSession = await readFile(`${harnessRoot}/.beads/issues.jsonl`, 'utf-8');
     const afterLines = afterSession.trim().split('\n').filter(Boolean);
     const afterHarness = afterLines.filter(l => l.includes(`harness:${harnessState.id}`));
     console.log(`   DEBUG AFTER: ${afterLines.length} issues, ${afterHarness.length} with harness label`);
