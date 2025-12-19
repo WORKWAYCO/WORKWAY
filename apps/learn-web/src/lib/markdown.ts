@@ -74,15 +74,29 @@ function escapeHtml(text: string): string {
 }
 
 /**
+ * Strip the first H1 from markdown content
+ * The H1 title is rendered by the page component from paths.ts
+ * to ensure single source of truth for lesson titles
+ */
+function stripFirstH1(markdown: string): string {
+	// Match first H1 at the start of the content (with optional leading whitespace)
+	// Captures: ^# Title text\n
+	return markdown.replace(/^\s*#\s+[^\n]+\n+/, '');
+}
+
+/**
  * Render markdown to HTML with syntax highlighting
  */
 export async function renderMarkdown(markdown: string): Promise<string> {
+	// Strip first H1 - title comes from paths.ts, rendered by page component
+	const contentWithoutTitle = stripFirstH1(markdown);
+
 	// Collect all code blocks for highlighting
 	const codeBlocks: Array<{ placeholder: string; code: string; lang: string }> = [];
 	let blockIndex = 0;
 
 	// Replace code blocks with placeholders
-	const markdownWithPlaceholders = markdown.replace(
+	const markdownWithPlaceholders = contentWithoutTitle.replace(
 		/```(\w+)?\n([\s\S]*?)```/g,
 		(_, lang, code) => {
 			const placeholder = `__CODE_BLOCK_${blockIndex}__`;
