@@ -25,12 +25,35 @@
 		}
 	});
 
-	// TODO: Replace with actual completion state from database
+	// Completion state - tracks whether this lesson has been marked complete
 	let isCompleted = $state(false);
+	let isSubmitting = $state(false);
 
 	async function markComplete() {
-		isCompleted = true;
-		// TODO: POST to /api/progress to update completion status
+		if (isSubmitting || isCompleted) return;
+
+		isSubmitting = true;
+
+		try {
+			const response = await fetch('/api/progress', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					pathId,
+					lessonId,
+					status: 'completed'
+				})
+			});
+
+			if (response.ok) {
+				// Update local state to reflect completion
+				isCompleted = true;
+			}
+		} catch (error) {
+			console.error('Failed to mark lesson complete:', error);
+		} finally {
+			isSubmitting = false;
+		}
 	}
 </script>
 
@@ -223,13 +246,19 @@
 		<section class="mb-xl">
 			<button
 				onclick={markComplete}
-				disabled={isCompleted}
+				disabled={isCompleted || isSubmitting}
 				class="button-ghost"
 				class:active={isCompleted}
 				aria-pressed={isCompleted}
 			>
 				<CheckCircle2 size={16} />
-				{isCompleted ? 'Completed!' : 'Mark as Complete'}
+				{#if isSubmitting}
+					Saving...
+				{:else if isCompleted}
+					Completed!
+				{:else}
+					Mark as Complete
+				{/if}
 			</button>
 		</section>
 
