@@ -27,16 +27,32 @@ interface PraxisResult {
 
 // Praxis validators - each lesson can have specific validation logic
 const praxisValidators: Record<string, (submission: PraxisSubmission) => PraxisResult> = {
+	// Getting Started path
+	'wezterm-setup': (submission) => {
+		const hasSetup =
+			submission.evidence.toLowerCase().includes('wezterm') ||
+			submission.evidence.toLowerCase().includes('config') ||
+			submission.evidence.toLowerCase().includes('terminal');
+
+		return {
+			success: true,
+			feedback: hasSetup
+				? 'WezTerm is configured. A good terminal recedes during development.'
+				: 'Install WezTerm and create the config file at ~/.config/wezterm/wezterm.lua',
+			nextSteps: ['Practice splitting panes and keyboard navigation']
+		};
+	},
+
 	'claude-code-setup': (submission) => {
-		// Check for evidence of exploring the codebase
-		const hasExploration = submission.evidence.toLowerCase().includes('pattern') ||
+		const hasExploration =
+			submission.evidence.toLowerCase().includes('pattern') ||
 			submission.evidence.toLowerCase().includes('workflow') ||
 			submission.evidence.toLowerCase().includes('found');
 
 		return {
-			success: true, // Praxis is about doing, not perfection
+			success: true,
 			feedback: hasExploration
-				? 'Good exploration! You\'re using Claude Code effectively.'
+				? "Good exploration! You're using Claude Code effectively."
 				: 'Try asking Claude Code about specific patterns in the codebase.',
 			nextSteps: hasExploration
 				? ['Continue to WORKWAY CLI Installation']
@@ -44,8 +60,24 @@ const praxisValidators: Record<string, (submission: PraxisSubmission) => PraxisR
 		};
 	},
 
+	'neomutt-setup': (submission) => {
+		const hasSetup =
+			submission.evidence.toLowerCase().includes('neomutt') ||
+			submission.evidence.toLowerCase().includes('email') ||
+			submission.evidence.toLowerCase().includes('gmail');
+
+		return {
+			success: true,
+			feedback: hasSetup
+				? 'Neomutt is ready. Terminal email integrates into your workflow.'
+				: "This is optional. If you prefer your current email client, that's fine.",
+			nextSteps: ['Explore email-triggered automations']
+		};
+	},
+
 	'workway-cli': (submission) => {
-		const hasInstalled = submission.evidence.toLowerCase().includes('install') ||
+		const hasInstalled =
+			submission.evidence.toLowerCase().includes('install') ||
 			submission.evidence.toLowerCase().includes('configured') ||
 			submission.evidence.toLowerCase().includes('workway');
 
@@ -58,22 +90,101 @@ const praxisValidators: Record<string, (submission: PraxisSubmission) => PraxisR
 		};
 	},
 
+	'essential-commands': (submission) => {
+		const hasAliases =
+			submission.evidence.toLowerCase().includes('alias') ||
+			submission.evidence.toLowerCase().includes('shortcut') ||
+			submission.evidence.toLowerCase().includes('command');
+
+		return {
+			success: true,
+			feedback: hasAliases
+				? 'Aliases set up! Muscle memory makes the tools recede.'
+				: 'Add the development aliases to your shell config.',
+			nextSteps: ['Practice until the commands feel automatic']
+		};
+	},
+
+	// Workflow Foundations path
+	'what-is-workflow': (submission) => {
+		const hasOutcome =
+			submission.evidence.toLowerCase().includes('outcome') ||
+			submission.evidence.toLowerCase().includes('disappear') ||
+			submission.evidence.toLowerCase().includes('automatic');
+
+		return {
+			success: true,
+			feedback: hasOutcome
+				? "You're thinking in outcomes, not mechanisms. That's the Zuhandenheit mindset."
+				: 'Reframe your tasks: what disappears from your to-do list?',
+			nextSteps: ['Save your outcome statements for later lessons']
+		};
+	},
+
 	'define-workflow-pattern': (submission) => {
-		const hasExamples = submission.evidence.toLowerCase().includes('defineworkflow') ||
+		const hasExamples =
+			submission.evidence.toLowerCase().includes('defineworkflow') ||
 			submission.evidence.toLowerCase().includes('example') ||
 			submission.evidence.toLowerCase().includes('found');
 
 		return {
 			success: true,
 			feedback: hasExamples
-				? 'You\'ve seen the pattern. Notice how each workflow follows the same structure.'
+				? "You've seen the pattern. Notice how each workflow follows the same structure."
 				: 'Ask Claude Code to show you defineWorkflow() examples.',
 			nextSteps: ['Look for common patterns across different workflows']
 		};
 	},
 
+	'integrations-oauth': (submission) => {
+		const hasIntegrations =
+			submission.evidence.toLowerCase().includes('baseapiclient') ||
+			submission.evidence.toLowerCase().includes('integration') ||
+			submission.evidence.toLowerCase().includes('oauth');
+
+		return {
+			success: true,
+			feedback: hasIntegrations
+				? 'The BaseAPIClient pattern centralizes OAuth complexity. Tool recedes.'
+				: 'Explore how integrations handle token refresh automatically.',
+			nextSteps: ['Map which integrations your workflows will need']
+		};
+	},
+
+	'config-schemas': (submission) => {
+		const hasSchema =
+			submission.evidence.toLowerCase().includes('configschema') ||
+			submission.evidence.toLowerCase().includes('config') ||
+			submission.evidence.toLowerCase().includes('default');
+
+		return {
+			success: true,
+			feedback: hasSchema
+				? 'Good config design minimizes required fields with sensible defaults.'
+				: 'Design schemas that work out of the box.',
+			nextSteps: ['Count required fields - can any become optional?']
+		};
+	},
+
+	triggers: (submission) => {
+		const hasTriggers =
+			submission.evidence.toLowerCase().includes('webhook') ||
+			submission.evidence.toLowerCase().includes('cron') ||
+			submission.evidence.toLowerCase().includes('schedule');
+
+		return {
+			success: true,
+			feedback: hasTriggers
+				? 'Triggers define when workflows spring to life. Choose based on your use case.'
+				: 'Practice cron expressions: daily at 9 AM is "0 9 * * *".',
+			nextSteps: ['Consider which events in your work could trigger automations']
+		};
+	},
+
+	// Building Workflows path
 	'first-workflow': (submission) => {
-		const hasWorkflow = submission.evidence.toLowerCase().includes('gmail') ||
+		const hasWorkflow =
+			submission.evidence.toLowerCase().includes('gmail') ||
 			submission.evidence.toLowerCase().includes('notion') ||
 			submission.evidence.toLowerCase().includes('workflow');
 
@@ -88,15 +199,23 @@ const praxisValidators: Record<string, (submission: PraxisSubmission) => PraxisR
 	},
 
 	'working-with-integrations': (submission) => {
+		const hasChaining =
+			submission.evidence.toLowerCase().includes('zoom') ||
+			submission.evidence.toLowerCase().includes('slack') ||
+			submission.evidence.toLowerCase().includes('chain');
+
 		return {
 			success: true,
-			feedback: 'Integration patterns follow consistent structure across services.',
-			nextSteps: ['Explore more integrations in packages/integrations/']
+			feedback: hasChaining
+				? 'Service chaining creates compound outcomes. More than the sum of parts.'
+				: 'Test each integration call individually before chaining.',
+			nextSteps: ["Add error isolation so one failure doesn't break everything"]
 		};
 	},
 
 	'workers-ai': (submission) => {
-		const hasAI = submission.evidence.toLowerCase().includes('ai') ||
+		const hasAI =
+			submission.evidence.toLowerCase().includes('ai') ||
 			submission.evidence.toLowerCase().includes('summar') ||
 			submission.evidence.toLowerCase().includes('generate');
 
@@ -105,14 +224,47 @@ const praxisValidators: Record<string, (submission: PraxisSubmission) => PraxisR
 			feedback: hasAI
 				? 'Workers AI integration looks good. Edge AI keeps everything fast.'
 				: 'Try adding a summarization step to your workflow.',
-			nextSteps: ['Experiment with different AI models']
+			nextSteps: ['Experiment with different AI models and temperature settings']
 		};
 	},
 
+	'error-handling': (submission) => {
+		const hasHandling =
+			submission.evidence.toLowerCase().includes('try') ||
+			submission.evidence.toLowerCase().includes('catch') ||
+			submission.evidence.toLowerCase().includes('retry');
+
+		return {
+			success: true,
+			feedback: hasHandling
+				? 'Resilient error handling makes workflows production-ready.'
+				: 'Add granular try/catch for each integration call.',
+			nextSteps: ['Distinguish critical vs optional steps']
+		};
+	},
+
+	'local-testing': (submission) => {
+		const hasTesting =
+			submission.evidence.toLowerCase().includes('test') ||
+			submission.evidence.toLowerCase().includes('mock') ||
+			submission.evidence.toLowerCase().includes('dev');
+
+		return {
+			success: true,
+			feedback: hasTesting
+				? 'Local testing catches bugs before production. Find bugs locally, not live.'
+				: 'Set up workway dev and create test fixtures.',
+			nextSteps: ['Run the pre-deploy checklist before workway deploy']
+		};
+	},
+
+	// Systems Thinking path
 	'compound-workflows': (submission) => {
-		const hasCompound = submission.evidence.toLowerCase().includes('slack') ||
+		const hasCompound =
+			submission.evidence.toLowerCase().includes('slack') ||
 			submission.evidence.toLowerCase().includes('notion') ||
-			submission.evidence.toLowerCase().includes('multiple');
+			submission.evidence.toLowerCase().includes('multiple') ||
+			submission.evidence.toLowerCase().includes('parallel');
 
 		return {
 			success: true,
@@ -121,6 +273,68 @@ const praxisValidators: Record<string, (submission: PraxisSubmission) => PraxisR
 				: 'Think about what happens after a meeting ends - all the follow-ups.',
 			nextSteps: ['Consider error handling for each step'],
 			badges: hasCompound ? ['compound-architect'] : undefined
+		};
+	},
+
+	'private-workflows': (submission) => {
+		const hasPrivate =
+			submission.evidence.toLowerCase().includes('private') ||
+			submission.evidence.toLowerCase().includes('access') ||
+			submission.evidence.toLowerCase().includes('byoo');
+
+		return {
+			success: true,
+			feedback: hasPrivate
+				? 'Private workflows serve specific organizations while leveraging the full platform.'
+				: 'Define accessGrants for who can install your workflow.',
+			nextSteps: ['Consider audit logging for compliance requirements']
+		};
+	},
+
+	'agency-patterns': (submission) => {
+		const hasAgency =
+			submission.evidence.toLowerCase().includes('template') ||
+			submission.evidence.toLowerCase().includes('client') ||
+			submission.evidence.toLowerCase().includes('parameterized');
+
+		return {
+			success: true,
+			feedback: hasAgency
+				? 'Build once, deploy many. Client patterns become platform assets.'
+				: 'Create a template factory that parameterizes per client.',
+			nextSteps: ['Track which patterns emerge across client requests'],
+			badges: hasAgency ? ['agency-builder'] : undefined
+		};
+	},
+
+	'performance-rate-limiting': (submission) => {
+		const hasPerformance =
+			submission.evidence.toLowerCase().includes('cache') ||
+			submission.evidence.toLowerCase().includes('rate') ||
+			submission.evidence.toLowerCase().includes('chunk');
+
+		return {
+			success: true,
+			feedback: hasPerformance
+				? 'Performance optimization makes workflows production-ready at scale.'
+				: 'Add caching for repeated lookups and rate-limited chunking.',
+			nextSteps: ['Measure performance before and after optimization']
+		};
+	},
+
+	'monitoring-debugging': (submission) => {
+		const hasMonitoring =
+			submission.evidence.toLowerCase().includes('log') ||
+			submission.evidence.toLowerCase().includes('alert') ||
+			submission.evidence.toLowerCase().includes('metric');
+
+		return {
+			success: true,
+			feedback: hasMonitoring
+				? 'Observability makes production issues visible and fixable.'
+				: 'Add structured logging at key points with context.',
+			nextSteps: ['Configure alerts for error rate and latency'],
+			badges: hasMonitoring ? ['production-ready'] : undefined
 		};
 	}
 };
