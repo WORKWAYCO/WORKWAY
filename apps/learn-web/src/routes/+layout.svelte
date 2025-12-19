@@ -47,7 +47,7 @@
 						</div>
 					{:else}
 						<a
-							href="/auth/login"
+							href="/auth/signup"
 							class="button-primary text-sm font-semibold"
 						>
 							Sign Up
@@ -101,7 +101,7 @@
 					</div>
 				{:else}
 					<a
-						href="/auth/login"
+						href="/auth/signup"
 						onclick={() => (isMenuOpen = false)}
 						class="button-primary text-sm font-semibold text-center w-full"
 					>

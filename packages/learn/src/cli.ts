@@ -16,6 +16,19 @@ import { initCommand } from './cli/commands/init.js';
 import { statusCommand } from './cli/commands/status.js';
 import { clearCommand } from './cli/commands/clear.js';
 
+// Check for --server flag before commander parsing
+if (process.argv.includes('--server')) {
+	import('./server.js').then(({ startServer }) => {
+		startServer().catch((error) => {
+			console.error('Fatal error:', error);
+			process.exit(1);
+		});
+	});
+} else {
+	runCLI();
+}
+
+function runCLI() {
 const program = new Command();
 
 program
@@ -51,18 +64,6 @@ program
 		await clearCommand(options);
 	});
 
-// Server mode (for MCP)
-program
-	.option('--server', 'Start MCP server mode')
-	.hook('preAction', async (thisCommand) => {
-		const opts = thisCommand.opts();
-		if (opts.server) {
-			// Import and run MCP server
-			const { startServer } = await import('./server.js');
-			await startServer();
-			process.exit(0);
-		}
-	});
-
 // Parse arguments
 program.parse();
+}
