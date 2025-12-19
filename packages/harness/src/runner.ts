@@ -5,13 +5,18 @@
  * Zuhandenheit: The harness recedes into transparent operation.
  * Humans engage through progress reports—reactive steering rather than proactive management.
  *
- * Uses bd CLI for all beads operations to avoid conflicts with daemon sync.
- * The bd CLI uses SQLite as source of truth, which daemon syncs to JSONL.
- * Direct file writes conflict with this, so we go through CLI instead.
+ * CRITICAL: The bd daemon MUST be stopped during harness runs.
+ * The daemon's git sync feature pulls stale JSONL from sync branches,
+ * which overwrites SQLite and causes harness-created issues to vanish.
+ * We stop the daemon at start and restart it at end.
  */
 
 import { readFile } from 'node:fs/promises';
+import { exec } from 'node:child_process';
+import { promisify } from 'node:util';
 import chalk from 'chalk';
+
+const execAsync = promisify(exec);
 import type {
   HarnessState,
   StartOptions,
@@ -55,12 +60,73 @@ import {
 } from './beads.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Helpers (defined first for use by other sections)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Sleep for a given duration.
+ */
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Daemon Management
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Stop the bd daemon to prevent sync conflicts during harness runs.
+ *
+ * The daemon's git sync feature pulls JSONL from sync branches,
+ * which can overwrite SQLite data and cause harness-created issues to vanish.
+ */
+async function stopBdDaemon(): Promise<void> {
+  try {
+    // Try graceful stop via CLI
+    await execAsync('bd daemon --stop');
+    console.log('   Stopped bd daemon via CLI');
+  } catch {
+    // CLI stop failed, try direct process kill
+    try {
+      const { stdout } = await execAsync('pgrep -f "bd daemon"');
+      const pids = stdout.trim().split('\n').filter(Boolean);
+      if (pids.length > 0) {
+        for (const pid of pids) {
+          await execAsync(`kill ${pid}`).catch(() => {});
+        }
+        console.log(`   Killed ${pids.length} bd daemon process(es)`);
+      }
+    } catch {
+      // No daemon running, which is fine
+      console.log('   No bd daemon running');
+    }
+  }
+
+  // Wait a moment for cleanup
+  await sleep(500);
+}
+
+/**
+ * Restart the bd daemon after harness completion.
+ */
+async function startBdDaemon(): Promise<void> {
+  try {
+    // Start daemon in background
+    await execAsync('bd daemon --start --interval 5s &');
+    console.log('   Restarted bd daemon');
+  } catch (error) {
+    // Non-fatal - daemon can be started manually
+    console.log('   Warning: Could not restart bd daemon');
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Initialization
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Initialize a new harness run.
- * Uses bd CLI for all beads operations - no daemon/sync conflicts.
+ * IMPORTANT: Stops bd daemon to prevent sync conflicts.
  */
 export async function initializeHarness(
   options: StartOptions,
@@ -68,6 +134,10 @@ export async function initializeHarness(
 ): Promise<{ harnessState: HarnessState; featureMap: Map<string, string> }> {
   console.log(`\n🚀 Initializing harness from spec: ${options.specFile}\n`);
   console.log(`   Mode: ${options.mode}`);
+
+  // CRITICAL: Stop bd daemon to prevent sync overwrites
+  console.log('   Stopping bd daemon...');
+  await stopBdDaemon();
 
   // Read and parse spec
   const specContent = await readFile(options.specFile, 'utf-8');
@@ -347,6 +417,10 @@ export async function runHarness(
     console.log(`  Pause Reason: ${harnessState.pauseReason}`);
   }
   console.log(`${'═'.repeat(63)}\n`);
+
+  // CRITICAL: Restart bd daemon now that harness is done
+  console.log('   Restarting bd daemon...');
+  await startBdDaemon();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -488,13 +562,3 @@ export async function getHarnessStatus(
   }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Sleep for a given duration.
- */
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
