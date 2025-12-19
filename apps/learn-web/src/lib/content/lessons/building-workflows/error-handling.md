@@ -20,16 +20,16 @@ Plan for failure.
 ### Try-Catch Pattern
 
 ```typescript
-async execute({ integrations, context }) {
+async execute({ trigger, integrations }) {
   const { zoom, notion } = integrations;
 
   try {
-    const meeting = await zoom.getMeeting(trigger.payload.meetingId);
-    await notion.createPage(formatMeeting(meeting));
+    const meetingResult = await zoom.getMeeting(trigger.data.object.id);
+    await notion.pages.create(formatMeeting(meetingResult.data));
     return { success: true };
   } catch (error) {
-    context.log.error('Workflow failed', { error: error.message });
-    return { success: false, error: error.message };
+    console.error('Workflow failed', { error: (error as Error).message });
+    return { success: false, error: (error as Error).message };
   }
 }
 ```
@@ -37,7 +37,9 @@ async execute({ integrations, context }) {
 ### Typed Error Handling
 
 ```typescript
-async execute({ integrations, context }) {
+import { IntegrationError } from '@workwayco/sdk';
+
+async execute({ integrations }) {
   try {
     // ... workflow logic
   } catch (error) {
@@ -57,7 +59,7 @@ async execute({ integrations, context }) {
     }
 
     // Unknown error
-    context.log.error('Unexpected error', { error });
+    console.error('Unexpected error', { error });
     return { success: false, error: 'An unexpected error occurred' };
   }
 }
@@ -68,14 +70,19 @@ async execute({ integrations, context }) {
 Don't let one failure kill everything:
 
 ```typescript
-async execute({ trigger, integrations, context }) {
+async execute({ trigger, inputs, integrations }) {
   const { zoom, notion, slack } = integrations;
-  const results = { notion: null, slack: null, errors: [] };
+  const results: { notion: string | null; slack: string | null; errors: string[] } = {
+    notion: null,
+    slack: null,
+    errors: [],
+  };
 
   // Step 1: Get meeting (required)
   let meeting;
   try {
-    meeting = await zoom.getMeeting(trigger.payload.meetingId);
+    const meetingResult = await zoom.getMeeting(trigger.data.object.id);
+    meeting = meetingResult.data;
   } catch (error) {
     // Can't proceed without meeting data
     return { success: false, error: 'Failed to fetch meeting' };
@@ -83,23 +90,26 @@ async execute({ trigger, integrations, context }) {
 
   // Step 2: Save to Notion (required)
   try {
-    const page = await notion.createPage(formatMeeting(meeting));
-    results.notion = page.id;
+    const page = await notion.pages.create({
+      parent: { database_id: inputs.notionDatabase },
+      properties: formatMeeting(meeting),
+    });
+    results.notion = page.data?.id || null;
   } catch (error) {
-    context.log.error('Notion failed', { error: error.message });
+    console.error('Notion failed', { error: (error as Error).message });
     return { success: false, error: 'Failed to create Notion page' };
   }
 
   // Step 3: Notify Slack (optional)
   try {
-    await slack.postMessage({
-      channel: config.slackChannel,
+    await slack.chat.postMessage({
+      channel: inputs.slackChannel,
       text: `Meeting notes ready: ${results.notion}`,
     });
     results.slack = 'sent';
   } catch (error) {
     // Log but don't fail the workflow
-    context.log.warn('Slack notification failed', { error: error.message });
+    console.warn('Slack notification failed', { error: (error as Error).message });
     results.errors.push('Slack notification failed');
   }
 
@@ -190,59 +200,71 @@ const result = await fetchWithConditionalRetry(
 When part of a workflow fails, continue with reduced functionality:
 
 ```typescript
-async execute({ integrations }) {
+async execute({ trigger, inputs, integrations }) {
   const { zoom, notion, ai } = integrations;
 
-  const meeting = await zoom.getMeeting(meetingId);
+  const meetingResult = await zoom.getMeeting(trigger.data.object.id);
+  const meeting = meetingResult.data;
 
   // Try to get transcript, fall back to basic info
-  let transcript;
+  let transcript: { transcript_text: string } | null = null;
   try {
-    transcript = await zoom.getMeetingTranscript(meetingId);
+    const transcriptResult = await zoom.getTranscript({ meetingId: meeting.id });
+    transcript = transcriptResult.data;
   } catch (error) {
-    context.log.warn('Transcript unavailable', { error: error.message });
-    transcript = null;
+    console.warn('Transcript unavailable', { error: (error as Error).message });
   }
 
   // Try AI summary, fall back to no summary
-  let summary = null;
+  let summary: string | null = null;
   if (transcript) {
     try {
-      summary = await ai.run('@cf/meta/llama-3-8b-instruct', {
-        prompt: `Summarize: ${transcript.text}`,
+      const summaryResult = await ai.generateText({
+        prompt: `Summarize: ${transcript.transcript_text}`,
       });
+      summary = summaryResult.data?.response || null;
     } catch (error) {
-      context.log.warn('AI summarization failed', { error: error.message });
+      console.warn('AI summarization failed', { error: (error as Error).message });
     }
   }
 
   // Create page with whatever we have
-  await notion.createPage({
+  const children = [];
+
+  if (summary) {
+    children.push({
+      type: 'paragraph',
+      paragraph: { rich_text: [{ text: { content: summary } }] },
+    });
+  }
+
+  if (transcript) {
+    children.push({
+      type: 'toggle',
+      toggle: {
+        rich_text: [{ text: { content: 'Full Transcript' } }],
+        children: [{
+          type: 'paragraph',
+          paragraph: { rich_text: [{ text: { content: transcript.transcript_text } }] },
+        }],
+      },
+    });
+  } else {
+    children.push({
+      type: 'callout',
+      callout: {
+        rich_text: [{ text: { content: 'Transcript not available' } }],
+        icon: { emoji: '⚠️' },
+      },
+    });
+  }
+
+  await notion.pages.create({
+    parent: { database_id: inputs.notionDatabase },
     properties: {
       Name: { title: [{ text: { content: meeting.topic } }] },
     },
-    children: [
-      summary && {
-        type: 'paragraph',
-        paragraph: { rich_text: [{ text: { content: summary.response } }] },
-      },
-      transcript && {
-        type: 'toggle',
-        toggle: {
-          rich_text: [{ text: { content: 'Full Transcript' } }],
-          children: [{ type: 'paragraph', paragraph: {
-            rich_text: [{ text: { content: transcript.text } }]
-          }}],
-        },
-      },
-      !transcript && {
-        type: 'callout',
-        callout: {
-          rich_text: [{ text: { content: 'Transcript not available' } }],
-          icon: { emoji: '⚠️' },
-        },
-      },
-    ].filter(Boolean),
+    children,
   });
 
   return {
@@ -260,11 +282,12 @@ Catch problems before they cause failures:
 ### Input Validation
 
 ```typescript
-async execute({ trigger, context }) {
-  const { meetingId, topic } = trigger.payload?.object || {};
+async execute({ trigger }) {
+  const meetingId = trigger.data?.object?.id;
+  const topic = trigger.data?.object?.topic;
 
   if (!meetingId) {
-    context.log.error('Missing meeting ID in payload');
+    console.error('Missing meeting ID in payload');
     return { success: false, error: 'Invalid webhook payload' };
   }
 
@@ -293,7 +316,7 @@ function validateMeetingData(data: unknown): Meeting | null {
 }
 
 async execute({ trigger }) {
-  const meeting = validateMeetingData(trigger.payload?.object);
+  const meeting = validateMeetingData(trigger.data?.object);
 
   if (!meeting) {
     return { success: false, error: 'Invalid meeting data' };
@@ -392,35 +415,51 @@ const circuitBreaker = {
 ## Complete Example
 
 ```typescript
-import { defineWorkflow, IntegrationError } from '@workway/sdk';
+import { defineWorkflow, webhook, IntegrationError } from '@workwayco/sdk';
 
 export default defineWorkflow({
-  metadata: {
-    id: 'resilient-meeting-notes',
-    name: 'Resilient Meeting Notes',
+  name: 'Resilient Meeting Notes',
+  description: 'Save meeting notes with comprehensive error handling',
+  version: '1.0.0',
+
+  integrations: [
+    { service: 'zoom', scopes: ['meeting:read'] },
+    { service: 'notion', scopes: ['read_pages', 'write_pages'] },
+    { service: 'slack', scopes: ['send_messages'], optional: true },
+  ],
+
+  inputs: {
+    notionDatabase: { type: 'text', label: 'Notion Database ID', required: true },
+    slackChannel: { type: 'text', label: 'Slack Channel', required: false },
   },
 
-  async execute({ trigger, config, integrations, context }) {
+  trigger: webhook({
+    service: 'zoom',
+    event: 'recording.completed',
+  }),
+
+  async execute({ trigger, inputs, integrations }) {
     const { zoom, notion, slack } = integrations;
-    const meetingId = trigger.payload?.object?.id;
+    const meetingId = trigger.data?.object?.id;
 
     // Validate input
     if (!meetingId) {
-      context.log.error('Invalid trigger payload', { payload: trigger.payload });
+      console.error('Invalid trigger payload', { payload: trigger.data });
       return { success: false, error: 'Missing meeting ID' };
     }
 
     // Get meeting with retry
     let meeting;
     try {
-      meeting = await withRetry(
+      const meetingResult = await withRetry(
         () => zoom.getMeeting(meetingId),
         { maxAttempts: 3, delayMs: 1000 }
       );
+      meeting = meetingResult.data;
     } catch (error) {
-      context.log.error('Failed to fetch meeting after retries', {
+      console.error('Failed to fetch meeting after retries', {
         meetingId,
-        error: error.message
+        error: (error as Error).message,
       });
       return { success: false, error: 'Could not retrieve meeting data' };
     }
@@ -428,34 +467,34 @@ export default defineWorkflow({
     // Create Notion page (required)
     let pageId;
     try {
-      const page = await notion.createPage({
-        parent: { database_id: config.notionDatabase },
+      const page = await notion.pages.create({
+        parent: { database_id: inputs.notionDatabase },
         properties: {
           Name: { title: [{ text: { content: meeting.topic } }] },
           Date: { date: { start: meeting.start_time } },
         },
       });
-      pageId = page.id;
+      pageId = page.data?.id;
     } catch (error) {
       if (error instanceof IntegrationError && error.code === 'RATE_LIMITED') {
         throw error; // Let WORKWAY retry
       }
-      context.log.error('Failed to create Notion page', { error: error.message });
+      console.error('Failed to create Notion page', { error: (error as Error).message });
       return { success: false, error: 'Failed to save meeting notes' };
     }
 
     // Notify Slack (optional)
     try {
-      if (config.slackChannel) {
-        await slack.postMessage({
-          channel: config.slackChannel,
+      if (inputs.slackChannel) {
+        await slack.chat.postMessage({
+          channel: inputs.slackChannel,
           text: `Meeting "${meeting.topic}" notes saved`,
         });
       }
     } catch (error) {
-      context.log.warn('Slack notification failed', {
-        error: error.message,
-        channel: config.slackChannel,
+      console.warn('Slack notification failed', {
+        error: (error as Error).message,
+        channel: inputs.slackChannel,
       });
       // Continue - don't fail workflow for notification failure
     }
