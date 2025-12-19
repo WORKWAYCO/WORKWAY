@@ -4,16 +4,16 @@
  * Runner: Main orchestration loop for the harness.
  * Zuhandenheit: The harness recedes into transparent operation.
  * Humans engage through progress reports—reactive steering rather than proactive management.
+ *
+ * Uses bd CLI for all beads operations to avoid conflicts with daemon sync.
+ * The bd CLI uses SQLite as source of truth, which daemon syncs to JSONL.
+ * Direct file writes conflict with this, so we go through CLI instead.
  */
 
 import { readFile } from 'node:fs/promises';
-import { join } from 'node:path';
 import chalk from 'chalk';
-import { BeadsStore } from '@workwayco/beads';
-import type { Issue } from '@workwayco/beads';
 import type {
   HarnessState,
-  HarnessMode,
   StartOptions,
   Checkpoint,
   CheckpointPolicy,
@@ -25,7 +25,6 @@ import {
   runSession,
   getRecentCommits,
   createHarnessBranch,
-  generatePrimingPrompt,
   discoverDryContext,
 } from './session.js';
 import {
@@ -45,78 +44,15 @@ import {
   requiresImmediateAction,
   logRedirect,
 } from './redirect.js';
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const execAsync = promisify(exec);
-
-/**
- * Stop the bd daemon to prevent beads file conflicts.
- * The daemon auto-syncs SQLite to JSONL every 5 seconds, which can
- * overwrite harness-created issues.
- *
- * We use `bd daemon --stop` for a clean stop, with pkill as fallback.
- */
-async function stopBdDaemon(): Promise<void> {
-  try {
-    // First try the clean stop
-    await execAsync('bd daemon --stop 2>/dev/null || true');
-    // Then force kill any remaining processes
-    await execAsync('pkill -f "bd daemon" 2>/dev/null || true');
-  } catch {
-    // Ignore errors - daemon might not be running
-  }
-}
-
-/**
- * Disable git hooks that run bd commands.
- * The pre-commit and post-merge hooks run `bd sync` and `bd import`
- * which export SQLite to JSONL, overwriting harness issues.
- *
- * Returns a function to restore the hooks.
- */
-async function disableGitHooks(cwd: string): Promise<() => Promise<void>> {
-  const hooksDir = `${cwd}/.git/hooks`;
-  const disabledHooks: string[] = [];
-
-  try {
-    // Disable pre-commit hook
-    try {
-      await execAsync(`mv "${hooksDir}/pre-commit" "${hooksDir}/pre-commit.harness-disabled" 2>/dev/null`);
-      disabledHooks.push('pre-commit');
-    } catch {
-      // Hook doesn't exist
-    }
-
-    // Disable post-merge hook
-    try {
-      await execAsync(`mv "${hooksDir}/post-merge" "${hooksDir}/post-merge.harness-disabled" 2>/dev/null`);
-      disabledHooks.push('post-merge');
-    } catch {
-      // Hook doesn't exist
-    }
-
-    if (disabledHooks.length > 0) {
-      console.log(`   Disabled git hooks: ${disabledHooks.join(', ')}`);
-    }
-  } catch {
-    // Ignore errors
-  }
-
-  // Return restore function
-  return async () => {
-    for (const hook of disabledHooks) {
-      try {
-        await execAsync(`mv "${hooksDir}/${hook}.harness-disabled" "${hooksDir}/${hook}" 2>/dev/null`);
-      } catch {
-        // Ignore errors
-      }
-    }
-    if (disabledHooks.length > 0) {
-      console.log(`   Restored git hooks: ${disabledHooks.join(', ')}`);
-    }
-  };
-}
+import {
+  createIssue,
+  createHarnessIssue,
+  createIssuesFromFeatures,
+  getHarnessReadyIssues,
+  updateIssueStatus,
+  readAllIssues,
+  getOpenIssues,
+} from './beads.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Initialization
@@ -124,29 +60,14 @@ async function disableGitHooks(cwd: string): Promise<() => Promise<void>> {
 
 /**
  * Initialize a new harness run.
+ * Uses bd CLI for all beads operations - no daemon/sync conflicts.
  */
 export async function initializeHarness(
   options: StartOptions,
   cwd: string
 ): Promise<{ harnessState: HarnessState; featureMap: Map<string, string> }> {
-  // Stop bd daemon before initialization to prevent beads conflicts
-  await stopBdDaemon();
-
   console.log(`\n🚀 Initializing harness from spec: ${options.specFile}\n`);
   console.log(`   Mode: ${options.mode}`);
-
-  // Use harness-specific beads directory to avoid conflicts with global bd CLI
-  // The global bd CLI uses SQLite with JSONL sync, which conflicts with
-  // BeadsStore's direct JSONL writes. Using .harness/.beads avoids this.
-  const harnessRoot = join(cwd, '.harness');
-  const store = new BeadsStore(harnessRoot);
-
-  // Ensure Beads is initialized
-  const initialized = await store.isInitialized();
-  if (!initialized) {
-    await store.init();
-    console.log('   Initialized .harness/.beads directory');
-  }
 
   // Read and parse spec
   const specContent = await readFile(options.specFile, 'utf-8');
@@ -174,8 +95,7 @@ export async function initializeHarness(
     onRedirect: true,
   };
 
-  // IMPORTANT: Create git branch FIRST, before any beads operations
-  // This prevents git checkout from resetting the beads file after we've appended issues
+  // Create git branch FIRST, before any beads operations
   const slugTitle = spec.title
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '-')
@@ -183,38 +103,30 @@ export async function initializeHarness(
   const gitBranch = await createHarnessBranch(slugTitle, cwd);
   console.log(`Created git branch: ${gitBranch}`);
 
-  // Now create harness issue (after branch switch, so it won't be lost)
-  const harnessIssue = await store.createIssue({
-    title: `Harness: ${spec.title}`,
-    description: `Harness run for: ${options.specFile}\nMode: ${options.mode}\nFeatures: ${spec.features.length}\nStarted: ${new Date().toISOString()}\nBranch: ${gitBranch}`,
-    type: 'epic',
-    priority: 0,
-    labels: ['harness'],
-  });
+  // Create harness issue via bd CLI
+  const harnessId = await createHarnessIssue(
+    spec.title,
+    options.specFile,
+    spec.features.length,
+    cwd
+  );
+  console.log(`Created harness issue: ${harnessId}`);
 
-  console.log(`Created harness issue: ${harnessIssue.id}`);
-
-  // Create issues from features
+  // Create issues from features via bd CLI
   const featureMap = await createIssuesFromFeatures(
     spec.features,
-    harnessIssue.id,
-    store
+    harnessId,
+    cwd
   );
   console.log(`Created ${featureMap.size} issues in Beads.`);
 
-  // DEBUG: Verify issues were written to file
-  const verifyIssues = await store.getAllIssues();
-  const harnessLabelIssues = verifyIssues.filter(i => i.labels.includes(`harness:${harnessIssue.id}`));
-  console.log(`DEBUG: Store root: ${harnessRoot}`);
-  console.log(`DEBUG: Total issues in store: ${verifyIssues.length}, with harness label: ${harnessLabelIssues.length}`);
-
-  // Double-check by reading file directly
-  const directContent = await readFile(`${harnessRoot}/.beads/issues.jsonl`, 'utf-8');
-  const directLines = directContent.trim().split('\n').filter(Boolean);
-  console.log(`DEBUG: Direct file read: ${directLines.length} lines\n`);
+  // Verify via bd CLI
+  const verifyIssues = await readAllIssues(cwd);
+  const harnessLabelIssues = verifyIssues.filter(i => i.labels?.includes(`harness:${harnessId}`));
+  console.log(`DEBUG: Total issues: ${verifyIssues.length}, with harness label: ${harnessLabelIssues.length}\n`);
 
   const harnessState: HarnessState = {
-    id: harnessIssue.id,
+    id: harnessId,
     status: 'running',
     mode: options.mode,
     specFile: options.specFile,
@@ -233,73 +145,18 @@ export async function initializeHarness(
   return { harnessState, featureMap };
 }
 
-/**
- * Create Beads issues from parsed features.
- */
-async function createIssuesFromFeatures(
-  features: Array<{
-    id: string;
-    title: string;
-    description: string;
-    priority: number;
-    dependsOn: string[];
-    labels: string[];
-  }>,
-  harnessId: string,
-  store: BeadsStore
-): Promise<Map<string, string>> {
-  const featureToIssue = new Map<string, string>();
-
-  // Create issues
-  for (const feature of features) {
-    const issue = await store.createIssue({
-      title: feature.title,
-      description: feature.description,
-      type: 'feature',
-      priority: feature.priority as 0 | 1 | 2 | 3 | 4,
-      labels: [...feature.labels, `harness:${harnessId}`],
-    });
-
-    featureToIssue.set(feature.id, issue.id);
-  }
-
-  // Add dependencies
-  for (const feature of features) {
-    const issueId = featureToIssue.get(feature.id);
-    if (!issueId) continue;
-
-    for (const depFeatureId of feature.dependsOn) {
-      const depIssueId = featureToIssue.get(depFeatureId);
-      if (depIssueId) {
-        await store.addDependency(issueId, depIssueId, 'blocks');
-      }
-    }
-  }
-
-  return featureToIssue;
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Loop
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Run the harness loop.
+ * Uses bd CLI for all beads operations - no daemon/sync conflicts.
  */
 export async function runHarness(
   harnessState: HarnessState,
   options: { cwd: string; dryRun?: boolean }
 ): Promise<void> {
-  // Stop bd daemon at harness start to prevent beads conflicts
-  await stopBdDaemon();
-
-  // Disable git hooks that run bd commands (pre-commit, post-merge)
-  // These hooks export SQLite to JSONL which overwrites harness issues
-  const restoreGitHooks = await disableGitHooks(options.cwd);
-
-  // Use harness-specific beads directory (same as in initializeHarness)
-  const harnessRoot = join(options.cwd, '.harness');
-  const store = new BeadsStore(harnessRoot);
   const checkpointTracker = createCheckpointTracker();
   let beadsSnapshot = await takeSnapshot(options.cwd);
   let lastCheckpoint: Checkpoint | null = null;
@@ -313,10 +170,6 @@ export async function runHarness(
   console.log(`${'═'.repeat(63)}\n`);
 
   while (harnessState.status === 'running') {
-    // Stop bd daemon at every iteration to prevent beads corruption
-    // The daemon can restart during sessions and corrupt the beads file
-    await stopBdDaemon();
-
     // 1. Check for redirects
     const redirectCheck = await checkForRedirects(
       beadsSnapshot,
@@ -358,19 +211,13 @@ export async function runHarness(
       }
     }
 
-    // 2. Get next work item (exclude checkpoints - they're progress reports, not tasks)
-    const readyIssues = await store.getReadyIssues();
-    console.log(`DEBUG: Ready issues: ${readyIssues.length}`);
-    const harnessIssues = readyIssues.filter((issue) =>
-      issue.labels.includes(`harness:${harnessState.id}`) &&
-      !issue.labels.includes('checkpoint')
-    );
-    console.log(`DEBUG: Harness issues (${harnessState.id}): ${harnessIssues.length}`);
+    // 2. Get next work item via bd CLI
+    const harnessIssues = await getHarnessReadyIssues(harnessState.id, options.cwd);
 
     if (harnessIssues.length === 0) {
       // No more work - debug why
-      const allIssues = await store.getAllIssues();
-      const allWithLabel = allIssues.filter(i => i.labels.includes(`harness:${harnessState.id}`));
+      const allIssues = await readAllIssues(options.cwd);
+      const allWithLabel = allIssues.filter(i => i.labels?.includes(`harness:${harnessState.id}`));
       console.log(`DEBUG: Total issues: ${allIssues.length}, with harness label: ${allWithLabel.length}`);
       console.log(`DEBUG: By status: open=${allWithLabel.filter(i => i.status === 'open').length}, closed=${allWithLabel.filter(i => i.status === 'closed').length}, in_progress=${allWithLabel.filter(i => i.status === 'in_progress').length}`);
       harnessState.status = 'completed';
@@ -381,8 +228,8 @@ export async function runHarness(
     const nextIssue = harnessIssues[0];
     console.log(`\n📋 Next task: ${nextIssue.id} - ${nextIssue.title}`);
 
-    // Mark as in progress
-    await store.updateIssue(nextIssue.id, { status: 'in_progress' });
+    // Mark as in progress via bd CLI
+    await updateIssueStatus(nextIssue.id, 'in_progress', options.cwd);
 
     // 3. Build priming context with DRY discovery
     const recentCommits = await getRecentCommits(options.cwd, 10);
@@ -411,31 +258,16 @@ export async function runHarness(
     harnessState.currentSession++;
     console.log(`\n🤖 Starting session #${harnessState.currentSession}...`);
 
-    // DEBUG: Check file before session (using harness beads directory)
-    const beforeSession = await readFile(`${harnessRoot}/.beads/issues.jsonl`, 'utf-8');
-    const beforeLines = beforeSession.trim().split('\n').filter(Boolean);
-    const beforeHarness = beforeLines.filter(l => l.includes(`harness:${harnessState.id}`));
-    console.log(`   DEBUG BEFORE: ${beforeLines.length} issues, ${beforeHarness.length} with harness label`);
-
     const sessionResult = await runSession(nextIssue, primingContext, {
       cwd: options.cwd,
       dryRun: options.dryRun,
     });
 
-    // DEBUG: Check file after session (using harness beads directory)
-    const afterSession = await readFile(`${harnessRoot}/.beads/issues.jsonl`, 'utf-8');
-    const afterLines = afterSession.trim().split('\n').filter(Boolean);
-    const afterHarness = afterLines.filter(l => l.includes(`harness:${harnessState.id}`));
-    console.log(`   DEBUG AFTER: ${afterLines.length} issues, ${afterHarness.length} with harness label`);
-
     // 5. Handle session result
     recordSession(checkpointTracker, sessionResult);
 
-    // Stop bd daemon before BeadsStore operations to prevent race conditions
-    await stopBdDaemon();
-
     if (sessionResult.outcome === 'success') {
-      await store.closeIssue(nextIssue.id);
+      await updateIssueStatus(nextIssue.id, 'closed', options.cwd);
       harnessState.featuresCompleted++;
       harnessState.sessionsCompleted++;
       console.log(chalk.green(`✅ Task completed: ${nextIssue.id}`));
@@ -505,9 +337,6 @@ export async function runHarness(
     }
   }
 
-  // Restore git hooks before exiting
-  await restoreGitHooks();
-
   // Final summary
   console.log(`\n${'═'.repeat(63)}`);
   console.log(`  HARNESS ${harnessState.status.toUpperCase()}`);
@@ -531,12 +360,11 @@ export async function findAndResumeHarness(
   specFile: string,
   cwd: string
 ): Promise<{ harnessState: HarnessState; featureMap: Map<string, string> } | null> {
-  const store = new BeadsStore(cwd);
-  const issues = await store.getOpenIssues();
+  const issues = await getOpenIssues({}, cwd);
 
   // Find harness issues that match this spec file
   const harnessIssues = issues.filter(
-    (i) => i.labels.includes('harness') && i.description?.includes(specFile)
+    (i) => i.labels?.includes('harness') && i.description?.includes(specFile)
   );
 
   if (harnessIssues.length === 0) {
@@ -550,12 +378,12 @@ export async function findAndResumeHarness(
 
   // Find associated issues
   const associatedIssues = issues.filter((i) =>
-    i.labels.includes(`harness:${harnessIssue.id}`) && !i.labels.includes('checkpoint')
+    i.labels?.includes(`harness:${harnessIssue.id}`) && !i.labels?.includes('checkpoint')
   );
 
   // Count status
   const completed = associatedIssues.filter((i) => i.status === 'closed').length;
-  const failed = associatedIssues.filter((i) => i.labels.includes('failed')).length;
+  const failed = associatedIssues.filter((i) => i.labels?.includes('failed')).length;
   const total = associatedIssues.length;
 
   console.log(`   Progress: ${completed}/${total} completed, ${failed} failed`);
@@ -611,16 +439,17 @@ export async function pauseHarness(
   reason: string | undefined,
   cwd: string
 ): Promise<void> {
-  const store = new BeadsStore(cwd);
-
-  // Create a pause request issue
-  await store.createIssue({
-    title: reason || 'Pause requested',
-    description: `Pause request for harness ${harnessId}`,
-    type: 'task',
-    priority: 0,
-    labels: ['pause', `harness:${harnessId}`],
-  });
+  // Create a pause request issue via bd CLI
+  await createIssue(
+    reason || 'Pause requested',
+    {
+      type: 'task',
+      priority: 0,
+      labels: ['pause', `harness:${harnessId}`],
+      description: `Pause request for harness ${harnessId}`,
+    },
+    cwd
+  );
 
   console.log(`Pause request created for harness: ${harnessId}`);
 }
@@ -632,11 +461,9 @@ export async function getHarnessStatus(
   harnessId: string | undefined,
   cwd: string
 ): Promise<void> {
-  const store = new BeadsStore(cwd);
-
-  // Find harness issues
-  const issues = await store.getOpenIssues();
-  const harnessIssues = issues.filter((i) => i.labels.includes('harness'));
+  // Find harness issues via bd CLI
+  const issues = await getOpenIssues({}, cwd);
+  const harnessIssues = issues.filter((i) => i.labels?.includes('harness'));
 
   if (harnessIssues.length === 0) {
     console.log('No active harness found.');
@@ -652,7 +479,7 @@ export async function getHarnessStatus(
 
     // Count associated issues
     const associatedIssues = issues.filter((i) =>
-      i.labels.includes(`harness:${harness.id}`)
+      i.labels?.includes(`harness:${harness.id}`)
     );
     const completed = associatedIssues.filter((i) => i.status === 'closed').length;
     const total = associatedIssues.length;

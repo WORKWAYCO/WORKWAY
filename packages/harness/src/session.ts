@@ -9,8 +9,8 @@ import { exec, spawn } from 'node:child_process';
 import { promisify } from 'node:util';
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import type { Issue } from '@workwayco/beads';
 import type {
+  BeadsIssue,
   PrimingContext,
   SessionResult,
   SessionOutcome,
@@ -327,12 +327,10 @@ export function generatePrimingPrompt(context: PrimingContext): string {
  * Run a Claude Code session.
  */
 export async function runSession(
-  issue: Issue,
+  issue: BeadsIssue,
   context: PrimingContext,
   options: { cwd: string; dryRun?: boolean }
 ): Promise<SessionResult> {
-  // Stop bd daemon at session start to ensure clean state
-  await stopBdDaemon();
 
   const startTime = Date.now();
   const startCommit = await getHeadCommit(options.cwd);
@@ -379,10 +377,6 @@ export async function runSession(
     // Detect outcome from output
     const outcome = detectOutcome(result.output, result.exitCode);
 
-    // Kill any bd daemons before returning to runner
-    // This ensures the runner can safely update beads without interference
-    await stopBdDaemon();
-
     return {
       issueId: issue.id,
       outcome,
@@ -393,9 +387,6 @@ export async function runSession(
       error: outcome === 'failure' ? extractError(result.output) : null,
     };
   } catch (error) {
-    // Kill any bd daemons before returning to runner
-    await stopBdDaemon();
-
     return {
       issueId: issue.id,
       outcome: 'failure',
@@ -409,41 +400,18 @@ export async function runSession(
 }
 
 /**
- * Stop the bd daemon to prevent beads file conflicts.
- * The daemon auto-syncs SQLite to JSONL every 5 seconds, which can
- * overwrite harness-created issues.
- *
- * Uses both `bd daemon --stop` and pkill for thorough cleanup.
- */
-async function stopBdDaemon(): Promise<void> {
-  try {
-    // First try the clean stop
-    await execAsync('bd daemon --stop 2>/dev/null || true');
-    // Then force kill any remaining processes
-    await execAsync('pkill -f "bd daemon" 2>/dev/null || true');
-  } catch {
-    // Ignore errors - daemon might not be running
-  }
-}
-
-/**
  * Run Claude Code CLI with a prompt.
  * Uses stdin pipe for prompt delivery (more reliable for long prompts).
  *
- * IMPORTANT: We disable hooks in spawned sessions to prevent auto-sync behavior
- * from overwriting the harness's beads file. The global `bd` command has
- * auto-import/auto-sync features that can conflict with harness operations.
+ * We disable hooks in spawned sessions since the harness manages its own
+ * workflow through the bd CLI abstraction layer.
  */
 async function runClaudeCode(
   prompt: string,
   cwd: string
 ): Promise<{ output: string; exitCode: number; contextUsed: number }> {
-  // Stop bd daemon before each session to prevent beads file conflicts
-  await stopBdDaemon();
-
   return new Promise((resolve) => {
-    // Disable hooks to prevent bd auto-sync from overwriting harness beads
-    // The SessionStart hook runs `bd prime` which can trigger auto-import
+    // Disable hooks to prevent spawned sessions from running bd commands
     const harnessSettings = JSON.stringify({ hooks: {} });
 
     const args = [
@@ -495,12 +463,8 @@ async function runClaudeCode(
       });
     }, 30 * 60 * 1000);
 
-    child.on('close', async (code) => {
+    child.on('close', (code) => {
       clearTimeout(timeoutId);
-
-      // Kill any bd daemons that may have started during the session
-      // This prevents the daemon from overwriting beads before the runner can update them
-      await stopBdDaemon();
 
       // Try to extract context usage from output
       const contextMatch = output.match(/context[:\s]+(\d+)/i);

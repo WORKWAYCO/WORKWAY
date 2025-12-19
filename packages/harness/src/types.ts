@@ -5,7 +5,26 @@
  * Beads-based human oversight with progress reports and reactive redirection.
  */
 
-import type { Issue } from '@workwayco/beads';
+// ─────────────────────────────────────────────────────────────────────────────
+// Beads Issue (from bd CLI)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Issue type from bd CLI.
+ * Matches the structure returned by `bd list --json`.
+ */
+export interface BeadsIssue {
+  id: string;
+  title: string;
+  description?: string;
+  status: 'open' | 'in_progress' | 'closed';
+  priority?: number;
+  issue_type?: string;
+  labels?: string[];
+  created_at: string;
+  updated_at: string;
+  closed_at?: string | null;
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Harness Mode
@@ -170,7 +189,7 @@ export interface Redirect {
 
 export interface PrimingContext {
   /** Current issue to work on */
-  currentIssue: Issue;
+  currentIssue: BeadsIssue;
   /** Recent git commits */
   recentCommits: string[];
   /** Last checkpoint summary */
