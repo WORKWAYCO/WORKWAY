@@ -1,6 +1,20 @@
 # Meeting Intelligence Workflow
 
-A production workflow that transforms Zoom meetings into actionable knowledge across your stack.
+A production compound workflow that transforms Zoom meetings into actionable knowledge across your stack.
+
+> **Zuhandenheit**: The tool recedes; the outcome remains. Users don't think "sync my meetings" - they think "my meetings document themselves."
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Architecture](#architecture)
+3. [Workflow Variants](#workflow-variants)
+4. [Implementation Guide](#implementation-guide)
+5. [Infrastructure](#infrastructure)
+6. [Configuration Reference](#configuration-reference)
+7. [Error Handling](#error-handling)
+
+---
 
 ## Overview
 
@@ -17,7 +31,158 @@ A production workflow that transforms Zoom meetings into actionable knowledge ac
 
 ---
 
-## Step 1: Create the Workflow
+## Architecture
+
+### Compound Workflow Pattern
+
+Meeting Intelligence implements the **Compound Workflow Pattern** - a multi-step orchestration where each step can fail independently while the overall workflow degrades gracefully.
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                          WORKFLOW ORCHESTRATOR                               │
+│                          (execute function)                                  │
+├─────────────────────────────────────────────────────────────────────────────┤
+│                                                                              │
+│  ┌──────────────┐     ┌──────────────┐     ┌──────────────┐                  │
+│  │   EXTRACT    │────▶│   ANALYZE    │────▶│    STORE     │                  │
+│  │   (Zoom)     │     │   (AI)       │     │   (Notion)   │                  │
+│  │              │     │              │     │              │                  │
+│  │ • Meetings   │     │ • Summary    │     │ • Page props │                  │
+│  │ • Clips      │     │ • Actions    │     │ • Transcript │                  │
+│  │ • Transcript │     │ • Decisions  │     │ • Toggles    │                  │
+│  └──────────────┘     └──────────────┘     └──────────────┘                  │
+│         │                    │                    │                          │
+│         │                    │                    │                          │
+│         ▼                    ▼                    ▼                          │
+│  ┌─────────────────────────────────────────────────────────────────────┐     │
+│  │                       PARALLEL NOTIFY                                │     │
+│  │                                                                      │     │
+│  │  ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐         │     │
+│  │  │   Slack   │  │   Gmail   │  │  HubSpot  │  │   Linear  │         │     │
+│  │  │  Summary  │  │   Draft   │  │    CRM    │  │   Tasks   │         │     │
+│  │  └───────────┘  └───────────┘  └───────────┘  └───────────┘         │     │
+│  │                                                                      │     │
+│  └─────────────────────────────────────────────────────────────────────┘     │
+│                                                                              │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow
+
+```
+                          ┌─────────────────┐
+                          │     TRIGGER     │
+                          │  • Cron (7 AM)  │
+                          │  • Webhook      │
+                          └────────┬────────┘
+                                   │
+                    ┌──────────────┴──────────────┐
+                    │                             │
+             ┌──────▼──────┐               ┌──────▼──────┐
+             │   MEETINGS  │               │    CLIPS    │
+             │   Batch     │               │   Batch     │
+             └──────┬──────┘               └──────┬──────┘
+                    │                             │
+                    └──────────────┬──────────────┘
+                                   │
+                    ┌──────────────▼──────────────┐
+                    │      FOR EACH ITEM          │
+                    │      (deduplication)        │
+                    └──────────────┬──────────────┘
+                                   │
+        ┌──────────────────────────┼──────────────────────────┐
+        │                          │                          │
+  ┌─────▼─────┐             ┌──────▼──────┐            ┌──────▼──────┐
+  │ EXTRACT   │             │  AI ANALYZE │            │   STORE     │
+  │ Transcript│────────────▶│  (optional) │───────────▶│   Notion    │
+  └───────────┘             └─────────────┘            └──────┬──────┘
+                                                              │
+                                   ┌──────────────────────────┤
+                                   │                          │
+                            ┌──────▼──────┐            ┌──────▼──────┐
+                            │ Slack Post  │            │ CRM Update  │
+                            │ (optional)  │            │ (optional)  │
+                            └─────────────┘            └─────────────┘
+```
+
+### Key Architectural Principles
+
+| Principle | Implementation |
+|-----------|----------------|
+| **Single Responsibility Helpers** | Each step is a pure function (`processMeeting`, `analyzeMeeting`, `createNotionMeetingPage`, etc.) |
+| **Graceful Degradation** | AI analysis failure doesn't stop Notion page creation; Slack failure doesn't affect CRM |
+| **Input-Driven Branching** | User inputs (`enableAI`, `postToSlack`, `updateCRM`) control which steps execute |
+| **Consistent Return Types** | All helpers return `{ success: boolean, data?: any, error?: string }` |
+| **Deduplication at Entry** | Check for existing Notion page by Source ID/URL before processing |
+
+---
+
+## Workflow Variants
+
+Meeting Intelligence has two implementations based on transcript access:
+
+### Public: `meeting-intelligence`
+
+**Location:** `packages/workflows/src/meeting-intelligence/index.ts`
+
+Uses Zoom OAuth API for transcript access. Fully automatic, no manual intervention required.
+
+| Feature | Value |
+|---------|-------|
+| Transcript Source | Zoom OAuth API |
+| Speaker Attribution | Limited (OAuth-dependent) |
+| Clips Support | OAuth-dependent |
+| Configuration | User-configurable via inputs |
+| Trigger | Webhook (`recording.completed`) or Cron |
+| Zuhandenheit Score | High (works out of box) |
+
+```typescript
+integrations: [
+  { service: 'zoom', scopes: ['meeting:read', 'recording:read', 'clip:read'] },
+  { service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
+  { service: 'slack', scopes: ['send_messages', 'read_channels'] },
+  // ... optional integrations
+]
+```
+
+### Private: `meeting-intelligence-private`
+
+**Location:** `packages/workflows/src/meeting-intelligence-private/index.ts`
+
+Uses browser-based transcript extraction via Cloudflare Puppeteer. Requires manual session refresh (24-hour expiration).
+
+| Feature | Value |
+|---------|-------|
+| Transcript Source | Browser scraper (Puppeteer) |
+| Speaker Attribution | Full (scrapes DOM directly) |
+| Clips Support | Yes (virtual scroll extraction) |
+| Configuration | Hardcoded to internal database |
+| Trigger | Cron only (no webhooks without OAuth) |
+| Zuhandenheit Score | Medium (requires daily refresh) |
+
+```typescript
+integrations: [
+  { service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
+  // No Zoom OAuth - uses browser scraping instead
+]
+```
+
+### Decision Criteria
+
+Choose **Public** (`meeting-intelligence`) when:
+- Zoom OAuth provides sufficient transcript access for your account type
+- You want zero-maintenance automation
+- Webhook-triggered immediate processing is important
+
+Choose **Private** (`meeting-intelligence-private`) when:
+- You need full speaker attribution (names in transcript)
+- Zoom OAuth doesn't provide transcript access for your meetings
+- You're willing to refresh the connection daily via bookmarklet
+- Your organization is @halfdozen.co (currently hardcoded)
+
+## Implementation Guide
+
+### Step 1: Create the Workflow
 
 ```bash
 # Initialize a new workflow
@@ -27,7 +192,7 @@ workway workflow init meeting-intelligence
 workway workflow create --template productivity
 ```
 
-## Step 2: Define the Workflow
+### Step 2: Define the Workflow
 
 Create `workflow.ts`:
 
@@ -143,7 +308,7 @@ export default defineWorkflow({
 });
 ```
 
-## Step 3: Implement the Execute Function
+### Step 3: Implement the Execute Function
 
 ```typescript
 async execute({ trigger, inputs, integrations, env }) {
@@ -198,7 +363,7 @@ async execute({ trigger, inputs, integrations, env }) {
 }
 ```
 
-## Step 4: Process Each Meeting
+### Step 4: Process Each Meeting
 
 ```typescript
 async function processMeeting({ meetingId, topic, startTime, inputs, integrations, env }) {
@@ -278,7 +443,7 @@ async function processMeeting({ meetingId, topic, startTime, inputs, integration
 }
 ```
 
-## Step 5: AI Analysis Helper
+### Step 5: AI Analysis Helper
 
 ```typescript
 async function analyzeWithAI(transcript, topic, depth, integrations) {
@@ -311,7 +476,7 @@ Return ONLY valid JSON.`,
 }
 ```
 
-## Step 6: Notion Page Creation
+### Step 6: Notion Page Creation
 
 ```typescript
 async function createNotionPage({ databaseId, topic, startTime, transcript, speakers, analysis, sourceId, integrations }) {
@@ -380,7 +545,7 @@ async function createNotionPage({ databaseId, topic, startTime, transcript, spea
 }
 ```
 
-## Step 7: Slack Summary
+### Step 7: Slack Summary
 
 ```typescript
 async function postToSlack({ channel, topic, summary, actionItems, notionUrl, integrations }) {
@@ -419,7 +584,7 @@ async function postToSlack({ channel, topic, summary, actionItems, notionUrl, in
 }
 ```
 
-## Step 8: HubSpot CRM Update
+### Step 8: HubSpot CRM Update
 
 ```typescript
 async function updateHubSpot({ topic, summary, actionItems, speakers, notionUrl, integrations }) {
@@ -468,7 +633,7 @@ async function updateHubSpot({ topic, summary, actionItems, speakers, notionUrl,
 
 ---
 
-## Step 9: Test Locally
+### Step 9: Test Locally
 
 ```bash
 # Connect required integrations
@@ -485,7 +650,7 @@ workway workflow test --mock
 workway workflow test --live
 ```
 
-## Step 10: Publish to Marketplace
+### Step 10: Publish to Marketplace
 
 ```bash
 # Validate workflow
@@ -502,7 +667,9 @@ workway workflow publish
 
 ---
 
-## Notion Database Setup
+## Configuration Reference
+
+### Notion Database Setup
 
 Users need a Notion database with these properties:
 
@@ -516,9 +683,7 @@ Users need a Notion database with these properties:
 | Type | Select | Meeting, Clip |
 | Source URL | URL | Link to Zoom recording |
 
----
-
-## Environment Variables
+### Environment Variables
 
 For local development, create `.dev.vars`:
 
@@ -531,16 +696,14 @@ ZOOM_CLIENT_SECRET=your-zoom-client-secret
 BROWSER_SCRAPER_URL=https://zoom-scraper.workway.co
 ```
 
----
-
-## Browser Scraper Setup (Speaker Attribution)
+### Browser Scraper Setup (Speaker Attribution)
 
 The Zoom OAuth API provides transcripts but often lacks speaker names. For full speaker attribution, deploy the WORKWAY Zoom Scraper worker:
 
-### Deploy the Worker
+#### Deploy the Worker
 
 ```bash
-cd packages/workers/zoom-scraper
+cd packages/workers/zoom-cookie-sync
 
 # Create KV namespace for cookie storage
 wrangler kv:namespace create ZOOM_COOKIES
@@ -554,7 +717,7 @@ wrangler secret put UPLOAD_SECRET
 wrangler deploy
 ```
 
-### Authenticate via Bookmarklet
+#### Authenticate via Bookmarklet
 
 1. Visit your deployed worker: `https://your-worker.workers.dev/sync`
 2. Drag the "Sync Cookies" button to your bookmarks bar
@@ -563,7 +726,7 @@ wrangler deploy
 
 Cookies expire after 24 hours. Re-sync when prompted.
 
-### Configure Workflow
+#### Configure Workflow
 
 Set the browser scraper URL in your workflow environment:
 
@@ -582,9 +745,7 @@ const transcript = await zoom.getTranscript({
 // transcript.speakers = ['Alice', 'Bob', 'Charlie']
 ```
 
----
-
-## Workflow Outputs
+### Workflow Outputs
 
 Each execution returns:
 
@@ -608,8 +769,6 @@ Each execution returns:
 }
 ```
 
----
-
 ## Error Handling
 
 ```typescript
@@ -626,26 +785,133 @@ onError: async ({ error, inputs, integrations }) => {
 
 ---
 
-## Architecture
+## Infrastructure
+
+### Private Workflow Infrastructure: `zoom-cookie-sync`
+
+**Location:** `packages/workers/zoom-cookie-sync/src/index.ts`
+
+The private workflow variant requires dedicated infrastructure for browser-based transcript extraction.
+
+#### Architecture
 
 ```
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│    Zoom     │────▶│  Workers AI │────▶│   Notion    │
-│  Meetings   │     │  Analysis   │     │   Pages     │
-└─────────────┘     └─────────────┘     └─────────────┘
-       │                   │                   │
-       │                   ▼                   │
-       │            ┌─────────────┐            │
-       │            │   Slack     │◀───────────┤
-       │            │  Summaries  │            │
-       │            └─────────────┘            │
-       │                   │                   │
-       ▼                   ▼                   ▼
-┌─────────────┐     ┌─────────────┐     ┌─────────────┐
-│   Gmail     │     │  HubSpot    │     │   Linear    │
-│   Drafts    │     │    CRM      │     │   Tasks     │
-└─────────────┘     └─────────────┘     └─────────────┘
+┌───────────────────────────────────────────────────────────────────────────────┐
+│                          zoom-cookie-sync Worker                               │
+│                     (meetings.workway.co / Cloudflare)                         │
+├───────────────────────────────────────────────────────────────────────────────┤
+│                                                                               │
+│  ┌──────────────────────┐     ┌──────────────────────────────────────────┐    │
+│  │   UserSession DO     │     │   Browser Automation (Puppeteer)          │    │
+│  │   (per-user state)   │     │                                           │    │
+│  │                      │     │   • scrapeMeetings()                      │    │
+│  │   • cookies[]        │────▶│   • scrapeTranscript()                    │    │
+│  │   • executions[]     │     │   • scrapeClips()                         │    │
+│  │   • rateLimits       │     │   • scrapeClipTranscript()                │    │
+│  └──────────────────────┘     └───────────────────────────────────────────┘    │
+│                                                                               │
+└───────────────────────────────────────────────────────────────────────────────┘
+                │                                        │
+                │ Cookie upload                          │ Scraping results
+                │ (bookmarklet)                          │
+                ▼                                        ▼
+┌─────────────────────────┐                ┌─────────────────────────────────────┐
+│   User's Browser        │                │   meeting-intelligence-private      │
+│   (Zoom logged in)      │                │   Workflow                          │
+│                         │                │                                     │
+│   Bookmarklet extracts  │                │   • checkZoomConnection()           │
+│   cookies and uploads   │                │   • fetchMeetings()                 │
+│   to worker             │                │   • fetchTranscript()               │
+│                         │                │   • createNotionPage()              │
+└─────────────────────────┘                └─────────────────────────────────────┘
 ```
+
+#### Durable Objects
+
+The worker uses **Durable Objects** for per-user state isolation:
+
+```typescript
+export class UserSession {
+  private state: DurableObjectState;
+
+  // Stored data:
+  // - zoom_cookies: StoredCookies (24-hour TTL)
+  // - executions: ExecutionRecord[] (last 50)
+  // - rate_limit:{category}: number[] (request timestamps)
+}
+```
+
+#### Endpoints
+
+| Endpoint | Method | Purpose |
+|----------|--------|---------|
+| `/setup/:userId` | GET | Bookmarklet setup page |
+| `/upload-cookies/:userId` | POST | Cookie upload from bookmarklet |
+| `/health/:userId` | GET | Check connection status |
+| `/scrape-meetings/:userId` | GET | List user meetings |
+| `/scrape-transcript/:userId` | POST | Extract meeting transcript |
+| `/scrape-clips/:userId` | GET | List user clips |
+| `/scrape-clip-transcript/:userId` | POST | Extract clip transcript (virtual scroll) |
+| `/executions/:userId` | GET/POST | Track workflow executions |
+| `/dashboard-data/:userId` | GET | All data for dashboard UI |
+
+#### Rate Limiting
+
+```typescript
+const RATE_LIMITS = {
+  expensive: { limit: 20, window: 3600000 },  // Scraping operations
+  standard: { limit: 100, window: 3600000 },  // API calls, uploads
+  cheap: { limit: 300, window: 3600000 },     // Health checks
+};
+```
+
+#### Cookie Lifecycle
+
+```
+User logs into Zoom ──▶ Runs bookmarklet ──▶ Cookies uploaded ──▶ 24hr TTL
+                                                    │
+                                                    ▼
+                                            Cron refresh (6hr) ──▶ Session kept alive
+                                                    │
+                                                    ▼
+                                            If expired: Workflow fails with
+                                            "refresh_connection" action
+```
+
+### Clip Transcript Extraction
+
+Clips use **virtual scroll** technique because Zoom lazy-loads transcript content:
+
+```typescript
+async scrapeClipTranscript(request, corsHeaders) {
+  // 1. Navigate to clip share page
+  // 2. Find largest scrollable container
+  // 3. Pre-load by scrolling to bottom multiple times
+  // 4. Scroll back to top
+  // 5. Incrementally scroll and collect visible items
+  // 6. Deduplicate by timestamp
+  // 7. Sort and return
+}
+```
+
+---
+
+## Helper Function Reference
+
+| Function | Lines | Location | Purpose |
+|----------|-------|----------|---------|
+| `processMeeting()` | ~90 | Both variants | Orchestrate single meeting pipeline |
+| `processClip()` | ~60 | Both variants | Orchestrate single clip pipeline |
+| `analyzeMeeting()` | ~50 | Both variants | AI transcript analysis (Workers AI) |
+| `createNotionMeetingPage()` | ~180 | Both variants | Notion page with structured content |
+| `splitTranscriptIntoBlocks()` | ~40 | Both variants | Split transcript into Notion-safe chunks (1900 char limit) |
+| `postSlackSummary()` | ~50 | Public only | Slack message with blocks |
+| `updateCRM()` | ~70 | Public only | HubSpot deal/contact updates |
+| `checkExistingPage()` | ~20 | Both variants | Deduplication by Source ID/URL |
+| `checkZoomConnection()` | ~20 | Private only | Verify cookie health |
+| `fetchMeetings()` | ~30 | Private only | Call worker `/scrape-meetings` |
+| `fetchTranscript()` | ~25 | Private only | Call worker `/scrape-transcript` |
+| `trackExecution()` | ~30 | Private only | Record execution for dashboard |
 
 ---
 
@@ -659,3 +925,14 @@ Developers think:
 - "Update CRM" → not "search deals, log engagement, PATCH notes..."
 
 The workflow handles complexity. The user gets value.
+
+---
+
+## Related Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [`COMPOUND_WORKFLOW_PATTERN.md`](./patterns/COMPOUND_WORKFLOW_PATTERN.md) | Generic pattern for multi-step workflows |
+| [`ZOOM_WORKWAY_PORT.md`](./ZOOM_WORKWAY_PORT.md) | Original technical implementation plan |
+| [`DEVELOPER_CAPABILITIES.md`](./DEVELOPER_CAPABILITIES.md) | What developers can/cannot do in workflows |
+| [`WORKERS_RUNTIME_GUIDE.md`](./WORKERS_RUNTIME_GUIDE.md) | Cloudflare Workers constraints |
