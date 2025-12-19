@@ -122,20 +122,29 @@ import { defineWorkflow, webhook, schedule, manual, poll } from '@workwayco/sdk'
 Most common. External services call your workflow:
 
 ```typescript
+// From: packages/workflows/src/stripe-to-notion/index.ts
 import { defineWorkflow, webhook } from '@workwayco/sdk';
 
 export default defineWorkflow({
-  name: 'Zoom Meeting Ended',
+  name: 'Stripe to Notion',
 
+  // Single event
   trigger: webhook({
-    service: 'zoom',
-    event: 'meeting.ended',
+    service: 'stripe',
+    event: 'payment_intent.succeeded',
+  }),
+
+  // OR multiple events (from real stripe-to-notion workflow)
+  trigger: webhook({
+    service: 'stripe',
+    events: ['payment_intent.succeeded', 'charge.refunded'],
   }),
 
   async execute({ trigger }) {
     // trigger.data contains the webhook payload
-    const meetingId = trigger.data.object.id;
-    const topic = trigger.data.object.topic;
+    const event = trigger.data;
+    const paymentData = event.data.object;
+    const amount = paymentData.amount / 100;
   },
 });
 ```
@@ -188,31 +197,39 @@ Configure this URL in your service's webhook settings.
 Run on a schedule using cron expressions:
 
 ```typescript
+// From: packages/workflows/src/standup-bot/index.ts
 import { defineWorkflow, schedule } from '@workwayco/sdk';
 
 export default defineWorkflow({
-  name: 'Daily Report',
+  name: 'Standup Reminder Bot',
+  description: 'Collect and share daily standups in Slack',
 
-  // Positional pattern
-  trigger: schedule('0 9 * * *'),  // 9 AM daily
+  // Object pattern with timezone (recommended)
+  trigger: schedule({
+    cron: '0 {{inputs.standupTime.hour}} * * 1-5',  // Weekdays
+    timezone: '{{inputs.timezone}}',
+  }),
 
-  async execute({ trigger }) {
-    // trigger.timestamp contains when triggered
-    const reportDate = new Date(trigger.timestamp);
+  async execute({ inputs, integrations }) {
+    const today = new Date();
+    // Post standup prompt to Slack
+    await integrations.slack.chat.postMessage({
+      channel: inputs.standupChannel,
+      text: `Good morning! Time for standup.`,
+    });
+    return { success: true };
   },
 });
 
-// With timezone
+// Positional pattern (also valid)
 export default defineWorkflow({
   name: 'Daily Report',
 
-  trigger: schedule({
-    cron: '0 9 * * *',
-    timezone: 'America/New_York',
-  }),
+  trigger: schedule('0 9 * * *'),  // 9 AM UTC daily
 
   async execute({ trigger }) {
-    // ...
+    const reportDate = new Date(trigger.timestamp);
+    return { success: true };
   },
 });
 ```
@@ -326,26 +343,43 @@ export default defineWorkflow({
 A workflow can have a primary trigger and additional webhook triggers:
 
 ```typescript
-import { defineWorkflow, schedule, webhook } from '@workwayco/sdk';
+// From: packages/workflows/src/meeting-intelligence/index.ts
+import { defineWorkflow, cron, webhook } from '@workwayco/sdk';
 
 export default defineWorkflow({
   name: 'Meeting Intelligence',
+  description: 'Sync Zoom meetings to Notion with transcripts and AI summaries',
 
-  // Primary trigger
-  trigger: schedule('0 18 * * *'),  // 6 PM daily
+  // Primary trigger: daily cron
+  trigger: cron({
+    schedule: '0 7 * * *',  // 7 AM UTC daily
+    timezone: 'UTC',
+  }),
 
   // Additional webhook triggers
   webhooks: [
-    webhook({ service: 'zoom', event: 'recording.completed' }),
+    webhook({
+      service: 'zoom',
+      event: 'recording.completed',
+    }),
   ],
 
-  async execute({ trigger }) {
-    // Check how it was triggered
-    if (trigger.type === 'webhook') {
-      // Process single meeting from webhook
+  async execute({ trigger, inputs, integrations }) {
+    const isWebhookTrigger = trigger.type === 'webhook';
+
+    if (isWebhookTrigger) {
+      // Real-time: process single meeting from webhook
+      const recording = trigger.data;
+      await processMeeting(recording.meeting_id, integrations);
     } else {
-      // Batch process from schedule
+      // Batch: process all meetings from the past day
+      const meetings = await integrations.zoom.getMeetings({ days: 1 });
+      for (const meeting of meetings.data || []) {
+        await processMeeting(meeting.id, integrations);
+      }
     }
+
+    return { success: true };
   },
 });
 ```
@@ -592,34 +626,33 @@ async execute({ trigger, integrations, storage }) {
 
 ## Praxis
 
-Add triggers to your workflow and understand the different types:
+Explore real trigger examples in the WORKWAY codebase:
 
-> **Praxis**: Ask Claude Code: "Show me examples of webhook, schedule, and manual triggers in the WORKWAY codebase"
+> **Praxis**: Ask Claude Code: "Show me the trigger patterns used in packages/workflows/src/"
 
-Create a workflow with multiple triggers:
+Real examples from the codebase:
 
 ```typescript
-import { defineWorkflow, schedule, webhook } from '@workwayco/sdk';
+// Webhook: packages/workflows/src/stripe-to-notion/index.ts
+trigger: webhook({
+  service: 'stripe',
+  events: ['payment_intent.succeeded', 'charge.refunded'],
+}),
 
-export default defineWorkflow({
-  name: 'Meeting Sync',
+// Schedule: packages/workflows/src/standup-bot/index.ts
+trigger: schedule({
+  cron: '0 {{inputs.standupTime.hour}} * * 1-5',
+  timezone: '{{inputs.timezone}}',
+}),
 
-  // Primary trigger: daily schedule
-  trigger: schedule('0 18 * * *'),  // 6 PM daily
-
-  // Additional webhook trigger
-  webhooks: [
-    webhook({ service: 'zoom', event: 'recording.completed' }),
-  ],
-
-  async execute({ trigger }) {
-    if (trigger.type === 'webhook') {
-      // Process single meeting
-    } else {
-      // Batch process day's meetings
-    }
-  },
-});
+// Cron with webhooks: packages/workflows/src/meeting-intelligence/index.ts
+trigger: cron({
+  schedule: '0 7 * * *',
+  timezone: 'UTC',
+}),
+webhooks: [
+  webhook({ service: 'zoom', event: 'recording.completed' }),
+],
 ```
 
 Practice writing cron expressions:

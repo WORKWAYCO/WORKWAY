@@ -393,62 +393,86 @@ async execute({ inputs, integrations }) {
 
 ## Event-Driven Chaining
 
-Workflows triggering other workflows:
+Multiple workflows in a single file (from `packages/workflows/src/standup-bot/index.ts`):
 
 ```typescript
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+// Real example: packages/workflows/src/standup-bot/index.ts
+import { defineWorkflow, schedule, webhook } from '@workwayco/sdk';
 
-// Workflow 1: Process meeting
+// Workflow 1: Post standup prompt in the morning
 export default defineWorkflow({
-  name: 'Process Meeting',
+  name: 'Standup Reminder Bot',
+  description: 'Collect and share daily standups in Slack',
 
-  integrations: ['zoom', 'notion'],
+  integrations: [
+    { service: 'slack', scopes: ['send_messages', 'read_messages'] },
+    { service: 'notion', scopes: ['write_pages', 'read_databases'] },
+  ],
 
-  trigger: webhook({
-    service: 'zoom',
-    event: 'recording.completed',
+  inputs: {
+    standupChannel: {
+      type: 'text',
+      label: 'Standup Channel',
+      required: true,
+    },
+    standupTime: {
+      type: 'time',
+      label: 'Standup Prompt Time',
+      default: '09:00',
+    },
+    timezone: {
+      type: 'timezone',
+      label: 'Timezone',
+      default: 'America/New_York',
+    },
+  },
+
+  trigger: schedule({
+    cron: '0 {{inputs.standupTime.hour}} * * 1-5',  // Weekdays
+    timezone: '{{inputs.timezone}}',
   }),
 
-  async execute({ trigger, inputs, integrations, storage }) {
-    const result = await processData(trigger.data);
-
-    // Store result for potential downstream workflows
-    await storage.put(`processed:${trigger.data.object.id}`, {
-      notionPageId: result.pageId,
-      summary: result.summary,
-      timestamp: Date.now(),
+  async execute({ inputs, integrations }) {
+    const promptMessage = await integrations.slack.chat.postMessage({
+      channel: inputs.standupChannel,
+      text: `Good morning! Time for standup.`,
     });
 
-    return { success: true, pageId: result.pageId };
+    return {
+      success: true,
+      threadTs: promptMessage.data?.ts,
+    };
   },
 });
 
-// Workflow 2: Notify on schedule (can query processed meetings)
-export const notifyStakeholders = defineWorkflow({
-  name: 'Notify Stakeholders',
+// Workflow 2: Collect responses and post summary
+export const standupSummary = defineWorkflow({
+  name: 'Standup Summary',
+  description: 'Collect standup responses and post summary',
 
-  integrations: ['slack'],
+  integrations: [
+    { service: 'slack', scopes: ['read_messages', 'send_messages'] },
+  ],
 
   inputs: {
-    slackChannel: { type: 'text', label: 'Slack Channel', required: true },
+    standupChannel: { type: 'text', label: 'Standup Channel', required: true },
+    summaryTime: { type: 'time', label: 'Summary Time', default: '10:00' },
+    timezone: { type: 'timezone', label: 'Timezone', default: 'America/New_York' },
   },
 
-  trigger: schedule('0 17 * * *'),  // Daily at 5 PM
+  trigger: schedule({
+    cron: '0 {{inputs.summaryTime.hour}} * * 1-5',
+    timezone: '{{inputs.timezone}}',
+  }),
 
-  async execute({ inputs, integrations, storage }) {
-    // Get recently processed meetings
-    const keys = await storage.keys();
-    const processedToday = keys.filter(k => k.startsWith('processed:'));
+  async execute({ inputs, integrations }) {
+    // Get thread replies and post summary
+    const history = await integrations.slack.conversations.history({
+      channel: inputs.standupChannel,
+      limit: 10,
+    });
 
-    for (const key of processedToday) {
-      const data = await storage.get(key);
-      if (data) {
-        await integrations.slack.chat.postMessage({
-          channel: inputs.slackChannel,
-          text: `Meeting processed: ${data.summary}`,
-        });
-      }
-    }
+    // ... process and post summary
 
     return { success: true };
   },
@@ -675,9 +699,15 @@ async execute({ inputs, integrations }) {
 
 ## Praxis
 
-Design a compound workflow that orchestrates multiple integrations:
+Study real compound workflows in the WORKWAY codebase:
 
-> **Praxis**: Ask Claude Code: "Help me design a compound workflow for [your outcome] that uses Zoom, Notion, Slack, and email"
+> **Praxis**: Ask Claude Code: "Show me the meeting-intelligence workflow in packages/workflows/src/meeting-intelligence/index.ts"
+
+This workflow demonstrates compound patterns:
+- Multiple triggers (cron + webhook)
+- Sequential data fetching → AI processing → multi-service output
+- Graceful degradation for optional integrations (HubSpot CRM)
+- Idempotency via Notion database queries
 
 Map out the workflow:
 

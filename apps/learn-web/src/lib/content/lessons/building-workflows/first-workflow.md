@@ -72,7 +72,11 @@ export default defineWorkflow({
     },
   },
 
-  trigger: schedule('*/15 * * * *'),  // Every 15 minutes
+  // Schedule trigger with object pattern (preferred)
+  trigger: schedule({
+    cron: '*/15 * * * *',  // Every 15 minutes
+    timezone: 'UTC',
+  }),
 
   async execute({ inputs, integrations, storage }) {
     const { gmail, notion } = integrations;
@@ -163,7 +167,14 @@ User provides the Notion database ID to save emails to.
 
 ### Trigger
 ```typescript
-trigger: schedule('*/15 * * * *'),  // Every 15 minutes
+// Object pattern with timezone (preferred)
+trigger: schedule({
+  cron: '*/15 * * * *',  // Every 15 minutes
+  timezone: 'UTC',
+}),
+
+// Positional pattern also works
+trigger: schedule('*/15 * * * *'),  // Every 15 minutes UTC
 ```
 
 Runs automatically every 15 minutes.
@@ -305,19 +316,35 @@ Instead of polling, use Gmail push notifications:
 ```typescript
 import { defineWorkflow, webhook } from '@workwayco/sdk';
 
-// ...
+export default defineWorkflow({
+  name: 'Gmail to Notion (Real-time)',
 
-trigger: webhook({
-  service: 'gmail',
-  event: 'message.received',
-}),
+  integrations: [
+    { service: 'gmail', scopes: ['gmail.readonly'] },
+    { service: 'notion', scopes: ['write_pages'] },
+  ],
 
-async execute({ trigger }) {
-  const email = trigger.data;
-  if (email.labels?.includes('STARRED')) {
-    // Process immediately
-  }
-}
+  // Webhook trigger for real-time processing
+  trigger: webhook({
+    service: 'gmail',
+    event: 'message.received',
+  }),
+
+  async execute({ trigger, inputs, integrations }) {
+    const email = trigger.data;
+
+    if (email.labels?.includes('STARRED')) {
+      await integrations.notion.pages.create({
+        parent: { database_id: inputs.notionDatabase },
+        properties: {
+          Name: { title: [{ text: { content: email.subject } }] },
+        },
+      });
+    }
+
+    return { success: true };
+  },
+});
 ```
 
 ## Common Issues

@@ -114,39 +114,58 @@ curl http://localhost:8787/execute -d '{}'
 ## Anatomy of a Workflow
 
 ```typescript
+// From: packages/workflows/src/stripe-to-notion/index.ts
 import { defineWorkflow, webhook } from '@workwayco/sdk';
 
 export default defineWorkflow({
   // Basic info
-  name: 'Meeting Notes to Notion',
-  description: 'Automatically save meeting transcripts to Notion',
+  name: 'Stripe to Notion Invoice Tracker',
+  description: 'Automatically log all Stripe payments to your Notion database',
   version: '1.0.0',
 
-  // Required integrations
+  // Required integrations with OAuth scopes
   integrations: [
-    { service: 'zoom', scopes: ['meeting:read', 'recording:read'] },
-    { service: 'notion', scopes: ['read_pages', 'write_pages'] },
+    { service: 'stripe', scopes: ['read_payments', 'webhooks'] },
+    { service: 'notion', scopes: ['write_pages', 'read_databases'] },
   ],
 
   // User-configurable inputs
   inputs: {
     notionDatabaseId: {
       type: 'text',
-      label: 'Notion Database',
-      description: 'Select the database for meeting notes',
+      label: 'Notion Database for Payments',
       required: true,
+      description: 'Select the database where payments will be logged',
+    },
+    includeRefunds: {
+      type: 'boolean',
+      label: 'Track Refunds',
+      default: true,
+      description: 'Also log refunds to the database',
     },
   },
 
-  // When to run
+  // When to run: webhook from Stripe
   trigger: webhook({
-    service: 'zoom',
-    event: 'recording.completed',
+    service: 'stripe',
+    events: ['payment_intent.succeeded', 'charge.refunded'],
   }),
 
   // What happens when the workflow runs
-  async execute({ trigger, inputs, integrations, storage }) {
+  async execute({ trigger, inputs, integrations }) {
     // Your workflow logic here
+    const event = trigger.data;
+    const paymentData = event.data.object;
+
+    // Create Notion page
+    const page = await integrations.notion.pages.create({
+      parent: { database_id: inputs.notionDatabaseId },
+      properties: {
+        Name: { title: [{ text: { content: `Payment: ${paymentData.amount / 100}` } }] },
+      },
+    });
+
+    return { success: true, pageId: page.data?.id };
   },
 });
 ```
@@ -213,13 +232,31 @@ inputs: {
 Define when the workflow runs using trigger helpers:
 
 ```typescript
-import { webhook, schedule, manual, poll } from '@workwayco/sdk';
+import { webhook, schedule, cron, manual, poll } from '@workwayco/sdk';
 
-// Webhook trigger
+// Webhook trigger - single event
 trigger: webhook({ service: 'zoom', event: 'recording.completed' }),
 
-// Schedule trigger (cron)
-trigger: schedule('0 9 * * *'),  // Daily at 9 AM
+// Webhook trigger - multiple events (from stripe-to-notion workflow)
+trigger: webhook({
+  service: 'stripe',
+  events: ['payment_intent.succeeded', 'charge.refunded'],
+}),
+
+// Schedule trigger - cron expression (both patterns work)
+trigger: schedule('0 9 * * *'),  // Daily at 9 AM UTC
+
+// Schedule with timezone (from standup-bot workflow)
+trigger: schedule({
+  cron: '0 9 * * 1-5',  // Weekdays at 9 AM
+  timezone: 'America/New_York',
+}),
+
+// cron() is an alias for schedule()
+trigger: cron({
+  schedule: '0 7 * * *',
+  timezone: 'UTC',
+}),
 
 // Manual trigger
 trigger: manual({ description: 'Generate report' }),
@@ -332,80 +369,113 @@ await storage.delete('lastProcessedId');
 
 ## Complete Example
 
+This example is based on the real `stripe-to-notion` workflow in `packages/workflows/src/stripe-to-notion/index.ts`:
+
 ```typescript
+// Real workflow: packages/workflows/src/stripe-to-notion/index.ts
 import { defineWorkflow, webhook } from '@workwayco/sdk';
 
 export default defineWorkflow({
-  name: 'Zoom Recordings to Notion',
-  description: 'Save Zoom meeting recordings and transcripts to Notion',
+  name: 'Stripe to Notion Invoice Tracker',
+  description: 'Automatically log all Stripe payments to your Notion database',
   version: '1.0.0',
 
   integrations: [
-    { service: 'zoom', scopes: ['meeting:read', 'recording:read'] },
-    { service: 'notion', scopes: ['read_pages', 'write_pages'] },
+    { service: 'stripe', scopes: ['read_payments', 'webhooks'] },
+    { service: 'notion', scopes: ['write_pages', 'read_databases'] },
   ],
 
   inputs: {
     notionDatabaseId: {
       type: 'text',
-      label: 'Meetings Database ID',
+      label: 'Notion Database for Payments',
       required: true,
+      description: 'Select the database where payments will be logged',
     },
-    includeTranscript: {
+    includeRefunds: {
       type: 'boolean',
-      label: 'Include Transcript',
+      label: 'Track Refunds',
       default: true,
+      description: 'Also log refunds to the database',
+    },
+    currencyFormat: {
+      type: 'select',
+      label: 'Currency Display',
+      options: ['symbol', 'code', 'both'],
+      default: 'symbol',
     },
   },
 
   trigger: webhook({
-    service: 'zoom',
-    event: 'recording.completed',
+    service: 'stripe',
+    events: ['payment_intent.succeeded', 'charge.refunded'],
   }),
 
-  async execute({ trigger, inputs, integrations, storage }) {
-    const { zoom, notion } = integrations;
+  async execute({ trigger, inputs, integrations }) {
+    const event = trigger.data;
+    const isRefund = event.type === 'charge.refunded';
 
-    // Get meeting from trigger data
-    const meetingId = trigger.data.object.id;
-    const topic = trigger.data.object.topic;
+    // Skip refunds if not configured
+    if (isRefund && !inputs.includeRefunds) {
+      return { success: true, skipped: true, reason: 'Refunds disabled' };
+    }
 
-    // Build page content
-    const children = [
-      {
-        type: 'heading_2',
-        heading_2: { rich_text: [{ text: { content: 'Meeting Details' } }] },
+    // Extract payment details
+    const paymentData = event.data.object;
+    const amount = paymentData.amount / 100;
+    const currency = paymentData.currency.toUpperCase();
+
+    // Format currency display
+    const currencySymbols: Record<string, string> = {
+      USD: '$', EUR: '€', GBP: '£', JPY: '¥',
+    };
+    const symbol = currencySymbols[currency] || currency;
+    const displayAmount = `${symbol}${amount.toFixed(2)}`;
+
+    // Idempotency check: prevent duplicate entries
+    const existingCheck = await integrations.notion.databases.query({
+      database_id: inputs.notionDatabaseId,
+      filter: {
+        property: 'Payment ID',
+        rich_text: { equals: paymentData.id },
       },
-    ];
+      page_size: 1,
+    });
 
-    // Get transcript if requested
-    if (inputs.includeTranscript) {
-      const result = await zoom.getTranscript({ meetingId });
-      if (result.success && result.data?.transcript_text) {
-        children.push({
-          type: 'heading_2',
-          heading_2: { rich_text: [{ text: { content: 'Transcript' } }] },
-        });
-        children.push({
-          type: 'paragraph',
-          paragraph: { rich_text: [{ text: { content: result.data.transcript_text } }] },
-        });
-      }
+    if (existingCheck.success && existingCheck.data?.results?.length > 0) {
+      return {
+        success: true,
+        skipped: true,
+        reason: 'Payment already logged (idempotency check)',
+      };
     }
 
     // Create Notion page
-    const page = await notion.pages.create({
+    const notionPage = await integrations.notion.pages.create({
       parent: { database_id: inputs.notionDatabaseId },
       properties: {
-        Name: { title: [{ text: { content: topic } }] },
-        Date: { date: { start: new Date().toISOString().split('T')[0] } },
+        Name: {
+          title: [{ text: { content: `${isRefund ? '🔄 Refund' : '💰 Payment'}: ${displayAmount}` } }],
+        },
+        Amount: { number: isRefund ? -amount : amount },
+        Currency: { select: { name: currency } },
+        Status: { select: { name: isRefund ? 'Refunded' : 'Completed' } },
+        'Payment ID': { rich_text: [{ text: { content: paymentData.id } }] },
+        Date: { date: { start: new Date(paymentData.created * 1000).toISOString() } },
       },
-      children,
     });
 
-    console.log('Created Notion page:', page.data?.id);
+    if (!notionPage.success) {
+      throw new Error(`Failed to create Notion page: ${notionPage.error?.message}`);
+    }
 
-    return { success: true, pageId: page.data?.id };
+    return {
+      success: true,
+      paymentId: paymentData.id,
+      notionPageId: notionPage.data.id,
+      amount: displayAmount,
+      type: isRefund ? 'refund' : 'payment',
+    };
   },
 });
 ```
