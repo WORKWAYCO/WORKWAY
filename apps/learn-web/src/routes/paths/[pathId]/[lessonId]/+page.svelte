@@ -187,20 +187,8 @@
 		</header>
 
 		<!-- Lesson content -->
-		<article class="prose prose-invert max-w-none mb-xl">
-			<div class="card">
-				<p class="text-[var(--color-fg-muted)]">
-					Lesson content will be loaded from markdown files. This is a placeholder for the lesson:
-					<strong>{lesson.title}</strong>
-				</p>
-
-				<div class="mt-md p-md bg-[var(--color-bg-pure)] rounded-[var(--radius-md)] border border-[var(--color-border-default)]">
-					<h3 class="text-sm font-medium mb-xs">Coming Soon</h3>
-					<p class="text-sm text-[var(--color-fg-muted)]">
-						Full lesson content with code examples, explanations, and interactive elements.
-					</p>
-				</div>
-			</div>
+		<article class="lesson-content mb-xl">
+			{@html data.content.html}
 		</article>
 
 		<!-- Praxis section -->

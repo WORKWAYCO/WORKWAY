@@ -1,7 +1,10 @@
 /**
  * Lesson Loader
  * Dynamically loads markdown lesson content using Vite's ?raw import
+ * Renders markdown with syntax highlighting via shiki
  */
+
+import { renderMarkdown } from '$lib/markdown';
 
 export interface Heading {
 	level: number;
@@ -11,6 +14,7 @@ export interface Heading {
 
 export interface LessonContent {
 	markdown: string;
+	html: string;
 	headings: Heading[];
 	excerpt: string;
 }
@@ -124,11 +128,12 @@ export function extractHeadings(markdown: string): Heading[] {
 }
 
 /**
- * Load lesson with extracted headings and excerpt
+ * Load lesson with extracted headings, excerpt, and rendered HTML
  */
 export async function loadLessonContent(pathId: string, lessonId: string): Promise<LessonContent> {
 	const markdown = await loadLesson(pathId, lessonId);
 	const headings = extractHeadings(markdown);
 	const excerpt = extractExcerpt(markdown);
-	return { markdown, headings, excerpt };
+	const html = await renderMarkdown(markdown);
+	return { markdown, html, headings, excerpt };
 }
