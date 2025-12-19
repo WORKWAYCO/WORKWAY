@@ -14,6 +14,110 @@ By the end of this lesson, you will be able to:
 
 Not every workflow belongs in the marketplace. Private workflows serve specific organizations with custom requirements while leveraging the full WORKWAY platform.
 
+## Step-by-Step: Create Your First Private Workflow
+
+### Step 1: Initialize the Project
+
+Create a new workflow with private visibility:
+
+```bash
+mkdir client-meeting-sync
+cd client-meeting-sync
+pnpm init
+pnpm add @workwayco/sdk
+```
+
+### Step 2: Define the Workflow Structure
+
+Create `src/index.ts`:
+
+```typescript
+import { defineWorkflow, webhook } from '@workwayco/sdk';
+
+export default defineWorkflow({
+  name: 'Client Meeting Sync',
+  description: 'Syncs meeting data to internal CRM',
+  version: '1.0.0',
+
+  integrations: [
+    { service: 'zoom', scopes: ['meeting:read'] },
+  ],
+
+  inputs: {
+    crmEndpoint: { type: 'text', label: 'CRM API Endpoint', required: true },
+  },
+
+  trigger: webhook({
+    service: 'zoom',
+    event: 'meeting.ended',
+  }),
+
+  async execute({ trigger, inputs, integrations }) {
+    const { zoom } = integrations;
+    const meeting = await zoom.getMeeting(trigger.data.object.id);
+
+    // Sync to internal CRM
+    await fetch(inputs.crmEndpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ meeting: meeting.data }),
+    });
+
+    return { success: true };
+  },
+});
+```
+
+### Step 3: Add Private Metadata
+
+Export the private workflow configuration:
+
+```typescript
+// Add at the bottom of src/index.ts
+export const metadata = {
+  id: 'client-meeting-sync',
+  visibility: 'private' as const,
+  accessGrants: [
+    { type: 'email_domain' as const, value: 'clientcorp.com' },
+  ],
+};
+```
+
+### Step 4: Test Locally
+
+```bash
+workway dev
+
+# In another terminal
+curl localhost:8787/execute \
+  -H "Content-Type: application/json" \
+  -d '{"object": {"id": "test-123", "topic": "Test Meeting"}}'
+```
+
+### Step 5: Deploy as Private
+
+```bash
+workway deploy
+
+# Output:
+# ✓ Deployed: client-meeting-sync
+# ✓ Visibility: private
+# ✓ Access: clientcorp.com email domain
+# ✓ URL: workway.co/workflows/private/client-meeting-sync
+```
+
+### Step 6: Share with Client
+
+Send the install link to authorized users:
+
+```
+https://workway.co/workflows/private/client-meeting-sync
+```
+
+They'll authenticate, verify access, connect integrations, and configure.
+
+---
+
 ## Public vs. Private
 
 | Aspect | Public Workflow | Private Workflow |

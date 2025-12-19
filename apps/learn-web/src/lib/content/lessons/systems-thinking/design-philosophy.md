@@ -14,6 +14,115 @@ By the end of this lesson, you will be able to:
 
 Building workflows that work is the foundation. Building workflows that *recede* is the craft. This lesson elevates your thinking from functional automation to intentional design.
 
+## Step-by-Step: Apply Design Philosophy to Your Workflow
+
+### Step 1: Identify User Touch Points
+
+List every moment a user must think about your workflow:
+
+```typescript
+// Audit your current workflow
+const touchPoints = [
+  'Initial setup: 5 config options',
+  'Slack notification on every run',
+  'Manual database ID entry',
+  'Error messages require log investigation',
+];
+```
+
+Each touch point is where the tool becomes visible (Vorhandenheit).
+
+### Step 2: Eliminate Configuration
+
+For each config option, ask: "Can this be a smart default?"
+
+```typescript
+// Before: 5 decisions required
+inputs: {
+  notionDatabase: { type: 'text', required: true },
+  slackChannel: { type: 'text', required: true },
+  summaryLength: { type: 'select', options: ['short', 'medium', 'long'] },
+  includeActionItems: { type: 'boolean' },
+  sendEmailCopy: { type: 'boolean' },
+}
+
+// After: 1 decision required
+inputs: {
+  notionDatabase: {
+    type: 'notion_database',
+    label: 'Save notes to',
+    required: true,
+  },
+  // Everything else has tested optimal defaults
+}
+```
+
+### Step 3: Remove Noise Notifications
+
+Change from "loud success, quiet failure" to "silent success, loud failure":
+
+```typescript
+// Before: User interrupted on every run
+await slack.postMessage({ text: '✅ Workflow completed!' });
+
+// After: User only notified when action needed
+if (!results.success) {
+  await slack.postMessage({
+    text: `⚠️ Meeting sync needs attention: ${results.error}`,
+  });
+}
+```
+
+### Step 4: Make Errors Actionable
+
+Transform cryptic errors into helpful guidance:
+
+```typescript
+// Before: Requires investigation
+return { success: false, error: error.message };
+
+// After: Tells user what to do
+if (error.code === 'AUTH_EXPIRED') {
+  return {
+    success: false,
+    error: 'Your Zoom connection expired. Reconnect at workway.co/settings',
+    actionUrl: 'https://workway.co/settings/integrations',
+  };
+}
+```
+
+### Step 5: Simplify the Code
+
+Find one abstraction that can be removed:
+
+```typescript
+// Before: Unnecessary abstraction
+class MeetingProcessor {
+  constructor(private integrations: Integrations) {}
+  async process(meeting: Meeting) { /* ... */ }
+}
+const processor = new MeetingProcessor(integrations);
+await processor.process(meeting);
+
+// After: Direct function
+async function processMeeting(meeting: Meeting, integrations: Integrations) {
+  // Same logic, no class overhead
+}
+await processMeeting(meeting, integrations);
+```
+
+### Step 6: Verify with the Checklist
+
+Run the philosophy checklist before shipping:
+
+- [ ] Users can forget this workflow exists
+- [ ] Success is silent, failure is helpful
+- [ ] Config options reduced to essentials
+- [ ] No premature abstractions
+- [ ] Description promises only what it delivers
+
+---
+
 ## The Philosophy Behind WORKWAY
 
 WORKWAY isn't just a technical platform—it's a design philosophy applied to automation. Two German concepts shape every decision:
