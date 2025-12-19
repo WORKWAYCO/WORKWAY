@@ -14,6 +14,22 @@ By the end of this lesson, you will be able to:
 
 The terminal is where workflows come to life. WezTerm provides a modern, GPU-accelerated terminal that disappears into your work.
 
+## Use Claude Code
+
+You can complete this entire lesson by asking Claude Code. Try these prompts:
+
+```
+> Install WezTerm on my Mac using Homebrew
+
+> Create a WezTerm config with pure black background and JetBrains Mono font
+
+> Add keybindings for split panes and Claude Code quick-launch
+
+> Show me how to navigate WezTerm panes with vim-style keys
+```
+
+Claude Code will generate the config, explain each setting, and help you customize it.
+
 ## Why WezTerm?
 
 | Feature | Benefit |

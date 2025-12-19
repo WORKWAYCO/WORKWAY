@@ -518,12 +518,25 @@ When prompted, mention an API you'd like to integrate (e.g., "Stripe", "Airtable
 - How do skills (slash commands) encode expertise into reusable patterns?
 - What custom skills might benefit your workflow development?
 
+## Use Claude Code for Everything That Follows
+
+With Claude Code installed, you can use it to complete every remaining lesson in this path:
+
+| Lesson | Ask Claude Code |
+|--------|-----------------|
+| WezTerm Setup | "Help me install WezTerm and configure it with a pure black theme" |
+| Neomutt Setup | "Set up Neomutt for Gmail with an app password" |
+| WORKWAY CLI | "Install and configure the WORKWAY CLI" |
+| Essential Commands | "Add WORKWAY development aliases to my shell" |
+
+You don't have to copy/paste configs manually. You can—but Claude Code can also generate, explain, and apply them for you.
+
 ## Next Step
 
-With Claude Code installed, you'll use it to complete the next lesson: installing the WORKWAY CLI.
+Let's configure your terminal. Ask Claude Code:
 
 ```
-> Help me install and configure the WORKWAY CLI
+> Help me install WezTerm and configure it with a pure black background for WORKWAY development
 ```
 
 The tool is ready. Let's build.

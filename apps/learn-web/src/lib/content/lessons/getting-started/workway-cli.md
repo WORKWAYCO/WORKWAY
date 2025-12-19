@@ -14,6 +14,24 @@ By the end of this lesson, you will be able to:
 
 The WORKWAY CLI connects your local development environment to the WORKWAY platform. Deploy, test, and manage workflows from your terminal.
 
+## Use Claude Code
+
+You can complete this entire lesson by asking Claude Code. Try these prompts:
+
+```
+> Install the WORKWAY CLI globally with pnpm
+
+> Help me authenticate with workway login
+
+> Create a new workflow project with workway init
+
+> Show me how to test my workflow locally with curl
+
+> Deploy my workflow to production
+```
+
+Claude Code will run the commands, explain each step, and help troubleshoot any issues.
+
 ## Quick Start: Your First Workflow in 5 Minutes
 
 ### Step 1: Install the CLI

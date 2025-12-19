@@ -15,6 +15,24 @@ By the end of this lesson, you will be able to:
 
 Email is a workflow trigger. Neomutt brings email into your terminal, where it can integrate with your development flow and—more importantly—help you recognize the patterns that become automated workflows.
 
+## Use Claude Code
+
+You can complete this entire lesson by asking Claude Code. Try these prompts:
+
+```
+> Install Neomutt on my Mac
+
+> Create a Neomutt config for Gmail with IMAP and SMTP
+
+> Help me generate a Gmail App Password for Neomutt
+
+> Show me vim-style navigation in Neomutt (j/k, search, reply)
+
+> Add a monochrome color scheme to my Neomutt config
+```
+
+Claude Code will generate the config, walk you through App Password setup, and explain each setting.
+
 ## Why Terminal Email?
 
 | Traditional Email | Terminal Email |

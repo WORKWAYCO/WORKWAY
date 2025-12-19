@@ -16,6 +16,24 @@ By the end of this lesson, you will be able to:
 
 Master these commands to move efficiently through your workflow development cycle. The goal: muscle memory that lets the tools recede.
 
+## Use Claude Code
+
+You can complete this entire lesson by asking Claude Code. Try these prompts:
+
+```
+> Add WORKWAY development aliases to my zshrc (wd, wdp, wl, gs, cc)
+
+> Create shell functions for workflow testing (wrun, wwl, wdeploy)
+
+> Show me the most useful keyboard shortcuts for terminal navigation
+
+> Set up my shell for efficient WORKWAY development
+
+> What's the complete development flow from dev to deploy?
+```
+
+Claude Code will add the aliases to your shell config, explain each shortcut, and help you practice the development cycle.
+
 ## Quick Start: Set Up Your Environment
 
 ### Step 1: Add WORKWAY Aliases to Your Shell

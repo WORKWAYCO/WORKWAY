@@ -27,24 +27,24 @@ export const paths: Path[] = [
 		id: 'getting-started',
 		title: 'Getting Started',
 		description: 'Get your development environment ready in under 2 hours. Install WezTerm, Claude Code, and WORKWAY CLI—everything needed to start building workflows.',
-		introduction: 'Your terminal is the cockpit for building workflows that run themselves. In this path, you will configure WezTerm for distraction-free development, install Claude Code as your AI pair programmer, set up terminal email with Neomutt, and master the WORKWAY CLI. By the end, you will have a professional development environment where tools recede and outcomes remain.',
+		introduction: 'Your terminal is the cockpit for building workflows that run themselves. In this path, you will install Claude Code as your AI pair programmer—then use it to configure WezTerm, Neomutt, and the WORKWAY CLI. By the end, you will have a professional development environment where tools recede and outcomes remain.',
 		icon: 'terminal',
 		difficulty: 'beginner',
 		estimatedHours: 2,
 		lessons: [
+			{
+				id: 'claude-code-setup',
+				title: 'Claude Code Setup',
+				description: 'Install Claude Code CLI and authenticate with your Anthropic account. Use Claude Code to complete the remaining setup tasks.',
+				duration: '10 min',
+				praxis: 'Install Claude Code, then ask it: "Help me set up WezTerm with a pure black theme for WORKWAY development."'
+			},
 			{
 				id: 'wezterm-setup',
 				title: 'WezTerm Installation & Configuration',
 				description: 'Install WezTerm and configure it for optimal developer experience.',
 				duration: '15 min',
 				praxis: 'Install WezTerm and configure it with a monochrome theme. Create ~/.config/wezterm/wezterm.lua with pure black background.'
-			},
-			{
-				id: 'claude-code-setup',
-				title: 'Claude Code Setup',
-				description: 'Install Claude Code CLI and authenticate with your Anthropic account.',
-				duration: '10 min',
-				praxis: 'Navigate to a project directory and ask Claude Code: "What patterns are used in the workflows folder?"'
 			},
 			{
 				id: 'neomutt-setup',
