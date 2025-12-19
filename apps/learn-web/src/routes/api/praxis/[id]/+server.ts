@@ -258,6 +258,24 @@ const praxisValidators: Record<string, (submission: PraxisSubmission) => PraxisR
 		};
 	},
 
+	'common-pitfalls': (submission) => {
+		const hasPitfall =
+			submission.evidence.toLowerCase().includes('error') ||
+			submission.evidence.toLowerCase().includes('fix') ||
+			submission.evidence.toLowerCase().includes('node') ||
+			submission.evidence.toLowerCase().includes('rate') ||
+			submission.evidence.toLowerCase().includes('validation');
+
+		return {
+			success: true,
+			feedback: hasPitfall
+				? 'Learning from intentional failures builds resilience. Now you know the error signatures.'
+				: 'Create a workflow with an intentional pitfall and observe the error.',
+			nextSteps: ['Document the error pattern for your team'],
+			badges: hasPitfall ? ['pitfall-survivor'] : undefined
+		};
+	},
+
 	// Systems Thinking path
 	'compound-workflows': (submission) => {
 		const hasCompound =
@@ -335,6 +353,24 @@ const praxisValidators: Record<string, (submission: PraxisSubmission) => PraxisR
 				: 'Add structured logging at key points with context.',
 			nextSteps: ['Configure alerts for error rate and latency'],
 			badges: hasMonitoring ? ['production-ready'] : undefined
+		};
+	},
+
+	'design-philosophy': (submission) => {
+		const hasPhilosophy =
+			submission.evidence.toLowerCase().includes('zuhandenheit') ||
+			submission.evidence.toLowerCase().includes('recede') ||
+			submission.evidence.toLowerCase().includes('rams') ||
+			submission.evidence.toLowerCase().includes('default') ||
+			submission.evidence.toLowerCase().includes('remove');
+
+		return {
+			success: true,
+			feedback: hasPhilosophy
+				? 'Weniger, aber besser. You understand what makes tools disappear.'
+				: 'Audit a workflow: what configuration could become a default?',
+			nextSteps: ['Apply these principles to your next workflow'],
+			badges: hasPhilosophy ? ['design-philosopher'] : undefined
 		};
 	}
 };

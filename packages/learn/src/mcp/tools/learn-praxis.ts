@@ -185,6 +185,7 @@ function detectExerciseType(praxisId: string): 'workflow' | 'setup' | 'conceptua
 		'working-with-integrations',
 		'workers-ai',
 		'error-handling',
+		'common-pitfalls',
 		'compound-workflows',
 		'private-workflows',
 		'agency-patterns'
@@ -212,7 +213,8 @@ function detectExerciseType(praxisId: string): 'workflow' | 'setup' | 'conceptua
 	const conceptualExercises = [
 		'what-is-workflow',
 		'define-workflow-pattern',
-		'integrations-oauth'
+		'integrations-oauth',
+		'design-philosophy'
 	];
 
 	if (workflowExercises.includes(praxisId)) return 'workflow';
@@ -556,6 +558,26 @@ function validateConceptualExercise(praxisId: string, evidence?: string, reflect
 			if (/packages\/integrations/i.test(content)) {
 				score += 15;
 				result.strengths.push('Explored integration implementations');
+			}
+			break;
+
+		case 'design-philosophy':
+			if (/zuhandenheit|recede|invisible|disappear/i.test(content)) {
+				score += 30;
+				result.strengths.push('Understanding of Zuhandenheit philosophy');
+				result.patterns.zuhandenheit.score = 90;
+			}
+			if (/rams|weniger|besser|less.*but.*better/i.test(content)) {
+				score += 25;
+				result.strengths.push('Dieter Rams principles understood');
+			}
+			if (/default|simplif|remov|audit/i.test(content)) {
+				score += 20;
+				result.strengths.push('Applied simplification thinking');
+			}
+			if (/unnecessary|abstraction|config/i.test(content)) {
+				score += 15;
+				result.strengths.push('Identified opportunities to remove complexity');
 			}
 			break;
 
