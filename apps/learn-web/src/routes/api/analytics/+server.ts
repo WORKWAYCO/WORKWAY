@@ -7,7 +7,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		throw error(500, 'Database not available');
 	}
 
-	const body = await request.json();
+	const body = await request.json() as { eventType?: string; eventData?: unknown; pagePath?: string; referrer?: string };
 	const { eventType, eventData, pagePath, referrer } = body;
 
 	if (!eventType) {

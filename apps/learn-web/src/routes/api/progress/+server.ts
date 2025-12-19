@@ -195,7 +195,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		throw error(500, 'Database not available');
 	}
 
-	const body = await request.json();
+	const body = await request.json() as { pathId?: string; lessonId?: string; status?: string; timeSpentSeconds?: number };
 	const { pathId, lessonId, status, timeSpentSeconds } = body;
 
 	if (!pathId || !lessonId) {

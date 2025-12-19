@@ -22,8 +22,8 @@ export const actions: Actions = {
 			});
 
 			if (!response.ok) {
-				const error = await response.json().catch(() => ({ message: 'Login failed' }));
-				return fail(response.status, { error: error.message || 'Invalid credentials' });
+				const errorData = await response.json().catch(() => ({ message: 'Login failed' })) as { message?: string };
+				return fail(response.status, { error: errorData.message || 'Invalid credentials' });
 			}
 
 			const data = await response.json() as { access_token: string; refresh_token: string };
