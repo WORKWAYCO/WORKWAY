@@ -108,7 +108,7 @@ function analyzeWorkflow(code: string, comprehensive: boolean): WorkflowAnalysis
 			priority: 'high',
 			category: 'structure',
 			suggestion: 'Wrap your workflow in defineWorkflow()',
-			codeExample: "import { defineWorkflow } from '@workwayco/sdk';\n\nexport default defineWorkflow({\n  // ...\n});"
+			codeExample: "import { defineWorkflow } from '@workwayco/sdk';\n\nexport default defineWorkflow({\n  name: 'My Workflow',\n  description: 'What this workflow achieves',\n  version: '1.0.0',\n  integrations: [],\n  inputs: {},\n  async execute({ trigger, inputs, integrations }) {\n    // Implementation\n  }\n});"
 		});
 		analysis.relatedLessons.push({
 			pathId: 'workflow-foundations',

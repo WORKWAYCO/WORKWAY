@@ -640,13 +640,14 @@ function validateWorkflowCode(code: string): ValidationResult {
 	// ====================
 
 	// Check for defineWorkflow pattern with import
-	const hasDefineWorkflowImport = /@workwayco\/sdk/.test(code);
+	// Accept @workwayco/sdk (current package name)
+	const hasWorkwaycoImport = /@workwayco\/sdk/.test(code);
 	const hasDefineWorkflow = /defineWorkflow\s*\(\s*\{/i.test(code);
 
 	if (hasDefineWorkflow) {
 		score += 15;
 		result.strengths.push('Uses defineWorkflow() pattern');
-		if (hasDefineWorkflowImport) {
+		if (hasWorkwaycoImport) {
 			score += 5;
 			result.strengths.push('Correctly imports from @workwayco/sdk');
 		} else {
