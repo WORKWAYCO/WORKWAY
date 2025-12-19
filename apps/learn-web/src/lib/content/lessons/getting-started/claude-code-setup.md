@@ -127,6 +127,132 @@ What this project does.
 
 Claude Code reads this automatically and follows your project's conventions.
 
+## MCP Server Setup
+
+Claude Code supports Model Context Protocol (MCP) servers for extended functionality. WORKWAY provides an MCP server that gives Claude Code direct access to learning tools.
+
+### Adding WORKWAY Learn MCP Server
+
+Create or edit `.mcp.json` in your project or home directory:
+
+```json
+{
+  "mcpServers": {
+    "workway-learn": {
+      "command": "npx",
+      "args": ["@workway/learn", "--server"]
+    }
+  }
+}
+```
+
+Location options:
+- **Project-level**: `.mcp.json` in project root (recommended for teams)
+- **User-level**: `~/.claude/.mcp.json` (available across all projects)
+
+### Verifying MCP Connection
+
+After adding the config, restart Claude Code. You can verify the connection:
+
+```
+> What MCP servers are connected?
+```
+
+Claude Code should show `workway-learn` as available.
+
+### Available MCP Tools
+
+Once connected, Claude Code gains access to these learning tools:
+
+| Tool | Description |
+|------|-------------|
+| `learn_status` | Check your learning progress |
+| `learn_lesson` | Fetch lesson content |
+| `learn_complete` | Mark lessons complete |
+| `learn_praxis` | Submit workflow exercises |
+| `learn_coach` | Get real-time guidance |
+| `learn_analyze` | Analyze workflow code |
+| `learn_recommend` | Get personalized recommendations |
+| `learn_digest` | Generate weekly summaries |
+
+Example usage:
+
+```
+> Show me my learning progress
+
+> Get the lesson on defineWorkflow()
+
+> Help me complete the first workflow praxis
+```
+
+## WORKWAY Skills (Slash Commands)
+
+Skills are reusable prompts that Claude Code executes with project context. WORKWAY provides specialized skills for workflow development.
+
+### Project Skills
+
+When working in the WORKWAY codebase, these skills are available:
+
+| Skill | Description | When to Use |
+|-------|-------------|-------------|
+| `/heidegger-design` | Apply Zuhandenheit and Dieter Rams principles | Architecture decisions, UI/UX choices |
+| `/workway-integrations` | Build integrations using BaseAPIClient | Creating new service integrations |
+
+### Using Skills
+
+Invoke a skill by typing its name:
+
+```
+> /heidegger-design
+
+Claude Code will apply Heideggerian design principles to evaluate
+your current work, asking questions like:
+- Does the tool recede?
+- Is this Zuhandenheit or Vorhandenheit?
+- What would Dieter Rams remove?
+```
+
+```
+> /workway-integrations
+
+Claude Code will help you build an integration following the
+canonical BaseAPIClient pattern, including:
+- Proper directory structure
+- Type definitions
+- Error handling
+- Tests
+```
+
+### Skill Philosophy
+
+Skills embody Zuhandenheit—they encode expert knowledge into simple invocations. Instead of explaining design philosophy each time, you invoke `/heidegger-design` and the principles flow through Claude Code's responses.
+
+The skill recedes. The better design remains.
+
+### Creating Custom Skills
+
+You can create your own skills in `.claude/skills/`:
+
+```bash
+mkdir -p .claude/skills/my-skill
+touch .claude/skills/my-skill/SKILL.md
+```
+
+Example `SKILL.md`:
+
+```markdown
+---
+name: my-skill
+description: What this skill does
+---
+
+# My Skill
+
+Instructions for Claude Code when this skill is invoked...
+```
+
+Skills are version-controlled with your project, ensuring team-wide consistency.
+
 ## Essential Commands
 
 ### In-Session Commands
@@ -196,6 +322,8 @@ With Claude Pro, you may hit usage limits. Options:
 
 ## Praxis
 
+### Part 1: Basic Exploration
+
 Navigate to the WORKWAY codebase and explore it with Claude Code:
 
 > **Praxis**: Open a terminal in the WORKWAY project directory and ask Claude Code: "What patterns are used in the workflows folder?"
@@ -206,11 +334,47 @@ Then explore further:
 
 Document what you find. Notice how Claude Code reads files, understands structure, and explains patterns.
 
+### Part 2: MCP Setup
+
+Configure the WORKWAY Learn MCP server:
+
+1. Create `.mcp.json` in your project directory:
+```json
+{
+  "mcpServers": {
+    "workway-learn": {
+      "command": "npx",
+      "args": ["@workway/learn", "--server"]
+    }
+  }
+}
+```
+
+2. Restart Claude Code
+3. Verify the connection:
+> "What learning tools are available via MCP?"
+
+Claude Code should list the `learn_*` tools.
+
+### Part 3: Skills
+
+Test the WORKWAY skills:
+
+> "/heidegger-design"
+
+When prompted, describe a recent design decision. Notice how the skill applies philosophical principles to practical choices.
+
+> "/workway-integrations"
+
+When prompted, mention an API you'd like to integrate (e.g., "Stripe", "Airtable"). Notice how the skill guides you toward the canonical BaseAPIClient pattern.
+
 ## Reflection
 
 - How does having an AI partner change your approach to learning?
 - What would you explore first if Claude Code could read any codebase?
 - How might "learning by building with AI" differ from traditional tutorials?
+- How do skills (slash commands) encode expertise into reusable patterns?
+- What custom skills might benefit your workflow development?
 
 ## Next Step
 
