@@ -15,6 +15,7 @@ export interface Path {
 	id: string;
 	title: string;
 	description: string;
+	introduction?: string;
 	icon: string;
 	difficulty: 'beginner' | 'intermediate' | 'advanced';
 	estimatedHours: number;
@@ -166,6 +167,7 @@ export const paths: Path[] = [
 		id: 'systems-thinking',
 		title: 'Systems Thinking',
 		description: 'Design compound workflows where one meeting triggers Notion notes, Slack updates, email drafts, and CRM entries—all automatically. Production patterns.',
+		introduction: 'Single automations move data from A to B. Systems thinking means designing complete outcomes that span multiple services, handle failures gracefully, and scale to production workloads. In this path, you will learn to orchestrate compound workflows that turn one event into many coordinated actions, build private workflows with enterprise-grade access controls, apply agency patterns that generate recurring revenue, and master the performance and monitoring techniques that separate hobby projects from production systems.',
 		icon: 'brain',
 		difficulty: 'advanced',
 		estimatedHours: 4,
@@ -209,6 +211,13 @@ export const paths: Path[] = [
 				description: 'Use Cloudflare analytics and logs for production troubleshooting.',
 				duration: '25 min',
 				praxis: 'Add structured logging at key points with context. Configure alerts for error rate, latency, and no executions.'
+			},
+			{
+				id: 'design-philosophy',
+				title: 'Design Philosophy',
+				description: 'Apply Zuhandenheit and Dieter Rams principles to create workflows that recede.',
+				duration: '30 min',
+				praxis: 'Audit a workflow for design philosophy. Identify configuration that could become defaults. Remove one unnecessary abstraction.'
 			}
 		]
 	}
