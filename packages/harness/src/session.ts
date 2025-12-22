@@ -299,20 +299,45 @@ export function generatePrimingPrompt(context: PrimingContext): string {
     lines.push('');
   }
 
-  // Completion criteria
-  lines.push('## Completion Criteria');
-  lines.push('1. All acceptance criteria met');
+  // Scope Guard (One-Feature Enforcement)
+  lines.push('## Scope Guard (CRITICAL)');
+  lines.push('');
+  lines.push(`**Active Issue**: ${context.currentIssue.id} (${context.currentIssue.title})`);
+  lines.push('**Status**: ✓ Single issue assigned for this session');
+  lines.push('');
+  lines.push('⚠️ **CONSTRAINTS**:');
+  lines.push('- Work ONLY on the issue above - do NOT touch other features');
+  lines.push('- If you discover additional work needed, note it but do NOT implement it');
+  lines.push('- Do NOT create new issues - the harness handles issue management');
+  lines.push('- Complete this one feature fully before the session ends');
+  lines.push('');
+  lines.push('If blocked, describe the blocker clearly and stop. Do NOT work around it by starting other features.');
+  lines.push('');
+
+  // Completion criteria (Two-Stage Verification)
+  lines.push('## Completion Criteria (Two-Stage)');
+  lines.push('');
+  lines.push('**Stage 1: Code Complete**');
+  lines.push('1. All files created/modified as needed');
   if (context.mode === 'workflow') {
     lines.push('2. `workway test` passes');
   } else {
     lines.push('2. TypeScript compiles without errors');
-    lines.push('3. Tests pass');
+    lines.push('3. Unit tests pass');
   }
+  lines.push('');
+  lines.push('**Stage 2: Verified**');
+  lines.push('4. Acceptance criteria actually met (not just "code exists")');
+  lines.push('5. Feature works end-to-end (test in browser/CLI)');
+  lines.push('6. No regressions introduced');
+  lines.push('');
+  lines.push('Only declare success when BOTH stages are complete.');
   lines.push('');
 
   lines.push('---');
   lines.push('');
-  lines.push('Begin working on this issue. When complete, simply finish your work - the harness will close the issue automatically.');
+  lines.push('Begin working on this issue. Focus exclusively on this one feature.');
+  lines.push('When complete, simply finish your work - the harness will close the issue automatically.');
   lines.push('');
   lines.push('**IMPORTANT**: Do NOT run `bd close` or `bd update` commands - the harness manages issue state.');
 
@@ -494,7 +519,7 @@ async function runClaudeCode(
 
 /**
  * Detect session outcome from output.
- * Aligned with CREATE SOMETHING's simpler, more reliable approach.
+ * Supports two-stage verification: code_complete vs success.
  */
 function detectOutcome(output: string, exitCode: number): SessionOutcome {
   const lower = output.toLowerCase();
@@ -524,7 +549,34 @@ function detectOutcome(output: string, exitCode: number): SessionOutcome {
     return 'partial';
   }
 
-  // If exit code is 0, assume success (trust Claude's judgment)
+  // Two-stage verification: check if verified vs just code complete
+  // Look for verification indicators
+  const hasVerification =
+    lower.includes('verified') ||
+    lower.includes('tested end-to-end') ||
+    lower.includes('e2e pass') ||
+    lower.includes('feature works') ||
+    lower.includes('manually verified') ||
+    lower.includes('acceptance criteria met');
+
+  // Look for code-complete-only indicators
+  const isCodeCompleteOnly =
+    lower.includes('code complete') ||
+    lower.includes('compiles successfully') ||
+    lower.includes('unit tests pass') ||
+    (lower.includes('tests pass') && !hasVerification);
+
+  // If explicitly verified, return success
+  if (hasVerification) {
+    return 'success';
+  }
+
+  // If code complete but not verified, return code_complete
+  if (isCodeCompleteOnly) {
+    return 'code_complete';
+  }
+
+  // Default: trust exit code 0 as success
   return 'success';
 }
 

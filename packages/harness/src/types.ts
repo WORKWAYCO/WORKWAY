@@ -147,7 +147,15 @@ export interface Checkpoint {
 // Session
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type SessionOutcome = 'success' | 'failure' | 'partial' | 'context_overflow';
+/**
+ * Session outcome with two-stage verification support.
+ * - success: Feature fully verified and working
+ * - code_complete: Code written and compiles, but not yet verified end-to-end
+ * - failure: Session failed with errors
+ * - partial: Some progress made but blocked
+ * - context_overflow: Ran out of context tokens
+ */
+export type SessionOutcome = 'success' | 'code_complete' | 'failure' | 'partial' | 'context_overflow';
 
 export interface SessionResult {
   /** Issue being worked on */

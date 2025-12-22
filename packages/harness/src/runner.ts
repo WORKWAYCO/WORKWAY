@@ -378,14 +378,21 @@ export async function runHarness(
       dryRun: options.dryRun,
     });
 
-    // 5. Handle session result
+    // 5. Handle session result (Two-Stage Verification)
     recordSession(checkpointTracker, sessionResult);
 
     if (sessionResult.outcome === 'success') {
+      // Fully verified - close the issue
       await updateIssueStatus(nextIssue.id, 'closed', options.cwd);
       harnessState.featuresCompleted++;
       harnessState.sessionsCompleted++;
-      console.log(chalk.green(`✅ Task completed: ${nextIssue.id}`));
+      console.log(chalk.green(`✅ Task verified and completed: ${nextIssue.id}`));
+    } else if (sessionResult.outcome === 'code_complete') {
+      // Code complete but not verified - keep in_progress, add label
+      // Next session should verify this feature before moving on
+      harnessState.sessionsCompleted++;
+      console.log(chalk.cyan(`◑ Code complete (awaiting verification): ${nextIssue.id}`));
+      console.log(chalk.cyan(`   Feature needs E2E verification before closing`));
     } else if (sessionResult.outcome === 'failure') {
       // Keep as in_progress for retry, but track failure
       harnessState.featuresFailed++;
