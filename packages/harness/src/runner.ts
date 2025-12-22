@@ -156,15 +156,33 @@ async function stopBdDaemon(): Promise<void> {
 
 /**
  * Restart the bd daemon after harness completion.
+ * Uses fire-and-forget pattern since daemon runs in background.
  */
 async function startBdDaemon(): Promise<void> {
+  // Sync first to commit all harness changes to JSONL
   try {
-    // Start daemon in background
-    await execAsync('bd daemon --start --interval 5s &');
+    await execAsync('bd sync');
+    console.log('   Synced harness changes to JSONL');
+  } catch {
+    console.log('   Warning: bd sync failed');
+  }
+
+  // Start daemon using fire-and-forget (don't await)
+  exec('bd daemon --start', (err) => {
+    if (err) {
+      console.log('   Warning: Could not restart bd daemon - run manually: bd daemon --start');
+    }
+  });
+
+  // Give daemon a moment to start
+  await sleep(1000);
+
+  // Verify daemon is running
+  try {
+    await execAsync('pgrep -f "bd daemon"');
     console.log('   Restarted bd daemon');
-  } catch (error) {
-    // Non-fatal - daemon can be started manually
-    console.log('   Warning: Could not restart bd daemon');
+  } catch {
+    console.log('   Warning: bd daemon may not have started - run manually: bd daemon --start');
   }
 }
 
