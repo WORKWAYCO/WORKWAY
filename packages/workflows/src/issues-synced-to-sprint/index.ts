@@ -50,7 +50,7 @@ export default defineWorkflow({
 		primaryPair: {
 			from: 'github',
 			to: 'linear',
-			workflowId: 'github-to-linear',
+			workflowId: 'issues-synced-to-sprint',
 			outcome: 'Issues that sync themselves',
 		},
 
@@ -58,14 +58,14 @@ export default defineWorkflow({
 			{
 				trigger: 'integration_connected',
 				integrations: ['github', 'linear'],
-				workflowId: 'github-to-linear',
+				workflowId: 'issues-synced-to-sprint',
 				priority: 90,
 			},
 			{
 				trigger: 'event_received',
 				eventType: 'github.issues.opened',
 				integrations: ['github', 'linear'],
-				workflowId: 'github-to-linear',
+				workflowId: 'issues-synced-to-sprint',
 				priority: 90,
 			},
 		],
@@ -449,7 +449,7 @@ function extractPriority(labels: Array<{ name: string }>): 0 | 1 | 2 | 3 | 4 {
 }
 
 export const metadata = {
-	id: 'github-to-linear',
+	id: 'issues-synced-to-sprint',
 	category: 'developer-tools',
 	featured: true,
 	stats: { rating: 4.8, users: 834, reviews: 52 },
