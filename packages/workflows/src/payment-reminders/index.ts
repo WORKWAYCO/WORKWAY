@@ -37,7 +37,7 @@ export default defineWorkflow({
 				trigger: 'integration_connected',
 				integrations: ['stripe', 'gmail'],
 				workflowId: 'payment-reminders',
-				priority: 70, // Lower than stripe-to-notion for tracking
+				priority: 70, // Lower than payments-tracked for tracking
 			},
 		],
 

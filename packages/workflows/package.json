@@ -96,10 +96,10 @@
 			"import": "./dist/standup-bot/index.js",
 			"default": "./dist/standup-bot/index.js"
 		},
-		"./stripe-to-notion": {
-			"types": "./dist/stripe-to-notion/index.d.ts",
-			"import": "./dist/stripe-to-notion/index.js",
-			"default": "./dist/stripe-to-notion/index.js"
+		"./payments-tracked": {
+			"types": "./dist/payments-tracked/index.d.ts",
+			"import": "./dist/payments-tracked/index.js",
+			"default": "./dist/payments-tracked/index.js"
 		},
 		"./support-ticket-router": {
 			"types": "./dist/support-ticket-router/index.d.ts",
