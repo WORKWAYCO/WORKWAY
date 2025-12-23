@@ -74,6 +74,11 @@ export default {
       });
     }
 
+    // Serve brand SVG assets
+    if (path.startsWith('/brand/')) {
+      return serveBrandAsset(path);
+    }
+
     // 404 for everything else
     return new Response('Not found', {
       status: 404,
@@ -169,4 +174,106 @@ function corsHeaders(): Record<string, string> {
     'Referrer-Policy': 'strict-origin-when-cross-origin',
     // Note: X-Frame-Options and CSP omitted - CSS files don't need frame/script protection
   };
+}
+
+/**
+ * Serve brand SVG assets directly from CDN
+ * Avoids dependency on GitHub raw URLs
+ */
+function serveBrandAsset(path: string): Response {
+  const assets: Record<string, string> = {
+    '/brand/icon-with-bg.svg': `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="512" height="512" rx="80" fill="#161616"/>
+  <g transform="translate(128, 128) scale(10.67, 10.67)">
+    <rect width="8" height="8" x="3" y="3" rx="2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect width="8" height="8" x="13" y="13" rx="2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+</svg>`,
+
+    '/brand/icon-circular.svg': `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="256" cy="256" r="256" fill="#161616"/>
+  <g transform="translate(128, 128) scale(10.67, 10.67)">
+    <rect width="8" height="8" x="3" y="3" rx="2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect width="8" height="8" x="13" y="13" rx="2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+</svg>`,
+
+    '/brand/icon-only.svg': `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="8" height="8" x="3" y="3" rx="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <rect width="8" height="8" x="13" y="13" rx="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>`,
+
+    '/brand/wordmark-white.svg': `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="280" height="48" viewBox="0 0 280 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <text x="0" y="36" fill="white" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="40" font-weight="600" letter-spacing="-0.02em">WORKWAY</text>
+</svg>`,
+
+    '/brand/wordmark-black.svg': `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="280" height="48" viewBox="0 0 280 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <text x="0" y="36" fill="#161616" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="40" font-weight="600" letter-spacing="-0.02em">WORKWAY</text>
+</svg>`,
+
+    '/brand/lockup-horizontal-light.svg': `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="340" height="48" viewBox="0 0 340 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(0, 0) scale(2)">
+    <rect width="8" height="8" x="3" y="3" rx="2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect width="8" height="8" x="13" y="13" rx="2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <text x="72" y="36" fill="white" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="40" font-weight="600" letter-spacing="-0.02em">WORKWAY</text>
+</svg>`,
+
+    '/brand/lockup-horizontal-dark.svg': `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="340" height="48" viewBox="0 0 340 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(0, 0) scale(2)">
+    <rect width="8" height="8" x="3" y="3" rx="2" stroke="#161616" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="#161616" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect width="8" height="8" x="13" y="13" rx="2" stroke="#161616" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <text x="72" y="36" fill="#161616" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="40" font-weight="600" letter-spacing="-0.02em">WORKWAY</text>
+</svg>`,
+
+    '/brand/lockup-stacked-light.svg': `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="280" height="120" viewBox="0 0 280 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(112, 8) scale(2.33)">
+    <rect width="8" height="8" x="3" y="3" rx="2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect width="8" height="8" x="13" y="13" rx="2" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <text x="140" y="105" fill="white" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="36" font-weight="600" letter-spacing="-0.02em" text-anchor="middle">WORKWAY</text>
+</svg>`,
+
+    '/brand/lockup-stacked-dark.svg': `<?xml version="1.0" encoding="UTF-8"?>
+<svg width="280" height="120" viewBox="0 0 280 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <g transform="translate(112, 8) scale(2.33)">
+    <rect width="8" height="8" x="3" y="3" rx="2" stroke="#161616" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="#161616" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect width="8" height="8" x="13" y="13" rx="2" stroke="#161616" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <text x="140" y="105" fill="#161616" font-family="Inter, -apple-system, BlinkMacSystemFont, sans-serif" font-size="36" font-weight="600" letter-spacing="-0.02em" text-anchor="middle">WORKWAY</text>
+</svg>`,
+  };
+
+  const svg = assets[path];
+  if (svg) {
+    return new Response(svg, {
+      headers: {
+        'Content-Type': 'image/svg+xml; charset=utf-8',
+        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
+        'Content-Disposition': `attachment; filename="${path.split('/').pop()}"`,
+        ...corsHeaders(),
+      },
+    });
+  }
+
+  return new Response('Asset not found', {
+    status: 404,
+    headers: { 'Content-Type': 'text/plain' },
+  });
 }
