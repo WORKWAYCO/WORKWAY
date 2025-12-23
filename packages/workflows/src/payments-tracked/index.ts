@@ -28,7 +28,7 @@ export default defineWorkflow({
 		primaryPair: {
 			from: 'stripe',
 			to: 'notion',
-			workflowId: 'stripe-to-notion',
+			workflowId: 'payments-tracked',
 			outcome: 'Payments that track themselves',
 		},
 
@@ -36,14 +36,14 @@ export default defineWorkflow({
 			{
 				trigger: 'integration_connected',
 				integrations: ['stripe', 'notion'],
-				workflowId: 'stripe-to-notion',
+				workflowId: 'payments-tracked',
 				priority: 100,
 			},
 			{
 				trigger: 'event_received',
 				eventType: 'stripe.payment_intent.succeeded',
 				integrations: ['stripe', 'notion'],
-				workflowId: 'stripe-to-notion',
+				workflowId: 'payments-tracked',
 				priority: 100,
 			},
 		],
@@ -234,7 +234,7 @@ export default defineWorkflow({
 });
 
 export const metadata = {
-	id: 'stripe-to-notion-invoice',
+	id: 'payments-tracked',
 	category: 'productivity',
 	featured: true,
 	stats: { rating: 4.9, users: 1247, reviews: 89 },

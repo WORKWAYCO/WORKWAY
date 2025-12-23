@@ -27,7 +27,7 @@
 // ============================================================================
 
 // Finance & Payments
-export { default as stripeToNotion } from './stripe-to-notion/index.js';
+export { default as paymentsTracked } from './payments-tracked/index.js';
 // paymentReminders - DEPRECATED: Requires Gmail (app verification not completed)
 export { default as invoiceGenerator } from './invoice-generator/index.js';
 
@@ -194,7 +194,7 @@ export const integrationPairs = {
 
 	// Payments
 	'stripe:notion': {
-		workflowId: 'stripe-to-notion',
+		workflowId: 'payments-tracked',
 		outcome: 'Payments tracked automatically',
 		outcomeFrame: 'when_payments_arrive',
 	},
@@ -674,7 +674,7 @@ export type OutcomeFrameId = keyof typeof outcomeFrames;
  * Category-based organization is being replaced by the pathway model.
  */
 export const workflows = {
-	'stripe-to-notion': { id: 'stripe-to-notion', outcomeFrame: 'when_payments_arrive' },
+	'payments-tracked': { id: 'payments-tracked', outcomeFrame: 'when_payments_arrive' },
 	'support-ticket-router': { id: 'support-ticket-router', outcomeFrame: 'when_tickets_arrive' },
 	'team-digest': { id: 'team-digest', outcomeFrame: 'every_morning' },
 	// 'ai-newsletter' - DEPRECATED: Requires Gmail
