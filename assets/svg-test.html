@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WORKWAY SVG Test Page</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 40px;
+            background: #f5f5f5;
+            min-height: 100vh;
+        }
+        h1 {
+            margin: 0 0 10px 0;
+            font-size: 28px;
+            color: #161616;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 40px;
+        }
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+        .test-card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .test-card h2 {
+            margin: 0 0 8px 0;
+            font-size: 16px;
+            font-weight: 600;
+            color: #161616;
+        }
+        .test-card .meta {
+            font-size: 13px;
+            color: #888;
+            margin-bottom: 16px;
+        }
+        .preview-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .preview-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+        .preview-box.light {
+            background: #fff;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .preview-box.dark {
+            background: #161616;
+            padding: 20px;
+            border: 1px solid #333;
+            border-radius: 8px;
+        }
+        .preview-box.checkerboard {
+            background-image:
+                linear-gradient(45deg, #ccc 25%, transparent 25%),
+                linear-gradient(-45deg, #ccc 25%, transparent 25%),
+                linear-gradient(45deg, transparent 75%, #ccc 75%),
+                linear-gradient(-45deg, transparent 75%, #ccc 75%);
+            background-size: 20px 20px;
+            background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+            padding: 20px;
+            border-radius: 8px;
+        }
+        .preview-box label {
+            font-size: 11px;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .preview-box.dark label {
+            color: #aaa;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .status.pass {
+            background: #e6f7e6;
+            color: #2d862d;
+        }
+        .status.fail {
+            background: #ffe6e6;
+            color: #c53030;
+        }
+        .results {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .results h2 {
+            margin: 0 0 16px 0;
+            font-size: 18px;
+        }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .result-item:last-child {
+            border-bottom: none;
+        }
+        .result-name {
+            font-weight: 500;
+        }
+        .result-details {
+            font-size: 13px;
+            color: #666;
+        }
+        .icon-currentColor {
+            color: #161616;
+        }
+        .icon-currentColor-white {
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <h1>WORKWAY SVG Rendering Test</h1>
+    <p class="subtitle">Visual verification that all SVG logo files render correctly in browser</p>
+
+    <div class="test-grid">
+        <!-- logo-official.svg -->
+        <div class="test-card">
+            <h2>logo-official.svg</h2>
+            <div class="meta">512x512 | Rounded square background | #161616 bg, white icon</div>
+            <div class="preview-row">
+                <div class="preview-box light">
+                    <img src="logo-official.svg" alt="Official Logo" width="128" height="128" id="logo-official">
+                    <label>Light bg</label>
+                </div>
+                <div class="preview-box dark">
+                    <img src="logo-official.svg" alt="Official Logo" width="128" height="128">
+                    <label>Dark bg</label>
+                </div>
+                <div class="preview-box checkerboard">
+                    <img src="logo-official.svg" alt="Official Logo" width="128" height="128">
+                    <label>Transparency</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- logo-github.svg -->
+        <div class="test-card">
+            <h2>logo-github.svg</h2>
+            <div class="meta">512x512 | Circular background | #161616 bg, white icon</div>
+            <div class="preview-row">
+                <div class="preview-box light">
+                    <img src="logo-github.svg" alt="GitHub Logo" width="128" height="128" id="logo-github">
+                    <label>Light bg</label>
+                </div>
+                <div class="preview-box dark">
+                    <img src="logo-github.svg" alt="GitHub Logo" width="128" height="128">
+                    <label>Dark bg</label>
+                </div>
+                <div class="preview-box checkerboard">
+                    <img src="logo-github.svg" alt="GitHub Logo" width="128" height="128">
+                    <label>Transparency</label>
+                </div>
+            </div>
+        </div>
+
+        <!-- logo-square.svg -->
+        <div class="test-card">
+            <h2>logo-square.svg</h2>
+            <div class="meta">24x24 | Icon only | Uses currentColor (inherits from CSS)</div>
+            <div class="preview-row">
+                <div class="preview-box light">
+                    <img src="logo-square.svg" alt="Square Logo" width="64" height="64" id="logo-square" class="icon-currentColor">
+                    <label>Light bg (dark icon)</label>
+                </div>
+                <div class="preview-box dark">
+                    <img src="logo-square.svg" alt="Square Logo" width="64" height="64" class="icon-currentColor-white">
+                    <label>Dark bg (white icon)</label>
+                </div>
+                <div class="preview-box checkerboard">
+                    <img src="logo-square.svg" alt="Square Logo" width="64" height="64">
+                    <label>Transparency</label>
+                </div>
+            </div>
+            <div style="margin-top: 16px; font-size: 13px; color: #666;">
+                <strong>Note:</strong> This SVG uses <code>currentColor</code>. When used inline in HTML,
+                it will inherit the text color from CSS. When loaded as an image, it defaults to black.
+            </div>
+        </div>
+    </div>
+
+    <div class="results">
+        <h2>Automated Checks</h2>
+        <div id="test-results">Loading...</div>
+    </div>
+
+    <script>
+        const tests = [
+            {
+                name: 'logo-official.svg',
+                id: 'logo-official',
+                expectedWidth: 512,
+                expectedHeight: 512,
+                checks: ['loads', 'dimensions', 'renders']
+            },
+            {
+                name: 'logo-github.svg',
+                id: 'logo-github',
+                expectedWidth: 512,
+                expectedHeight: 512,
+                checks: ['loads', 'dimensions', 'renders']
+            },
+            {
+                name: 'logo-square.svg',
+                id: 'logo-square',
+                expectedWidth: 24,
+                expectedHeight: 24,
+                checks: ['loads', 'dimensions', 'renders']
+            }
+        ];
+
+        async function runTests() {
+            const resultsContainer = document.getElementById('test-results');
+            resultsContainer.innerHTML = '';
+
+            for (const test of tests) {
+                const img = document.getElementById(test.id);
+                const results = [];
+                let allPassed = true;
+
+                // Check 1: Image loaded
+                const loaded = img.complete && img.naturalHeight !== 0;
+                results.push({
+                    check: 'Loads successfully',
+                    passed: loaded
+                });
+                if (!loaded) allPassed = false;
+
+                // Check 2: Natural dimensions match expected
+                if (loaded) {
+                    // Fetch SVG to parse viewBox
+                    try {
+                        const response = await fetch(test.name);
+                        const svgText = await response.text();
+                        const parser = new DOMParser();
+                        const svgDoc = parser.parseFromString(svgText, 'image/svg+xml');
+                        const svgEl = svgDoc.querySelector('svg');
+
+                        if (svgEl) {
+                            const width = parseInt(svgEl.getAttribute('width'), 10);
+                            const height = parseInt(svgEl.getAttribute('height'), 10);
+                            const viewBox = svgEl.getAttribute('viewBox');
+
+                            const dimensionsMatch = width === test.expectedWidth && height === test.expectedHeight;
+                            results.push({
+                                check: `Dimensions: ${width}x${height} (expected ${test.expectedWidth}x${test.expectedHeight})`,
+                                passed: dimensionsMatch
+                            });
+                            if (!dimensionsMatch) allPassed = false;
+
+                            // Check viewBox matches dimensions
+                            const vbMatch = viewBox === `0 0 ${test.expectedWidth} ${test.expectedHeight}`;
+                            results.push({
+                                check: `ViewBox: ${viewBox}`,
+                                passed: vbMatch
+                            });
+                            if (!vbMatch) allPassed = false;
+
+                            // Check for valid SVG structure
+                            const hasValidStructure = svgEl.querySelector('rect, circle, path, g') !== null;
+                            results.push({
+                                check: 'Has valid SVG elements',
+                                passed: hasValidStructure
+                            });
+                            if (!hasValidStructure) allPassed = false;
+
+                            // Check for parse errors
+                            const parseError = svgDoc.querySelector('parsererror');
+                            const noParseErrors = parseError === null;
+                            results.push({
+                                check: 'No XML parse errors',
+                                passed: noParseErrors
+                            });
+                            if (!noParseErrors) allPassed = false;
+                        }
+                    } catch (e) {
+                        results.push({
+                            check: 'Fetch/parse SVG',
+                            passed: false,
+                            error: e.message
+                        });
+                        allPassed = false;
+                    }
+                }
+
+                // Render result item
+                const resultItem = document.createElement('div');
+                resultItem.className = 'result-item';
+                resultItem.innerHTML = `
+                    <div>
+                        <div class="result-name">${test.name}</div>
+                        <div class="result-details">${results.map(r =>
+                            `${r.passed ? '✓' : '✗'} ${r.check}`
+                        ).join(' | ')}</div>
+                    </div>
+                    <span class="status ${allPassed ? 'pass' : 'fail'}">${allPassed ? 'PASS' : 'FAIL'}</span>
+                `;
+                resultsContainer.appendChild(resultItem);
+            }
+
+            // Summary
+            const summary = document.createElement('div');
+            summary.style.marginTop = '20px';
+            summary.style.padding = '16px';
+            summary.style.background = '#f9f9f9';
+            summary.style.borderRadius = '8px';
+            summary.style.textAlign = 'center';
+
+            const allPassed = document.querySelectorAll('.status.fail').length === 0;
+            summary.innerHTML = allPassed
+                ? '<span style="color: #2d862d; font-weight: 600;">✓ All SVG files render correctly</span>'
+                : '<span style="color: #c53030; font-weight: 600;">✗ Some tests failed - check details above</span>';
+
+            resultsContainer.appendChild(summary);
+        }
+
+        // Run tests after images load
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>
