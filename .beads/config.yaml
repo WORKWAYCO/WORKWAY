@@ -3,62 +3,8 @@
 # All settings can also be set via environment variables (BD_* prefix)
 # or overridden with command-line flags
 
-# Issue prefix for this repository (short for cleaner IDs)
-issue-prefix: "ww"
-
-# ============================================================================
-# LABEL CONVENTIONS (for team alignment)
-# ============================================================================
-#
-# Scope (where):
-#   integrations - @workwayco/integrations (Gmail, Slack, Notion, Zoom, etc.)
-#   workflows    - @workwayco/workflows (workflow templates)
-#   workers      - Cloudflare Workers (design-tokens CDN, etc.)
-#   sdk          - @workwayco/sdk (core SDK)
-#   cli          - @workwayco/cli (command-line interface)
-#   harness      - Harness infrastructure
-#
-# Type (what):
-#   feature      - New capability
-#   bug          - Something broken
-#   task         - Implementation work
-#   experiment   - Research/POC
-#   chore        - Maintenance/cleanup
-#   epic         - Multi-issue initiative
-#
-# Priority:
-#   P0 - Critical (blocks everything)
-#   P1 - High (do this week)
-#   P2 - Medium (default)
-#   P3 - Low (backlog)
-#   P4 - Someday (nice to have)
-#
-# Harness:
-#   harness:<run-id> - Created/managed by harness run
-#   checkpoint       - Harness checkpoint issue
-#   review           - Needs review
-#
-# ============================================================================
-
-# Directory-aware label auto-tagging
-# When creating issues, labels are auto-added based on file paths
-directory:
-  labels:
-    packages/integrations: integrations
-    packages/workflows: workflows
-    packages/workers: workers
-    packages/sdk: sdk
-    packages/cli: cli
-    packages/harness: harness
-
-# Git branch for beads commits
-sync-branch: "beads-sync"
-
-# Auto-start daemon if not running
-auto-start-daemon: true
-
-# Debounce interval for auto-flush (responsive writes)
-flush-debounce: "5s"
+# Issue prefix for this repository
+issue-prefix: "Cloudflare"
 
 # Use no-db mode: load from JSONL, no SQLite, write back after each command
 # When true, bd will use .beads/issues.jsonl as the source of truth
@@ -82,6 +28,15 @@ flush-debounce: "5s"
 
 # Path to database (overridden by BEADS_DB or --db)
 # db: ""
+
+# Auto-start daemon if not running (can also use BEADS_AUTO_START_DAEMON)
+# auto-start-daemon: true
+
+# Debounce interval for auto-flush (can also use BEADS_FLUSH_DEBOUNCE)
+# flush-debounce: "5s"
+
+# Git branch for beads commits
+sync-branch: "beads-sync"
 
 # Multi-repo configuration (experimental - bd-307)
 # Allows hydrating from multiple repositories and routing writes to the correct JSONL

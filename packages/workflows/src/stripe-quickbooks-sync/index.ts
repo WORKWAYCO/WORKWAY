@@ -32,7 +32,7 @@ export default defineWorkflow({
 		primaryPair: {
 			from: 'stripe',
 			to: 'quickbooks',
-			workflowId: 'stripe-quickbooks-sync',
+			workflowId: 'accounting-stays-current',
 			outcome: 'Stripe payments appear in QuickBooks automatically',
 		},
 
@@ -40,14 +40,14 @@ export default defineWorkflow({
 			{
 				trigger: 'integration_connected',
 				integrations: ['stripe', 'quickbooks'],
-				workflowId: 'stripe-quickbooks-sync',
+				workflowId: 'accounting-stays-current',
 				priority: 95,
 			},
 			{
 				trigger: 'event_received',
 				eventType: 'stripe.payment_intent.succeeded',
 				integrations: ['stripe', 'quickbooks'],
-				workflowId: 'stripe-quickbooks-sync',
+				workflowId: 'accounting-stays-current',
 				priority: 98,
 			},
 		],
@@ -354,7 +354,7 @@ interface SyncResult {
 }
 
 export const metadata = {
-	id: 'stripe-quickbooks-sync',
+	id: 'accounting-stays-current',
 	category: 'finance-billing',
 	featured: true,
 	stats: { rating: 0, users: 0, reviews: 0 },
