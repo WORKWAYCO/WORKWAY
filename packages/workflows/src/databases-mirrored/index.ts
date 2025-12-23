@@ -10,7 +10,7 @@
  *
  * STEP 1: You (Workflow Owner)
  * ────────────────────────────
- *   1. Go to workway.co/workflows/notion-two-way-sync
+ *   1. Go to workway.co/workflows/databases-mirrored
  *   2. Click "Connect Notion" → OAuth screen → authorize
  *   3. Select your database (e.g., "Client Projects")
  *   4. Click "Enable Workflow"
@@ -193,7 +193,7 @@ export default defineWorkflow({
 		primaryPair: {
 			from: 'notion',
 			to: 'notion',
-			workflowId: 'notion-two-way-sync',
+			workflowId: 'databases-mirrored',
 			outcome: 'Databases that stay in sync',
 		},
 
@@ -201,13 +201,13 @@ export default defineWorkflow({
 			{
 				trigger: 'integration_connected',
 				integrations: ['notion'],
-				workflowId: 'notion-two-way-sync',
+				workflowId: 'databases-mirrored',
 				priority: 70,
 			},
 			{
 				trigger: 'pattern_detected',
 				integrations: ['notion'],
-				workflowId: 'notion-two-way-sync',
+				workflowId: 'databases-mirrored',
 				priority: 95,
 				pattern: {
 					action: 'manual_cross_workspace_copy',
@@ -746,7 +746,7 @@ function extractRichTextProperty(prop: any): string | undefined {
 // ============================================================================
 
 export const metadata = {
-	id: 'notion-two-way-sync',
+	id: 'databases-mirrored',
 	category: 'data-sync',
 	featured: false, // Not featured until tested in production
 	experimental: false, // OAuth-based, no manual token setup
