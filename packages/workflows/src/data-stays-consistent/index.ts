@@ -33,19 +33,19 @@ export default defineWorkflow({
 		primaryPair: {
 			from: 'google-sheets',
 			to: 'airtable',
-			workflowId: 'spreadsheet-sync',
+			workflowId: 'data-stays-consistent',
 			outcome: 'Spreadsheets synced to Airtable',
 		},
 
 		additionalPairs: [
-			{ from: 'google-sheets', to: 'slack', workflowId: 'spreadsheet-sync', outcome: 'Sync notifications in Slack' },
+			{ from: 'google-sheets', to: 'slack', workflowId: 'data-stays-consistent', outcome: 'Sync notifications in Slack' },
 		],
 
 		discoveryMoments: [
 			{
 				trigger: 'integration_connected',
 				integrations: ['google-sheets', 'airtable'],
-				workflowId: 'spreadsheet-sync',
+				workflowId: 'data-stays-consistent',
 				priority: 80,
 			},
 		],
@@ -374,7 +374,7 @@ If no anomalies found, return: []`;
 }
 
 export const metadata = {
-	id: 'spreadsheet-sync',
+	id: 'data-stays-consistent',
 	category: 'data-analytics',
 	featured: true,
 	stats: { rating: 0, users: 0, reviews: 0 },
