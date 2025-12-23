@@ -59,7 +59,7 @@ export { default as gmailToNotionPrivate } from './gmail-to-notion-private/index
 
 // Dev Team & Data
 export { default as sprintProgressTracker } from './sprint-progress-tracker/index.js';
-export { default as spreadsheetSync } from './spreadsheet-sync/index.js';
+export { default as dataStaysConsistent } from './data-stays-consistent/index.js';
 export { default as contentCalendar } from './content-calendar/index.js';
 
 // Error Tracking & Incidents (WORKWAY Dogfooding!)
@@ -86,7 +86,7 @@ export { default as dealTracker } from './deal-tracker/index.js';
 export { default as taskSyncBridge } from './task-sync-bridge/index.js';
 
 // Cross-Workspace Sync
-export { default as notionTwoWaySync } from './notion-two-way-sync/index.js';
+export { default as databasesMirrored } from './databases-mirrored/index.js';
 
 // Developer Tools
 export { default as githubToLinear } from './github-to-linear/index.js';
@@ -96,7 +96,7 @@ export { default as prReviewNotifier } from './pr-review-notifier/index.js';
 export { default as discordStandupBot } from './discord-standup-bot/index.js';
 
 // Google Drive
-export { default as driveDocumentHub } from './drive-document-hub/index.js';
+export { default as documentsOrganized } from './documents-organized/index.js';
 export { default as documentApprovalFlow } from './document-approval-flow/index.js';
 
 // Calendar & Status
@@ -251,7 +251,7 @@ export const integrationPairs = {
 
 	// Data Sync
 	'google-sheets:airtable': {
-		workflowId: 'spreadsheet-sync',
+		workflowId: 'data-stays-consistent',
 		outcome: 'Spreadsheets synced to Airtable',
 		outcomeFrame: 'when_data_changes',
 	},
@@ -332,17 +332,17 @@ export const integrationPairs = {
 
 	// Cross-Workspace Sync (Notion to Notion)
 	'notion:notion': {
-		workflowId: 'notion-two-way-sync',
+		workflowId: 'databases-mirrored',
 		outcome: 'Support tickets that sync across workspaces',
 		outcomeFrame: 'when_tickets_arrive',
 	},
 	'notion:notion:support': {
-		workflowId: 'notion-two-way-sync',
+		workflowId: 'databases-mirrored',
 		outcome: 'Client tickets that manage themselves',
 		outcomeFrame: 'when_tickets_arrive',
 	},
 	'notion:notion:updates': {
-		workflowId: 'notion-two-way-sync',
+		workflowId: 'databases-mirrored',
 		outcome: 'Agentic updates between workspaces',
 		outcomeFrame: 'when_data_changes',
 	},
@@ -385,12 +385,12 @@ export const integrationPairs = {
 
 	// Google Drive
 	'google-drive:notion': {
-		workflowId: 'drive-document-hub',
+		workflowId: 'documents-organized',
 		outcome: 'Documents that organize themselves',
 		outcomeFrame: 'when_files_change',
 	},
 	'google-drive:slack': {
-		workflowId: 'drive-document-hub',
+		workflowId: 'documents-organized',
 		outcome: 'File updates in Slack',
 		outcomeFrame: 'when_files_change',
 	},
@@ -691,7 +691,7 @@ export const workflows = {
 	'meeting-followup-engine': { id: 'meeting-followup-engine', outcomeFrame: 'after_calls' },
 	'weekly-productivity-digest': { id: 'weekly-productivity-digest', outcomeFrame: 'weekly_automatically' },
 	'sprint-progress-tracker': { id: 'sprint-progress-tracker', outcomeFrame: 'every_morning' },
-	'spreadsheet-sync': { id: 'spreadsheet-sync', outcomeFrame: 'when_data_changes' },
+	'data-stays-consistent': { id: 'data-stays-consistent', outcomeFrame: 'when_data_changes' },
 	'content-calendar': { id: 'content-calendar', outcomeFrame: 'every_morning' },
 	'design-portfolio-sync': { id: 'design-portfolio-sync', outcomeFrame: 'after_publishing' },
 	'scheduling-autopilot': { id: 'scheduling-autopilot', outcomeFrame: 'when_meetings_booked' },
@@ -702,14 +702,14 @@ export const workflows = {
 	// Email Sync (Private - BYOO)
 	'gmail-to-notion-private': { id: 'gmail-to-notion-private', outcomeFrame: 'when_emails_arrive', experimental: true },
 	// Cross-Workspace Sync
-	'notion-two-way-sync': { id: 'notion-two-way-sync', outcomeFrame: 'when_tickets_arrive' },
+	'databases-mirrored': { id: 'databases-mirrored', outcomeFrame: 'when_tickets_arrive' },
 	'error-incident-manager': { id: 'error-incident-manager', outcomeFrame: 'when_errors_happen' },
 	'github-to-linear': { id: 'github-to-linear', outcomeFrame: 'when_issues_arrive' },
 	'pr-review-notifier': { id: 'pr-review-notifier', outcomeFrame: 'when_code_changes' },
 	'discord-standup-bot': { id: 'discord-standup-bot', outcomeFrame: 'every_morning' },
 	'calendar-meeting-prep': { id: 'calendar-meeting-prep', outcomeFrame: 'before_meetings' },
 	'meeting-to-action': { id: 'meeting-to-action', outcomeFrame: 'after_meetings' },
-	'drive-document-hub': { id: 'drive-document-hub', outcomeFrame: 'when_files_change' },
+	'documents-organized': { id: 'documents-organized', outcomeFrame: 'when_files_change' },
 	'document-approval-flow': { id: 'document-approval-flow', outcomeFrame: 'when_approval_needed' },
 	'calendar-availability-sync': { id: 'calendar-availability-sync', outcomeFrame: 'always_current' },
 	'meeting-expense-tracker': { id: 'meeting-expense-tracker', outcomeFrame: 'after_meetings' },

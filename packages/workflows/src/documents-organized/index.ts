@@ -31,25 +31,25 @@ export default defineWorkflow({
 		primaryPair: {
 			from: 'google-drive',
 			to: 'notion',
-			workflowId: 'drive-document-hub',
+			workflowId: 'documents-organized',
 			outcome: 'Documents that organize themselves',
 		},
 
 		additionalPairs: [
-			{ from: 'google-drive', to: 'slack', workflowId: 'drive-document-hub', outcome: 'File updates in Slack' },
+			{ from: 'google-drive', to: 'slack', workflowId: 'documents-organized', outcome: 'File updates in Slack' },
 		],
 
 		discoveryMoments: [
 			{
 				trigger: 'integration_connected',
 				integrations: ['google-drive', 'notion'],
-				workflowId: 'drive-document-hub',
+				workflowId: 'documents-organized',
 				priority: 100,
 			},
 			{
 				trigger: 'integration_connected',
 				integrations: ['google-drive', 'slack'],
-				workflowId: 'drive-document-hub',
+				workflowId: 'documents-organized',
 				priority: 85,
 			},
 		],
@@ -561,7 +561,7 @@ async function postFileNotification(params: {
 }
 
 export const metadata = {
-	id: 'drive-document-hub',
+	id: 'documents-organized',
 	category: 'productivity',
 	featured: true,
 	stats: { rating: 0, users: 0, reviews: 0 },
