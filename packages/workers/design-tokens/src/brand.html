@@ -1,0 +1,462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WORKWAY Brand Assets</title>
+  <link rel="stylesheet" href="/fonts.css">
+  <link rel="stylesheet" href="/tokens.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--color-bg-pure);
+      color: var(--color-fg-primary);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: var(--space-xl) var(--space-md);
+    }
+
+    header {
+      margin-bottom: var(--space-2xl);
+    }
+
+    h1 {
+      font-size: clamp(2.5rem, 6vw, 4rem);
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      margin-bottom: var(--space-sm);
+    }
+
+    .subtitle {
+      color: var(--color-fg-secondary);
+      font-size: 1.125rem;
+    }
+
+    section {
+      margin-bottom: var(--space-2xl);
+    }
+
+    h2 {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: var(--space-lg);
+      padding-bottom: var(--space-sm);
+      border-bottom: 1px solid var(--color-border-subtle);
+    }
+
+    .asset-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--space-md);
+    }
+
+    .asset-card {
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      transition: border-color var(--duration-fast) var(--ease-standard);
+    }
+
+    .asset-card:hover {
+      border-color: var(--color-border-emphasis);
+    }
+
+    .asset-preview {
+      aspect-ratio: 16/10;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-lg);
+    }
+
+    .asset-preview.dark {
+      background: var(--color-bg-pure);
+    }
+
+    .asset-preview.light {
+      background: #ffffff;
+    }
+
+    .asset-preview.checker {
+      background-image:
+        linear-gradient(45deg, #333 25%, transparent 25%),
+        linear-gradient(-45deg, #333 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #333 75%),
+        linear-gradient(-45deg, transparent 75%, #333 75%);
+      background-size: 20px 20px;
+      background-position: 0 0, 0 10px, 10px -10px, -10px 0px;
+      background-color: #222;
+    }
+
+    .asset-preview img,
+    .asset-preview svg {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    .asset-info {
+      padding: var(--space-sm) var(--space-md);
+      border-top: 1px solid var(--color-border-subtle);
+    }
+
+    .asset-name {
+      font-weight: 500;
+      font-size: 0.875rem;
+      margin-bottom: 4px;
+    }
+
+    .asset-meta {
+      font-size: 0.75rem;
+      color: var(--color-fg-tertiary);
+      font-family: var(--font-mono);
+    }
+
+    .download-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: var(--space-xs);
+      padding: 6px 12px;
+      background: transparent;
+      border: 1px solid var(--color-border-default);
+      border-radius: var(--radius-sm);
+      color: var(--color-fg-secondary);
+      font-size: 0.75rem;
+      font-family: var(--font-sans);
+      cursor: pointer;
+      transition: all var(--duration-fast) var(--ease-standard);
+    }
+
+    .download-btn:hover {
+      background: var(--color-bg-emphasis);
+      border-color: var(--color-border-emphasis);
+      color: var(--color-fg-primary);
+    }
+
+    .colors-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: var(--space-sm);
+    }
+
+    .color-swatch {
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      border: 1px solid var(--color-border-subtle);
+    }
+
+    .color-preview {
+      height: 80px;
+    }
+
+    .color-info {
+      padding: var(--space-sm);
+      background: var(--color-bg-subtle);
+    }
+
+    .color-name {
+      font-weight: 500;
+      font-size: 0.875rem;
+    }
+
+    .color-hex {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      color: var(--color-fg-tertiary);
+    }
+
+    .guidelines {
+      background: var(--color-bg-subtle);
+      border: 1px solid var(--color-border-subtle);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+    }
+
+    .guidelines h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: var(--space-sm);
+    }
+
+    .guidelines ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .guidelines li {
+      padding: var(--space-xs) 0;
+      color: var(--color-fg-secondary);
+      font-size: 0.875rem;
+    }
+
+    .guidelines li::before {
+      content: "✗ ";
+      color: var(--color-error);
+    }
+
+    .do-list li::before {
+      content: "✓ ";
+      color: var(--color-success);
+    }
+
+    footer {
+      margin-top: var(--space-2xl);
+      padding-top: var(--space-lg);
+      border-top: 1px solid var(--color-border-subtle);
+      text-align: center;
+      color: var(--color-fg-tertiary);
+      font-size: 0.875rem;
+    }
+
+    footer a {
+      color: var(--color-fg-secondary);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      color: var(--color-fg-primary);
+    }
+
+    /* Icon SVG inline styling */
+    .icon-dark { color: #161616; }
+    .icon-light { color: #ffffff; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>WORKWAY Brand</h1>
+      <p class="subtitle">Logo assets and brand guidelines</p>
+    </header>
+
+    <section>
+      <h2>Icon</h2>
+      <div class="asset-grid">
+        <div class="asset-card">
+          <div class="asset-preview dark">
+            <svg width="128" height="128" viewBox="0 0 512 512" fill="none">
+              <rect width="512" height="512" rx="80" fill="#161616"/>
+              <g transform="translate(128, 128) scale(10.67)">
+                <rect width="8" height="8" x="3" y="3" rx="2" stroke="white" stroke-width="2" fill="none"/>
+                <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="white" stroke-width="2" fill="none"/>
+                <rect width="8" height="8" x="13" y="13" rx="2" stroke="white" stroke-width="2" fill="none"/>
+              </g>
+            </svg>
+          </div>
+          <div class="asset-info">
+            <div class="asset-name">Icon with Background</div>
+            <div class="asset-meta">512×512 · Rounded square</div>
+            <a href="https://raw.githubusercontent.com/WORKWAYCO/WORKWAY/main/assets/logo-pack/svg/icon-with-bg.svg" download class="download-btn">Download SVG</a>
+          </div>
+        </div>
+
+        <div class="asset-card">
+          <div class="asset-preview dark">
+            <svg width="128" height="128" viewBox="0 0 512 512" fill="none">
+              <circle cx="256" cy="256" r="256" fill="#161616"/>
+              <g transform="translate(128, 128) scale(10.67)">
+                <rect width="8" height="8" x="3" y="3" rx="2" stroke="white" stroke-width="2" fill="none"/>
+                <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="white" stroke-width="2" fill="none"/>
+                <rect width="8" height="8" x="13" y="13" rx="2" stroke="white" stroke-width="2" fill="none"/>
+              </g>
+            </svg>
+          </div>
+          <div class="asset-info">
+            <div class="asset-name">Icon Circular</div>
+            <div class="asset-meta">512×512 · For GitHub/social</div>
+            <a href="https://raw.githubusercontent.com/WORKWAYCO/WORKWAY/main/assets/logo-pack/svg/icon-circular.svg" download class="download-btn">Download SVG</a>
+          </div>
+        </div>
+
+        <div class="asset-card">
+          <div class="asset-preview checker">
+            <svg width="64" height="64" viewBox="0 0 24 24" fill="none" class="icon-light">
+              <rect width="8" height="8" x="3" y="3" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+              <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="currentColor" stroke-width="2" fill="none"/>
+              <rect width="8" height="8" x="13" y="13" rx="2" stroke="currentColor" stroke-width="2" fill="none"/>
+            </svg>
+          </div>
+          <div class="asset-info">
+            <div class="asset-name">Icon Only</div>
+            <div class="asset-meta">24×24 · Uses currentColor</div>
+            <a href="https://raw.githubusercontent.com/WORKWAYCO/WORKWAY/main/assets/logo-pack/svg/icon-only.svg" download class="download-btn">Download SVG</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Lockups</h2>
+      <div class="asset-grid">
+        <div class="asset-card">
+          <div class="asset-preview dark">
+            <svg width="200" height="32" viewBox="0 0 340 48" fill="none">
+              <g transform="scale(2)">
+                <rect width="8" height="8" x="3" y="3" rx="2" stroke="white" stroke-width="2" fill="none"/>
+                <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="white" stroke-width="2" fill="none"/>
+                <rect width="8" height="8" x="13" y="13" rx="2" stroke="white" stroke-width="2" fill="none"/>
+              </g>
+              <text x="72" y="36" fill="white" font-family="Inter, system-ui, sans-serif" font-size="40" font-weight="600" letter-spacing="-0.02em">WORKWAY</text>
+            </svg>
+          </div>
+          <div class="asset-info">
+            <div class="asset-name">Horizontal Lockup (Light)</div>
+            <div class="asset-meta">For dark backgrounds</div>
+            <a href="https://raw.githubusercontent.com/WORKWAYCO/WORKWAY/main/assets/logo-pack/svg/lockup-horizontal-light.svg" download class="download-btn">Download SVG</a>
+          </div>
+        </div>
+
+        <div class="asset-card">
+          <div class="asset-preview light">
+            <svg width="200" height="32" viewBox="0 0 340 48" fill="none">
+              <g transform="scale(2)">
+                <rect width="8" height="8" x="3" y="3" rx="2" stroke="#161616" stroke-width="2" fill="none"/>
+                <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="#161616" stroke-width="2" fill="none"/>
+                <rect width="8" height="8" x="13" y="13" rx="2" stroke="#161616" stroke-width="2" fill="none"/>
+              </g>
+              <text x="72" y="36" fill="#161616" font-family="Inter, system-ui, sans-serif" font-size="40" font-weight="600" letter-spacing="-0.02em">WORKWAY</text>
+            </svg>
+          </div>
+          <div class="asset-info">
+            <div class="asset-name">Horizontal Lockup (Dark)</div>
+            <div class="asset-meta">For light backgrounds</div>
+            <a href="https://raw.githubusercontent.com/WORKWAYCO/WORKWAY/main/assets/logo-pack/svg/lockup-horizontal-dark.svg" download class="download-btn">Download SVG</a>
+          </div>
+        </div>
+
+        <div class="asset-card">
+          <div class="asset-preview dark" style="aspect-ratio: 1;">
+            <svg width="140" height="80" viewBox="0 0 280 120" fill="none">
+              <g transform="translate(112, 8) scale(2.33)">
+                <rect width="8" height="8" x="3" y="3" rx="2" stroke="white" stroke-width="2" fill="none"/>
+                <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="white" stroke-width="2" fill="none"/>
+                <rect width="8" height="8" x="13" y="13" rx="2" stroke="white" stroke-width="2" fill="none"/>
+              </g>
+              <text x="140" y="105" fill="white" font-family="Inter, system-ui, sans-serif" font-size="36" font-weight="600" letter-spacing="-0.02em" text-anchor="middle">WORKWAY</text>
+            </svg>
+          </div>
+          <div class="asset-info">
+            <div class="asset-name">Stacked Lockup (Light)</div>
+            <div class="asset-meta">For dark backgrounds</div>
+            <a href="https://raw.githubusercontent.com/WORKWAYCO/WORKWAY/main/assets/logo-pack/svg/lockup-stacked-light.svg" download class="download-btn">Download SVG</a>
+          </div>
+        </div>
+
+        <div class="asset-card">
+          <div class="asset-preview light" style="aspect-ratio: 1;">
+            <svg width="140" height="80" viewBox="0 0 280 120" fill="none">
+              <g transform="translate(112, 8) scale(2.33)">
+                <rect width="8" height="8" x="3" y="3" rx="2" stroke="#161616" stroke-width="2" fill="none"/>
+                <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="#161616" stroke-width="2" fill="none"/>
+                <rect width="8" height="8" x="13" y="13" rx="2" stroke="#161616" stroke-width="2" fill="none"/>
+              </g>
+              <text x="140" y="105" fill="#161616" font-family="Inter, system-ui, sans-serif" font-size="36" font-weight="600" letter-spacing="-0.02em" text-anchor="middle">WORKWAY</text>
+            </svg>
+          </div>
+          <div class="asset-info">
+            <div class="asset-name">Stacked Lockup (Dark)</div>
+            <div class="asset-meta">For light backgrounds</div>
+            <a href="https://raw.githubusercontent.com/WORKWAYCO/WORKWAY/main/assets/logo-pack/svg/lockup-stacked-dark.svg" download class="download-btn">Download SVG</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Wordmark</h2>
+      <div class="asset-grid">
+        <div class="asset-card">
+          <div class="asset-preview dark">
+            <svg width="200" height="36" viewBox="0 0 280 48" fill="none">
+              <text x="0" y="36" fill="white" font-family="Inter, system-ui, sans-serif" font-size="40" font-weight="600" letter-spacing="-0.02em">WORKWAY</text>
+            </svg>
+          </div>
+          <div class="asset-info">
+            <div class="asset-name">Wordmark (White)</div>
+            <div class="asset-meta">For dark backgrounds</div>
+            <a href="https://raw.githubusercontent.com/WORKWAYCO/WORKWAY/main/assets/logo-pack/svg/wordmark-white.svg" download class="download-btn">Download SVG</a>
+          </div>
+        </div>
+
+        <div class="asset-card">
+          <div class="asset-preview light">
+            <svg width="200" height="36" viewBox="0 0 280 48" fill="none">
+              <text x="0" y="36" fill="#161616" font-family="Inter, system-ui, sans-serif" font-size="40" font-weight="600" letter-spacing="-0.02em">WORKWAY</text>
+            </svg>
+          </div>
+          <div class="asset-info">
+            <div class="asset-name">Wordmark (Black)</div>
+            <div class="asset-meta">For light backgrounds</div>
+            <a href="https://raw.githubusercontent.com/WORKWAYCO/WORKWAY/main/assets/logo-pack/svg/wordmark-black.svg" download class="download-btn">Download SVG</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Colors</h2>
+      <div class="colors-grid">
+        <div class="color-swatch">
+          <div class="color-preview" style="background: #161616;"></div>
+          <div class="color-info">
+            <div class="color-name">Near Black</div>
+            <div class="color-hex">#161616</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-preview" style="background: #000000;"></div>
+          <div class="color-info">
+            <div class="color-name">Pure Black</div>
+            <div class="color-hex">#000000</div>
+          </div>
+        </div>
+        <div class="color-swatch">
+          <div class="color-preview" style="background: #ffffff; border-bottom: 1px solid var(--color-border-subtle);"></div>
+          <div class="color-info">
+            <div class="color-name">Pure White</div>
+            <div class="color-hex">#FFFFFF</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Usage Guidelines</h2>
+      <div class="asset-grid">
+        <div class="guidelines">
+          <h3>Do</h3>
+          <ul class="do-list">
+            <li>Use light variants on dark backgrounds</li>
+            <li>Use dark variants on light backgrounds</li>
+            <li>Maintain clearspace equal to icon height</li>
+            <li>Use SVG for web, PNG for documents</li>
+          </ul>
+        </div>
+        <div class="guidelines">
+          <h3>Don't</h3>
+          <ul>
+            <li>Stretch or distort the logo</li>
+            <li>Rotate the logo</li>
+            <li>Add shadows or effects</li>
+            <li>Change the logo colors</li>
+            <li>Place on busy backgrounds</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <footer>
+      <p>WORKWAY Brand Assets · <a href="https://github.com/WORKWAYCO/WORKWAY/tree/main/assets/logo-pack">View on GitHub</a></p>
+    </footer>
+  </div>
+</body>
+</html>

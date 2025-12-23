@@ -8,9 +8,11 @@
  * - /tokens.css - canonical CSS design tokens
  * - /fonts.css - Stack Sans Notch + JetBrains Mono (proxied from Google Fonts)
  * - /lucide.js - Lucide icons library (proxied with caching)
+ * - /brand - brand assets page with logo downloads
  */
 
 import TOKENS_CSS from './tokens.css';
+import BRAND_HTML from './brand.html';
 
 // Lucide version pinned for consistency across all WORKWAY properties
 const LUCIDE_VERSION = '0.468.0';
@@ -58,6 +60,17 @@ export default {
     if (path === '/health') {
       return new Response('OK', {
         headers: { 'Content-Type': 'text/plain' },
+      });
+    }
+
+    // Brand assets page
+    if (path === '/brand') {
+      return new Response(BRAND_HTML, {
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+          ...corsHeaders(),
+        },
       });
     }
 

@@ -11,8 +11,8 @@ routes = [
   { pattern = "cdn.workway.co", custom_domain = true }
 ]
 
-# Import CSS as text
+# Import CSS and HTML as text
 [[rules]]
 type = "Text"
-globs = ["**/*.css"]
+globs = ["**/*.css", "**/*.html"]
 fallthrough = false
