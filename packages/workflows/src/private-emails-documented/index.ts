@@ -141,7 +141,7 @@ async function trackExecution(
 				Authorization: `Bearer ${apiSecret}`,
 			},
 			body: JSON.stringify({
-				workflow_id: 'gmail-to-notion-private',
+				workflow_id: 'private-emails-documented',
 				trigger_type: 'schedule',
 				status: data.status,
 				threads_synced: data.threadsSynced || 0,
@@ -461,7 +461,7 @@ export default defineWorkflow({
 		primaryPair: {
 			from: 'gmail-byoo',
 			to: 'notion',
-			workflowId: 'gmail-to-notion-private',
+			workflowId: 'private-emails-documented',
 			outcome: 'Emails documented (requires BYOO app)',
 		},
 
@@ -471,7 +471,7 @@ export default defineWorkflow({
 			{
 				trigger: 'integration_connected',
 				integrations: ['notion'],
-				workflowId: 'gmail-to-notion-private',
+				workflowId: 'private-emails-documented',
 				priority: 25, // Lower than OAuth version (future)
 			},
 		],
@@ -825,7 +825,7 @@ export default defineWorkflow({
 			updated: results.filter((r) => r.isUpdate).length,
 			contactsCreated,
 			results,
-			analyticsUrl: 'https://workway.co/workflows/private/gmail-to-notion-private/analytics',
+			analyticsUrl: 'https://workway.co/workflows/private/private-emails-documented/analytics',
 		};
 	},
 
@@ -846,7 +846,7 @@ export default defineWorkflow({
  * Workflow metadata - Private workflow for @halfdozen.co
  */
 export const metadata = {
-	id: 'gmail-to-notion-private',
+	id: 'private-emails-documented',
 	category: 'productivity',
 	featured: false,
 
@@ -869,7 +869,7 @@ export const metadata = {
 
 	// Analytics URL - unified at workway.co/workflows
 	// Private workflow analytics are accessible at /workflows/private/{workflow-id}/analytics
-	analyticsUrl: 'https://workway.co/workflows/private/gmail-to-notion-private/analytics',
+	analyticsUrl: 'https://workway.co/workflows/private/private-emails-documented/analytics',
 
 	// Setup URL - initial BYOO connection setup
 	setupUrl: `${GMAIL_CONNECTION_URL}/setup`,

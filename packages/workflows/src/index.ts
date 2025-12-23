@@ -55,7 +55,7 @@ export { default as onboardingAutomation } from './onboarding/index.js';
 // feedbackAnalyzer - DEPRECATED: Requires Gmail (app verification not completed)
 
 // Email Sync (Private - BYOO)
-export { default as gmailToNotionPrivate } from './gmail-to-notion-private/index.js';
+export { default as privateEmailsDocumented } from './private-emails-documented/index.js';
 
 // Dev Team & Data
 export { default as sprintProgressTracker } from './sprint-progress-tracker/index.js';
@@ -185,7 +185,7 @@ export const integrationPairs = {
 
 	// Email Sync (BYOO - Private)
 	'gmail:notion': {
-		workflowId: 'gmail-to-notion-private',
+		workflowId: 'private-emails-documented',
 		outcome: 'Important emails that become searchable knowledge',
 		outcomeFrame: 'when_emails_arrive',
 		experimental: true,
@@ -700,7 +700,7 @@ export const workflows = {
 	'deal-tracker': { id: 'deal-tracker', outcomeFrame: 'when_deals_progress' },
 	'task-sync-bridge': { id: 'task-sync-bridge', outcomeFrame: 'when_tasks_complete' },
 	// Email Sync (Private - BYOO)
-	'gmail-to-notion-private': { id: 'gmail-to-notion-private', outcomeFrame: 'when_emails_arrive', experimental: true },
+	'private-emails-documented': { id: 'private-emails-documented', outcomeFrame: 'when_emails_arrive', experimental: true },
 	// Cross-Workspace Sync
 	'databases-mirrored': { id: 'databases-mirrored', outcomeFrame: 'when_tickets_arrive' },
 	'error-incident-manager': { id: 'error-incident-manager', outcomeFrame: 'when_errors_happen' },
