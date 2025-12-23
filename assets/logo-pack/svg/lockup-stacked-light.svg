@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="280" height="120" viewBox="0 0 280 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- WORKWAY Stacked Lockup - Light variant (white icon + text, for dark backgrounds) -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&amp;display=swap');
+    .wordmark {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+  </style>
+
+  <!-- Icon (centered, scaled to 56x56) -->
+  <g transform="translate(112, 8) scale(2.33)">
+    <rect width="8" height="8" x="3" y="3" rx="2"
+          stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <path d="M7 11v4a2 2 0 0 0 2 2h4"
+          stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+    <rect width="8" height="8" x="13" y="13" rx="2"
+          stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+
+  <!-- Wordmark (centered below icon) -->
+  <text x="140" y="105" class="wordmark" fill="white" font-size="36" text-anchor="middle">WORKWAY</text>
+</svg>

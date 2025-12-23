@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="280" height="48" viewBox="0 0 280 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- WORKWAY Wordmark - White variant (for dark backgrounds) -->
+  <!-- Font: Stack Sans Notch, weight 600, letter-spacing: -0.02em -->
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&amp;display=swap');
+    .wordmark {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+  </style>
+  <text x="0" y="36" class="wordmark" fill="white" font-size="40">WORKWAY</text>
+</svg>

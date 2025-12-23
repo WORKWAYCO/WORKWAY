@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- WORKWAY Logo for GitHub Organization Profile -->
+  <!-- Background: #161616 (WORKWAY brand color) -->
+  <circle cx="256" cy="256" r="256" fill="#161616"/>
+
+  <!-- Workflow icon (centered and scaled for circular profile) -->
+  <g transform="translate(128, 128) scale(10.67, 10.67)">
+    <!-- First workflow node -->
+    <rect width="8" height="8" x="3" y="3" rx="2"
+          stroke="white"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          fill="none"/>
+
+    <!-- Connection path between nodes -->
+    <path d="M7 11v4a2 2 0 0 0 2 2h4"
+          stroke="white"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          fill="none"/>
+
+    <!-- Second workflow node -->
+    <rect width="8" height="8" x="13" y="13" rx="2"
+          stroke="white"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          fill="none"/>
+  </g>
+</svg>

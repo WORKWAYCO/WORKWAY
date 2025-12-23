@@ -191,12 +191,22 @@
             <h2>logo-square.svg</h2>
             <div class="meta">24x24 | Icon only | Uses currentColor (inherits from CSS)</div>
             <div class="preview-row">
-                <div class="preview-box light">
-                    <img src="logo-square.svg" alt="Square Logo" width="64" height="64" id="logo-square" class="icon-currentColor">
+                <div class="preview-box light" style="color: #161616;">
+                    <!-- Inline SVG to demonstrate currentColor inheritance -->
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" id="logo-square">
+                        <rect width="8" height="8" x="3" y="3" rx="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <rect width="8" height="8" x="13" y="13" rx="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
                     <label>Light bg (dark icon)</label>
                 </div>
-                <div class="preview-box dark">
-                    <img src="logo-square.svg" alt="Square Logo" width="64" height="64" class="icon-currentColor-white">
+                <div class="preview-box dark" style="color: white;">
+                    <!-- Inline SVG to demonstrate currentColor inheritance -->
+                    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <rect width="8" height="8" x="3" y="3" rx="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <path d="M7 11v4a2 2 0 0 0 2 2h4" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <rect width="8" height="8" x="13" y="13" rx="2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    </svg>
                     <label>Dark bg (white icon)</label>
                 </div>
                 <div class="preview-box checkerboard">
@@ -205,8 +215,8 @@
                 </div>
             </div>
             <div style="margin-top: 16px; font-size: 13px; color: #666;">
-                <strong>Note:</strong> This SVG uses <code>currentColor</code>. When used inline in HTML,
-                it will inherit the text color from CSS. When loaded as an image, it defaults to black.
+                <strong>Note:</strong> This SVG uses <code>currentColor</code>. When used <strong>inline</strong> in HTML (as shown in light/dark demos),
+                it inherits the text color from CSS. When loaded as an <code>&lt;img&gt;</code>, it defaults to black.
             </div>
         </div>
     </div>
@@ -241,9 +251,20 @@
             }
         ];
 
+        // Check if running from file:// protocol (fetch will fail due to CORS)
+        const isFileProtocol = window.location.protocol === 'file:';
+
         async function runTests() {
             const resultsContainer = document.getElementById('test-results');
             resultsContainer.innerHTML = '';
+
+            // Show notice if running from file://
+            if (isFileProtocol) {
+                const notice = document.createElement('div');
+                notice.style.cssText = 'background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px 16px; margin-bottom: 16px; font-size: 13px; color: #856404;';
+                notice.innerHTML = '<strong>Note:</strong> Running from <code>file://</code> protocol. Fetch-based SVG parsing is skipped (CORS restriction). Visual rendering tests still work. For full tests, serve via HTTP.';
+                resultsContainer.appendChild(notice);
+            }
 
             for (const test of tests) {
                 const img = document.getElementById(test.id);
@@ -258,8 +279,18 @@
                 });
                 if (!loaded) allPassed = false;
 
-                // Check 2: Natural dimensions match expected
+                // Check 2: Visual render check (image has non-zero dimensions when rendered)
                 if (loaded) {
+                    const hasRenderedSize = img.offsetWidth > 0 && img.offsetHeight > 0;
+                    results.push({
+                        check: 'Renders visually',
+                        passed: hasRenderedSize
+                    });
+                    if (!hasRenderedSize) allPassed = false;
+                }
+
+                // Check 3: Parse SVG (only if not file:// protocol)
+                if (loaded && !isFileProtocol) {
                     // Fetch SVG to parse viewBox
                     try {
                         const response = await fetch(test.name);
