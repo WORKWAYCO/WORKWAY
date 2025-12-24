@@ -34,7 +34,7 @@ import {
 	IntegrationError,
 	ErrorCode,
 } from '@workwayco/sdk';
-import { BaseAPIClient } from '../core/base-client.js';
+import { BaseAPIClient, createErrorHandler } from '../core/index.js';
 
 // ============================================================================
 // TYPES
@@ -98,6 +98,13 @@ export interface ListResourcesOptions {
 }
 
 // ============================================================================
+// ERROR HANDLER
+// ============================================================================
+
+/** Error handler bound to ServiceName integration */
+const handleError = createErrorHandler('service-name');
+
+// ============================================================================
 // INTEGRATION CLASS
 // ============================================================================
 
@@ -154,7 +161,7 @@ export class ServiceName extends BaseAPIClient {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'get-resource');
+			return handleError(error, 'get-resource');
 		}
 	}
 
@@ -184,7 +191,7 @@ export class ServiceName extends BaseAPIClient {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'create-resource');
+			return handleError(error, 'create-resource');
 		}
 	}
 
@@ -209,7 +216,7 @@ export class ServiceName extends BaseAPIClient {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'update-resource');
+			return handleError(error, 'update-resource');
 		}
 	}
 
@@ -235,7 +242,7 @@ export class ServiceName extends BaseAPIClient {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'list-resources');
+			return handleError(error, 'list-resources');
 		}
 	}
 
@@ -254,7 +261,7 @@ export class ServiceName extends BaseAPIClient {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'delete-resource');
+			return handleError(error, 'delete-resource');
 		}
 	}
 
@@ -329,7 +336,7 @@ export class ServiceName extends BaseAPIClient {
 				capabilities: this.getCapabilities(),
 			});
 		} catch (error) {
-			return this.handleError(error, 'parse-webhook');
+			return handleError(error, 'parse-webhook');
 		}
 	}
 
@@ -355,27 +362,6 @@ export class ServiceName extends BaseAPIClient {
 			supportsRelations: false,
 			supportsMetadata: true,
 		};
-	}
-
-	/**
-	 * Handle general errors - convert to ActionResult
-	 */
-	private handleError<T>(error: unknown, action: string): ActionResult<T> {
-		// Handle IntegrationError (includes timeout, network errors from BaseAPIClient)
-		if (error instanceof IntegrationError) {
-			const integrationErr = error as IntegrationError;
-			return ActionResult.error(integrationErr.message, integrationErr.code, {
-				integration: 'service-name',
-				action,
-			});
-		}
-
-		// Handle generic errors
-		const message = error instanceof Error ? error.message : 'Unknown error';
-		return ActionResult.error(message, ErrorCode.UNKNOWN, {
-			integration: 'service-name',
-			action,
-		});
 	}
 
 	/**
