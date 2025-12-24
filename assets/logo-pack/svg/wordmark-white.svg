@@ -3,9 +3,9 @@
   <!-- WORKWAY Wordmark - White variant (for dark backgrounds) -->
   <!-- Font: Stack Sans Notch, weight 600, letter-spacing: -0.02em -->
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@600&amp;display=swap');
+    @import url('https://cdn.workway.co/fonts.css');
     .wordmark {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Stack Sans Notch', 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
       font-weight: 600;
       letter-spacing: -0.02em;
     }
