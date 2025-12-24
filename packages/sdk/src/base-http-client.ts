@@ -45,6 +45,22 @@ import {
 // ============================================================================
 
 /**
+ * Token refresh handler for OAuth token refresh
+ */
+export interface TokenRefreshHandler {
+	/** Refresh token for OAuth token refresh */
+	refreshToken: string;
+	/** OAuth token endpoint URL */
+	tokenEndpoint: string;
+	/** Client ID for OAuth token refresh */
+	clientId: string;
+	/** Client secret for OAuth token refresh */
+	clientSecret: string;
+	/** Callback to update the access token after refresh */
+	onTokenRefreshed: (newAccessToken: string, newRefreshToken?: string) => void | Promise<void>;
+}
+
+/**
  * Configuration for BaseHTTPClient
  */
 export interface HTTPClientConfig {
@@ -67,6 +83,9 @@ export interface HTTPClientConfig {
 export interface AuthenticatedHTTPClientConfig extends HTTPClientConfig {
 	/** Bearer token for authentication */
 	accessToken: string;
+
+	/** Optional: OAuth token refresh configuration */
+	tokenRefresh?: TokenRefreshHandler;
 }
 
 /**
@@ -352,10 +371,12 @@ export class BaseHTTPClient {
 /**
  * HTTP client with Bearer token authentication
  *
- * Extends BaseHTTPClient with automatic Authorization header injection.
+ * Extends BaseHTTPClient with automatic Authorization header injection
+ * and optional automatic token refresh on 401 responses.
  */
 export class AuthenticatedHTTPClient extends BaseHTTPClient {
-	protected readonly accessToken: string;
+	protected accessToken: string;
+	protected readonly tokenRefresh?: TokenRefreshHandler;
 
 	constructor(config: AuthenticatedHTTPClientConfig) {
 		super({
@@ -366,6 +387,104 @@ export class AuthenticatedHTTPClient extends BaseHTTPClient {
 			},
 		});
 		this.accessToken = config.accessToken;
+		this.tokenRefresh = config.tokenRefresh;
+	}
+
+	/**
+	 * Make an HTTP request with automatic token refresh on 401
+	 */
+	protected override async request(
+		method: string,
+		path: string,
+		options: RequestWithBodyOptions = {},
+		isRetry = false
+	): Promise<Response> {
+		const response = await super.request(method, path, options);
+
+		// Handle 401 Unauthorized - attempt token refresh if configured
+		if (response.status === 401 && !isRetry && this.tokenRefresh) {
+			await this.refreshAccessToken();
+			// Retry the request once with the new token
+			return this.request(method, path, options, true);
+		}
+
+		return response;
+	}
+
+	/**
+	 * Refresh the OAuth access token
+	 *
+	 * Uses the OAuth refresh token to get a new access token.
+	 * Updates the internal accessToken and calls the onTokenRefreshed callback.
+	 */
+	private async refreshAccessToken(): Promise<void> {
+		if (!this.tokenRefresh) {
+			throw new IntegrationError(
+				ErrorCode.AUTH_EXPIRED,
+				'Token expired and no refresh configuration provided',
+				this.errorContext
+			);
+		}
+
+		const { refreshToken, tokenEndpoint, clientId, clientSecret, onTokenRefreshed } = this.tokenRefresh;
+
+		try {
+			const response = await fetch(tokenEndpoint, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/x-www-form-urlencoded',
+				},
+				body: new URLSearchParams({
+					grant_type: 'refresh_token',
+					refresh_token: refreshToken,
+					client_id: clientId,
+					client_secret: clientSecret,
+				}),
+			});
+
+			if (!response.ok) {
+				throw new IntegrationError(
+					ErrorCode.AUTH_EXPIRED,
+					`Token refresh failed: ${response.status} ${response.statusText}`,
+					{
+						...this.errorContext,
+						retryable: false,
+					}
+				);
+			}
+
+			const data = await response.json() as {
+				access_token: string;
+				refresh_token?: string;
+			};
+
+			if (!data.access_token) {
+				throw new IntegrationError(
+					ErrorCode.AUTH_EXPIRED,
+					'Token refresh response missing access_token',
+					this.errorContext
+				);
+			}
+
+			// Update internal access token and default headers
+			this.accessToken = data.access_token;
+			this.defaultHeaders['Authorization'] = `Bearer ${data.access_token}`;
+
+			// Call the callback to persist the new token
+			await onTokenRefreshed(data.access_token, data.refresh_token);
+		} catch (error) {
+			if (error instanceof IntegrationError) {
+				throw error;
+			}
+			throw new IntegrationError(
+				ErrorCode.AUTH_EXPIRED,
+				`Token refresh failed: ${error}`,
+				{
+					...this.errorContext,
+					retryable: false,
+				}
+			);
+		}
 	}
 
 	/**
@@ -378,6 +497,7 @@ export class AuthenticatedHTTPClient extends BaseHTTPClient {
 			defaultHeaders: { ...this.defaultHeaders },
 			accessToken: token,
 			errorContext: this.errorContext,
+			tokenRefresh: this.tokenRefresh,
 		});
 	}
 }
