@@ -27,46 +27,68 @@ Before writing ANY code:
 
 ## Relevant Files to Reference
 - `CLAUDE.md`
+- `.claude/rules/beads-workflow.md`
+- `.claude/rules/deployment-safety.md`
 - `.claude/rules/design-tokens.md`
-- `.claude/rules/integrations.md`
-- `.claude/rules/philosophy.md`
-- `./packages/workflows/src/client-onboarding/index.ts`
-- `./packages/cli/src/lib/workflow-validator.ts`
-- `./packages/integrations/openapi/generated/stripe.generated.d.ts`
-- `./packages/sdk/src/vectorize.ts`
-- `./apps/f-n-web/src/routes/auth/signup/+page.svelte`
-- `./packages/learn/src/types/index.ts`
+- `./examples/meeting-intelligence/workflow.ts`
+- `./examples/ai-email-assistant/workflow.ts`
+- `./examples/ai-support-agent/workflow.ts`
+- `./scripts/test-sikka-connection.ts`
+- `./packages/learn/src/mcp/tools/learn-praxis.ts`
 
 ---
 
 ## Current Issue
-**Enhance lessons with real code examples from  and ** (Cloudflare-g7sn)
+**Middleware usage (, , )** (Cloudflare-1jmn)
 
 Created by harness
 
 ## Session Goal
-Complete: Enhance lessons with real code examples from  and 
+Complete: Middleware usage (, , )
 
 Created by harness
 
 ## Recent Commits
-- d183d50 fix(learn): Fix syntax highlighting in code blocks
-- 41e9e2d feat(learn): Add missing praxis validators for common-pitfalls and design-philosophy
-- cb7472a fix(learn): Fix TypeScript errors in API routes and auth
-- 4b6a57c feat(learn): Add accurate code examples from WORKWAY codebase
-- dd97504 feat(learn): Add step-by-step instructions to three lessons
+- 6cce3f7 refactor(workflows): fix github-to-linear export to use renamed directory
+- 9dba8d1 refactor(integrations): eliminate manual fetch() with AbortController
+- 9ddc616 refactor(integrations): use createErrorHandler in template
+- ac325c2 feat(sdk): add token refresh support to BaseHTTPClient
+- 9c7cb0f refactor(integrations): use deleteJson and add patchJson example to template
 
 ## Last Checkpoint
-Session #38: 3 completed (100% confidence)
-Confidence: 100%
+Session #6: 2 completed (92% confidence)
+Confidence: 92%
 
-## Completion Criteria
-1. All acceptance criteria met
+## Scope Guard (CRITICAL)
+
+**Active Issue**: Cloudflare-1jmn (Middleware usage (, , ))
+**Status**: ✓ Single issue assigned for this session
+
+⚠️ **CONSTRAINTS**:
+- Work ONLY on the issue above - do NOT touch other features
+- If you discover additional work needed, note it but do NOT implement it
+- Do NOT create new issues - the harness handles issue management
+- Complete this one feature fully before the session ends
+
+If blocked, describe the blocker clearly and stop. Do NOT work around it by starting other features.
+
+## Completion Criteria (Two-Stage)
+
+**Stage 1: Code Complete**
+1. All files created/modified as needed
 2. TypeScript compiles without errors
-3. Tests pass
+3. Unit tests pass
+
+**Stage 2: Verified**
+4. Acceptance criteria actually met (not just "code exists")
+5. Feature works end-to-end (test in browser/CLI)
+6. No regressions introduced
+
+Only declare success when BOTH stages are complete.
 
 ---
 
-Begin working on this issue. When complete, simply finish your work - the harness will close the issue automatically.
+Begin working on this issue. Focus exclusively on this one feature.
+When complete, simply finish your work - the harness will close the issue automatically.
 
 **IMPORTANT**: Do NOT run `bd close` or `bd update` commands - the harness manages issue state.

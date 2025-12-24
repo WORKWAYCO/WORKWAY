@@ -14,18 +14,18 @@ By the end of this lesson, you will be able to:
 
 Not every workflow belongs in the marketplace. Private workflows serve specific organizations with custom requirements while leveraging the full WORKWAY platform.
 
-## Real Example: Gmail to Notion Private
+## Real Example: Private Emails Documented
 
-Here's how the production `gmail-to-notion-private` workflow configures private visibility and access grants:
+Here's how the production `private-emails-documented` workflow configures private visibility and access grants:
 
 ```typescript
-// From packages/workflows/src/gmail-to-notion-private/index.ts
+// From packages/workflows/src/private-emails-documented/index.ts
 
 /**
  * Workflow metadata - Private workflow for @halfdozen.co
  */
 export const metadata = {
-  id: 'gmail-to-notion-private',
+  id: 'private-emails-documented',
   category: 'productivity',
   featured: false,
 
@@ -36,18 +36,18 @@ export const metadata = {
   // Honest flags (matches meeting-intelligence-private pattern)
   experimental: true,
   requiresCustomInfrastructure: true,
-  canonicalAlternative: 'gmail-to-notion', // Future public version
+  canonicalAlternative: 'emails-documented', // Future public version
 
   // Why this exists
   workaroundReason: 'Gmail OAuth scopes require Google app verification for public apps',
   infrastructureRequired: ['BYOO Google OAuth app', 'Arc for Gmail worker'],
 
   // Upgrade path (when Google verification completes)
-  upgradeTarget: 'gmail-to-notion',
+  upgradeTarget: 'emails-documented',
   upgradeCondition: 'When WORKWAY Gmail OAuth app is verified',
 
   // Analytics URL - unified at workway.co/workflows
-  analyticsUrl: 'https://workway.co/workflows/private/gmail-to-notion-private/analytics',
+  analyticsUrl: 'https://workway.co/workflows/private/private-emails-documented/analytics',
 
   // Setup URL - initial BYOO connection setup
   setupUrl: 'https://arc.halfdozen.co/setup',
@@ -236,7 +236,7 @@ Access grants determine who can install and use your private workflow. All grant
 Allow anyone from a company domain:
 
 ```typescript
-// From gmail-to-notion-private - restricts to @halfdozen.co team
+// From private-emails-documented - restricts to @halfdozen.co team
 accessGrants: [
   { type: 'email_domain' as const, value: 'halfdozen.co' },
 ]
@@ -269,7 +269,7 @@ All members of the organization can access.
 
 ### Combined Access (Real Pattern)
 
-From the production `gmail-to-notion-private` workflow header comments:
+From the production `private-emails-documented` workflow header comments:
 
 ```typescript
 // Real-world example: Company + external auditor
