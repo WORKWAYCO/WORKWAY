@@ -133,6 +133,8 @@ Migrations are **irreversible by default**. For reversible changes:
 1. Deploy a new migration that reverts the schema
 2. Then rollback the Worker code
 
+**Comprehensive D1 Migration Safety**: For detailed D1 migration checklists, SQLite constraints, and rollback strategies, see `workway-platform/.claude/rules/deployment.md` → "D1 Migration Safety Checklist" section.
+
 ## Environment Variables
 
 Never commit secrets. Use:
