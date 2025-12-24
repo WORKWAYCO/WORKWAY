@@ -335,6 +335,8 @@ describe('ServiceName API methods', () => {
 			mockFetch.mockResolvedValueOnce({
 				ok: false,
 				status: 429,
+				statusText: 'Too Many Requests',
+				headers: new Headers({ 'Content-Type': 'application/json' }),
 				json: async () => ({ error: { message: 'Rate limited' } }),
 			});
 

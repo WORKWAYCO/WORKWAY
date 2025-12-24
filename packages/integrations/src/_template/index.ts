@@ -16,11 +16,14 @@
  *
  * const client = new ServiceName({ accessToken: env.SERVICE_API_KEY });
  *
- * // Example operation
+ * // Get a resource (uses getJson helper)
  * const result = await client.getResource('resource-id');
  * if (result.success) {
  *   console.log(result.data);
  * }
+ *
+ * // Update a resource (uses patchJson helper)
+ * const updated = await client.updateResource('resource-id', { name: 'New Name' });
  * ```
  */
 
@@ -186,6 +189,31 @@ export class ServiceName extends BaseAPIClient {
 	}
 
 	/**
+	 * Update a resource
+	 */
+	async updateResource(
+		id: string,
+		updates: Partial<CreateResourceOptions>
+	): Promise<ActionResult<ServiceResource>> {
+		try {
+			const resource = await this.patchJson<ServiceResource>(
+				`/resources/${id}`,
+				updates
+			);
+
+			return createActionResult({
+				data: resource,
+				integration: 'service-name',
+				action: 'update-resource',
+				schema: 'service-name.resource.v1',
+				capabilities: this.getCapabilities(),
+			});
+		} catch (error) {
+			return this.handleError(error, 'update-resource');
+		}
+	}
+
+	/**
 	 * List resources with pagination
 	 */
 	async listResources(
@@ -216,7 +244,7 @@ export class ServiceName extends BaseAPIClient {
 	 */
 	async deleteResource(id: string): Promise<ActionResult<{ deleted: boolean }>> {
 		try {
-			await this.delete(`/resources/${id}`);
+			await this.deleteJson(`/resources/${id}`);
 
 			return createActionResult({
 				data: { deleted: true },
