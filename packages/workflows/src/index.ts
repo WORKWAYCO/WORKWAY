@@ -89,7 +89,7 @@ export { default as taskSyncBridge } from './task-sync-bridge/index.js';
 export { default as databasesMirrored } from './databases-mirrored/index.js';
 
 // Developer Tools
-export { default as githubToLinear } from './github-to-linear/index.js';
+export { default as issuesSyncedToSprint } from './issues-synced-to-sprint/index.js';
 export { default as prReviewNotifier } from './pr-review-notifier/index.js';
 
 // Team Collaboration
@@ -361,7 +361,7 @@ export const integrationPairs = {
 
 	// Developer Tools
 	'github:linear': {
-		workflowId: 'github-to-linear',
+		workflowId: 'issues-synced-to-sprint',
 		outcome: 'Issues synced to Linear',
 		outcomeFrame: 'when_issues_arrive',
 	},
@@ -704,7 +704,7 @@ export const workflows = {
 	// Cross-Workspace Sync
 	'databases-mirrored': { id: 'databases-mirrored', outcomeFrame: 'when_tickets_arrive' },
 	'error-incident-manager': { id: 'error-incident-manager', outcomeFrame: 'when_errors_happen' },
-	'github-to-linear': { id: 'github-to-linear', outcomeFrame: 'when_issues_arrive' },
+	'issues-synced-to-sprint': { id: 'issues-synced-to-sprint', outcomeFrame: 'when_issues_arrive' },
 	'pr-review-notifier': { id: 'pr-review-notifier', outcomeFrame: 'when_code_changes' },
 	'discord-standup-bot': { id: 'discord-standup-bot', outcomeFrame: 'every_morning' },
 	'calendar-meeting-prep': { id: 'calendar-meeting-prep', outcomeFrame: 'before_meetings' },
