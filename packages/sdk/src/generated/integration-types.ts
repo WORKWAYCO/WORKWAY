@@ -19,7 +19,7 @@
  * ```
  */
 
-import type { ActionResult } from '../sdk';
+import type { ActionResult } from '../action-result';
 
 // ============================================================================
 // ZOOM INTEGRATION TYPES

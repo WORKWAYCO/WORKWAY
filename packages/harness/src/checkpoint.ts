@@ -59,6 +59,7 @@ export function resetTracker(tracker: CheckpointTracker): void {
  */
 const OUTCOME_WEIGHTS: Record<SessionOutcome, number> = {
   success: 1.0,
+  code_complete: 0.8, // Code done, needs verification
   partial: 0.5,
   failure: 0.0,
   context_overflow: 0.3, // Not a failure, but not ideal

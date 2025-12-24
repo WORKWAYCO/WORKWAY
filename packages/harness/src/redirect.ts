@@ -97,8 +97,8 @@ export async function checkForRedirects(
 
     // Check for pause request
     if (
-      issue.labels.includes('pause') &&
-      issue.labels.includes(`harness:${harnessId}`) &&
+      issue.labels?.includes('pause') &&
+      issue.labels?.includes(`harness:${harnessId}`) &&
       issue.status !== 'closed'
     ) {
       shouldPause = true;
