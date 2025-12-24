@@ -4,28 +4,14 @@
  * Weniger, aber besser: One HTTP request implementation for all integrations.
  * Eliminates ~120-180 lines of duplicate code across 6 integrations.
  *
- * Now leverages SDK's BaseHTTPClient for unified error handling and JSON helpers.
+ * Now extends SDK's AuthenticatedHTTPClient - eliminates duplicate AbortController logic.
  */
 
 import {
-	IntegrationError,
-	ErrorCode,
-	createErrorFromResponse,
+	AuthenticatedHTTPClient,
+	type TokenRefreshHandler,
 	type ErrorContext,
 } from '@workwayco/sdk';
-
-export interface TokenRefreshHandler {
-	/** Refresh token for OAuth token refresh */
-	refreshToken: string;
-	/** OAuth token endpoint URL */
-	tokenEndpoint: string;
-	/** Client ID for OAuth token refresh */
-	clientId: string;
-	/** Client secret for OAuth token refresh */
-	clientSecret: string;
-	/** Callback to update the access token after refresh */
-	onTokenRefreshed: (newAccessToken: string, newRefreshToken?: string) => void | Promise<void>;
-}
 
 export interface BaseClientConfig {
 	/** OAuth access token */
@@ -43,366 +29,214 @@ export interface BaseClientConfig {
 /**
  * Base API client with standardized HTTP request handling
  *
- * Provides both raw Response methods (get, post, etc.) and
- * JSON-parsing methods (getJson, postJson, etc.) for convenience.
+ * Extends AuthenticatedHTTPClient from SDK, providing:
+ * - Automatic AbortController timeout handling (no manual fetch)
+ * - Automatic token refresh on 401
+ * - Unified error handling via IntegrationError
+ * - JSON-parsing helpers (getJson, postJson, etc.)
+ *
+ * Integration-specific behavior (like custom headers) is added via
+ * wrapper methods that preserve the simple API.
  */
-export abstract class BaseAPIClient {
-	protected accessToken: string;
-	protected readonly apiUrl: string;
-	protected readonly timeout: number;
-	protected readonly errorContext: Partial<ErrorContext>;
-	protected readonly tokenRefresh?: TokenRefreshHandler;
-
+export abstract class BaseAPIClient extends AuthenticatedHTTPClient {
 	constructor(config: BaseClientConfig) {
-		this.accessToken = config.accessToken;
-		this.apiUrl = config.apiUrl;
-		this.timeout = config.timeout ?? 30000;
-		this.errorContext = config.errorContext ?? {};
-		this.tokenRefresh = config.tokenRefresh;
+		super({
+			baseUrl: config.apiUrl,
+			accessToken: config.accessToken,
+			timeout: config.timeout,
+			errorContext: config.errorContext,
+			tokenRefresh: config.tokenRefresh,
+		});
 	}
 
+	// =========================================================================
+	// COMPATIBILITY GETTERS
+	// =========================================================================
+	// For backwards compatibility with integrations that access these directly
+
 	/**
-	 * Make an authenticated HTTP request
-	 *
-	 * @param path - API endpoint path (appended to apiUrl)
-	 * @param options - Fetch options
-	 * @param additionalHeaders - Extra headers (e.g., API version headers)
-	 * @param isRetry - Internal flag to prevent infinite retry loops
+	 * Get the API URL (alias for baseUrl from parent)
 	 */
+	protected get apiUrl(): string {
+		return this.baseUrl;
+	}
+
+	// =========================================================================
+	// LOW-LEVEL REQUEST METHOD
+	// =========================================================================
+	// For advanced integrations that need direct access to request() with custom options
+
+	/**
+	 * Make a low-level HTTP request (old signature for backwards compatibility)
+	 *
+	 * This method provides the old request() signature that integrations expect.
+	 * It converts RequestInit-style options to the new signature.
+	 *
+	 * @param path - API endpoint path
+	 * @param options - RequestInit options (method, headers, body, etc.)
+	 * @param additionalHeaders - Extra headers (e.g., API version headers)
+	 * @deprecated Use get(), post(), patch(), etc. methods instead
+	 */
+	// @ts-expect-error - Intentionally overriding with different signature for backwards compatibility
 	protected async request(
 		path: string,
 		options: RequestInit = {},
-		additionalHeaders: Record<string, string> = {},
-		isRetry = false
+		additionalHeaders: Record<string, string> = {}
 	): Promise<Response> {
-		const url = `${this.apiUrl}${path}`;
-		const headers = new Headers(options.headers);
+		const method = options.method || 'GET';
 
-		// Standard headers
-		headers.set('Authorization', `Bearer ${this.accessToken}`);
-		headers.set('Content-Type', 'application/json');
-
-		// Integration-specific headers (e.g., Notion-Version, Stripe-Version)
-		for (const [key, value] of Object.entries(additionalHeaders)) {
-			headers.set(key, value);
-		}
-
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-		try {
-			const response = await fetch(url, {
-				...options,
-				headers,
-				signal: controller.signal,
-			});
-
-			// Handle 401 Unauthorized - attempt token refresh if configured
-			if (response.status === 401 && !isRetry && this.tokenRefresh) {
-				clearTimeout(timeoutId);
-				await this.refreshAccessToken();
-				// Retry the request once with the new token
-				return this.request(path, options, additionalHeaders, true);
-			}
-
-			return response;
-		} catch (error) {
-			if (error instanceof Error && error.name === 'AbortError') {
-				throw new IntegrationError(ErrorCode.TIMEOUT, `Request timed out after ${this.timeout}ms`, {
-					...this.errorContext,
-					retryable: true,
-				});
-			}
-			throw new IntegrationError(ErrorCode.NETWORK_ERROR, `Network request failed: ${error}`, {
-				...this.errorContext,
-				retryable: true,
-			});
-		} finally {
-			clearTimeout(timeoutId);
-		}
-	}
-
-	/**
-	 * Refresh the OAuth access token
-	 *
-	 * Uses the OAuth refresh token to get a new access token.
-	 * Updates the internal accessToken and calls the onTokenRefreshed callback.
-	 */
-	private async refreshAccessToken(): Promise<void> {
-		if (!this.tokenRefresh) {
-			throw new IntegrationError(
-				ErrorCode.AUTH_EXPIRED,
-				'Token expired and no refresh configuration provided',
-				this.errorContext
-			);
-		}
-
-		const { refreshToken, tokenEndpoint, clientId, clientSecret, onTokenRefreshed } = this.tokenRefresh;
-
-		try {
-			const response = await fetch(tokenEndpoint, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/x-www-form-urlencoded',
-				},
-				body: new URLSearchParams({
-					grant_type: 'refresh_token',
-					refresh_token: refreshToken,
-					client_id: clientId,
-					client_secret: clientSecret,
-				}),
-			});
-
-			if (!response.ok) {
-				throw new IntegrationError(
-					ErrorCode.AUTH_EXPIRED,
-					`Token refresh failed: ${response.status} ${response.statusText}`,
-					{
-						...this.errorContext,
-						retryable: false,
-					}
-				);
-			}
-
-			const data = await response.json() as {
-				access_token: string;
-				refresh_token?: string;
-			};
-
-			if (!data.access_token) {
-				throw new IntegrationError(
-					ErrorCode.AUTH_EXPIRED,
-					'Token refresh response missing access_token',
-					this.errorContext
-				);
-			}
-
-			// Update internal access token
-			this.accessToken = data.access_token;
-
-			// Call the callback to persist the new token
-			await onTokenRefreshed(data.access_token, data.refresh_token);
-		} catch (error) {
-			if (error instanceof IntegrationError) {
-				throw error;
-			}
-			throw new IntegrationError(
-				ErrorCode.AUTH_EXPIRED,
-				`Token refresh failed: ${error}`,
-				{
-					...this.errorContext,
-					retryable: false,
+		// Extract body - it might be stringified JSON or already an object
+		let body: unknown = undefined;
+		if (options.body) {
+			if (typeof options.body === 'string') {
+				try {
+					body = JSON.parse(options.body);
+				} catch {
+					// If it's not JSON, pass it through
+					body = options.body;
 				}
-			);
+			} else {
+				body = options.body;
+			}
 		}
-	}
 
-	/**
-	 * Make a GET request
-	 */
-	protected get(
-		path: string,
-		additionalHeaders: Record<string, string> = {}
-	): Promise<Response> {
-		return this.request(path, { method: 'GET' }, additionalHeaders);
-	}
-
-	/**
-	 * Make a POST request with JSON body
-	 */
-	protected post(
-		path: string,
-		body?: unknown,
-		additionalHeaders: Record<string, string> = {}
-	): Promise<Response> {
-		return this.request(
-			path,
-			{
-				method: 'POST',
-				body: body ? JSON.stringify(body) : undefined,
+		return super.request(method, path, {
+			body,
+			headers: {
+				...Object.fromEntries(new Headers(options.headers || {})),
+				...additionalHeaders,
 			},
-			additionalHeaders
-		);
-	}
-
-	/**
-	 * Make a PATCH request with JSON body
-	 */
-	protected patch(
-		path: string,
-		body?: unknown,
-		additionalHeaders: Record<string, string> = {}
-	): Promise<Response> {
-		return this.request(
-			path,
-			{
-				method: 'PATCH',
-				body: body ? JSON.stringify(body) : undefined,
-			},
-			additionalHeaders
-		);
-	}
-
-	/**
-	 * Make a PUT request with JSON body
-	 */
-	protected put(
-		path: string,
-		body?: unknown,
-		additionalHeaders: Record<string, string> = {}
-	): Promise<Response> {
-		return this.request(
-			path,
-			{
-				method: 'PUT',
-				body: body ? JSON.stringify(body) : undefined,
-			},
-			additionalHeaders
-		);
-	}
-
-	/**
-	 * Make a DELETE request
-	 */
-	protected delete(
-		path: string,
-		additionalHeaders: Record<string, string> = {}
-	): Promise<Response> {
-		return this.request(path, { method: 'DELETE' }, additionalHeaders);
+		});
 	}
 
 	// =========================================================================
-	// JSON HELPERS (Weniger, aber besser)
+	// SIMPLIFIED WRAPPERS
 	// =========================================================================
-	// These helpers combine request + response parsing + error handling
-	// into single calls, eliminating ~100 lines of duplicate code.
+	// These methods provide the old API signature while delegating to the
+	// SDK's AuthenticatedHTTPClient. Integrations can override these to add
+	// service-specific headers (e.g., Notion-Version, Stripe-Version).
 
 	/**
-	 * GET request with automatic JSON parsing and error handling
-	 *
-	 * @example
-	 * ```typescript
-	 * const channels = await this.getJson<SlackChannel[]>('/conversations.list');
-	 * ```
+	 * GET request with optional additional headers
 	 */
-	protected async getJson<T>(
+	protected override get(
 		path: string,
 		additionalHeaders: Record<string, string> = {}
-	): Promise<T> {
-		const response = await this.get(path, additionalHeaders);
-		return this.parseJsonResponse<T>(response);
+	): Promise<Response> {
+		return super.get(path, { headers: additionalHeaders });
 	}
 
 	/**
-	 * POST request with automatic JSON parsing and error handling
-	 *
-	 * @example
-	 * ```typescript
-	 * const page = await this.postJson<NotionPage>('/pages', {
-	 *   parent: { database_id: 'xxx' },
-	 *   properties: { ... }
-	 * });
-	 * ```
+	 * POST request with JSON body and optional additional headers
 	 */
-	protected async postJson<T>(
+	protected override post(
+		path: string,
+		body?: unknown,
+		additionalHeaders: Record<string, string> = {}
+	): Promise<Response> {
+		return super.post(path, { body, headers: additionalHeaders });
+	}
+
+	/**
+	 * PATCH request with JSON body and optional additional headers
+	 */
+	protected override patch(
+		path: string,
+		body?: unknown,
+		additionalHeaders: Record<string, string> = {}
+	): Promise<Response> {
+		return super.patch(path, { body, headers: additionalHeaders });
+	}
+
+	/**
+	 * PUT request with JSON body and optional additional headers
+	 */
+	protected override put(
+		path: string,
+		body?: unknown,
+		additionalHeaders: Record<string, string> = {}
+	): Promise<Response> {
+		return super.put(path, { body, headers: additionalHeaders });
+	}
+
+	/**
+	 * DELETE request with optional additional headers
+	 */
+	protected override delete(
+		path: string,
+		additionalHeaders: Record<string, string> = {}
+	): Promise<Response> {
+		return super.delete(path, { headers: additionalHeaders });
+	}
+
+	// =========================================================================
+	// JSON HELPERS (delegated to SDK)
+	// =========================================================================
+	// These preserve the old API signature while using the SDK's implementations.
+
+	/**
+	 * GET request with automatic JSON parsing
+	 */
+	protected override async getJson<T>(
+		path: string,
+		additionalHeaders: Record<string, string> = {}
+	): Promise<T> {
+		return super.getJson<T>(path, { headers: additionalHeaders });
+	}
+
+	/**
+	 * POST request with automatic JSON parsing
+	 */
+	protected override async postJson<T>(
 		path: string,
 		body?: unknown,
 		additionalHeaders: Record<string, string> = {}
 	): Promise<T> {
-		const response = await this.post(path, body, additionalHeaders);
-		return this.parseJsonResponse<T>(response);
+		return super.postJson<T>(path, { body, headers: additionalHeaders });
 	}
 
 	/**
-	 * PATCH request with automatic JSON parsing and error handling
+	 * PATCH request with automatic JSON parsing
 	 */
-	protected async patchJson<T>(
+	protected override async patchJson<T>(
 		path: string,
 		body?: unknown,
 		additionalHeaders: Record<string, string> = {}
 	): Promise<T> {
-		const response = await this.patch(path, body, additionalHeaders);
-		return this.parseJsonResponse<T>(response);
+		return super.patchJson<T>(path, { body, headers: additionalHeaders });
 	}
 
 	/**
-	 * PUT request with automatic JSON parsing and error handling
+	 * PUT request with automatic JSON parsing
 	 */
-	protected async putJson<T>(
+	protected override async putJson<T>(
 		path: string,
 		body?: unknown,
 		additionalHeaders: Record<string, string> = {}
 	): Promise<T> {
-		const response = await this.put(path, body, additionalHeaders);
-		return this.parseJsonResponse<T>(response);
+		return super.putJson<T>(path, { body, headers: additionalHeaders });
 	}
 
 	/**
-	 * DELETE request with automatic JSON parsing (if response has body)
+	 * DELETE request with automatic JSON parsing
 	 */
-	protected async deleteJson<T = void>(
+	protected override async deleteJson<T = void>(
 		path: string,
 		additionalHeaders: Record<string, string> = {}
 	): Promise<T> {
-		const response = await this.delete(path, additionalHeaders);
-
-		// Handle empty responses (204 No Content)
-		if (response.status === 204) {
-			return undefined as T;
-		}
-
-		return this.parseJsonResponse<T>(response);
+		return super.deleteJson<T>(path, { headers: additionalHeaders });
 	}
 
 	/**
-	 * Parse JSON response with unified error handling
+	 * Assert response is OK, throw if not
 	 *
-	 * Throws IntegrationError if response is not OK or parsing fails.
-	 * Uses the SDK's createErrorFromResponse for consistent error mapping.
-	 */
-	protected async parseJsonResponse<T>(response: Response): Promise<T> {
-		if (!response.ok) {
-			throw await createErrorFromResponse(response, this.errorContext);
-		}
-
-		try {
-			return (await response.json()) as T;
-		} catch {
-			throw new IntegrationError(
-				ErrorCode.API_ERROR,
-				'Failed to parse JSON response',
-				this.errorContext
-			);
-		}
-	}
-
-	/**
-	 * Assert response is OK, throw IntegrationError if not
-	 *
-	 * Use when you need the raw response but want error handling.
-	 * This is an alias for compatibility with the existing assertResponseOk pattern.
+	 * Alias for SDK's assertResponseOk for backwards compatibility.
 	 */
 	protected async assertOk(response: Response): Promise<void> {
-		if (!response.ok) {
-			throw await createErrorFromResponse(response, this.errorContext);
-		}
+		return this.assertResponseOk(response);
 	}
 }
 
-/**
- * Build a query string from an object, filtering out undefined/null values
- */
-export function buildQueryString(
-	params: Record<string, string | number | boolean | undefined | null>
-): string {
-	const search = new URLSearchParams();
-
-	for (const [key, value] of Object.entries(params)) {
-		if (value !== undefined && value !== null && value !== '') {
-			search.set(key, String(value));
-		}
-	}
-
-	const str = search.toString();
-	return str ? `?${str}` : '';
-}
+// Re-export SDK utilities for convenience
+export { buildQueryString } from '@workwayco/sdk';
+export type { TokenRefreshHandler } from '@workwayco/sdk';

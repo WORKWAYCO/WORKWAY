@@ -320,6 +320,7 @@ export {
 	type AuthenticatedHTTPClientConfig,
 	type RequestOptions,
 	type RequestWithBodyOptions,
+	type TokenRefreshHandler,
 } from './base-http-client';
 
 // ============================================================================
