@@ -69,23 +69,23 @@ function createMockEvent(
 // ============================================================================
 
 describe('ServiceName constructor', () => {
-	it('should require API key', () => {
-		expect(() => new ServiceName({ apiKey: '' })).toThrow();
+	it('should require access token', () => {
+		expect(() => new ServiceName({ accessToken: '' })).toThrow();
 	});
 
 	it('should accept valid config', () => {
-		const client = new ServiceName({ apiKey: 'test_key' });
+		const client = new ServiceName({ accessToken: 'test_token' });
 		expect(client).toBeInstanceOf(ServiceName);
 	});
 
 	it('should allow custom timeout', () => {
-		const client = new ServiceName({ apiKey: 'test_key', timeout: 5000 });
+		const client = new ServiceName({ accessToken: 'test_token', timeout: 5000 });
 		expect(client).toBeInstanceOf(ServiceName);
 	});
 
 	it('should allow custom API URL', () => {
 		const client = new ServiceName({
-			apiKey: 'test_key',
+			accessToken: 'test_token',
 			apiUrl: 'https://custom.api.com',
 		});
 		expect(client).toBeInstanceOf(ServiceName);
@@ -101,7 +101,7 @@ describe('ServiceName.parseWebhookEvent', () => {
 	let client: ServiceName;
 
 	beforeEach(() => {
-		client = new ServiceName({ apiKey: 'test_key' });
+		client = new ServiceName({ accessToken: 'test_token' });
 	});
 
 	describe('valid signatures', () => {
@@ -295,7 +295,7 @@ describe('ServiceName API methods', () => {
 	let mockFetch: ReturnType<typeof vi.fn>;
 
 	beforeEach(() => {
-		client = new ServiceName({ apiKey: 'test_key' });
+		client = new ServiceName({ accessToken: 'test_token' });
 		mockFetch = vi.fn();
 		vi.stubGlobal('fetch', mockFetch);
 	});

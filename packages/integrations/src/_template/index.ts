@@ -4,16 +4,17 @@
  * [Brief description of what this integration enables]
  *
  * Implements the SDK patterns:
+ * - Extends BaseAPIClient for DRY HTTP handling
  * - ActionResult narrow waist for output
  * - IntegrationError narrow waist for errors
- * - Configurable timeout via AbortController
+ * - Automatic token refresh support
  * - Honest ActionCapabilities declaration
  *
  * @example
  * ```typescript
  * import { ServiceName } from '@workwayco/integrations/service-name';
  *
- * const client = new ServiceName({ apiKey: env.SERVICE_API_KEY });
+ * const client = new ServiceName({ accessToken: env.SERVICE_API_KEY });
  *
  * // Example operation
  * const result = await client.getResource('resource-id');
@@ -27,8 +28,10 @@ import {
 	ActionResult,
 	createActionResult,
 	type ActionCapabilities,
+	IntegrationError,
+	ErrorCode,
 } from '@workwayco/sdk';
-import { IntegrationError, ErrorCode } from '@workwayco/sdk';
+import { BaseAPIClient } from '../core/base-client.js';
 
 // ============================================================================
 // TYPES
@@ -38,12 +41,20 @@ import { IntegrationError, ErrorCode } from '@workwayco/sdk';
  * Integration configuration
  */
 export interface ServiceNameConfig {
-	/** API key or access token */
-	apiKey: string;
+	/** OAuth access token */
+	accessToken: string;
 	/** Optional: Override API endpoint (for testing) */
 	apiUrl?: string;
 	/** Request timeout in milliseconds (default: 30000) */
 	timeout?: number;
+	/** Optional: OAuth refresh token for automatic token refresh */
+	refreshToken?: string;
+	/** Optional: OAuth client ID for token refresh */
+	clientId?: string;
+	/** Optional: OAuth client secret for token refresh */
+	clientSecret?: string;
+	/** Optional: Callback to update tokens after refresh */
+	onTokenRefreshed?: (newAccessToken: string, newRefreshToken?: string) => void | Promise<void>;
 }
 
 /**
@@ -90,26 +101,35 @@ export interface ListResourcesOptions {
 /**
  * [SERVICE_NAME] Integration
  *
- * Implements the WORKWAY SDK patterns for [SERVICE_NAME] API access.
+ * Extends BaseAPIClient for DRY HTTP handling with automatic token refresh.
  */
-export class ServiceName {
-	private apiKey: string;
-	private apiUrl: string;
-	private timeout: number;
-
+export class ServiceName extends BaseAPIClient {
 	constructor(config: ServiceNameConfig) {
 		// Validate required config - throw in constructor (can't return)
-		if (!config.apiKey) {
+		if (!config.accessToken) {
 			throw new IntegrationError(
 				ErrorCode.AUTH_MISSING,
-				'[SERVICE_NAME] API key is required',
+				'[SERVICE_NAME] access token is required',
 				{ integration: 'service-name', retryable: false }
 			);
 		}
 
-		this.apiKey = config.apiKey;
-		this.apiUrl = config.apiUrl || 'https://api.service.com/v1';
-		this.timeout = config.timeout ?? 30000;
+		// Call parent constructor with BaseAPIClient config
+		super({
+			accessToken: config.accessToken,
+			apiUrl: config.apiUrl || 'https://api.service.com/v1',
+			timeout: config.timeout,
+			errorContext: { integration: 'service-name' },
+			tokenRefresh: config.refreshToken && config.clientId && config.clientSecret && config.onTokenRefreshed
+				? {
+					refreshToken: config.refreshToken,
+					tokenEndpoint: 'https://api.service.com/oauth/token', // Replace with actual endpoint
+					clientId: config.clientId,
+					clientSecret: config.clientSecret,
+					onTokenRefreshed: config.onTokenRefreshed,
+				}
+				: undefined,
+		});
 	}
 
 	// ==========================================================================
@@ -121,13 +141,7 @@ export class ServiceName {
 	 */
 	async getResource(id: string): Promise<ActionResult<ServiceResource>> {
 		try {
-			const response = await this.request(`/resources/${id}`);
-
-			if (!response.ok) {
-				return this.handleApiError(response, 'get-resource');
-			}
-
-			const resource = (await response.json()) as ServiceResource;
+			const resource = await this.getJson<ServiceResource>(`/resources/${id}`);
 
 			return createActionResult({
 				data: resource,
@@ -157,16 +171,7 @@ export class ServiceName {
 				);
 			}
 
-			const response = await this.request('/resources', {
-				method: 'POST',
-				body: JSON.stringify(options),
-			});
-
-			if (!response.ok) {
-				return this.handleApiError(response, 'create-resource');
-			}
-
-			const resource = (await response.json()) as ServiceResource;
+			const resource = await this.postJson<ServiceResource>('/resources', options);
 
 			return createActionResult({
 				data: resource,
@@ -192,13 +197,7 @@ export class ServiceName {
 			if (options.cursor) params.append('cursor', options.cursor);
 
 			const url = `/resources${params.toString() ? '?' + params.toString() : ''}`;
-			const response = await this.request(url);
-
-			if (!response.ok) {
-				return this.handleApiError(response, 'list-resources');
-			}
-
-			const list = (await response.json()) as ServiceList<ServiceResource>;
+			const list = await this.getJson<ServiceList<ServiceResource>>(url);
 
 			return createActionResult({
 				data: list,
@@ -217,13 +216,7 @@ export class ServiceName {
 	 */
 	async deleteResource(id: string): Promise<ActionResult<{ deleted: boolean }>> {
 		try {
-			const response = await this.request(`/resources/${id}`, {
-				method: 'DELETE',
-			});
-
-			if (!response.ok) {
-				return this.handleApiError(response, 'delete-resource');
-			}
+			await this.delete(`/resources/${id}`);
 
 			return createActionResult({
 				data: { deleted: true },
@@ -238,11 +231,18 @@ export class ServiceName {
 	}
 
 	// ==========================================================================
-	// WEBHOOK HANDLING (if applicable)
+	// WEBHOOK HANDLING (template-specific helper)
 	// ==========================================================================
+	// Note: Webhook verification logic is service-specific and should remain
+	// in the template. BaseAPIClient handles HTTP requests, but webhook signature
+	// verification varies by service (Stripe uses HMAC-SHA256, Slack uses different
+	// headers, etc.). Keep this section as-is when using this template.
 
 	/**
 	 * Parse and verify a webhook event
+	 *
+	 * This is a template-specific helper. Adjust signature verification
+	 * based on your service's webhook signature format.
 	 *
 	 * @param payload - Raw request body
 	 * @param signature - Signature header from webhook
@@ -310,34 +310,6 @@ export class ServiceName {
 	// ==========================================================================
 
 	/**
-	 * Make authenticated request with timeout
-	 */
-	private async request(
-		endpoint: string,
-		options: RequestInit = {}
-	): Promise<Response> {
-		const url = `${this.apiUrl}${endpoint}`;
-
-		// Add timeout via AbortController
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-		try {
-			return await fetch(url, {
-				...options,
-				headers: {
-					'Authorization': `Bearer ${this.apiKey}`,
-					'Content-Type': 'application/json',
-					...options.headers,
-				},
-				signal: controller.signal,
-			});
-		} finally {
-			clearTimeout(timeoutId);
-		}
-	}
-
-	/**
 	 * Get capabilities - be honest about what this integration can do
 	 */
 	private getCapabilities(): ActionCapabilities {
@@ -358,74 +330,10 @@ export class ServiceName {
 	}
 
 	/**
-	 * Handle API errors - map status codes to ErrorCode
-	 */
-	private async handleApiError<T>(
-		response: Response,
-		action: string
-	): Promise<ActionResult<T>> {
-		try {
-			const errorData = (await response.json()) as {
-				error?: { message?: string; code?: string };
-				message?: string;
-			};
-			const message =
-				errorData.error?.message || errorData.message || 'API error';
-			const code = this.mapStatusToErrorCode(response.status);
-
-			return ActionResult.error(message, code, {
-				integration: 'service-name',
-				action,
-			});
-		} catch {
-			return ActionResult.error(
-				`API error: ${response.status}`,
-				ErrorCode.API_ERROR,
-				{ integration: 'service-name', action }
-			);
-		}
-	}
-
-	/**
-	 * Map HTTP status to ErrorCode
-	 */
-	private mapStatusToErrorCode(status: number): string {
-		switch (status) {
-			case 400:
-				return ErrorCode.VALIDATION_ERROR;
-			case 401:
-				return ErrorCode.AUTH_INVALID;
-			case 403:
-				return ErrorCode.AUTH_INSUFFICIENT_SCOPE;
-			case 404:
-				return ErrorCode.NOT_FOUND;
-			case 409:
-				return ErrorCode.CONFLICT;
-			case 429:
-				return ErrorCode.RATE_LIMITED;
-			case 500:
-			case 502:
-			case 503:
-			case 504:
-				return ErrorCode.PROVIDER_DOWN;
-			default:
-				return ErrorCode.API_ERROR;
-		}
-	}
-
-	/**
 	 * Handle general errors - convert to ActionResult
 	 */
 	private handleError<T>(error: unknown, action: string): ActionResult<T> {
-		// Handle timeout
-		if (error instanceof DOMException && error.name === 'AbortError') {
-			return ActionResult.error('Request timeout', ErrorCode.TIMEOUT, {
-				integration: 'service-name',
-				action,
-			});
-		}
-
-		// Handle IntegrationError
+		// Handle IntegrationError (includes timeout, network errors from BaseAPIClient)
 		if (error instanceof IntegrationError) {
 			const integrationErr = error as IntegrationError;
 			return ActionResult.error(integrationErr.message, integrationErr.code, {
@@ -444,6 +352,10 @@ export class ServiceName {
 
 	/**
 	 * Compute HMAC-SHA256 signature for webhook verification
+	 *
+	 * Template-specific helper: Keep this method when using this template.
+	 * Different services use different signature algorithms (HMAC-SHA256,
+	 * HMAC-SHA1, etc.). Adjust as needed for your service.
 	 */
 	private async computeHmac(payload: string, secret: string): Promise<string> {
 		const encoder = new TextEncoder();
