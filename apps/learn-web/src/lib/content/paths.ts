@@ -237,52 +237,6 @@ export const paths: Path[] = [
 				praxis: 'Audit a workflow for design philosophy. Identify configuration that could become defaults. Remove one unnecessary abstraction.'
 			}
 		]
-	},
-	{
-		id: 'development-tools',
-		title: 'Development Tools',
-		description: 'Master Claude Code plugins, design philosophy, and the subtractive methodology that powers WORKWAY development.',
-		introduction: 'The best tools disappear during use. This path teaches you to build and use development tools that embody Zuhandenheit—the tool recedes, the outcome remains. You will learn the Heideggerian design principles, install and use Claude Code plugins, apply the Subtractive Triad methodology to code review, and understand the canon that guides all WORKWAY decisions.',
-		icon: 'wrench',
-		difficulty: 'intermediate',
-		estimatedHours: 2,
-		lessons: [
-			{
-				id: 'heidegger-principles',
-				title: 'Heideggerian Design Principles',
-				description: 'Master Zuhandenheit, Vorhandenheit, and Geworfenheit for software design.',
-				duration: '25 min',
-				praxis: 'Evaluate three features in your current project using the Zuhandenheit test. Identify where the tool becomes visible and how to make it recede.'
-			},
-			{
-				id: 'dieter-rams',
-				title: 'Dieter Rams: Less, But Better',
-				description: 'Apply the ten principles of good design to code and UI decisions.',
-				duration: '25 min',
-				praxis: 'Audit a component or function against Rams\' ten principles. Remove one element that doesn\'t serve the outcome.'
-			},
-			{
-				id: 'claude-code-plugins',
-				title: 'Claude Code Plugins Setup',
-				description: 'Install and configure WORKWAY plugins for enhanced development experience.',
-				duration: '15 min',
-				praxis: 'Install the WORKWAY plugin marketplace. Run /deploy and /integration-test commands. Observe how skills activate automatically.'
-			},
-			{
-				id: 'subtractive-review',
-				title: 'The Subtractive Triad',
-				description: 'Three-pass code review: DRY (Eliminate), Rams (Simplify), Heidegger (Reconnect).',
-				duration: '30 min',
-				praxis: 'Apply the Subtractive Triad to a pull request or code file. Document what you removed and what insight emerged from the removal.'
-			},
-			{
-				id: 'canon-principles',
-				title: 'The Canon: Design System Enforcement',
-				description: 'Understand the canonical patterns that maintain consistency across WORKWAY.',
-				duration: '20 min',
-				praxis: 'Review your last three commits against the canon checklist. Identify any violations and how to prevent them.'
-			}
-		]
 	}
 ];
 
