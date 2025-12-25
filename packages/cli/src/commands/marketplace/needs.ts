@@ -33,7 +33,6 @@ let getPairsForOutcome: (frameId: string) => any[] = () => [];
 let workflowsAvailable = false;
 
 try {
-	// @ts-expect-error - Optional dependency, may not exist
 	const workflows = await import('@workwayco/workflows');
 	integrationPairs = workflows.integrationPairs || {};
 	outcomeFrames = workflows.outcomeFrames || {};
