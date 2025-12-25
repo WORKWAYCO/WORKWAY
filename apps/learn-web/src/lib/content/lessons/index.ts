@@ -57,6 +57,13 @@ export async function loadLesson(pathId: string, lessonId: string): Promise<stri
 				import('./systems-thinking/performance-rate-limiting.md?raw'),
 			'monitoring-debugging': () => import('./systems-thinking/monitoring-debugging.md?raw'),
 			'design-philosophy': () => import('./systems-thinking/design-philosophy.md?raw')
+		},
+		'development-tools': {
+			'heidegger-principles': () => import('./development-tools/heidegger-principles.md?raw'),
+			'dieter-rams': () => import('./development-tools/dieter-rams.md?raw'),
+			'claude-code-plugins': () => import('./development-tools/claude-code-plugins.md?raw'),
+			'subtractive-review': () => import('./development-tools/subtractive-review.md?raw'),
+			'canon-principles': () => import('./development-tools/canon-principles.md?raw')
 		}
 	};
 
