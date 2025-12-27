@@ -491,7 +491,6 @@ export class ActionRegistry {
 	reloadIntegration(integration: IntegrationDefinition): void {
 		this.unregisterIntegration(integration.id);
 		this.registerIntegration(integration);
-		console.log(`🔄 Reloaded integration: ${integration.id}`);
 	}
 
 	/**

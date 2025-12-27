@@ -51,37 +51,46 @@
 import { defineWorkflow, cron } from '@workwayco/sdk';
 
 // ============================================================================
-// HALF DOZEN INTERNAL CONSTANTS
-// These are organization-specific. Do NOT use this workflow as a template.
+// ORGANIZATION CONFIGURATION
+// These values come from workflow config. Set via environment or workflow setup.
 // ============================================================================
 
 /**
- * Half Dozen's central LLM database in Notion (Interactions)
- * All email intelligence data for @halfdozen.co goes here.
- * This is intentionally NOT configurable - it's internal infrastructure.
+ * Get organization-specific configuration from workflow context.
+ * Falls back to environment variables if available.
  */
-const HALFDOZEN_INTERACTIONS_DATABASE = '27a019187ac580b797fec563c98afbbc';
+function getOrgConfig(config?: Record<string, unknown>) {
+	return {
+		/** Notion database ID for email interactions */
+		interactionsDatabase:
+			(config?.notionInteractionsDatabase as string) ||
+			(typeof process !== 'undefined' ? process.env.NOTION_INTERACTIONS_DATABASE : undefined) ||
+			'', // Must be configured per-organization
 
-/**
- * Half Dozen's Contacts database in Notion
- * Auto-creates contacts for external email participants.
- */
-const HALFDOZEN_CONTACTS_DATABASE = 'ccd3f8e7-5cc1-48c4-90b2-69a8f3d78e5c'; // TODO: Get actual contacts database ID
+		/** Notion database ID for contacts */
+		contactsDatabase:
+			(config?.notionContactsDatabase as string) ||
+			(typeof process !== 'undefined' ? process.env.NOTION_CONTACTS_DATABASE : undefined) ||
+			'', // Must be configured per-organization
 
-/**
- * Internal domains for @halfdozen.co team
- * Used to categorize participants as internal vs external
- */
-const HALFDOZEN_INTERNAL_DOMAINS = ['halfdozen.co'];
+		/** Internal email domains for the organization */
+		internalDomains: ((config?.internalDomains as string[]) || []).length > 0
+			? (config?.internalDomains as string[])
+			: ['halfdozen.co'], // Default for backwards compatibility
 
-/** Gmail label to watch for syncing */
-const GMAIL_LABEL = 'Log to Notion';
+		/** Gmail label to watch for syncing */
+		gmailLabel: (config?.gmailLabel as string) || 'Log to Notion',
+
+		/** Infrastructure URL for Gmail worker */
+		connectionUrl:
+			(config?.connectionUrl as string) ||
+			(typeof process !== 'undefined' ? process.env.GMAIL_CONNECTION_URL : undefined) ||
+			'https://arc.halfdozen.co', // Default for backwards compatibility
+	};
+}
 
 /** Workers AI model for summaries */
 const AI_MODEL = '@cf/meta/llama-3-8b-instruct';
-
-/** Infrastructure URL - Arc for Gmail worker */
-const GMAIL_CONNECTION_URL = 'https://arc.halfdozen.co';
 
 // ============================================================================
 // TYPES
@@ -122,6 +131,7 @@ interface ThreadTracking {
 async function trackExecution(
 	userId: string,
 	apiSecret: string,
+	connectionUrl: string,
 	data: {
 		status: 'running' | 'success' | 'failed';
 		threadsSynced?: number;
@@ -134,7 +144,7 @@ async function trackExecution(
 	}
 ) {
 	try {
-		await fetch(`${GMAIL_CONNECTION_URL}/executions/${userId}`, {
+		await fetch(`${connectionUrl}/executions/${userId}`, {
 			method: 'POST',
 			headers: {
 				'Content-Type': 'application/json',
@@ -528,9 +538,12 @@ export default defineWorkflow({
 		timezone: 'UTC',
 	}),
 
-	async execute({ inputs, integrations, env }) {
+	async execute({ inputs, integrations, env, config }) {
 		const startTime = Date.now();
 		const startedAt = new Date().toISOString();
+
+		// Get organization-specific configuration
+		const orgConfig = getOrgConfig(config);
 
 		const results: Array<{
 			threadId: string;
@@ -551,18 +564,26 @@ export default defineWorkflow({
 				error: 'Missing Gmail connection ID. Please complete setup.',
 				action: 'setup_required',
 				actionLabel: 'Complete Setup',
-				actionUrl: `${GMAIL_CONNECTION_URL}/setup`,
+				actionUrl: `${orgConfig.connectionUrl}/setup`,
+			};
+		}
+
+		// Validate required configuration
+		if (!orgConfig.interactionsDatabase) {
+			return {
+				success: false,
+				error: 'Missing Notion Interactions database ID. Configure via NOTION_INTERACTIONS_DATABASE.',
 			};
 		}
 
 		// Track execution start
-		await trackExecution(userId, apiSecret, {
+		await trackExecution(userId, apiSecret, orgConfig.connectionUrl, {
 			status: 'running',
 			startedAt,
 		});
 
-		const labelName = inputs.gmailLabel || GMAIL_LABEL;
-		const internalDomains = HALFDOZEN_INTERNAL_DOMAINS;
+		const labelName = inputs.gmailLabel || orgConfig.gmailLabel;
+		const internalDomains = orgConfig.internalDomains;
 
 		// 1. Get label ID for the sync label
 		const labelsResponse = await integrations.gmail.request('/gmail/v1/users/me/labels', {
@@ -578,7 +599,7 @@ export default defineWorkflow({
 
 		if (!syncLabel) {
 			// Track failed execution (no label)
-			await trackExecution(userId, apiSecret, {
+			await trackExecution(userId, apiSecret, orgConfig.connectionUrl, {
 				status: 'failed',
 				startedAt,
 				completedAt: new Date().toISOString(),
@@ -650,9 +671,9 @@ export default defineWorkflow({
 				};
 			});
 
-			// Check if thread already exists in Notion (using hardcoded database)
+			// Check if thread already exists in Notion
 			const existingPage = await integrations.notion.databases.query({
-				database_id: HALFDOZEN_INTERACTIONS_DATABASE,
+				database_id: orgConfig.interactionsDatabase,
 				filter: {
 					property: 'Thread ID',
 					rich_text: { equals: thread.id },
@@ -677,11 +698,11 @@ export default defineWorkflow({
 				}
 			}
 
-			// Find or create contacts (using hardcoded database)
+			// Find or create contacts
 			const contactIds: string[] = [];
 			for (const participant of externalParticipants) {
 				try {
-					const contactId = await findOrCreateContact(participant, integrations.notion, HALFDOZEN_CONTACTS_DATABASE);
+					const contactId = await findOrCreateContact(participant, integrations.notion, orgConfig.contactsDatabase);
 					contactIds.push(contactId);
 					contactsCreated++;
 				} catch (error) {
@@ -779,9 +800,9 @@ export default defineWorkflow({
 					isUpdate: true,
 				});
 			} else {
-				// Create new page (using hardcoded database)
+				// Create new page
 				const createResult = await integrations.notion.pages.create({
-					parent: { database_id: HALFDOZEN_INTERACTIONS_DATABASE },
+					parent: { database_id: orgConfig.interactionsDatabase },
 					properties,
 					children: contentBlocks.slice(0, 100), // Notion limit: 100 blocks per request
 				});
@@ -808,7 +829,7 @@ export default defineWorkflow({
 		}
 
 		// Track successful execution
-		await trackExecution(userId, apiSecret, {
+		await trackExecution(userId, apiSecret, orgConfig.connectionUrl, {
 			status: 'success',
 			threadsSynced: results.length,
 			contactsCreated,
@@ -871,8 +892,8 @@ export const metadata = {
 	// Private workflow analytics are accessible at /workflows/private/{workflow-id}/analytics
 	analyticsUrl: 'https://workway.co/workflows/private/private-emails-documented/analytics',
 
-	// Setup URL - initial BYOO connection setup
-	setupUrl: `${GMAIL_CONNECTION_URL}/setup`,
+	// Setup URL - initial BYOO connection setup (configurable via GMAIL_CONNECTION_URL env var)
+	setupUrl: 'https://arc.halfdozen.co/setup',
 
 	stats: { rating: 0, users: 0, reviews: 0 },
 };
