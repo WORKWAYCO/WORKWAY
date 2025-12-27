@@ -260,9 +260,10 @@ export async function createHarnessIssue(
   title: string,
   specFile: string,
   featuresTotal: number,
+  gitBranch: string,
   cwd?: string
 ): Promise<string> {
-  const description = `Harness run for: ${specFile}\nFeatures: ${featuresTotal}\nStarted: ${new Date().toISOString()}`;
+  const description = `Harness run for: ${specFile}\nFeatures: ${featuresTotal}\nBranch: ${gitBranch}\nStarted: ${new Date().toISOString()}`;
 
   const issueId = await createIssue(
     `Harness: ${title}`,

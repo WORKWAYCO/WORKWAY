@@ -57,6 +57,8 @@ import {
   updateIssueStatus,
   readAllIssues,
   getOpenIssues,
+  getIssue,
+  getHarnessCheckpoints,
 } from './beads.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -244,6 +246,7 @@ export async function initializeHarness(
     spec.title,
     options.specFile,
     spec.features.length,
+    gitBranch,
     cwd
   );
   console.log(`Created harness issue: ${harnessId}`);
@@ -566,15 +569,172 @@ export async function findAndResumeHarness(
 }
 
 /**
+ * Load harness state from a Beads issue.
+ * Parses the issue description to extract state markers.
+ */
+async function loadHarnessState(issueId: string, cwd: string): Promise<HarnessState> {
+  // Get harness issue
+  const harnessIssue = await getIssue(issueId, cwd);
+  if (!harnessIssue) {
+    throw new Error(`Harness issue not found: ${issueId}`);
+  }
+
+  // Parse description for metadata
+  const description = harnessIssue.description || '';
+
+  // Extract spec file
+  const specMatch = description.match(/Harness run for:\s*(.+)/);
+  const specFile = specMatch ? specMatch[1].trim() : '';
+
+  // Extract git branch from description or reconstruct
+  const branchMatch = description.match(/Branch:\s*([\w\/-]+)/);
+  const gitBranch = branchMatch ? branchMatch[1] : `harness/resumed-${issueId}`;
+
+  // Get all associated issues to count completed/failed
+  const allIssues = await readAllIssues(cwd);
+  const associatedIssues = allIssues.filter((i) =>
+    i.labels?.includes(`harness:${issueId}`) &&
+    !i.labels?.includes('checkpoint') &&
+    i.issue_type !== 'epic'
+  );
+
+  const completed = associatedIssues.filter((i) => i.status === 'closed').length;
+  const failed = associatedIssues.filter((i) => i.labels?.includes('failed')).length;
+  const total = associatedIssues.length;
+
+  // Extract mode from description or labels
+  let mode: 'workflow' | 'platform' = 'platform';
+  if (description.includes('workflow') || harnessIssue.labels?.includes('workflow')) {
+    mode = 'workflow';
+  }
+
+  // Get last checkpoint to restore policy
+  const checkpoints = await getHarnessCheckpoints(issueId, cwd);
+  const lastCheckpointId = checkpoints.length > 0 ? checkpoints[0].id : null;
+
+  return {
+    id: issueId,
+    status: 'running',
+    mode,
+    specFile,
+    gitBranch,
+    startedAt: harnessIssue.created_at,
+    currentSession: completed + failed,
+    sessionsCompleted: completed + failed,
+    featuresTotal: total,
+    featuresCompleted: completed,
+    featuresFailed: failed,
+    lastCheckpoint: lastCheckpointId,
+    checkpointPolicy: DEFAULT_CHECKPOINT_POLICY,
+    pauseReason: null,
+  };
+}
+
+/**
+ * Load checkpoint context from the most recent checkpoint.
+ * Returns AgentContext for session priming.
+ */
+async function loadCheckpointContext(harnessId: string, cwd: string): Promise<Checkpoint | null> {
+  const checkpoints = await getHarnessCheckpoints(harnessId, cwd);
+
+  if (checkpoints.length === 0) {
+    return null;
+  }
+
+  // Get the most recent checkpoint issue
+  const checkpointIssue = checkpoints[0];
+  const description = checkpointIssue.description || '';
+
+  // Parse checkpoint data from description
+  const summaryMatch = description.match(/## Summary\n(.+)/);
+  const completedMatch = description.match(/## Completed\n((?:- .+\n?)+)/);
+  const inProgressMatch = description.match(/## In Progress\n((?:- .+\n?)+)/);
+  const failedMatch = description.match(/## Failed\n((?:- .+\n?)+)/);
+  const confidenceMatch = description.match(/## Confidence:\s*(\d+(?:\.\d+)?)%?/);
+  const sessionMatch = checkpointIssue.title.match(/Checkpoint #(\d+)/);
+  const gitCommitMatch = description.match(/Git Commit:\s*(\S+)/);
+  const redirectMatch = description.match(/## Redirect Notes\n(.+?)(?:\n##|$)/s);
+
+  const parseIssueList = (text: string | undefined): string[] => {
+    if (!text) return [];
+    return text.split('\n')
+      .map(line => line.trim())
+      .filter(line => line.startsWith('-'))
+      .map(line => line.slice(2).trim());
+  };
+
+  return {
+    id: checkpointIssue.id,
+    harnessId,
+    sessionNumber: sessionMatch ? parseInt(sessionMatch[1], 10) : 0,
+    timestamp: checkpointIssue.created_at,
+    summary: summaryMatch ? summaryMatch[1].trim() : 'No summary',
+    issuesCompleted: parseIssueList(completedMatch?.[1]),
+    issuesInProgress: parseIssueList(inProgressMatch?.[1]),
+    issuesFailed: parseIssueList(failedMatch?.[1]),
+    gitCommit: gitCommitMatch ? gitCommitMatch[1] : 'unknown',
+    confidence: confidenceMatch ? parseFloat(confidenceMatch[1]) / 100 : 0.5,
+    redirectNotes: redirectMatch ? redirectMatch[1].trim() : null,
+  };
+}
+
+/**
  * Resume a paused harness.
+ * If harnessId is not provided or is 'current', finds the most recent harness.
  */
 export async function resumeHarness(
-  harnessId: string,
+  harnessId: string | undefined,
   cwd: string
 ): Promise<void> {
-  // TODO: Load harness state from Beads issue metadata
-  console.log(`Resuming harness: ${harnessId}`);
-  console.log('Resume functionality not yet implemented.');
+  // If no ID provided, find the most recent harness
+  let targetHarnessId = harnessId;
+  if (!targetHarnessId || targetHarnessId === 'current') {
+    const issues = await getOpenIssues({}, cwd);
+    const harnessIssues = issues
+      .filter((i) => i.labels?.includes('harness') && i.issue_type === 'epic')
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+    if (harnessIssues.length === 0) {
+      throw new Error('No harness found to resume. Use --id to specify a harness ID.');
+    }
+
+    targetHarnessId = harnessIssues[0].id;
+    console.log(`\n📍 No harness ID provided, using most recent: ${targetHarnessId}\n`);
+  }
+
+  console.log(`\n🔄 Resuming harness: ${targetHarnessId}\n`);
+
+  // Stop daemon
+  console.log('   Stopping bd daemon...');
+  await stopBdDaemon();
+
+  // Load harness state
+  console.log('   Loading harness state...');
+  const harnessState = await loadHarnessState(targetHarnessId, cwd);
+
+  console.log(`   Spec: ${harnessState.specFile}`);
+  console.log(`   Branch: ${harnessState.gitBranch}`);
+  console.log(`   Progress: ${harnessState.featuresCompleted}/${harnessState.featuresTotal} completed`);
+  console.log(`   Failed: ${harnessState.featuresFailed}`);
+
+  // Load last checkpoint context
+  const lastCheckpoint = await loadCheckpointContext(targetHarnessId, cwd);
+  if (lastCheckpoint) {
+    console.log(`   Last checkpoint: #${lastCheckpoint.sessionNumber} (${(lastCheckpoint.confidence * 100).toFixed(0)}% confidence)`);
+  }
+
+  // Check out the git branch if it exists
+  try {
+    await execAsync(`git rev-parse --verify ${harnessState.gitBranch}`, { cwd });
+    await execAsync(`git checkout ${harnessState.gitBranch}`, { cwd });
+    console.log(`   Checked out branch: ${harnessState.gitBranch}`);
+  } catch {
+    console.log(`   Warning: Branch ${harnessState.gitBranch} not found, staying on current branch`);
+  }
+
+  // Resume the harness loop
+  console.log('\n   Resuming harness loop...\n');
+  await runHarness(harnessState, { cwd });
 }
 
 /**
