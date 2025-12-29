@@ -1,11 +1,12 @@
 name = "repair-agent"
 main = "src/index.ts"
 compatibility_date = "2024-01-01"
-compatibility_flags = ["nodejs_compat", "workflows"]
+compatibility_flags = ["nodejs_compat"]
 
 # Workflow configuration
-[workflows]
-name = "RepairAgent"
+[[workflows]]
+binding = "REPAIR_WORKFLOW"
+name = "repair-agent"
 class_name = "RepairAgent"
 
 # Secrets (set via wrangler secret put)

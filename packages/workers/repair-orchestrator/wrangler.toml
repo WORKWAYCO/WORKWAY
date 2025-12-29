@@ -22,10 +22,12 @@ max_batch_timeout = 30
 max_retries = 3
 dead_letter_queue = "repair-queue-dlq"
 
-# Workflow binding (will be created)
+# Workflow binding - references the repair-agent workflow
 [[workflows]]
-name = "REPAIR_AGENT_WORKFLOW"
+binding = "REPAIR_AGENT_WORKFLOW"
+name = "repair-agent"
 class_name = "RepairAgent"
+script_name = "repair-agent"
 
 # Secrets (set via wrangler secret put)
 # - ANTHROPIC_API_KEY: Claude API key
