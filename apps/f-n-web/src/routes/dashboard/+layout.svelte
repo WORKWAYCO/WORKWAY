@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Users } from 'lucide-svelte';
+
 	let { children, data } = $props();
 </script>
 
@@ -31,6 +33,15 @@
 					>
 						Settings
 					</a>
+					{#if data.isAdmin}
+						<a
+							href="/admin"
+							class="px-3 py-1.5 rounded-md text-sm font-medium text-[var(--brand-accent)] hover:bg-[var(--brand-accent)]/10 transition-colors flex items-center gap-1.5"
+						>
+							<Users size={14} />
+							Admin
+						</a>
+					{/if}
 				</div>
 			</div>
 			<div class="flex items-center gap-4">

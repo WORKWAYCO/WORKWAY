@@ -1,4 +1,5 @@
 import { redirect } from '@sveltejs/kit';
+import { isAdmin } from '$lib/server/admin';
 import type { LayoutServerLoad } from './$types';
 
 export const load: LayoutServerLoad = async ({ locals }) => {
@@ -8,6 +9,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 	}
 
 	return {
-		user: locals.user
+		user: locals.user,
+		isAdmin: isAdmin(locals.user.email)
 	};
 };
