@@ -1,132 +1,63 @@
 # F→N Admin Guide
 
-> Sync Fireflies transcripts to Notion databases — not pages.
+> For Half Dozen team members creating client invitations.
 
-This guide covers the admin panel at `fn.workway.co/admin` for managing white glove client invitations.
+## Quick Start
 
----
-
-## Quick Reference
-
-| Page | URL | Purpose |
-|------|-----|---------|
-| Dashboard | `/dashboard` | Connect services, sync transcripts |
-| History | `/dashboard/history` | View past syncs |
-| Settings | `/dashboard/settings` | Account, subscription, connections |
-| Admin | `/admin` | Create client invitations (Half Dozen only) |
+1. Go to [fn.workway.co/admin](https://fn.workway.co/admin)
+2. Click **Create New Invitation**
+3. Fill out the form → **Generate Invitation Link**
+4. Copy and share the link with your client
 
 ---
 
-## User Dashboard
+## Creating a Client Invitation
 
-### Step 1: Connect Your Accounts
+### Step 1: Open Admin Panel
 
-![Dashboard Connect](./images/01-dashboard-connect.png)
+Navigate to [fn.workway.co/admin](https://fn.workway.co/admin)
 
-Before syncing, connect both Fireflies and Notion:
+You'll see:
+- **Stats cards** — Active, Redeemed, Expired counts
+- **Create New Invitation** button
+- **Invitation list** — All existing invitations
 
-1. **Fireflies**: Click "Connect Fireflies" to enter your API key
-2. **Notion**: Click "Connect Notion" to authorize workspace access
+### Step 2: Fill Out the Form
 
-The sync interface appears once both services are connected.
+| Field | Description |
+|-------|-------------|
+| **Client Email** | Optional. Leave blank for anyone to use, or enter a specific email to restrict access. |
+| **Subscription Tier** | Free (5 syncs), Pro (100 syncs), or Unlimited |
+| **Complimentary** | Check for 100% off — automatically grants Unlimited tier at no cost |
 
-### Entering Your Fireflies API Key
+**Note**: When Complimentary is checked, the tier selector shows "Unlimited" and is disabled.
 
-![Fireflies API Key](./images/02-fireflies-api-key.png)
+### Step 3: Generate & Share
 
-1. Click "Connect Fireflies" on the dashboard
-2. Visit [Fireflies Settings](https://app.fireflies.ai/integrations) to get your API key
-3. Paste the key into the input field
-4. Click "Connect"
+Click **Generate Invitation Link**
 
-### Sync History
+The invitation appears in the list with action buttons:
+- **Copy** (clipboard icon) — Copy link to share
+- **Open** (external link) — Preview the setup page
+- **Delete** (trash) — Revoke the invitation
 
-![Sync History](./images/03-sync-history.png)
-
-The History tab shows all past syncs:
-- Transcript name
-- Sync date
-- Status (success/failed)
-- Notion page link
-
-### Settings
-
-![Settings](./images/04-settings.png)
-
-The Settings page contains:
-
-| Section | Purpose |
-|---------|---------|
-| **Account** | Your email, sign out |
-| **Subscription** | Current plan, syncs used this month, upgrade option |
-| **Connected Accounts** | Manage Fireflies and Notion connections |
-| **Danger Zone** | Delete account permanently |
+**Share the link with your client.** They have 7 days to redeem it.
 
 ---
 
-## Admin Panel (White Glove Clients)
-
-The admin panel is available only to `@halfdozen.co` team members.
-
-### Overview
-
-![Admin Empty State](./images/05-admin-empty.png)
-
-The admin panel shows:
-
-- **Stats cards**: Active, Redeemed, and Expired invitation counts
-- **Create button**: Generate new invitation links
-- **Invitation list**: All invitations with status
-
-### Creating an Invitation
-
-![Create Invitation Form](./images/06-admin-create-form.png)
-
-To create a client invitation:
-
-1. Click "Create New Invitation"
-2. Fill out the form:
-   - **Client Email** (optional): Restrict invitation to specific email. Leave blank for anyone to use.
-   - **Subscription Tier**: Free (5 syncs), Pro (100 syncs), or Unlimited
-   - **Complimentary**: Check for 100% off — automatically grants Unlimited tier
-3. Click "Generate Invitation Link"
-
-**Note**: When "Complimentary" is checked, the tier selector is disabled and defaults to Unlimited.
-
-### Sharing the Invitation Link
-
-![Active Invitation](./images/07-admin-active-invitation.png)
-
-After creating an invitation:
-
-1. The invitation appears in "Active Invitations"
-2. Use the action buttons:
-   - **Copy** (clipboard icon): Copy link to clipboard
-   - **Open** (external link icon): Preview the setup page
-   - **Delete** (trash icon): Revoke the invitation
-
-The invitation shows:
-- Client email (or "Any email" if unrestricted)
-- Tier badge (free/pro/unlimited)
-- Complimentary badge (if applicable)
-- Time remaining (e.g., "7 days left")
-- Creation date
-
-### Client Setup Experience
-
-![Client Setup Page](./images/08-client-setup.png)
+## What Clients See
 
 When a client opens the invitation link:
 
-1. They see "You've been invited!" with their plan (e.g., Unlimited)
-2. Email is pre-filled (if specified during invitation creation)
-3. They enter a password
-4. Click "Create Account & Get Started"
+1. **"You've been invited!"** banner with their plan (e.g., Unlimited)
+2. **Email field** — Pre-filled if you specified one
+3. **Password field** — They create their password
+4. **Create Account & Get Started** button
 
-**What happens next:**
-- Account is created with the specified tier
-- If Complimentary was checked, they have Unlimited access at no cost
-- They're redirected to the dashboard to connect services
+After signup:
+- Account created with the specified tier
+- If Complimentary: Unlimited access at no cost
+- Redirected to dashboard to connect Fireflies and Notion
 
 ---
 
@@ -135,29 +66,46 @@ When a client opens the invitation link:
 ```
 Created → Active → Redeemed
              ↓
-          Expired (after 7 days if unredeemed)
+          Expired (7 days)
 ```
 
-| Status | Description |
-|--------|-------------|
+| Status | Meaning |
+|--------|---------|
 | **Active** | Link is valid, awaiting redemption |
-| **Redeemed** | Client created account using link |
-| **Expired** | 7 days passed without redemption |
+| **Redeemed** | Client created account |
+| **Expired** | 7 days passed, link no longer works |
 
-Admins can revoke active invitations at any time.
+You can delete active invitations at any time.
+
+---
+
+## Example: White Glove Client Setup
+
+**Scenario**: New client needs unlimited access at no cost.
+
+1. Go to [fn.workway.co/admin](https://fn.workway.co/admin)
+2. Click **Create New Invitation**
+3. Enter: `client@theircompany.com`
+4. Check: **Complimentary (100% off)**
+5. Click **Generate Invitation Link**
+6. Copy the link and send to client
+
+**Client receives**: `fn.workway.co/setup/abc123`
+
+They sign up → Unlimited tier → Ready to sync.
 
 ---
 
 ## FAQ
 
-**Q: Can I resend an invitation?**
-No. Create a new invitation and share the new link.
+**Can I resend an invitation?**
+No. Create a new one and share the new link.
 
-**Q: What happens when Complimentary is checked?**
-The client receives Unlimited tier at no cost. They never see pricing or payment prompts.
+**What if I need to change a client's tier after they sign up?**
+Contact support — not available in admin panel yet.
 
-**Q: Can I change a client's tier after they redeem?**
-Not currently through the admin panel. Contact support.
+**Can multiple people use the same link?**
+Only if you left Client Email blank. Otherwise, only that specific email can use it.
 
-**Q: How long are invitations valid?**
-7 days from creation.
+**How do I know when someone redeemed?**
+The stats card shows "Redeemed" count, and the invitation row shows status.
