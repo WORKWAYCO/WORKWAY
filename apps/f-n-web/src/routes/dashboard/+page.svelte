@@ -2,6 +2,7 @@
 	import type { PageData } from './$types';
 	import { Mic, BookOpen, Check, X, ChevronDown, Loader2 } from 'lucide-svelte';
 	import { invalidateAll } from '$app/navigation';
+	import { page } from '$app/stores';
 
 	interface TranscriptItem {
 		id: string;
@@ -31,12 +32,14 @@
 	let firefliesApiKey = $state('');
 	let firefliesConnecting = $state(false);
 	let firefliesError = $state<string | null>(null);
+	let firefliesErrorHint = $state<string | null>(null);
 
 	async function connectFireflies() {
 		if (!firefliesApiKey.trim()) return;
 
 		firefliesConnecting = true;
 		firefliesError = null;
+		firefliesErrorHint = null;
 
 		try {
 			const res = await fetch('/api/integrations/fireflies/connect', {
@@ -45,10 +48,11 @@
 				body: JSON.stringify({ apiKey: firefliesApiKey.trim() })
 			});
 
-			const result = await res.json();
+			const result = await res.json() as { error?: string; hint?: string; success?: boolean };
 
 			if (!res.ok) {
 				firefliesError = result.error || 'Failed to connect';
+				firefliesErrorHint = result.hint || null;
 				return;
 			}
 
@@ -190,8 +194,27 @@
 		</div>
 	</div>
 
+	<!-- Success Messages -->
+	{#if $page.url.searchParams.get('success') === 'notion_connected'}
+		<div class="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-[var(--brand-radius)] text-green-400 text-sm flex items-center gap-2">
+			<Check size={16} />
+			Notion connected successfully
+		</div>
+	{/if}
+
 	<!-- Connection Status — only show when setup needed (tool recedes when ready) -->
 	{#if !bothConnected}
+		<!-- Step Indicator -->
+		<div class="mb-6 text-sm text-[var(--brand-text-muted)]">
+			{#if !data.connections.fireflies && !data.connections.notion}
+				<span class="font-medium text-[var(--brand-text)]">Step 1 of 2:</span> Connect your accounts to start syncing
+			{:else if data.connections.fireflies && !data.connections.notion}
+				<span class="font-medium text-[var(--brand-text)]">Step 2 of 2:</span> Authorize Notion to complete setup
+			{:else if !data.connections.fireflies && data.connections.notion}
+				<span class="font-medium text-[var(--brand-text)]">Step 2 of 2:</span> Connect Fireflies to complete setup
+			{/if}
+		</div>
+
 		<div class="grid md:grid-cols-2 gap-4 mb-8">
 			<!-- Fireflies Connection -->
 			<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-6 bg-[var(--brand-surface-elevated)]">
@@ -215,7 +238,12 @@
 					{#if showFirefliesForm}
 						<div class="space-y-3">
 							{#if firefliesError}
-								<div class="text-sm text-[var(--brand-error)]">{firefliesError}</div>
+								<div class="text-sm text-[var(--brand-error)]">
+									{firefliesError}
+									{#if firefliesErrorHint}
+										<p class="text-[var(--brand-text-muted)] mt-1 font-normal">{firefliesErrorHint}</p>
+									{/if}
+								</div>
 							{/if}
 							<input
 								type="password"
@@ -239,7 +267,7 @@
 								</button>
 							</div>
 							<a
-								href="https://app.fireflies.ai/integrations/custom/api"
+								href="https://app.fireflies.ai/settings#DeveloperSettings"
 								target="_blank"
 								rel="noopener"
 								class="block text-xs text-[var(--brand-text-muted)] hover:text-[var(--brand-text)] transition-colors"

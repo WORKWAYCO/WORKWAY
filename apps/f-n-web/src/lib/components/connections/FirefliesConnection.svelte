@@ -51,6 +51,9 @@
 				{#if error}
 					<div class="text-sm text-[var(--brand-error)]">{error}</div>
 				{/if}
+				<p class="text-xs text-[var(--brand-text-muted)]">
+					Find your API key in Fireflies Settings → Developer Settings
+				</p>
 				<input
 					type="password"
 					bind:value={apiKey}
@@ -73,7 +76,7 @@
 					</button>
 				</div>
 				<a
-					href="https://app.fireflies.ai/integrations/custom/api"
+					href="https://app.fireflies.ai/settings#DeveloperSettings"
 					target="_blank"
 					rel="noopener"
 					class="block text-xs text-[var(--brand-text-muted)] hover:text-[var(--brand-text)] transition-colors"

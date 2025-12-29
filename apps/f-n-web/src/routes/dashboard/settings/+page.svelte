@@ -155,7 +155,7 @@
 								</button>
 							</div>
 							<a
-								href="https://app.fireflies.ai/integrations/custom/api"
+								href="https://app.fireflies.ai/settings#DeveloperSettings"
 								target="_blank"
 								rel="noopener"
 								class="block text-xs text-[var(--brand-text-muted)] hover:text-[var(--brand-text)] transition-colors"

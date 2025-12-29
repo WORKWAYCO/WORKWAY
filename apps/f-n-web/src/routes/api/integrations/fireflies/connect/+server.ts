@@ -17,12 +17,22 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		return json({ error: 'API key is required' }, { status: 400 });
 	}
 
+	// Clean the API key (remove accidental whitespace)
+	const cleanedKey = apiKey.trim();
+
+	if (!cleanedKey) {
+		return json({ error: 'API key is required' }, { status: 400 });
+	}
+
 	// Validate API key
-	const client = createFirefliesClient(apiKey);
+	const client = createFirefliesClient(cleanedKey);
 	const isValid = await client.validateApiKey();
 
 	if (!isValid) {
-		return json({ error: 'Invalid Fireflies API key' }, { status: 400 });
+		return json({
+			error: 'Invalid API key',
+			hint: 'Check that you copied the full key from Fireflies Settings → Developer Settings. The key is a long string of letters and numbers.'
+		}, { status: 400 });
 	}
 
 	const { DB } = platform.env;
@@ -39,14 +49,14 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		await DB.prepare(
 			'UPDATE connected_accounts SET access_token = ?, updated_at = datetime("now") WHERE user_id = ? AND provider = ?'
 		)
-			.bind(apiKey, locals.user.id, 'fireflies')
+			.bind(cleanedKey, locals.user.id, 'fireflies')
 			.run();
 	} else {
 		// Create new
 		await DB.prepare(
 			'INSERT INTO connected_accounts (id, user_id, provider, access_token) VALUES (?, ?, ?, ?)'
 		)
-			.bind(crypto.randomUUID(), locals.user.id, 'fireflies', apiKey)
+			.bind(crypto.randomUUID(), locals.user.id, 'fireflies', cleanedKey)
 			.run();
 	}
 
