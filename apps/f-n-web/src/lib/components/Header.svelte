@@ -10,6 +10,9 @@
 	<nav class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
 		<a href="/" class="brand-arrow text-2xl font-semibold">F→N</a>
 		<div class="flex items-center gap-6">
+			<a href="/docs" class="text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
+				Docs
+			</a>
 			{#if showPricing}
 				<a href="/pricing" class="text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
 					Pricing
