@@ -233,8 +233,8 @@
 		</div>
 	</div>
 {:else}
-	<!-- Tour Active -->
-	<div class="relative">
+	<!-- Tour Active - Full Screen Overlay -->
+	<div class="fixed inset-0 z-[100] bg-[var(--brand-bg)] overflow-auto" in:fade={{ duration: 200 }}>
 		<!-- Tour Controls (top bar) -->
 		<div class="sticky top-0 z-50 bg-[var(--brand-surface-elevated)] border-b border-[var(--brand-border)] px-4 py-3">
 			<div class="max-w-4xl mx-auto flex items-center justify-between">
@@ -621,10 +621,10 @@
 		<!-- Narration Box (floating, typewriter) -->
 		{#if tourStarted}
 			<div
-				class="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-full max-w-lg px-4"
+				class="fixed bottom-6 left-1/2 -translate-x-1/2 z-[110] w-full max-w-lg px-4"
 				in:fly={{ y: 20, duration: 200 }}
 			>
-				<div class="bg-[var(--brand-bg)] border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-5 shadow-2xl">
+				<div class="bg-[var(--brand-surface-elevated)] border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-5 shadow-2xl">
 					<!-- Narration text with typewriter effect -->
 					<p class="text-sm mb-4 min-h-[40px] font-mono">
 						{displayedText}<span class="animate-pulse {isTyping ? '' : 'opacity-0'}">|</span>
