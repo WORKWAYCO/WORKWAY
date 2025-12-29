@@ -13,6 +13,7 @@
 		redeemed_at: number | null;
 		redeemed_by_user_id: string | null;
 		created_at: string;
+		complimentary?: number;
 	}
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
@@ -20,6 +21,7 @@
 	let showCreateForm = $state(false);
 	let email = $state('');
 	let tier = $state('free');
+	let complimentary = $state(false);
 	let copied = $state<string | null>(null);
 
 	function getSetupUrl(inviteCode: string): string {
@@ -123,6 +125,7 @@
 					showCreateForm = false;
 					email = '';
 					tier = 'free';
+					complimentary = false;
 				};
 			}}>
 				<h3 class="font-semibold mb-4">Create Invitation</h3>
@@ -175,12 +178,38 @@
 							id="tier"
 							name="tier"
 							bind:value={tier}
-							class="w-full px-3 py-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] bg-[var(--brand-surface)] text-sm"
+							disabled={complimentary}
+							class="w-full px-3 py-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] bg-[var(--brand-surface)] text-sm disabled:opacity-50 disabled:cursor-not-allowed"
 						>
 							<option value="free">Free (5 syncs/month)</option>
 							<option value="pro">Pro (100 syncs/month)</option>
 							<option value="unlimited">Unlimited</option>
 						</select>
+						{#if complimentary}
+							<p class="text-xs text-[var(--brand-text-muted)] mt-1">
+								Complimentary access will grant Unlimited tier
+							</p>
+						{/if}
+					</div>
+
+					<div>
+						<label class="flex items-center gap-2 cursor-pointer">
+							<input
+								type="checkbox"
+								name="complimentary"
+								bind:checked={complimentary}
+								onchange={() => {
+									if (complimentary) {
+										tier = 'unlimited';
+									}
+								}}
+								class="w-4 h-4 border border-[var(--brand-border)] rounded bg-[var(--brand-surface)] checked:bg-[var(--brand-primary)] checked:border-[var(--brand-primary)] cursor-pointer"
+							/>
+							<span class="text-sm font-medium">Complimentary (100% off)</span>
+						</label>
+						<p class="text-xs text-[var(--brand-text-muted)] mt-1 ml-6">
+							Client receives Unlimited access at no cost
+						</p>
 					</div>
 				</div>
 
@@ -229,6 +258,11 @@
 									<span class="px-2 py-0.5 bg-[var(--brand-accent)]/10 text-[var(--brand-accent)] rounded text-xs font-medium">
 										{invitation.tier}
 									</span>
+									{#if invitation.complimentary}
+										<span class="px-2 py-0.5 bg-[var(--brand-success)]/10 text-[var(--brand-success)] rounded text-xs font-medium">
+											Complimentary
+										</span>
+									{/if}
 								</div>
 								<div class="flex items-center gap-3 text-xs text-[var(--brand-text-muted)]">
 									<span class="flex items-center gap-1">

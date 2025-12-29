@@ -20,6 +20,7 @@ interface Invitation {
 	expires_at: number;
 	redeemed_at: number | null;
 	created_at: string;
+	complimentary?: number;
 }
 
 export const load: PageServerLoad = async ({ params, locals, platform }) => {
@@ -38,7 +39,7 @@ export const load: PageServerLoad = async ({ params, locals, platform }) => {
 
 	// Look up invitation
 	const invitation = await DB.prepare(
-		'SELECT id, invite_code, email, tier, created_by_email, expires_at, redeemed_at, created_at FROM client_invitations WHERE invite_code = ?'
+		'SELECT id, invite_code, email, tier, created_by_email, expires_at, redeemed_at, created_at, complimentary FROM client_invitations WHERE invite_code = ?'
 	).bind(code).first<Invitation>();
 
 	if (!invitation) {
@@ -71,7 +72,7 @@ export const actions: Actions = {
 
 		// Get invitation
 		const invitation = await DB.prepare(
-			'SELECT id, invite_code, email, tier, expires_at, redeemed_at FROM client_invitations WHERE invite_code = ?'
+			'SELECT id, invite_code, email, tier, expires_at, redeemed_at, created_by_email, complimentary FROM client_invitations WHERE invite_code = ?'
 		).bind(code).first<Invitation>();
 
 		if (!invitation) {
@@ -129,10 +130,14 @@ export const actions: Actions = {
 					.run();
 
 				// Create subscription with tier from invitation
+				// If complimentary, store sponsor info
+				const complimentary = invitation.complimentary || 0;
+				const sponsoredBy = complimentary ? invitation.created_by_email : null;
+
 				await DB.prepare(
-					'INSERT INTO subscriptions (id, user_id, tier, status, sync_count, sync_count_reset_at) VALUES (?, ?, ?, ?, 0, ?)'
+					'INSERT INTO subscriptions (id, user_id, tier, status, sync_count, sync_count_reset_at, complimentary, sponsored_by) VALUES (?, ?, ?, ?, 0, ?, ?, ?)'
 				)
-					.bind(crypto.randomUUID(), data.user.id, invitation.tier, invitation.tier, new Date().toISOString())
+					.bind(crypto.randomUUID(), data.user.id, invitation.tier, invitation.tier, new Date().toISOString(), complimentary, sponsoredBy)
 					.run();
 			} catch (dbError) {
 				// User might already exist locally, continue

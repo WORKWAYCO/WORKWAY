@@ -19,6 +19,7 @@ interface Invitation {
 	redeemed_at: number | null;
 	redeemed_by_user_id: string | null;
 	created_at: string;
+	complimentary?: number;
 }
 
 export const load: PageServerLoad = async ({ locals, platform }) => {
@@ -40,7 +41,7 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 
 	// Get all invitations (most recent first)
 	const invitations = await DB.prepare(
-		`SELECT id, invite_code, email, tier, created_by_email, expires_at, redeemed_at, redeemed_by_user_id, created_at
+		`SELECT id, invite_code, email, tier, created_by_email, expires_at, redeemed_at, redeemed_by_user_id, created_at, complimentary
 		 FROM client_invitations
 		 ORDER BY created_at DESC
 		 LIMIT 50`
@@ -67,7 +68,13 @@ export const actions: Actions = {
 
 		const formData = await request.formData();
 		const email = formData.get('email')?.toString().toLowerCase().trim() || null;
-		const tier = formData.get('tier')?.toString() || 'free';
+		let tier = formData.get('tier')?.toString() || 'free';
+		const complimentary = formData.get('complimentary') === 'on' ? 1 : 0;
+
+		// If complimentary, force tier to unlimited
+		if (complimentary) {
+			tier = 'unlimited';
+		}
 
 		const { DB } = platform.env;
 
@@ -76,10 +83,10 @@ export const actions: Actions = {
 		const expiresAt = getExpirationTimestamp();
 
 		await DB.prepare(
-			`INSERT INTO client_invitations (id, invite_code, email, tier, created_by_email, expires_at)
-			 VALUES (?, ?, ?, ?, ?, ?)`
+			`INSERT INTO client_invitations (id, invite_code, email, tier, created_by_email, expires_at, complimentary)
+			 VALUES (?, ?, ?, ?, ?, ?, ?)`
 		)
-			.bind(id, inviteCode, email, tier, locals.user.email, expiresAt)
+			.bind(id, inviteCode, email, tier, locals.user.email, expiresAt, complimentary)
 			.run();
 
 		return {
