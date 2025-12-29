@@ -29,7 +29,7 @@
 			</div>
 			<h1 class="text-3xl font-bold mb-3">Sync Fireflies to Notion</h1>
 			<p class="text-[var(--brand-text-muted)] text-lg">
-				Transcripts as database entries — queryable, filterable, linked
+				Transcripts as database entries — with summaries, action items, and full text
 			</p>
 		</div>
 

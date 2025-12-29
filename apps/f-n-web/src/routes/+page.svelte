@@ -83,7 +83,7 @@
 				"name": "Does Fireflies have a Notion database integration?",
 				"acceptedAnswer": {
 					"@type": "Answer",
-					"text": "Fireflies native integration syncs to Notion pages only. F→N syncs to databases — queryable, filterable, linkable to other databases via relation properties."
+					"text": "Fireflies native integration syncs to Notion pages only. F→N syncs to databases — filter by date, search all content, add relations to link transcripts to other databases."
 				}
 			},
 			{
@@ -146,14 +146,14 @@
 							<Search size={20} />
 						</div>
 						<h3 class="font-semibold text-lg mb-2">Database entries</h3>
-						<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Each transcript becomes a row. Filter by date, participant, or keyword.</p>
+						<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Each transcript becomes a row. Filter by date, search by participant or keyword.</p>
 					</div>
 					<div>
 						<div class="w-10 h-10 bg-[var(--color-border-default)] rounded-[var(--radius-md)] flex items-center justify-center mb-4 text-[var(--color-fg-secondary)]">
 							<Link size={20} />
 						</div>
-						<h3 class="font-semibold text-lg mb-2">Relation properties</h3>
-						<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Link transcripts to projects, clients, or any other database.</p>
+						<h3 class="font-semibold text-lg mb-2">Ready for relations</h3>
+						<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Add relation properties to link transcripts to projects, clients, or other databases.</p>
 					</div>
 					<div>
 						<div class="w-10 h-10 bg-[var(--color-border-default)] rounded-[var(--radius-md)] flex items-center justify-center mb-4 text-[var(--color-fg-secondary)]">
@@ -161,6 +161,43 @@
 						</div>
 						<h3 class="font-semibold text-lg mb-2">Bulk import</h3>
 						<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Tested with 900+ transcripts. No timeouts — runs on Cloudflare.</p>
+					</div>
+				</div>
+			</div>
+		</section>
+
+		<!-- What's inside each entry -->
+		<section class="border-t border-[var(--color-border-default)]">
+			<div class="max-w-5xl mx-auto px-4 py-20">
+				<h2 class="text-3xl font-bold mb-12 text-center">What's in each entry</h2>
+				<div class="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+					<div class="flex items-start gap-4">
+						<div class="w-2 h-2 rounded-full bg-[var(--color-fg-secondary)] mt-2 shrink-0"></div>
+						<div>
+							<h3 class="font-semibold mb-1">AI Summary</h3>
+							<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Overview extracted from the conversation</p>
+						</div>
+					</div>
+					<div class="flex items-start gap-4">
+						<div class="w-2 h-2 rounded-full bg-[var(--color-fg-secondary)] mt-2 shrink-0"></div>
+						<div>
+							<h3 class="font-semibold mb-1">Key points</h3>
+							<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Bulleted highlights for quick scanning</p>
+						</div>
+					</div>
+					<div class="flex items-start gap-4">
+						<div class="w-2 h-2 rounded-full bg-[var(--color-fg-secondary)] mt-2 shrink-0"></div>
+						<div>
+							<h3 class="font-semibold mb-1">Action items</h3>
+							<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Checkable to-do blocks in Notion</p>
+						</div>
+					</div>
+					<div class="flex items-start gap-4">
+						<div class="w-2 h-2 rounded-full bg-[var(--color-fg-secondary)] mt-2 shrink-0"></div>
+						<div>
+							<h3 class="font-semibold mb-1">Full transcript</h3>
+							<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Speaker-labeled, searchable text</p>
+						</div>
 					</div>
 				</div>
 			</div>
