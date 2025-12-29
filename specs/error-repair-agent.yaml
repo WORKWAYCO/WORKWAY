@@ -1,0 +1,335 @@
+# Error Repair Agent
+# Autonomous error diagnosis and fix with human-in-loop approval
+
+title: Error Repair Agent
+property: cloudflare
+complexity: substantial
+
+# Philosophy: Tool recedes from labor, not responsibility
+# Agent does the work, human makes the decision
+
+overview: |
+  Receives error reports from production systems, uses Claude to diagnose
+  and propose fixes, creates PRs with evidence, and auto-deploys on approval.
+
+  Flow: Error → Queue → Agent → PR → Approval → Deploy
+
+  Key principle: The agent handles the tedious parts (reading logs, tracing
+  code paths, writing fixes, running tests) while humans retain decision
+  authority over what ships.
+
+architecture:
+  components:
+    - name: error-receiver
+      type: worker
+      path: packages/workers/error-receiver/
+      description: Webhook endpoint for error sources (Sentry, CloudWatch, custom)
+
+    - name: repair-queue
+      type: queue
+      description: Buffers errors for processing, handles backpressure
+
+    - name: repair-orchestrator
+      type: durable-object
+      path: packages/workers/repair-orchestrator/
+      description: Manages repair sessions, prevents duplicate work, tracks state
+
+    - name: repair-agent
+      type: workflow
+      path: packages/workflows/repair-agent/
+      description: Claude-powered diagnosis and fix generation
+
+  data-flow: |
+    Sentry/CloudWatch/Logs
+           ↓
+    error-receiver (Worker)
+           ↓
+    repair-queue (Queue)
+           ↓
+    repair-orchestrator (DO) ← deduplication, rate limiting
+           ↓
+    repair-agent (Workflow) ← Claude API
+           ↓
+    GitHub PR + Beads Issue
+           ↓
+    Human Approval
+           ↓
+    Auto-Deploy (GitHub Actions)
+
+features:
+  - title: Error Receiver Worker
+    priority: 1
+    files:
+      - Cloudflare/packages/workers/error-receiver/src/index.ts
+      - Cloudflare/packages/workers/error-receiver/wrangler.toml
+    acceptance:
+      - test: Accepts Sentry webhook format
+        verify: pnpm test --filter=error-receiver
+      - test: Accepts generic error JSON format
+        verify: pnpm test --filter=error-receiver
+      - Normalizes errors to common schema
+      - Enqueues to repair-queue
+      - Returns 200 within 100ms (non-blocking)
+    schema:
+      input: |
+        // Sentry format or generic
+        interface ErrorEvent {
+          source: 'sentry' | 'cloudwatch' | 'custom';
+          level: 'error' | 'fatal' | 'warning';
+          message: string;
+          stack?: string;
+          context?: Record<string, unknown>;
+          timestamp: string;
+          fingerprint?: string; // For deduplication
+        }
+      normalized: |
+        interface NormalizedError {
+          id: string;
+          fingerprint: string;
+          level: 'error' | 'fatal' | 'warning';
+          message: string;
+          stack: string | null;
+          context: {
+            url?: string;
+            user_id?: string;
+            request_id?: string;
+            worker?: string;
+            [key: string]: unknown;
+          };
+          source: string;
+          repo: string; // Inferred from worker name or explicit
+          received_at: string;
+        }
+
+  - title: Repair Queue Configuration
+    priority: 1
+    files:
+      - Cloudflare/packages/workers/error-receiver/wrangler.toml
+    acceptance:
+      - Queue created with appropriate retention
+      - Dead letter queue for failed processing
+      - Batch size configured for efficient processing
+
+  - title: Repair Orchestrator Durable Object
+    priority: 1
+    depends_on:
+      - Error Receiver Worker
+    files:
+      - Cloudflare/packages/workers/repair-orchestrator/src/index.ts
+      - Cloudflare/packages/workers/repair-orchestrator/src/state.ts
+    acceptance:
+      - test: Deduplicates errors by fingerprint within 1 hour
+        verify: pnpm test --filter=repair-orchestrator
+      - test: Rate limits to max 10 repairs per hour per repo
+        verify: pnpm test --filter=repair-orchestrator
+      - test: Tracks repair state (pending, diagnosing, fixing, pr-created, deployed)
+        verify: pnpm test --filter=repair-orchestrator
+      - Prevents concurrent repairs for same error
+      - Exposes status endpoint for monitoring
+    state-schema: |
+      interface RepairState {
+        id: string;
+        error_fingerprint: string;
+        status: 'pending' | 'diagnosing' | 'fixing' | 'pr_created' | 'approved' | 'deployed' | 'failed';
+        repo: string;
+        error: NormalizedError;
+        diagnosis?: Diagnosis;
+        fix?: Fix;
+        pr_url?: string;
+        beads_issue?: string;
+        created_at: string;
+        updated_at: string;
+        attempts: number;
+        failure_reason?: string;
+      }
+
+  - title: Repair Agent Workflow
+    priority: 1
+    depends_on:
+      - Repair Orchestrator Durable Object
+    files:
+      - Cloudflare/packages/workflows/repair-agent/src/index.ts
+      - Cloudflare/packages/workflows/repair-agent/src/diagnose.ts
+      - Cloudflare/packages/workflows/repair-agent/src/fix.ts
+      - Cloudflare/packages/workflows/repair-agent/src/pr.ts
+    acceptance:
+      - test: Diagnoses error with relevant code context
+        verify: pnpm test --filter=repair-agent
+      - test: Generates fix with test coverage
+        verify: pnpm test --filter=repair-agent
+      - test: Creates PR with evidence
+        verify: pnpm test --filter=repair-agent
+      - test: Creates Beads issue for tracking
+        verify: pnpm test --filter=repair-agent
+      - Workflow is idempotent (can resume from any step)
+    workflow-steps:
+      - name: diagnose
+        description: |
+          1. Fetch relevant code files based on stack trace
+          2. Send to Claude with error context
+          3. Get structured diagnosis (root cause, affected files, confidence)
+        output: Diagnosis
+
+      - name: generate-fix
+        description: |
+          1. Create branch from main
+          2. Apply fix using Claude
+          3. Run tests locally
+          4. If tests fail, iterate (max 3 attempts)
+        output: Fix
+
+      - name: create-pr
+        description: |
+          1. Push branch to GitHub
+          2. Create PR with diagnosis + fix explanation
+          3. Include test results as evidence
+          4. Link to error source
+        output: PullRequest
+
+      - name: create-beads-issue
+        description: |
+          1. Create Beads issue with error context
+          2. Link to PR
+          3. Add appropriate labels
+        output: BeadsIssue
+
+  - title: GitHub Actions Deploy on Approval
+    priority: 2
+    depends_on:
+      - Repair Agent Workflow
+    files:
+      - Cloudflare/.github/workflows/repair-deploy.yml
+      - workway-platform/.github/workflows/repair-deploy.yml
+    acceptance:
+      - Triggers on PR approval with 'repair-agent' label
+      - Runs full test suite before deploy
+      - Deploys to staging first, then production
+      - Posts deployment status to PR
+      - Updates Beads issue status
+
+  - title: Monitoring Dashboard
+    priority: 3
+    depends_on:
+      - Repair Orchestrator Durable Object
+    files:
+      - Cloudflare/packages/workers/repair-orchestrator/src/dashboard.ts
+    acceptance:
+      - Shows pending/active repairs
+      - Shows success/failure rate
+      - Shows average time-to-fix
+      - Allows manual retry of failed repairs
+
+schemas:
+  diagnosis: |
+    interface Diagnosis {
+      root_cause: string;
+      confidence: 'high' | 'medium' | 'low';
+      affected_files: string[];
+      related_code: {
+        file: string;
+        start_line: number;
+        end_line: number;
+        snippet: string;
+      }[];
+      suggested_approach: string;
+      risk_assessment: 'low' | 'medium' | 'high';
+      similar_past_errors?: string[]; // Fingerprints of similar errors
+    }
+
+  fix: |
+    interface Fix {
+      branch: string;
+      commits: {
+        sha: string;
+        message: string;
+        files_changed: string[];
+      }[];
+      test_results: {
+        passed: number;
+        failed: number;
+        skipped: number;
+        duration_ms: number;
+      };
+      changes_summary: string;
+    }
+
+prompts:
+  diagnosis: |
+    You are diagnosing a production error. Your goal is to identify the root cause
+    and suggest a fix approach.
+
+    ERROR:
+    {error_message}
+
+    STACK TRACE:
+    {stack_trace}
+
+    CONTEXT:
+    {context}
+
+    RELEVANT CODE:
+    {code_snippets}
+
+    Provide your diagnosis in the following JSON format:
+    {
+      "root_cause": "Clear explanation of what caused this error",
+      "confidence": "high|medium|low",
+      "affected_files": ["list", "of", "files"],
+      "suggested_approach": "How to fix this",
+      "risk_assessment": "low|medium|high"
+    }
+
+    Be specific. Reference line numbers. Explain WHY not just WHAT.
+
+  fix: |
+    You are fixing a production error. Apply the minimum change needed to resolve
+    the issue without introducing new problems.
+
+    DIAGNOSIS:
+    {diagnosis}
+
+    FILES TO MODIFY:
+    {files}
+
+    Requirements:
+    1. Fix the root cause, not symptoms
+    2. Add or update tests to cover this case
+    3. Keep changes minimal and focused
+    4. Do not refactor unrelated code
+
+    For each file, provide the exact changes needed.
+
+requirements:
+  - All API keys stored in Worker secrets (never in code)
+  - Claude API calls use streaming for long operations
+  - GitHub token has minimal required permissions (repo, PR)
+  - Rate limiting prevents runaway costs
+  - All repairs logged for audit trail
+  - Errors with 'high' risk assessment require human triage before agent attempts fix
+
+security:
+  - Worker secrets for API keys (ANTHROPIC_API_KEY, GITHUB_TOKEN)
+  - GitHub App preferred over PAT for better audit trail
+  - Repo allowlist prevents agent from touching unauthorized repos
+  - No direct production database access from agent
+  - All fixes must pass CI before deploy is possible
+
+cost-controls:
+  - Max 10 repairs per hour per repo
+  - Max 3 Claude API calls per repair attempt
+  - Max 3 fix iterations before failing to human
+  - Daily cost cap via Anthropic API usage limits
+  - Batch similar errors (same fingerprint) into single repair
+
+success:
+  - Error received → PR created in < 5 minutes (p95)
+  - Fix success rate > 70% for 'high' confidence diagnoses
+  - Zero unauthorized deployments
+  - Full audit trail for every repair attempt
+  - Human approval required for every deploy
+
+future:
+  - Learn from approved fixes to improve diagnosis
+  - Auto-approve low-risk fixes after track record established
+  - Integration with on-call rotation for high-risk errors
+  - Proactive error prediction from log patterns

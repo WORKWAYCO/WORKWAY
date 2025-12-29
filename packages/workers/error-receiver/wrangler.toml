@@ -1,0 +1,21 @@
+name = "error-receiver"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Queue binding for repair jobs
+[[queues.producers]]
+queue = "repair-queue"
+binding = "REPAIR_QUEUE"
+
+# Secrets (set via wrangler secret put)
+# - WEBHOOK_SECRET: Shared secret for webhook validation
+# - ALLOWED_REPOS: Comma-separated list of repos to accept errors for
+
+[vars]
+ALLOWED_REPOS = "workway-platform,Cloudflare"
+
+# Routes
+# routes = [
+#   { pattern = "errors.workway.co/*", zone_name = "workway.co" }
+# ]
