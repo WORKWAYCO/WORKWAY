@@ -115,21 +115,21 @@
 		<section class="max-w-5xl mx-auto px-4 py-24 text-center">
 			<h1 class="font-bold tracking-tight mb-6 leading-tight" style="font-size: clamp(2.5rem, 7vw, 4.5rem);">
 				Fireflies transcripts<br />
-				<span class="text-white/80">in Notion databases</span>
+				<span class="text-[var(--color-fg-secondary)]">in Notion databases</span>
 			</h1>
-			<p class="text-white/60 max-w-2xl mx-auto mb-10 text-center leading-relaxed" style="font-size: clamp(1.125rem, 2vw, 1.5rem);">
+			<p class="text-[var(--color-fg-tertiary)] max-w-2xl mx-auto mb-10 text-center leading-relaxed" style="font-size: clamp(1.125rem, 2vw, 1.5rem);">
 				Not pages — databases. Queryable, filterable, linked to your work.
 			</p>
 			<div class="flex items-center justify-center gap-4">
 				<a
 					href="/auth/signup"
-					class="bg-white text-black px-6 py-3 rounded-md font-medium hover:bg-white/90 transition-colors"
+					class="bg-[var(--color-fg-primary)] text-[var(--color-bg-pure)] px-6 py-3 rounded-[var(--radius-md)] font-medium hover:opacity-90 transition-opacity"
 				>
 					Start free
 				</a>
 				<a
 					href="#how-it-works"
-					class="border border-white/10 px-6 py-3 rounded-md font-medium hover:bg-white/5 transition-colors"
+					class="border border-[var(--color-border-default)] px-6 py-3 rounded-[var(--radius-md)] font-medium hover:bg-[var(--color-hover)] transition-colors"
 				>
 					How it works
 				</a>
@@ -137,43 +137,43 @@
 		</section>
 
 		<!-- What you get -->
-		<section id="how-it-works" class="border-t border-white/10">
+		<section id="how-it-works" class="border-t border-[var(--color-border-default)]">
 			<div class="max-w-5xl mx-auto px-4 py-20">
 				<h2 class="text-3xl font-bold mb-12 text-center">What this does</h2>
 				<div class="grid md:grid-cols-3 gap-12">
 					<div>
-						<div class="w-10 h-10 bg-white/10 rounded-md flex items-center justify-center mb-4 text-white/80">
+						<div class="w-10 h-10 bg-[var(--color-border-default)] rounded-[var(--radius-md)] flex items-center justify-center mb-4 text-[var(--color-fg-secondary)]">
 							<Search size={20} />
 						</div>
 						<h3 class="font-semibold text-lg mb-2">Database entries</h3>
-						<p class="text-white/60 leading-relaxed">Each transcript becomes a row. Filter by date, participant, or keyword.</p>
+						<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Each transcript becomes a row. Filter by date, participant, or keyword.</p>
 					</div>
 					<div>
-						<div class="w-10 h-10 bg-white/10 rounded-md flex items-center justify-center mb-4 text-white/80">
+						<div class="w-10 h-10 bg-[var(--color-border-default)] rounded-[var(--radius-md)] flex items-center justify-center mb-4 text-[var(--color-fg-secondary)]">
 							<Link size={20} />
 						</div>
 						<h3 class="font-semibold text-lg mb-2">Relation properties</h3>
-						<p class="text-white/60 leading-relaxed">Link transcripts to projects, clients, or any other database.</p>
+						<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Link transcripts to projects, clients, or any other database.</p>
 					</div>
 					<div>
-						<div class="w-10 h-10 bg-white/10 rounded-md flex items-center justify-center mb-4 text-white/80">
+						<div class="w-10 h-10 bg-[var(--color-border-default)] rounded-[var(--radius-md)] flex items-center justify-center mb-4 text-[var(--color-fg-secondary)]">
 							<RefreshCw size={20} />
 						</div>
 						<h3 class="font-semibold text-lg mb-2">Bulk import</h3>
-						<p class="text-white/60 leading-relaxed">Tested with 900+ transcripts. No timeouts — runs on Cloudflare.</p>
+						<p class="text-[var(--color-fg-tertiary)] leading-relaxed">Tested with 900+ transcripts. No timeouts — runs on Cloudflare.</p>
 					</div>
 				</div>
 			</div>
 		</section>
 
 		<!-- CTA -->
-		<section class="border-t border-white/10 bg-[#0a0a0a]">
+		<section class="border-t border-[var(--color-border-default)]">
 			<div class="max-w-5xl mx-auto px-4 py-20 text-center">
 				<h2 class="text-3xl font-bold mb-4">5 syncs free. No card required.</h2>
-				<p class="text-white/60 mb-8 leading-relaxed">Pro: $5/mo for 100 syncs. Unlimited: $15/mo.</p>
+				<p class="text-[var(--color-fg-tertiary)] mb-8 leading-relaxed">Pro: $5/mo for 100 syncs. Unlimited: $15/mo.</p>
 				<a
 					href="/auth/signup"
-					class="inline-block bg-white text-black px-6 py-3 rounded-md font-medium hover:bg-white/90 transition-colors"
+					class="inline-block bg-[var(--color-fg-primary)] text-[var(--color-bg-pure)] px-6 py-3 rounded-[var(--radius-md)] font-medium hover:opacity-90 transition-opacity"
 				>
 					Start free
 				</a>

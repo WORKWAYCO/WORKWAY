@@ -263,7 +263,7 @@
 									<input type="hidden" name="id" value={invitation.id} />
 									<button
 										type="submit"
-										class="p-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500 transition-colors"
+										class="p-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] hover:bg-[var(--color-error-muted)] hover:border-[var(--color-error)]/20 hover:text-[var(--color-error)] transition-colors"
 										title="Revoke"
 									>
 										<Trash2 size={16} />
@@ -323,7 +323,7 @@
 									{:else}
 										<span class="text-[var(--brand-text-muted)] italic">Any email</span>
 									{/if}
-									<span class="px-2 py-0.5 bg-neutral-500/10 text-neutral-500 rounded text-xs font-medium">
+									<span class="px-2 py-0.5 bg-[var(--color-fg-muted)]/10 text-[var(--color-fg-muted)] rounded text-xs font-medium">
 										Expired
 									</span>
 								</div>
@@ -335,7 +335,7 @@
 								<input type="hidden" name="id" value={invitation.id} />
 								<button
 									type="submit"
-									class="p-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] hover:bg-red-500/10 hover:border-red-500/20 hover:text-red-500 transition-colors"
+									class="p-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] hover:bg-[var(--color-error-muted)] hover:border-[var(--color-error)]/20 hover:text-[var(--color-error)] transition-colors"
 									title="Delete"
 								>
 									<Trash2 size={16} />

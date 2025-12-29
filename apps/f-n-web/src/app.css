@@ -16,11 +16,13 @@
    ========================================================================== */
 
 :root {
-	/* Colors - Functional Minimalism */
+	/* Colors - Canon: Pure Black Canvas
+	   Visual hierarchy via borders, not grey gradients.
+	   "Weniger, aber besser" */
 	--color-bg-pure: #000000;
-	--color-bg-elevated: #0a0a0a;
-	--color-bg-surface: #111111;
-	--color-bg-subtle: #1a1a1a;
+	--color-bg-elevated: #000000;
+	--color-bg-surface: #000000;
+	--color-bg-subtle: #000000;
 
 	/* Foreground - White with semantic opacity */
 	--color-fg-primary: #ffffff;
@@ -31,10 +33,16 @@
 	/* Borders */
 	--color-border-default: rgba(255, 255, 255, 0.1);
 
+	/* Interactive States */
+	--color-hover: rgba(255, 255, 255, 0.05);
+
 	/* Functional accents */
 	--color-success: #44aa44;
+	--color-success-muted: rgba(68, 170, 68, 0.2);
 	--color-error: #cc4444;
+	--color-error-muted: rgba(204, 68, 68, 0.2);
 	--color-warning: #aa8844;
+	--color-warning-muted: rgba(170, 136, 68, 0.2);
 
 	/* Typography */
 	--font-sans: 'Stack Sans Notch', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
