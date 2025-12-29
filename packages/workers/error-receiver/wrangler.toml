@@ -8,6 +8,14 @@ compatibility_flags = ["nodejs_compat"]
 queue = "repair-queue"
 binding = "REPAIR_QUEUE"
 
+# Queue configuration (created separately)
+# repair-queue: Main queue for error processing
+# repair-queue-dlq: Dead letter queue for failed messages
+#
+# To create queues:
+# wrangler queues create repair-queue
+# wrangler queues create repair-queue-dlq
+
 # Secrets (set via wrangler secret put)
 # - WEBHOOK_SECRET: Shared secret for webhook validation
 # - ALLOWED_REPOS: Comma-separated list of repos to accept errors for

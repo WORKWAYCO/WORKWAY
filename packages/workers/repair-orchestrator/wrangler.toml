@@ -1,0 +1,37 @@
+name = "repair-orchestrator"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Durable Object binding
+[[durable_objects.bindings]]
+name = "REPAIR_ORCHESTRATOR"
+class_name = "RepairOrchestrator"
+script_name = "repair-orchestrator"
+
+# Durable Object migration
+[[migrations]]
+tag = "v1"
+new_classes = ["RepairOrchestrator"]
+
+# Queue consumer for repair-queue
+[[queues.consumers]]
+queue = "repair-queue"
+max_batch_size = 10
+max_batch_timeout = 30
+max_retries = 3
+dead_letter_queue = "repair-queue-dlq"
+
+# Workflow binding (will be created)
+[[workflows]]
+name = "REPAIR_AGENT_WORKFLOW"
+class_name = "RepairAgent"
+
+# Secrets (set via wrangler secret put)
+# - ANTHROPIC_API_KEY: Claude API key
+# - GITHUB_TOKEN: GitHub token for PR creation
+
+# Routes (optional, for direct access)
+# routes = [
+#   { pattern = "repair-orchestrator.workway.co/*", zone_name = "workway.co" }
+# ]
