@@ -1,6 +1,6 @@
 <script lang="ts">
 	import type { PageData, ActionData } from './$types';
-	import { Copy, Trash2, Check, Clock, Users, ExternalLink } from 'lucide-svelte';
+	import { Copy, Trash2, Check, Clock, Users, ExternalLink, BookOpen } from 'lucide-svelte';
 	import { enhance } from '$app/forms';
 
 	interface Invitation {
@@ -92,12 +92,21 @@
 				Generate setup links for white glove clients
 			</p>
 		</div>
-		<a
-			href="/dashboard"
-			class="text-sm text-[var(--brand-text-muted)] hover:text-[var(--brand-text)] transition-colors"
-		>
-			← Back to dashboard
-		</a>
+		<div class="flex items-center gap-4">
+			<a
+				href="/admin/guide"
+				class="text-sm text-[var(--brand-text-muted)] hover:text-[var(--brand-text)] transition-colors flex items-center gap-1"
+			>
+				<BookOpen size={14} />
+				Guide
+			</a>
+			<a
+				href="/dashboard"
+				class="text-sm text-[var(--brand-text-muted)] hover:text-[var(--brand-text)] transition-colors"
+			>
+				← Back to dashboard
+			</a>
+		</div>
 	</div>
 
 	<!-- Stats -->
