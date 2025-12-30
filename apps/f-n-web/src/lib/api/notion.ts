@@ -169,6 +169,65 @@ function parseMarkdownBold(text: string): Array<{ type: string; text: { content:
 }
 
 /**
+ * Split a blob of key points into individual key points
+ * Fireflies sometimes returns all key points as one string with emoji-prefixed sections
+ * Format: "- 📝 **Title1**...\nDesc\n📋 **Title2**...\nDesc"
+ */
+function splitKeyPointsBlob(text: string): string[] {
+	// Match lines starting with emoji (with optional leading "- ")
+	const emojiPattern = /^[\s-]*([\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}])/u;
+
+	const lines = text.split('\n');
+	const keyPoints: string[] = [];
+	let currentPoint: string[] = [];
+
+	for (const line of lines) {
+		const trimmed = line.trim();
+		if (!trimmed) continue;
+
+		// Strip leading "- " if present
+		const cleanLine = trimmed.replace(/^-\s*/, '');
+
+		// Check if this line starts a new key point (emoji prefix)
+		if (emojiPattern.test(cleanLine) && currentPoint.length > 0) {
+			// Save previous key point
+			keyPoints.push(currentPoint.join('\n'));
+			currentPoint = [cleanLine];
+		} else if (emojiPattern.test(cleanLine)) {
+			// First key point
+			currentPoint = [cleanLine];
+		} else {
+			// Description line - add to current key point
+			currentPoint.push(trimmed);
+		}
+	}
+
+	// Don't forget the last key point
+	if (currentPoint.length > 0) {
+		keyPoints.push(currentPoint.join('\n'));
+	}
+
+	return keyPoints;
+}
+
+/**
+ * Parse a key point into a main bullet with optional nested children
+ * Fireflies format: "📝 **Title** (timestamp)\nDescription line 1\nDescription line 2"
+ */
+function parseKeyPointWithChildren(point: string): { title: string; children: string[] } {
+	const lines = point.split('\n').map(l => l.trim()).filter(l => l);
+	if (lines.length === 0) return { title: point, children: [] };
+
+	// First line is the title (with emoji, bold, timestamp)
+	// Strip leading "- " if present
+	const title = lines[0].replace(/^-\s*/, '');
+	// Remaining lines are description children
+	const children = lines.slice(1);
+
+	return { title, children };
+}
+
+/**
  * Format transcript content as Notion blocks
  */
 export function formatTranscriptBlocks(transcript: {
@@ -229,19 +288,49 @@ export function formatTranscriptBlocks(transcript: {
 				rich_text: [{ type: 'text', text: { content: 'Key Points' } }]
 			}
 		});
+
 		// Handle both array and string formats from Fireflies
-		const bullets = Array.isArray(transcript.summary.shorthand_bullet)
+		// Join all items and split by emoji to handle blob format
+		const rawBullets = Array.isArray(transcript.summary.shorthand_bullet)
 			? transcript.summary.shorthand_bullet
 			: [transcript.summary.shorthand_bullet];
-		for (const point of bullets) {
-			if (typeof point === 'string' && point.trim()) {
-				blocks.push({
+
+		// Combine all into one blob and split by emoji-prefixed lines
+		const combinedBlob = rawBullets.join('\n');
+		const keyPoints = splitKeyPointsBlob(combinedBlob);
+
+		for (const point of keyPoints) {
+			if (point.trim()) {
+				const { title, children } = parseKeyPointWithChildren(point);
+
+				// Create main bullet with nested children for descriptions
+				const bulletBlock: {
+					object: string;
+					type: string;
+					bulleted_list_item: {
+						rich_text: Array<{ type: string; text: { content: string }; annotations?: { bold: boolean } }>;
+						children?: unknown[];
+					};
+				} = {
 					object: 'block',
 					type: 'bulleted_list_item',
 					bulleted_list_item: {
-						rich_text: parseMarkdownBold(truncateForNotion(point))
+						rich_text: parseMarkdownBold(truncateForNotion(title))
 					}
-				});
+				};
+
+				// Add description lines as nested bullets
+				if (children.length > 0) {
+					bulletBlock.bulleted_list_item.children = children.map(child => ({
+						object: 'block',
+						type: 'bulleted_list_item',
+						bulleted_list_item: {
+							rich_text: [{ type: 'text', text: { content: truncateForNotion(child) } }]
+						}
+					}));
+				}
+
+				blocks.push(bulletBlock);
 			}
 		}
 	}
