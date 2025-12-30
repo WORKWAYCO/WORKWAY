@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { Link2, Check, Clock, AlertCircle } from 'lucide-svelte';
+	import { Link2, Check, Clock, AlertCircle, Settings2 } from 'lucide-svelte';
 </script>
 
 <svelte:head>
@@ -99,6 +99,77 @@
 					<span class="text-sm"><strong>Full Transcript</strong> — Complete text with speaker attribution</span>
 				</li>
 			</ul>
+		</div>
+	</section>
+
+	<!-- Property Mapping -->
+	<section class="mb-10">
+		<h2 class="text-lg font-semibold mb-4 flex items-center gap-2">
+			<Settings2 size={18} />
+			Property Mapping
+		</h2>
+		<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-5 bg-[var(--brand-surface-elevated)]">
+			<p class="text-sm text-[var(--brand-text-muted)] mb-4">
+				Map additional Fireflies data to your Notion database properties:
+			</p>
+
+			<div class="overflow-x-auto mb-4">
+				<table class="w-full text-sm">
+					<thead>
+						<tr class="border-b border-[var(--brand-border)]">
+							<th class="text-left py-2 pr-4 font-medium">Fireflies Field</th>
+							<th class="text-left py-2 pr-4 font-medium">Notion Type</th>
+							<th class="text-left py-2 font-medium">Description</th>
+						</tr>
+					</thead>
+					<tbody class="text-[var(--brand-text-muted)]">
+						<tr class="border-b border-[var(--brand-border)]">
+							<td class="py-2 pr-4">Duration</td>
+							<td class="py-2 pr-4">Number</td>
+							<td class="py-2">Meeting length in minutes</td>
+						</tr>
+						<tr class="border-b border-[var(--brand-border)]">
+							<td class="py-2 pr-4">Participants</td>
+							<td class="py-2 pr-4">Multi-select</td>
+							<td class="py-2">Attendee names</td>
+						</tr>
+						<tr class="border-b border-[var(--brand-border)]">
+							<td class="py-2 pr-4">Keywords</td>
+							<td class="py-2 pr-4">Multi-select</td>
+							<td class="py-2">AI-extracted topics</td>
+						</tr>
+						<tr>
+							<td class="py-2 pr-4">Meeting Date</td>
+							<td class="py-2 pr-4">Date</td>
+							<td class="py-2">When the meeting occurred</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+			<p class="text-xs uppercase tracking-wide text-[var(--brand-text-muted)] mb-2 mt-4">Setting Up Mappings</p>
+			<ol class="space-y-2 text-sm text-[var(--brand-text-muted)]">
+				<li class="flex items-start gap-2">
+					<span class="text-[var(--brand-text)]">1.</span>
+					<span>Select your Notion database</span>
+				</li>
+				<li class="flex items-start gap-2">
+					<span class="text-[var(--brand-text)]">2.</span>
+					<span>Expand the Property Mapping card</span>
+				</li>
+				<li class="flex items-start gap-2">
+					<span class="text-[var(--brand-text)]">3.</span>
+					<span>Match Fireflies fields to your Notion properties</span>
+				</li>
+				<li class="flex items-start gap-2">
+					<span class="text-[var(--brand-text)]">4.</span>
+					<span>Click "Save Mapping"</span>
+				</li>
+			</ol>
+
+			<p class="text-sm text-[var(--brand-text-muted)] mt-4">
+				Mappings save per database — future syncs use them automatically.
+			</p>
 		</div>
 	</section>
 

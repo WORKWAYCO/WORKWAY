@@ -107,7 +107,15 @@
 					Will syncing the same transcript create duplicates?
 				</summary>
 				<div class="p-4 bg-[var(--brand-surface)] text-sm text-[var(--brand-text-muted)]">
-					Yes. F→N doesn't track which transcripts you've already synced. Syncing the same transcript twice creates two entries in your database.
+					No. F→N tracks which transcripts you've synced and won't create duplicates. Already-synced transcripts appear grayed out in the list. If you need to re-sync, delete the entry from your History first.
+				</div>
+			</details>
+			<details class="group">
+				<summary class="p-4 bg-[var(--brand-surface-elevated)] cursor-pointer hover:bg-[var(--brand-surface)] transition-colors font-medium">
+					Why don't I see Duration or Participants in my synced entries?
+				</summary>
+				<div class="p-4 bg-[var(--brand-surface)] text-sm text-[var(--brand-text-muted)]">
+					You need to configure Property Mapping. After selecting your database, expand the Property Mapping card and match Fireflies fields to your Notion properties. Duration requires a Number property, Participants and Keywords require Multi-select properties.
 				</div>
 			</details>
 			<details class="group">
