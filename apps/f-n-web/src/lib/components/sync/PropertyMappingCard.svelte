@@ -24,15 +24,24 @@
 	let { databaseId, properties, savedMapping, onSave }: Props = $props();
 
 	// Local state
-	let expanded = $state(!savedMapping);
+	let expanded = $state(false);
 	let saving = $state(false);
 	let error = $state<string | null>(null);
 
-	// Form state
-	let duration = $state(savedMapping?.duration || '');
-	let participants = $state(savedMapping?.participants || '');
-	let keywords = $state(savedMapping?.keywords || '');
-	let date = $state(savedMapping?.date || '');
+	// Form state - synced with savedMapping prop
+	let duration = $state('');
+	let participants = $state('');
+	let keywords = $state('');
+	let date = $state('');
+
+	// Sync form state when savedMapping changes
+	$effect(() => {
+		expanded = !savedMapping;
+		duration = savedMapping?.duration || '';
+		participants = savedMapping?.participants || '';
+		keywords = savedMapping?.keywords || '';
+		date = savedMapping?.date || '';
+	});
 
 	// Filter properties by type
 	const numberProperties = $derived(properties.filter((p) => p.type === 'number'));
