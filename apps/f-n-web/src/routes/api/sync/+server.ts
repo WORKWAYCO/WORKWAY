@@ -17,10 +17,12 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
 	// Parse request body
 	const body = await request.json().catch(() => ({}));
-	const { databaseId, transcriptIds, dateFieldId } = body as {
+	const { databaseId, databaseName, transcriptIds, dateFieldId, forceResync } = body as {
 		databaseId?: string;
+		databaseName?: string;
 		transcriptIds?: string[];
 		dateFieldId?: string;
+		forceResync?: boolean;
 	};
 
 	if (!databaseId) {
@@ -86,13 +88,14 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	const jobId = crypto.randomUUID();
 
 	await DB.prepare(
-		`INSERT INTO sync_jobs (id, user_id, status, database_id, total_transcripts, selected_transcript_ids, date_field_id)
-		 VALUES (?, ?, 'pending', ?, ?, ?, ?)`
+		`INSERT INTO sync_jobs (id, user_id, status, database_id, database_name, total_transcripts, selected_transcript_ids, date_field_id)
+		 VALUES (?, ?, 'pending', ?, ?, ?, ?, ?)`
 	)
 		.bind(
 			jobId,
 			locals.user.id,
 			databaseId,
+			databaseName || 'Unknown',
 			transcriptIds.length,
 			JSON.stringify(transcriptIds),
 			dateFieldId || null
@@ -120,6 +123,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			propertyMapping,
 			firefliesApiKey: firefliesAccount.access_token,
 			notionAccessToken: notionAccount.access_token,
+			forceResync: forceResync || false,
 			db: DB
 		})
 	);
@@ -136,8 +140,9 @@ async function processSync(params: {
 	firefliesApiKey: string;
 	notionAccessToken: string;
 	db: D1Database;
+	forceResync: boolean;
 }) {
-	const { jobId, userId, databaseId, transcriptIds, propertyMapping, firefliesApiKey, notionAccessToken, db } = params;
+	const { jobId, userId, databaseId, transcriptIds, propertyMapping, firefliesApiKey, notionAccessToken, db, forceResync } = params;
 
 	const fireflies = createFirefliesClient(firefliesApiKey);
 	const notion = createNotionClient(notionAccessToken);
@@ -151,6 +156,19 @@ async function processSync(params: {
 			.bind('running', jobId)
 			.run();
 
+		// Get database schema to find the title property name
+		const database = await notion.getDatabase(databaseId);
+		if (!database) {
+			throw new Error('Could not access Notion database');
+		}
+
+		// Find the title property (every Notion database has exactly one)
+		const titlePropertyEntry = Object.entries(database.properties || {}).find(
+			([, prop]) => prop.type === 'title'
+		);
+		const titlePropertyName = titlePropertyEntry ? titlePropertyEntry[0] : 'Name';
+		console.log(`Using title property: "${titlePropertyName}"`);
+
 		let progress = 0;
 
 		for (const transcriptId of transcriptIds) {
@@ -162,13 +180,23 @@ async function processSync(params: {
 					.bind(userId, transcriptId)
 					.first();
 
-				if (existing) {
+				if (existing && !forceResync) {
 					console.log(`Transcript ${transcriptId} already synced (dedup), skipping`);
 					progress++;
 					await db.prepare('UPDATE sync_jobs SET progress = ? WHERE id = ?')
 						.bind(progress, jobId)
 						.run();
 					continue;
+				}
+
+				// If force resync, delete existing sync record
+				if (existing && forceResync) {
+					console.log(`Force resync: deleting existing sync record for ${transcriptId}`);
+					await db.prepare(
+						'DELETE FROM synced_transcripts WHERE user_id = ? AND fireflies_transcript_id = ?'
+					)
+						.bind(userId, transcriptId)
+						.run();
 				}
 
 				// Fetch full transcript
@@ -181,9 +209,9 @@ async function processSync(params: {
 					continue;
 				}
 
-				// Build Notion page properties - only Name is required
+				// Build Notion page properties - use detected title property name
 				const properties: Record<string, unknown> = {
-					Name: {
+					[titlePropertyName]: {
 						title: [{ text: { content: transcript.title || 'Untitled Meeting' } }]
 					}
 				};
@@ -225,6 +253,16 @@ async function processSync(params: {
 
 				// Format content blocks
 				const blocks = formatTranscriptBlocks(transcript);
+
+				// Debug: Log what content we're syncing
+				console.log(`Transcript ${transcriptId} content:`, {
+					hasOverview: !!transcript.summary?.overview,
+					hasBullets: !!transcript.summary?.shorthand_bullet?.length,
+					hasActionItems: !!transcript.summary?.action_items?.length,
+					hasSentences: !!transcript.sentences?.length,
+					sentenceCount: transcript.sentences?.length || 0,
+					blockCount: blocks.length
+				});
 
 				// Create Notion page
 				const page = await notion.createPage(databaseId, properties, blocks.slice(0, 100));

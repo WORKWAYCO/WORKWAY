@@ -88,6 +88,7 @@
 	let total = $state(0);
 	let selectedTranscripts = $state<string[]>([]);
 	let selectedDatabase = $state<string | null>(null);
+	let forceResync = $state(false);
 
 	// Data from API
 	let transcripts = $state<TranscriptItem[]>([]);
@@ -199,12 +200,15 @@
 		total = selectedTranscripts.length;
 
 		try {
+			const selectedDb = databases.find((db) => db.id === selectedDatabase);
 			const res = await fetch('/api/sync', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				body: JSON.stringify({
 					databaseId: selectedDatabase,
-					transcriptIds: selectedTranscripts
+					databaseName: selectedDb?.title || 'Unknown',
+					transcriptIds: selectedTranscripts,
+					forceResync
 				})
 			});
 
@@ -426,13 +430,23 @@
 			<div class="mb-6">
 				<div class="flex items-center justify-between mb-2">
 					<span class="text-sm font-medium">Transcripts</span>
-					<button
-						type="button"
-						onclick={selectAllUnsynced}
-						class="text-xs text-[var(--brand-accent)] hover:underline"
-					>
-						Select all unsynced
-					</button>
+					<div class="flex items-center gap-4">
+						<label class="flex items-center gap-2 text-xs text-[var(--brand-text-muted)] cursor-pointer">
+							<input
+								type="checkbox"
+								bind:checked={forceResync}
+								class="rounded"
+							/>
+							Force resync
+						</label>
+						<button
+							type="button"
+							onclick={selectAllUnsynced}
+							class="text-xs text-[var(--brand-accent)] hover:underline"
+						>
+							Select all unsynced
+						</button>
+					</div>
 				</div>
 
 				{#if loadingTranscripts}
@@ -444,13 +458,13 @@
 						{#each transcripts as transcript}
 							<label
 								class="flex items-center gap-3 p-3 border-b border-[var(--brand-border)] last:border-b-0 cursor-pointer hover:bg-[var(--brand-surface)] transition-colors"
-								class:opacity-50={transcript.synced}
+								class:opacity-50={transcript.synced && !forceResync}
 							>
 								<input
 									type="checkbox"
 									checked={selectedTranscripts.includes(transcript.id)}
 									onchange={() => toggleTranscript(transcript.id)}
-									disabled={transcript.synced}
+									disabled={transcript.synced && !forceResync}
 									class="rounded"
 								/>
 								<div class="flex-1 min-w-0">

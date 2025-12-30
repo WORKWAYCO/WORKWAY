@@ -106,6 +106,14 @@ export function createNotionClient(accessToken: string): NotionClient {
 	};
 }
 
+/** Notion's 2000 char limit with safety margin */
+const NOTION_TEXT_LIMIT = 1900;
+
+/** Truncate text to Notion's limit */
+function truncateForNotion(text: string): string {
+	return text.length > NOTION_TEXT_LIMIT ? text.slice(0, NOTION_TEXT_LIMIT) + '...' : text;
+}
+
 /**
  * Format transcript content as Notion blocks
  */
@@ -136,7 +144,7 @@ export function formatTranscriptBlocks(transcript: {
 			object: 'block',
 			type: 'paragraph',
 			paragraph: {
-				rich_text: [{ type: 'text', text: { content: transcript.summary.overview } }]
+				rich_text: [{ type: 'text', text: { content: truncateForNotion(transcript.summary.overview) } }]
 			}
 		});
 	}
@@ -150,14 +158,20 @@ export function formatTranscriptBlocks(transcript: {
 				rich_text: [{ type: 'text', text: { content: 'Key Points' } }]
 			}
 		});
-		for (const point of transcript.summary.shorthand_bullet) {
-			blocks.push({
-				object: 'block',
-				type: 'bulleted_list_item',
-				bulleted_list_item: {
-					rich_text: [{ type: 'text', text: { content: point } }]
-				}
-			});
+		// Handle both array and string formats from Fireflies
+		const bullets = Array.isArray(transcript.summary.shorthand_bullet)
+			? transcript.summary.shorthand_bullet
+			: [transcript.summary.shorthand_bullet];
+		for (const point of bullets) {
+			if (typeof point === 'string' && point.trim()) {
+				blocks.push({
+					object: 'block',
+					type: 'bulleted_list_item',
+					bulleted_list_item: {
+						rich_text: [{ type: 'text', text: { content: truncateForNotion(point) } }]
+					}
+				});
+			}
 		}
 	}
 
@@ -170,44 +184,45 @@ export function formatTranscriptBlocks(transcript: {
 				rich_text: [{ type: 'text', text: { content: 'Action Items' } }]
 			}
 		});
-		for (const item of transcript.summary.action_items) {
-			blocks.push({
-				object: 'block',
-				type: 'to_do',
-				to_do: {
-					rich_text: [{ type: 'text', text: { content: item } }],
-					checked: false
-				}
-			});
+		// Handle both array and string formats from Fireflies
+		const items = Array.isArray(transcript.summary.action_items)
+			? transcript.summary.action_items
+			: [transcript.summary.action_items];
+		for (const item of items) {
+			if (typeof item === 'string' && item.trim()) {
+				blocks.push({
+					object: 'block',
+					type: 'to_do',
+					to_do: {
+						rich_text: [{ type: 'text', text: { content: truncateForNotion(item) } }],
+						checked: false
+					}
+				});
+			}
 		}
 	}
 
-	// Full transcript
+	// Full transcript - inside a collapsible toggle (Zuhandenheit: content recedes until needed)
 	if (transcript.sentences?.length) {
-		blocks.push({
-			object: 'block',
-			type: 'heading_2',
-			heading_2: {
-				rich_text: [{ type: 'text', text: { content: 'Full Transcript' } }]
-			}
-		});
 		blocks.push({
 			object: 'block',
 			type: 'divider',
 			divider: {}
 		});
 
-		// Group by speaker for readability
+		// Build full transcript text with speaker attribution
+		const transcriptParts: string[] = [];
 		let currentSpeaker = '';
 		let currentText = '';
 
 		for (const sentence of transcript.sentences) {
-			if (sentence.speaker_name !== currentSpeaker) {
+			const speaker = sentence.speaker_name || 'Speaker';
+			if (speaker !== currentSpeaker) {
 				// Flush previous speaker's text
 				if (currentText) {
-					blocks.push(createTranscriptBlock(currentSpeaker, currentText));
+					transcriptParts.push(`${currentSpeaker}: ${currentText}`);
 				}
-				currentSpeaker = sentence.speaker_name;
+				currentSpeaker = speaker;
 				currentText = sentence.text;
 			} else {
 				currentText += ' ' + sentence.text;
@@ -216,32 +231,85 @@ export function formatTranscriptBlocks(transcript: {
 
 		// Flush last speaker
 		if (currentText) {
-			blocks.push(createTranscriptBlock(currentSpeaker, currentText));
+			transcriptParts.push(`${currentSpeaker}: ${currentText}`);
 		}
+
+		const fullTranscript = transcriptParts.join('\n\n');
+
+		// Put transcript inside a toggle block (collapsible)
+		// All transcript blocks are nested children of the toggle - not top-level blocks
+		blocks.push({
+			object: 'block',
+			type: 'toggle',
+			toggle: {
+				rich_text: [{ type: 'text', text: { content: 'Full Transcript' } }],
+				children: splitTranscriptIntoBlocks(fullTranscript)
+			}
+		});
 	}
 
 	return blocks;
 }
 
-function createTranscriptBlock(speaker: string, text: string): unknown {
-	// Notion has a 2000 char limit per text block
-	const truncatedText = text.length > 1900 ? text.slice(0, 1900) + '...' : text;
+/**
+ * Split a long transcript into paragraph blocks of ~1900 chars
+ * Keeps logical segments (speaker turns) together when possible
+ */
+function splitTranscriptIntoBlocks(transcript: string): unknown[] {
+	const blocks: unknown[] = [];
+	const maxChars = 1900;
 
-	return {
-		object: 'block',
-		type: 'paragraph',
-		paragraph: {
-			rich_text: [
-				{
-					type: 'text',
-					text: { content: `${speaker}: ` },
-					annotations: { bold: true }
-				},
-				{
-					type: 'text',
-					text: { content: truncatedText }
+	// Split on double newlines or speaker turns
+	const segments = transcript.split(/\n\n/);
+	let currentBlock = '';
+
+	for (const segment of segments) {
+		if (currentBlock.length + segment.length + 2 > maxChars) {
+			if (currentBlock) {
+				blocks.push({
+					object: 'block',
+					type: 'paragraph',
+					paragraph: { rich_text: [{ type: 'text', text: { content: currentBlock } }] }
+				});
+			}
+			// If segment itself is too long, split it
+			if (segment.length > maxChars) {
+				const words = segment.split(' ');
+				let chunk = '';
+				for (const word of words) {
+					if (chunk.length + word.length + 1 > maxChars) {
+						blocks.push({
+							object: 'block',
+							type: 'paragraph',
+							paragraph: { rich_text: [{ type: 'text', text: { content: chunk } }] }
+						});
+						chunk = word;
+					} else {
+						chunk = chunk ? `${chunk} ${word}` : word;
+					}
 				}
-			]
+				currentBlock = chunk;
+			} else {
+				currentBlock = segment;
+			}
+		} else {
+			currentBlock = currentBlock ? `${currentBlock}\n\n${segment}` : segment;
 		}
-	};
+	}
+
+	if (currentBlock) {
+		blocks.push({
+			object: 'block',
+			type: 'paragraph',
+			paragraph: { rich_text: [{ type: 'text', text: { content: currentBlock } }] }
+		});
+	}
+
+	return blocks.length > 0
+		? blocks
+		: [{
+			object: 'block',
+			type: 'paragraph',
+			paragraph: { rich_text: [{ type: 'text', text: { content: 'No transcript available' } }] }
+		}];
 }
