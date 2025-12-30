@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { createFirefliesClient } from '$lib/api/fireflies';
+import { createFirefliesClient, isRateLimitError } from '$lib/api/fireflies';
 import { createNotionClient, formatTranscriptBlocks } from '$lib/api/notion';
 import type { PropertyMapping } from '../property-mappings/+server';
 
@@ -291,6 +291,10 @@ async function processSync(params: {
 					.run();
 
 			} catch (error) {
+				// Rate limit errors should stop the entire sync
+				if (isRateLimitError(error)) {
+					throw error;
+				}
 				const errMsg = error instanceof Error ? error.message : String(error);
 				console.error(`Error syncing transcript ${transcriptId}:`, errMsg);
 				errors.push({ transcriptId, error: errMsg });
@@ -323,7 +327,17 @@ async function processSync(params: {
 		console.log(`Sync job ${jobId} ${finalStatus}: ${progress}/${transcriptIds.length} synced, ${errors.length} errors`);
 
 	} catch (error) {
-		const errMsg = error instanceof Error ? error.message : 'Unknown error';
+		let errMsg: string;
+		if (isRateLimitError(error)) {
+			const retryTime = error.retryAfter.toLocaleString('en-US', {
+				timeZone: 'UTC',
+				dateStyle: 'medium',
+				timeStyle: 'short'
+			});
+			errMsg = `Fireflies rate limit reached. Try again after ${retryTime} UTC.`;
+		} else {
+			errMsg = error instanceof Error ? error.message : 'Unknown error';
+		}
 		console.error('Sync job failed:', errMsg);
 		await db.prepare(
 			'UPDATE sync_jobs SET status = ?, error_message = ? WHERE id = ?'

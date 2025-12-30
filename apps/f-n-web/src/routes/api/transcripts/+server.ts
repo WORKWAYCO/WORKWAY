@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { createFirefliesClient } from '$lib/api/fireflies';
+import { createFirefliesClient, isRateLimitError } from '$lib/api/fireflies';
 
 export const GET: RequestHandler = async ({ url, locals, platform }) => {
 	if (!locals.user) {
@@ -49,6 +49,18 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
 
 		return json({ transcripts: transcriptsWithStatus });
 	} catch (error) {
+		if (isRateLimitError(error)) {
+			const retryTime = error.retryAfter.toLocaleString('en-US', {
+				timeZone: 'UTC',
+				dateStyle: 'medium',
+				timeStyle: 'short'
+			});
+			return json({
+				error: 'Fireflies rate limit reached',
+				hint: `Too many requests to Fireflies API. Try again after ${retryTime} UTC.`,
+				retryAfter: error.retryAfter.toISOString()
+			}, { status: 429 });
+		}
 		console.error('Error fetching transcripts:', error);
 		return json({ error: 'Failed to fetch transcripts' }, { status: 500 });
 	}

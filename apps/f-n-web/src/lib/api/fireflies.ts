@@ -1,9 +1,29 @@
 /**
  * Fireflies.ai GraphQL API Client
  * Fetches meeting transcripts for F→N sync
+ *
+ * Rate limits (per Fireflies docs):
+ * - Free/Pro: 50 requests/day
+ * - Business/Enterprise: 60 requests/min
  */
 
 const FIREFLIES_API_URL = 'https://api.fireflies.ai/graphql';
+
+/** Custom error for Fireflies rate limiting */
+export class FirefliesRateLimitError extends Error {
+	retryAfter: Date;
+
+	constructor(message: string, retryAfter: Date) {
+		super(message);
+		this.name = 'FirefliesRateLimitError';
+		this.retryAfter = retryAfter;
+	}
+}
+
+/** Check if an error is a rate limit error */
+export function isRateLimitError(error: unknown): error is FirefliesRateLimitError {
+	return error instanceof FirefliesRateLimitError;
+}
 
 export interface FirefliesTranscript {
 	id: string;
@@ -47,16 +67,45 @@ export function createFirefliesClient(apiKey: string): FirefliesClient {
 			throw new Error(`Fireflies API error: ${response.status}`);
 		}
 
-		const result = await response.json() as { data: T; errors?: Array<{ message: string }> };
+		const result = await response.json() as {
+			data: T;
+			errors?: Array<{
+				message: string;
+				code?: string;
+				extensions?: {
+					code?: string;
+					status?: number;
+					metadata?: { retryAfter?: number };
+				};
+			}>;
+		};
 
 		if (result.errors) {
-			throw new Error(result.errors[0]?.message || 'GraphQL error');
+			const error = result.errors[0];
+			const errorCode = error?.code || error?.extensions?.code;
+
+			// Check for rate limit error
+			if (errorCode === 'too_many_requests' || error?.extensions?.status === 429) {
+				const retryAfterMs = error?.extensions?.metadata?.retryAfter;
+				const retryAfter = retryAfterMs ? new Date(retryAfterMs) : new Date(Date.now() + 3600000); // Default 1 hour
+				throw new FirefliesRateLimitError(
+					error?.message || 'Rate limit exceeded',
+					retryAfter
+				);
+			}
+
+			throw new Error(error?.message || 'GraphQL error');
 		}
 
 		return result.data;
 	}
 
 	return {
+		/**
+		 * Validate API key by fetching user info
+		 * @throws {FirefliesRateLimitError} if rate limited
+		 * @returns true if valid, false if invalid
+		 */
 		async validateApiKey(): Promise<boolean> {
 			try {
 				await query<{ user: { email: string } }>(`
@@ -67,7 +116,11 @@ export function createFirefliesClient(apiKey: string): FirefliesClient {
 					}
 				`);
 				return true;
-			} catch {
+			} catch (error) {
+				// Re-throw rate limit errors - they're not invalid keys
+				if (isRateLimitError(error)) {
+					throw error;
+				}
 				return false;
 			}
 		},

@@ -1,6 +1,6 @@
 import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
-import { createFirefliesClient } from '$lib/api/fireflies';
+import { createFirefliesClient, isRateLimitError } from '$lib/api/fireflies';
 
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	if (!locals.user) {
@@ -26,7 +26,25 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
 	// Validate API key
 	const client = createFirefliesClient(cleanedKey);
-	const isValid = await client.validateApiKey();
+
+	let isValid: boolean;
+	try {
+		isValid = await client.validateApiKey();
+	} catch (error) {
+		if (isRateLimitError(error)) {
+			const retryTime = error.retryAfter.toLocaleString('en-US', {
+				timeZone: 'UTC',
+				dateStyle: 'medium',
+				timeStyle: 'short'
+			});
+			return json({
+				error: 'Fireflies rate limit reached',
+				hint: `Too many requests to Fireflies API. Try again after ${retryTime} UTC. This is a Fireflies limit, not F→N.`,
+				retryAfter: error.retryAfter.toISOString()
+			}, { status: 429 });
+		}
+		throw error;
+	}
 
 	if (!isValid) {
 		return json({
