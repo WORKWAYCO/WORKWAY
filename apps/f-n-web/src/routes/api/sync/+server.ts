@@ -142,6 +142,9 @@ async function processSync(params: {
 	const fireflies = createFirefliesClient(firefliesApiKey);
 	const notion = createNotionClient(notionAccessToken);
 
+	// Track errors for debugging
+	const errors: Array<{ transcriptId: string; error: string }> = [];
+
 	try {
 		// Update job status to running
 		await db.prepare('UPDATE sync_jobs SET status = ?, started_at = datetime("now") WHERE id = ?')
@@ -152,7 +155,7 @@ async function processSync(params: {
 
 		for (const transcriptId of transcriptIds) {
 			try {
-				// Check if already synced
+				// Check if already synced (deduplication)
 				const existing = await db.prepare(
 					'SELECT notion_page_id FROM synced_transcripts WHERE user_id = ? AND fireflies_transcript_id = ?'
 				)
@@ -160,6 +163,7 @@ async function processSync(params: {
 					.first();
 
 				if (existing) {
+					console.log(`Transcript ${transcriptId} already synced (dedup), skipping`);
 					progress++;
 					await db.prepare('UPDATE sync_jobs SET progress = ? WHERE id = ?')
 						.bind(progress, jobId)
@@ -171,11 +175,13 @@ async function processSync(params: {
 				const transcript = await fireflies.getTranscript(transcriptId);
 
 				if (!transcript) {
-					console.error(`Transcript not found: ${transcriptId}`);
+					const errMsg = `Transcript not found in Fireflies: ${transcriptId}`;
+					console.error(errMsg);
+					errors.push({ transcriptId, error: errMsg });
 					continue;
 				}
 
-				// Build Notion page properties
+				// Build Notion page properties - only Name is required
 				const properties: Record<string, unknown> = {
 					Name: {
 						title: [{ text: { content: transcript.title || 'Untitled Meeting' } }]
@@ -189,9 +195,9 @@ async function processSync(params: {
 					};
 				}
 
-				// Add URL
-				if (transcript.transcript_url) {
-					properties['Fireflies URL'] = {
+				// Add URL if mapped (previously hardcoded 'Fireflies URL')
+				if (propertyMapping.url && transcript.transcript_url) {
+					properties[propertyMapping.url] = {
 						url: transcript.transcript_url
 					};
 				}
@@ -228,7 +234,7 @@ async function processSync(params: {
 					await notion.appendBlocks(page.id, blocks.slice(100));
 				}
 
-				// Record synced transcript
+				// Record synced transcript (for deduplication)
 				await db.prepare(
 					`INSERT INTO synced_transcripts (id, user_id, fireflies_transcript_id, notion_page_id, database_id, transcript_title)
 					 VALUES (?, ?, ?, ?, ?, ?)`
@@ -236,37 +242,51 @@ async function processSync(params: {
 					.bind(crypto.randomUUID(), userId, transcriptId, page.id, databaseId, transcript.title)
 					.run();
 
+				console.log(`Successfully synced transcript ${transcriptId} → Notion page ${page.id}`);
 				progress++;
 				await db.prepare('UPDATE sync_jobs SET progress = ? WHERE id = ?')
 					.bind(progress, jobId)
 					.run();
 
 			} catch (error) {
-				console.error(`Error syncing transcript ${transcriptId}:`, error);
+				const errMsg = error instanceof Error ? error.message : String(error);
+				console.error(`Error syncing transcript ${transcriptId}:`, errMsg);
+				errors.push({ transcriptId, error: errMsg });
 				// Continue with other transcripts
 			}
 		}
 
-		// Update job as completed
+		// Determine final status based on results
+		const allFailed = progress === 0 && errors.length > 0;
+		const finalStatus = allFailed ? 'failed' : 'completed';
+		const errorMessage = errors.length > 0
+			? `${errors.length} error(s): ${errors.map(e => e.error).join('; ').slice(0, 500)}`
+			: null;
+
 		await db.prepare(
-			'UPDATE sync_jobs SET status = ?, completed_at = datetime("now") WHERE id = ?'
+			'UPDATE sync_jobs SET status = ?, error_message = ?, completed_at = datetime("now") WHERE id = ?'
 		)
-			.bind('completed', jobId)
+			.bind(finalStatus, errorMessage, jobId)
 			.run();
 
-		// Update sync count
-		await db.prepare(
-			'UPDATE subscriptions SET sync_count = sync_count + ? WHERE user_id = ?'
-		)
-			.bind(progress, userId)
-			.run();
+		// Update sync count (only count successful syncs)
+		if (progress > 0) {
+			await db.prepare(
+				'UPDATE subscriptions SET sync_count = sync_count + ? WHERE user_id = ?'
+			)
+				.bind(progress, userId)
+				.run();
+		}
+
+		console.log(`Sync job ${jobId} ${finalStatus}: ${progress}/${transcriptIds.length} synced, ${errors.length} errors`);
 
 	} catch (error) {
-		console.error('Sync job failed:', error);
+		const errMsg = error instanceof Error ? error.message : 'Unknown error';
+		console.error('Sync job failed:', errMsg);
 		await db.prepare(
 			'UPDATE sync_jobs SET status = ?, error_message = ? WHERE id = ?'
 		)
-			.bind('failed', error instanceof Error ? error.message : 'Unknown error', jobId)
+			.bind('failed', errMsg, jobId)
 			.run();
 	}
 }

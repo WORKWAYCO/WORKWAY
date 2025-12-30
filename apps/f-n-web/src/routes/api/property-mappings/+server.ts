@@ -6,6 +6,7 @@ export interface PropertyMapping {
 	participants?: string;  // Notion property name for multi_select
 	keywords?: string;      // Notion property name for multi_select
 	date?: string;          // Notion property name for date
+	url?: string;           // Notion property name for URL field (Fireflies URL)
 }
 
 // GET: Fetch saved mapping for a database

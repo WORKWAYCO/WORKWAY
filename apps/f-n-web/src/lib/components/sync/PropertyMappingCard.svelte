@@ -12,6 +12,7 @@
 		participants?: string;
 		keywords?: string;
 		date?: string;
+		url?: string;
 	}
 
 	interface Props {
@@ -33,6 +34,7 @@
 	let participants = $state('');
 	let keywords = $state('');
 	let date = $state('');
+	let url = $state('');
 
 	// Sync form state when savedMapping changes
 	$effect(() => {
@@ -41,16 +43,18 @@
 		participants = savedMapping?.participants || '';
 		keywords = savedMapping?.keywords || '';
 		date = savedMapping?.date || '';
+		url = savedMapping?.url || '';
 	});
 
 	// Filter properties by type
 	const numberProperties = $derived(properties.filter((p) => p.type === 'number'));
 	const multiSelectProperties = $derived(properties.filter((p) => p.type === 'multi_select'));
 	const dateProperties = $derived(properties.filter((p) => p.type === 'date'));
+	const urlProperties = $derived(properties.filter((p) => p.type === 'url'));
 
 	// Count mapped fields
 	const mappedCount = $derived(
-		[duration, participants, keywords, date].filter((v) => v).length
+		[duration, participants, keywords, date, url].filter((v) => v).length
 	);
 
 	async function handleSave() {
@@ -62,6 +66,7 @@
 		if (participants) mapping.participants = participants;
 		if (keywords) mapping.keywords = keywords;
 		if (date) mapping.date = date;
+		if (url) mapping.url = url;
 
 		try {
 			const response = await fetch('/api/property-mappings', {
@@ -202,6 +207,28 @@
 						>
 							<option value="">Don't map</option>
 							{#each dateProperties as prop (prop.id)}
+								<option value={prop.name}>{prop.name}</option>
+							{/each}
+						</select>
+					{/if}
+				</div>
+
+				<!-- URL -->
+				<div>
+					<label for="map-url" class="block text-sm font-medium mb-1">Fireflies URL</label>
+					<p class="text-xs text-[var(--brand-text-muted)] mb-2">Link to the Fireflies transcript</p>
+					{#if urlProperties.length === 0}
+						<p class="text-xs text-[var(--brand-text-muted)] italic">
+							Add a URL property to your database
+						</p>
+					{:else}
+						<select
+							id="map-url"
+							bind:value={url}
+							class="w-full px-3 py-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] bg-[var(--brand-surface)] text-sm"
+						>
+							<option value="">Don't map</option>
+							{#each urlProperties as prop (prop.id)}
 								<option value={prop.name}>{prop.name}</option>
 							{/each}
 						</select>
