@@ -9,6 +9,10 @@ binding = "REPAIR_WORKFLOW"
 name = "repair-agent"
 class_name = "RepairAgent"
 
+# Cloudflare Sandbox binding for test execution
+[[sandbox]]
+binding = "SANDBOX"
+
 # Secrets (set via wrangler secret put)
 # - ANTHROPIC_API_KEY: Claude API key
 # - GITHUB_TOKEN: GitHub token for PR creation

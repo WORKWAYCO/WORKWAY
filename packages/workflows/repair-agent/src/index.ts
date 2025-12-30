@@ -3,9 +3,11 @@
  *
  * Autonomous error diagnosis and fix with human-in-loop approval.
  *
- * Flow: Diagnose → Generate Fix → Create PR → Create Beads Issue
+ * Flow: Diagnose → Generate Fix → Run Tests (Sandbox) → Create PR → Create Beads Issue
  *
  * Philosophy: Agent does the work, human makes the decision.
+ *
+ * Test execution via Cloudflare Sandbox ensures fixes are validated before PR creation.
  */
 
 import {
@@ -16,6 +18,12 @@ import {
 import { diagnose, type DiagnosisInput, type Diagnosis } from './diagnose';
 import { generateFix, type FixInput, type Fix } from './fix';
 import { createPR, type PRInput, type PullRequest } from './pr';
+import {
+  runTestsInSandbox,
+  formatTestSummary,
+  type CloudflareSandbox,
+  type TestResult,
+} from './test';
 
 export interface RepairAgentParams {
   repair_id: string;
@@ -36,6 +44,7 @@ export interface RepairAgentParams {
 export interface RepairAgentEnv {
   ANTHROPIC_API_KEY: string;
   GITHUB_TOKEN: string;
+  SANDBOX: CloudflareSandbox;
 }
 
 export class RepairAgent extends WorkflowEntrypoint<RepairAgentEnv, RepairAgentParams> {
@@ -98,27 +107,59 @@ export class RepairAgent extends WorkflowEntrypoint<RepairAgentEnv, RepairAgentP
       console.log(`Fix generated:`, {
         branch: result.branch,
         files_changed: result.commits[0].files_changed.length,
-        test_results: result.test_results,
       });
 
       return result;
     });
 
+    // Step 3: Run Tests in Sandbox
+    const testResults = await step.do('run-tests', async () => {
+      console.log(`Running tests for ${error.fingerprint} on branch ${fix.branch}`);
+
+      await this.updateStatus(orchestrator_url, 'testing');
+
+      // Construct GitHub URL for the repository
+      const repoUrl = `https://github.com/WORKWAYCO/${
+        error.repo === 'Cloudflare' ? 'WORKWAY' : error.repo
+      }`;
+
+      const results = await runTestsInSandbox(
+        this.env.SANDBOX,
+        repoUrl,
+        fix.branch,
+        error.repo,
+        diagnosis.affected_files
+      );
+
+      console.log('Test results:', formatTestSummary(results));
+
+      return results;
+    });
+
     // Check if tests failed
-    if (fix.test_results.failed > 0) {
-      console.log('Tests failed after fix, aborting');
+    if (testResults.failed > 0 || testResults.timed_out) {
+      const reason = testResults.timed_out
+        ? 'Tests timed out'
+        : `Tests failed: ${testResults.failed} failures`;
+
+      console.log(`Tests failed for ${error.fingerprint}: ${reason}`);
+
       await this.updateStatus(orchestrator_url, 'failed', {
-        failure_reason: `Tests failed: ${fix.test_results.failed} failures`,
+        failure_reason: reason,
+        test_output: testResults.output,
+        failing_tests: testResults.failing_tests,
       });
+
       return {
         status: 'failed',
         reason: 'tests_failed',
         diagnosis,
         fix,
+        test_results: testResults,
       };
     }
 
-    // Step 3: Create PR
+    // Step 4: Create PR
     const pr = await step.do('create-pr', async () => {
       console.log(`Creating PR for ${error.fingerprint}`);
 
@@ -131,6 +172,7 @@ export class RepairAgent extends WorkflowEntrypoint<RepairAgentEnv, RepairAgentP
           repo: error.repo,
         },
         isHighRisk,
+        testResults,
       };
 
       const result = await createPR(input, this.env.GITHUB_TOKEN);
@@ -140,7 +182,7 @@ export class RepairAgent extends WorkflowEntrypoint<RepairAgentEnv, RepairAgentP
       return result;
     });
 
-    // Step 4: Create Beads Issue
+    // Step 5: Create Beads Issue
     const beadsIssue = await step.do('create-beads-issue', async () => {
       console.log(`Creating Beads issue for ${error.fingerprint}`);
 
@@ -156,6 +198,7 @@ export class RepairAgent extends WorkflowEntrypoint<RepairAgentEnv, RepairAgentP
     await this.updateStatus(orchestrator_url, 'pr_created', {
       diagnosis,
       fix,
+      test_results: testResults,
       pr_url: pr.url,
       beads_issue: beadsIssue,
     });
@@ -167,6 +210,7 @@ export class RepairAgent extends WorkflowEntrypoint<RepairAgentEnv, RepairAgentP
       beads_issue: beadsIssue,
       diagnosis,
       fix,
+      test_results: testResults,
     };
   }
 

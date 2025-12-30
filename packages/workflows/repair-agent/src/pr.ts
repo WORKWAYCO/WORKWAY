@@ -6,6 +6,7 @@
 
 import type { Diagnosis } from './diagnose';
 import type { Fix } from './fix';
+import type { TestResult } from './test';
 
 export interface PRInput {
   diagnosis: Diagnosis;
@@ -16,6 +17,7 @@ export interface PRInput {
     repo: string;
   };
   isHighRisk?: boolean;
+  testResults?: TestResult;
 }
 
 export interface PullRequest {
@@ -27,7 +29,7 @@ export async function createPR(
   input: PRInput,
   githubToken: string
 ): Promise<PullRequest> {
-  const { diagnosis, fix, error, isHighRisk } = input;
+  const { diagnosis, fix, error, isHighRisk, testResults } = input;
 
   // High-risk warning banner
   const riskWarning = isHighRisk
@@ -68,10 +70,7 @@ ${fix.commits[0].files_changed.map((f) => `- ${f}`).join('\n')}
 
 ### Test Results
 
-- ✅ Passed: ${fix.test_results.passed}
-- ❌ Failed: ${fix.test_results.failed}
-- ⏭️ Skipped: ${fix.test_results.skipped}
-- ⏱️ Duration: ${fix.test_results.duration_ms}ms
+${testResults ? formatTestResults(testResults) : '⚠️ No test results available'}
 
 ### Suggested Approach
 
@@ -133,4 +132,27 @@ function parseRepo(repo: string): [string, string] {
   };
 
   return mapping[repo] || ['WORKWAYCO', repo];
+}
+
+function formatTestResults(results: TestResult): string {
+  const lines: string[] = [
+    `- ✅ Passed: ${results.passed}`,
+    `- ❌ Failed: ${results.failed}`,
+    `- ⏭️ Skipped: ${results.skipped}`,
+    `- ⏱️ Duration: ${results.duration_ms}ms`,
+  ];
+
+  if (results.timed_out) {
+    lines.push('- ⚠️ **TIMED OUT**');
+  }
+
+  if (results.failing_tests && results.failing_tests.length > 0) {
+    lines.push('');
+    lines.push('**Failing Tests:**');
+    results.failing_tests.forEach((test) => {
+      lines.push(`  - \`${test}\``);
+    });
+  }
+
+  return lines.join('\n');
 }

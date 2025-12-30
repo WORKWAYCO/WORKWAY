@@ -21,12 +21,6 @@ export interface Fix {
     message: string;
     files_changed: string[];
   }[];
-  test_results: {
-    passed: number;
-    failed: number;
-    skipped: number;
-    duration_ms: number;
-  };
   changes_summary: string;
 }
 
@@ -100,9 +94,6 @@ export async function generateFix(
     githubToken
   );
 
-  // Run tests (in production, trigger CI)
-  const testResults = await runTests(input.error.repo, branchName);
-
   return {
     branch: branchName,
     commits: [
@@ -112,7 +103,6 @@ export async function generateFix(
         files_changed: changedFiles,
       },
     ],
-    test_results: testResults,
     changes_summary: `Fixed ${input.diagnosis.root_cause}. Modified ${changedFiles.length} files.`,
   };
 }
@@ -322,23 +312,4 @@ async function applyChanges(
   );
 
   return [placeholderPath];
-}
-
-async function runTests(
-  repo: string,
-  branch: string
-): Promise<{
-  passed: number;
-  failed: number;
-  skipped: number;
-  duration_ms: number;
-}> {
-  // In production, trigger CI or run tests locally
-  // For now, return placeholder
-  return {
-    passed: 10,
-    failed: 0,
-    skipped: 0,
-    duration_ms: 5000,
-  };
 }
