@@ -194,13 +194,90 @@ export class RepairAgent extends WorkflowEntrypoint<RepairAgentEnv, RepairAgentP
       return issueId;
     });
 
+    // Step 6: Auto-merge if tests passed and not high-risk
+    const autoMerged = await step.do('auto-merge', async () => {
+      // Skip auto-merge for high-risk fixes
+      if (isHighRisk) {
+        console.log('Skipping auto-merge for high-risk fix - requires human review');
+        return false;
+      }
+
+      console.log(`Auto-merging PR ${pr.number} for ${error.fingerprint}`);
+
+      try {
+        // Enable auto-merge on PR using GitHub GraphQL API
+        const graphqlResponse = await fetch('https://api.github.com/graphql', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${this.env.GITHUB_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            query: `
+              mutation EnableAutoMerge($prId: ID!) {
+                enablePullRequestAutoMerge(input: {
+                  pullRequestId: $prId
+                  mergeMethod: SQUASH
+                }) {
+                  pullRequest {
+                    autoMergeRequest {
+                      enabledAt
+                    }
+                  }
+                }
+              }
+            `,
+            variables: { prId: pr.node_id },
+          }),
+        });
+
+        if (!graphqlResponse.ok) {
+          console.error('Failed to enable auto-merge:', await graphqlResponse.text());
+          return false;
+        }
+
+        // Approve PR with test results summary
+        const approvalResponse = await fetch(
+          `https://api.github.com/repos/${pr.owner}/${pr.repo}/pulls/${pr.number}/reviews`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${this.env.GITHUB_TOKEN}`,
+              'Content-Type': 'application/json',
+              'Accept': 'application/vnd.github+json',
+            },
+            body: JSON.stringify({
+              event: 'APPROVE',
+              body: `✅ **Sandbox tests passed** (${testResults.passed} passed, ${testResults.failed} failed)\n\n` +
+                    `Test duration: ${testResults.duration_ms}ms\n\n` +
+                    `Auto-merging this fix.\n\n` +
+                    `---\n` +
+                    `🤖 Automated repair by WORKWAY Error Repair Agent`,
+            }),
+          }
+        );
+
+        if (!approvalResponse.ok) {
+          console.error('Failed to approve PR:', await approvalResponse.text());
+          // Continue anyway - auto-merge might still work without approval
+        }
+
+        console.log(`Auto-merge enabled for PR ${pr.number}`);
+        return true;
+      } catch (err) {
+        console.error('Auto-merge failed:', err);
+        return false;
+      }
+    });
+
     // Update orchestrator with final state
-    await this.updateStatus(orchestrator_url, 'pr_created', {
+    await this.updateStatus(orchestrator_url, autoMerged ? 'auto_merged' : 'pr_created', {
       diagnosis,
       fix,
       test_results: testResults,
       pr_url: pr.url,
       beads_issue: beadsIssue,
+      auto_merged: autoMerged,
     });
 
     return {
@@ -211,6 +288,7 @@ export class RepairAgent extends WorkflowEntrypoint<RepairAgentEnv, RepairAgentP
       diagnosis,
       fix,
       test_results: testResults,
+      auto_merged: autoMerged,
     };
   }
 
