@@ -114,6 +114,60 @@ function truncateForNotion(text: string): string {
 	return text.length > NOTION_TEXT_LIMIT ? text.slice(0, NOTION_TEXT_LIMIT) + '...' : text;
 }
 
+/** Check if text contains markdown-style bullets */
+function hasMarkdownBullets(text: string): boolean {
+	return text.split('\n').some(line => line.trim().startsWith('- '));
+}
+
+/** Parse markdown bullets into array of items */
+function parseMarkdownBullets(text: string): string[] {
+	return text
+		.split('\n')
+		.map(line => line.trim())
+		.filter(line => line.startsWith('- '))
+		.map(line => line.slice(2).trim()); // Remove "- " prefix
+}
+
+/** Convert markdown bold **text** to Notion rich_text with bold annotation */
+function parseMarkdownBold(text: string): Array<{ type: string; text: { content: string }; annotations?: { bold: boolean } }> {
+	const parts: Array<{ type: string; text: { content: string }; annotations?: { bold: boolean } }> = [];
+	const regex = /\*\*([^*]+)\*\*/g;
+	let lastIndex = 0;
+	let match;
+
+	while ((match = regex.exec(text)) !== null) {
+		// Add text before the bold
+		if (match.index > lastIndex) {
+			parts.push({
+				type: 'text',
+				text: { content: text.slice(lastIndex, match.index) }
+			});
+		}
+		// Add the bold text
+		parts.push({
+			type: 'text',
+			text: { content: match[1] },
+			annotations: { bold: true }
+		});
+		lastIndex = regex.lastIndex;
+	}
+
+	// Add remaining text
+	if (lastIndex < text.length) {
+		parts.push({
+			type: 'text',
+			text: { content: text.slice(lastIndex) }
+		});
+	}
+
+	// If no bold found, return simple text
+	if (parts.length === 0) {
+		parts.push({ type: 'text', text: { content: text } });
+	}
+
+	return parts;
+}
+
 /**
  * Format transcript content as Notion blocks
  */
@@ -140,13 +194,30 @@ export function formatTranscriptBlocks(transcript: {
 				rich_text: [{ type: 'text', text: { content: 'Summary' } }]
 			}
 		});
-		blocks.push({
-			object: 'block',
-			type: 'paragraph',
-			paragraph: {
-				rich_text: [{ type: 'text', text: { content: truncateForNotion(transcript.summary.overview) } }]
+
+		// Check if overview contains markdown bullets
+		if (hasMarkdownBullets(transcript.summary.overview)) {
+			// Parse and render as bullet list with bold formatting
+			const bullets = parseMarkdownBullets(transcript.summary.overview);
+			for (const bullet of bullets) {
+				blocks.push({
+					object: 'block',
+					type: 'bulleted_list_item',
+					bulleted_list_item: {
+						rich_text: parseMarkdownBold(truncateForNotion(bullet))
+					}
+				});
 			}
-		});
+		} else {
+			// Render as paragraph
+			blocks.push({
+				object: 'block',
+				type: 'paragraph',
+				paragraph: {
+					rich_text: [{ type: 'text', text: { content: truncateForNotion(transcript.summary.overview) } }]
+				}
+			});
+		}
 	}
 
 	// Key points
@@ -168,7 +239,7 @@ export function formatTranscriptBlocks(transcript: {
 					object: 'block',
 					type: 'bulleted_list_item',
 					bulleted_list_item: {
-						rich_text: [{ type: 'text', text: { content: truncateForNotion(point) } }]
+						rich_text: parseMarkdownBold(truncateForNotion(point))
 					}
 				});
 			}
@@ -194,7 +265,7 @@ export function formatTranscriptBlocks(transcript: {
 					object: 'block',
 					type: 'to_do',
 					to_do: {
-						rich_text: [{ type: 'text', text: { content: truncateForNotion(item) } }],
+						rich_text: parseMarkdownBold(truncateForNotion(item)),
 						checked: false
 					}
 				});

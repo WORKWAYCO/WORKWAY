@@ -257,11 +257,15 @@ async function processSync(params: {
 				// Debug: Log what content we're syncing
 				console.log(`Transcript ${transcriptId} content:`, {
 					hasOverview: !!transcript.summary?.overview,
+					overviewLength: transcript.summary?.overview?.length || 0,
 					hasBullets: !!transcript.summary?.shorthand_bullet?.length,
+					bulletCount: transcript.summary?.shorthand_bullet?.length || 0,
 					hasActionItems: !!transcript.summary?.action_items?.length,
+					actionItemCount: transcript.summary?.action_items?.length || 0,
 					hasSentences: !!transcript.sentences?.length,
 					sentenceCount: transcript.sentences?.length || 0,
-					blockCount: blocks.length
+					blockCount: blocks.length,
+					rawSummary: JSON.stringify(transcript.summary || {}).slice(0, 500)
 				});
 
 				// Create Notion page
