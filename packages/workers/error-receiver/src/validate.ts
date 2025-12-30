@@ -24,10 +24,6 @@ async function validateSentryWebhook(
   request: Request,
   secret: string
 ): Promise<boolean> {
-  // Allow dev mode bypass for testing
-  const isDev = request.headers.get('x-dev-mode') === 'true';
-  if (isDev) return true;
-
   const signature = request.headers.get('sentry-hook-signature');
   if (!signature) return false;
 
@@ -50,11 +46,7 @@ async function validateCustomWebhook(
   secret: string
 ): Promise<boolean> {
   const signature = request.headers.get('x-webhook-signature');
-  if (!signature) {
-    // Allow unsigned requests in development
-    const isDev = request.headers.get('x-dev-mode') === 'true';
-    return isDev;
-  }
+  if (!signature) return false;
 
   const body = await request.clone().text();
   const expected = await computeHmac(secret, body);
