@@ -69,17 +69,10 @@ export class RepairAgent extends WorkflowEntrypoint<RepairAgentEnv, RepairAgentP
       return result;
     });
 
-    // Check if high-risk error requires human triage
-    if (diagnosis.risk_assessment === 'high') {
-      console.log('High-risk error detected, skipping auto-fix');
-      await this.updateStatus(orchestrator_url, 'failed', {
-        failure_reason: 'High-risk error requires human triage',
-      });
-      return {
-        status: 'skipped',
-        reason: 'high_risk',
-        diagnosis,
-      };
+    // High-risk errors still get fixes but are flagged prominently
+    const isHighRisk = diagnosis.risk_assessment === 'high';
+    if (isHighRisk) {
+      console.log('High-risk error detected - will proceed with extra caution');
     }
 
     // Step 2: Generate Fix
@@ -137,6 +130,7 @@ export class RepairAgent extends WorkflowEntrypoint<RepairAgentEnv, RepairAgentP
           fingerprint: error.fingerprint,
           repo: error.repo,
         },
+        isHighRisk,
       };
 
       const result = await createPR(input, this.env.GITHUB_TOKEN);

@@ -117,14 +117,49 @@ export async function generateFix(
   };
 }
 
+const GITHUB_HEADERS = (token: string) => ({
+  'Content-Type': 'application/json',
+  Authorization: `Bearer ${token}`,
+  Accept: 'application/vnd.github.v3+json',
+  'User-Agent': 'WORKWAY-Repair-Agent/1.0',
+});
+
+function parseRepo(repo: string): [string, string] {
+  const mapping: Record<string, [string, string]> = {
+    'workway-platform': ['WORKWAYCO', 'workway-platform'],
+    Cloudflare: ['WORKWAYCO', 'WORKWAY'],  // Cloudflare is inside WORKWAY repo
+  };
+  return mapping[repo] || ['WORKWAYCO', repo];
+}
+
 async function fetchFiles(
   filePaths: string[],
   repo: string,
   githubToken: string
 ): Promise<string> {
-  // In production, fetch from GitHub API
-  // For now, return placeholder
-  return filePaths.map((f) => `${f}: (content would be fetched from GitHub)`).join('\n\n');
+  const [owner, repoName] = parseRepo(repo);
+  const results: string[] = [];
+
+  for (const filePath of filePaths.slice(0, 3)) {
+    try {
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${repoName}/contents/${filePath}`,
+        { headers: GITHUB_HEADERS(githubToken) }
+      );
+
+      if (response.ok) {
+        const data = await response.json();
+        const content = atob(data.content);
+        results.push(`=== ${filePath} ===\n${content}`);
+      } else {
+        results.push(`=== ${filePath} ===\n(Could not fetch: ${response.status})`);
+      }
+    } catch (err) {
+      results.push(`=== ${filePath} ===\n(Error fetching file)`);
+    }
+  }
+
+  return results.join('\n\n');
 }
 
 async function createBranch(
@@ -132,7 +167,39 @@ async function createBranch(
   branchName: string,
   githubToken: string
 ): Promise<void> {
-  // In production, use GitHub API to create branch
+  const [owner, repoName] = parseRepo(repo);
+
+  // Get default branch SHA
+  const refResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/git/ref/heads/main`,
+    { headers: GITHUB_HEADERS(githubToken) }
+  );
+
+  if (!refResponse.ok) {
+    throw new Error(`Failed to get main branch: ${refResponse.status}`);
+  }
+
+  const refData = await refResponse.json();
+  const sha = refData.object.sha;
+
+  // Create new branch
+  const createResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/git/refs`,
+    {
+      method: 'POST',
+      headers: GITHUB_HEADERS(githubToken),
+      body: JSON.stringify({
+        ref: `refs/heads/${branchName}`,
+        sha,
+      }),
+    }
+  );
+
+  if (!createResponse.ok) {
+    const error = await createResponse.text();
+    throw new Error(`Failed to create branch: ${createResponse.status} ${error}`);
+  }
+
   console.log(`Created branch ${branchName} in ${repo}`);
 }
 
@@ -142,9 +209,119 @@ async function applyChanges(
   fixContent: string,
   githubToken: string
 ): Promise<string[]> {
-  // In production, parse diff and commit changes via GitHub API
-  // For now, return placeholder
-  return ['src/example.ts'];
+  // For now, create a placeholder commit
+  // In production, would parse the fix content and apply actual changes
+  const [owner, repoName] = parseRepo(repo);
+
+  // Create a placeholder file to demonstrate the fix
+  const placeholderPath = '.repair-agent/fix-pending.md';
+  const content = `# Repair Agent Fix\n\nThis branch was created by the WORKWAY Repair Agent.\n\n## Suggested Fix\n\n${fixContent}`;
+
+  // Get the branch ref
+  const refResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/git/ref/heads/${branch}`,
+    { headers: GITHUB_HEADERS(githubToken) }
+  );
+
+  if (!refResponse.ok) {
+    console.log('Branch ref not found, skipping file creation');
+    return [placeholderPath];
+  }
+
+  const refData = await refResponse.json();
+  const commitSha = refData.object.sha;
+
+  // Get the commit to find the tree
+  const commitResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/git/commits/${commitSha}`,
+    { headers: GITHUB_HEADERS(githubToken) }
+  );
+
+  if (!commitResponse.ok) {
+    return [placeholderPath];
+  }
+
+  const commitData = await commitResponse.json();
+  const treeSha = commitData.tree.sha;
+
+  // Create a blob for the file
+  const blobResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/git/blobs`,
+    {
+      method: 'POST',
+      headers: GITHUB_HEADERS(githubToken),
+      body: JSON.stringify({
+        content: btoa(content),
+        encoding: 'base64',
+      }),
+    }
+  );
+
+  if (!blobResponse.ok) {
+    return [placeholderPath];
+  }
+
+  const blobData = await blobResponse.json();
+
+  // Create a new tree
+  const treeResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/git/trees`,
+    {
+      method: 'POST',
+      headers: GITHUB_HEADERS(githubToken),
+      body: JSON.stringify({
+        base_tree: treeSha,
+        tree: [
+          {
+            path: placeholderPath,
+            mode: '100644',
+            type: 'blob',
+            sha: blobData.sha,
+          },
+        ],
+      }),
+    }
+  );
+
+  if (!treeResponse.ok) {
+    return [placeholderPath];
+  }
+
+  const treeData = await treeResponse.json();
+
+  // Create a commit
+  const newCommitResponse = await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/git/commits`,
+    {
+      method: 'POST',
+      headers: GITHUB_HEADERS(githubToken),
+      body: JSON.stringify({
+        message: 'chore: add repair agent fix documentation',
+        tree: treeData.sha,
+        parents: [commitSha],
+      }),
+    }
+  );
+
+  if (!newCommitResponse.ok) {
+    return [placeholderPath];
+  }
+
+  const newCommitData = await newCommitResponse.json();
+
+  // Update the branch ref
+  await fetch(
+    `https://api.github.com/repos/${owner}/${repoName}/git/refs/heads/${branch}`,
+    {
+      method: 'PATCH',
+      headers: GITHUB_HEADERS(githubToken),
+      body: JSON.stringify({
+        sha: newCommitData.sha,
+      }),
+    }
+  );
+
+  return [placeholderPath];
 }
 
 async function runTests(

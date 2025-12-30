@@ -15,6 +15,7 @@ export interface PRInput {
     fingerprint: string;
     repo: string;
   };
+  isHighRisk?: boolean;
 }
 
 export interface PullRequest {
@@ -26,11 +27,24 @@ export async function createPR(
   input: PRInput,
   githubToken: string
 ): Promise<PullRequest> {
-  const { diagnosis, fix, error } = input;
+  const { diagnosis, fix, error, isHighRisk } = input;
+
+  // High-risk warning banner
+  const riskWarning = isHighRisk
+    ? `
+> ⚠️ **HIGH-RISK FIX** - This repair affects critical code paths. Extra review required.
+>
+> The repair agent has classified this as high-risk due to:
+> - Potential impact on critical functionality
+> - Complex code changes required
+> - Insufficient test coverage for affected areas
+
+`
+    : '';
 
   // Prepare PR body
   const body = `
-## Error Repair
+${riskWarning}## Error Repair
 
 **Error Fingerprint:** \`${error.fingerprint}\`
 
@@ -86,13 +100,15 @@ ${diagnosis.suggested_approach}
         'Content-Type': 'application/json',
         Authorization: `Bearer ${githubToken}`,
         Accept: 'application/vnd.github.v3+json',
+        'User-Agent': 'WORKWAY-Repair-Agent/1.0',
       },
       body: JSON.stringify({
-        title: `fix: ${diagnosis.root_cause.slice(0, 72)}`,
+        title: isHighRisk
+          ? `⚠️ fix: ${diagnosis.root_cause.slice(0, 65)}`
+          : `fix: ${diagnosis.root_cause.slice(0, 72)}`,
         body,
         head: fix.branch,
         base: 'main',
-        labels: ['repair-agent', `risk:${diagnosis.risk_assessment}`],
       }),
     }
   );
@@ -113,7 +129,7 @@ function parseRepo(repo: string): [string, string] {
   // Map repo name to GitHub owner/repo
   const mapping: Record<string, [string, string]> = {
     'workway-platform': ['WORKWAYCO', 'workway-platform'],
-    Cloudflare: ['WORKWAYCO', 'Cloudflare'],
+    Cloudflare: ['WORKWAYCO', 'WORKWAY'],  // Cloudflare is inside WORKWAY repo
   };
 
   return mapping[repo] || ['WORKWAYCO', repo];

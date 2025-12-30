@@ -44,6 +44,12 @@ export class RepairOrchestrator {
       return this.handleRepair(request);
     }
 
+    // Update repair state (from workflow)
+    if (path.startsWith('/repair/') && request.method === 'PATCH') {
+      const id = path.split('/')[2];
+      return this.handleUpdateRepair(id, request);
+    }
+
     // Get repair state
     if (path.startsWith('/repair/')) {
       const id = path.split('/')[2];
@@ -114,7 +120,7 @@ export class RepairOrchestrator {
         params: {
           repair_id: repair.id,
           error: repair.error,
-          orchestrator_url: `https://repair-orchestrator.workway.co/${repair.id}`,
+          orchestrator_url: `https://repair-orchestrator.half-dozen.workers.dev/repair/${repair.id}`,
         },
       });
 
@@ -125,6 +131,20 @@ export class RepairOrchestrator {
         status: 'failed',
         failure_reason: err instanceof Error ? err.message : 'Unknown error',
       });
+    }
+  }
+
+  /**
+   * Update repair status (from workflow)
+   */
+  private async handleUpdateRepair(id: string, request: Request): Promise<Response> {
+    try {
+      const updates = await request.json();
+      await this.manager.updateRepair(id, updates);
+      return Response.json({ status: 'updated' });
+    } catch (err) {
+      console.error('Error updating repair:', err);
+      return Response.json({ error: 'Failed to update repair' }, { status: 500 });
     }
   }
 
