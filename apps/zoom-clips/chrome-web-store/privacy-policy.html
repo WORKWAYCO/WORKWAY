@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Privacy Policy - WORKWAY Zoom Sync Extension</title>
+  <link rel="stylesheet" href="https://cdn.workway.co/fonts.css">
+  <link rel="stylesheet" href="https://cdn.workway.co/tokens.css">
+  <style>
+    body {
+      font-family: var(--font-sans), system-ui, sans-serif;
+      background: var(--bg-pure, #000);
+      color: var(--fg-primary, #fff);
+      line-height: 1.6;
+      padding: 2rem;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+    h2 { font-size: 1.25rem; margin-top: 2rem; color: rgba(255,255,255,0.9); }
+    h3 { font-size: 1rem; margin-top: 1.5rem; }
+    p, li { color: rgba(255,255,255,0.8); }
+    ul { padding-left: 1.5rem; }
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
+    th, td { text-align: left; padding: 0.75rem; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    th { color: rgba(255,255,255,0.6); font-weight: 500; }
+    a { color: #fff; }
+    .updated { color: rgba(255,255,255,0.5); font-size: 0.875rem; }
+    .logo { font-size: 0.75rem; letter-spacing: 0.1em; color: rgba(255,255,255,0.4); margin-bottom: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="logo">WORKWAY</div>
+  <h1>Privacy Policy</h1>
+  <p class="updated">WORKWAY Zoom Sync Extension &mdash; Last Updated: December 30, 2025</p>
+
+  <h2>Overview</h2>
+  <p>WORKWAY Zoom Sync ("the Extension") is a browser extension that enables the WORKWAY Meeting Intelligence workflow by syncing Zoom authentication cookies.</p>
+
+  <h2>Data Collection</h2>
+
+  <h3>What We Collect</h3>
+  <p>The Extension collects <strong>only</strong> the following data:</p>
+  <ul>
+    <li>Zoom session cookies from the <code>zoom.us</code> domain</li>
+    <li>Your WORKWAY User ID (entered by you)</li>
+  </ul>
+
+  <h3>What We Do NOT Collect</h3>
+  <ul>
+    <li>Browsing history</li>
+    <li>Personal information</li>
+    <li>Data from any website other than zoom.us</li>
+    <li>Zoom meeting content, recordings, or transcripts (these are accessed server-side after authentication)</li>
+  </ul>
+
+  <h2>How Data Is Used</h2>
+  <ol>
+    <li><strong>Zoom Cookies</strong>: Sent securely via HTTPS to <code>meetings.workway.co</code> to authenticate with Zoom on your behalf. This enables WORKWAY to access your Zoom recordings and extract meeting transcripts.</li>
+    <li><strong>User ID</strong>: Stored locally in Chrome extension storage to identify your WORKWAY account.</li>
+  </ol>
+
+  <h2>Data Storage</h2>
+  <ul>
+    <li><strong>Local Storage</strong>: Your User ID and sync timestamps are stored in Chrome's extension storage on your device.</li>
+    <li><strong>Server Storage</strong>: Zoom cookies are stored securely on Cloudflare's infrastructure (Durable Objects) and automatically expire after 24 hours.</li>
+  </ul>
+
+  <h2>Data Sharing</h2>
+  <p>We do not sell, trade, or share your data with third parties. Zoom cookies are used solely to authenticate with Zoom's website on your behalf.</p>
+
+  <h2>Data Retention</h2>
+  <ul>
+    <li>Zoom cookies expire and are deleted after 24 hours</li>
+    <li>Local extension data persists until you uninstall the extension or clear extension data</li>
+  </ul>
+
+  <h2>Security</h2>
+  <ul>
+    <li>All data transmission uses HTTPS encryption</li>
+    <li>Cookies are stored in Cloudflare Durable Objects with per-user isolation</li>
+    <li>No cookies are logged or stored in plaintext</li>
+  </ul>
+
+  <h2>Your Rights</h2>
+  <p>You can:</p>
+  <ul>
+    <li>Stop syncing at any time by not clicking "Sync Now"</li>
+    <li>Uninstall the extension to remove all local data</li>
+    <li>Contact us to request deletion of server-side data</li>
+  </ul>
+
+  <h2>Permissions Justification</h2>
+  <table>
+    <thead>
+      <tr><th>Permission</th><th>Why It's Needed</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>cookies</code></td><td>Read Zoom httpOnly cookies that are inaccessible to websites</td></tr>
+      <tr><td><code>storage</code></td><td>Store your User ID and sync preferences locally</td></tr>
+      <tr><td><code>alarms</code></td><td>Schedule automatic cookie sync every 6 hours</td></tr>
+      <tr><td><code>notifications</code></td><td>Alert you when cookies need to be refreshed</td></tr>
+      <tr><td><code>*://*.zoom.us/*</code></td><td>Access cookies from Zoom domains</td></tr>
+      <tr><td><code>https://meetings.workway.co/*</code></td><td>Send cookies to WORKWAY backend</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Contact</h2>
+  <p>For privacy questions or data deletion requests:</p>
+  <ul>
+    <li>Email: <a href="mailto:privacy@workway.co">privacy@workway.co</a></li>
+    <li>Website: <a href="https://workway.co">https://workway.co</a></li>
+  </ul>
+
+  <h2>Changes to This Policy</h2>
+  <p>We may update this policy occasionally. Changes will be posted at this URL.</p>
+
+  <hr style="border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 2rem 0;">
+  <p style="font-size: 0.875rem; color: rgba(255,255,255,0.4);">
+    <strong>WORKWAY, Inc.</strong><br>
+    <a href="https://workway.co" style="color: rgba(255,255,255,0.4);">https://workway.co</a>
+  </p>
+</body>
+</html>

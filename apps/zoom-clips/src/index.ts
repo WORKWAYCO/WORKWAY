@@ -121,6 +121,7 @@ export default {
           'GET /dashboard-data/:userId': 'Dashboard data',
           'POST /upload-cookies/:userId': 'Upload Zoom cookies',
           'GET /meetings/:userId': 'List meetings with transcripts',
+          'GET /clips/:userId?days=N': 'List clips from clips library',
           'GET /meeting-transcript/:userId?index=N': 'Get transcript for meeting',
           'POST /transcript/:userId': 'Extract transcript from Zoom URL',
         },
@@ -227,6 +228,11 @@ export class ZoomSessionManager {
 
       if (path === '/dashboard-data' && request.method === 'GET') {
         return this.getDashboardData();
+      }
+
+      if (path === '/clips' && request.method === 'GET') {
+        const days = parseInt(url.searchParams.get('days') || '7');
+        return this.listClips(days);
       }
 
       return Response.json({ error: 'Unknown endpoint', path }, { status: 404 });
@@ -787,6 +793,172 @@ export class ZoomSessionManager {
   }
 
   /**
+   * GET /clips?days=N - List Zoom Clips from the user's clips library
+   *
+   * Scrapes zoom.us/clips page to get clip list with share URLs.
+   * Each clip's share_url can be passed to /transcript endpoint for extraction.
+   */
+  private async listClips(days: number = 7): Promise<Response> {
+    // Validate cookies exist
+    const storedCookies = await this.state.storage.get<any>('zoom_cookies');
+    const cookies = Array.isArray(storedCookies) ? storedCookies : [];
+    if (cookies.length === 0) {
+      return Response.json({
+        success: false,
+        error: 'No cookies. Use Chrome extension to sync first.',
+        needsAuth: true,
+      }, { status: 401 });
+    }
+
+    try {
+      const browser = await this.getBrowser();
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1920, height: 1080 });
+
+      // Set cookies
+      console.log(`Loading ${cookies.length} cookies for clips list...`);
+      for (const cookie of cookies) {
+        try {
+          await page.setCookie({
+            ...cookie,
+            domain: cookie.domain || '.zoom.us',
+            path: cookie.path || '/',
+            secure: cookie.secure ?? true,
+            httpOnly: true,
+          });
+        } catch (e) {
+          // Skip invalid cookies
+        }
+      }
+
+      // Navigate to clips page
+      console.log('Navigating to Clips page...');
+      await page.goto('https://us06web.zoom.us/clips', {
+        waitUntil: 'networkidle2',
+        timeout: 30000,
+      });
+
+      // Check if redirected to login
+      const currentUrl = page.url();
+      if (currentUrl.includes('/signin') || currentUrl.includes('/login')) {
+        await page.close();
+        return Response.json({
+          success: false,
+          error: 'Cookies expired. Please re-sync via Chrome extension.',
+          needsAuth: true,
+        }, { status: 401 });
+      }
+
+      // Wait for clips to load
+      await page.waitForSelector('[class*="clip"], .clip-item, .clip-card', { timeout: 10000 }).catch(() => {});
+
+      // Additional wait for UI to fully render
+      await new Promise(r => setTimeout(r, 2000));
+
+      // Calculate date filter
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - days);
+
+      // Extract clips from the page
+      const clips = await page.evaluate((fromDateStr: string) => {
+        const results: Array<{
+          id: string;
+          title: string;
+          created_at: string;
+          duration: number;
+          share_url: string;
+          thumbnail_url?: string;
+        }> = [];
+
+        // Try various selectors for clip items
+        const clipElements = document.querySelectorAll(
+          '[data-clip-id], .clip-item, .clip-card, [class*="clip-list"] > div, [role="listitem"]'
+        );
+
+        clipElements.forEach((el) => {
+          // Extract clip ID
+          const id =
+            el.getAttribute('data-clip-id') ||
+            el.getAttribute('data-id') ||
+            el.querySelector('a[href*="/clips/"]')?.getAttribute('href')?.match(/clips\/([^/?]+)/)?.[1] ||
+            '';
+
+          if (!id) return;
+
+          // Extract title
+          const title =
+            el.querySelector('[class*="title"], .clip-title, h3, h4')?.textContent?.trim() ||
+            el.querySelector('a')?.textContent?.trim() ||
+            'Untitled Clip';
+
+          // Extract date
+          const dateText =
+            el.querySelector('[class*="date"], [class*="time"], .clip-date')?.textContent?.trim() ||
+            '';
+          let createdAt = new Date().toISOString();
+          if (dateText) {
+            const parsed = new Date(dateText);
+            if (!isNaN(parsed.getTime())) {
+              createdAt = parsed.toISOString();
+            }
+          }
+
+          // Extract duration (format: "1:30" or "01:30")
+          const durationText =
+            el.querySelector('[class*="duration"], .clip-duration')?.textContent?.trim() || '';
+          let duration = 0;
+          const durationMatch = durationText.match(/(\d+):(\d+)/);
+          if (durationMatch) {
+            duration = parseInt(durationMatch[1]) * 60 + parseInt(durationMatch[2]);
+          }
+
+          // Extract share URL
+          const shareLink = el.querySelector('a[href*="/clips/share/"], a[href*="/clips/"]');
+          let shareUrl = shareLink?.getAttribute('href') || '';
+          if (shareUrl && !shareUrl.startsWith('http')) {
+            shareUrl = `https://zoom.us${shareUrl}`;
+          }
+          if (!shareUrl) {
+            shareUrl = `https://zoom.us/clips/share/${id}`;
+          }
+
+          // Extract thumbnail
+          const thumbnail = el.querySelector('img[src*="thumbnail"], img[class*="thumb"]');
+          const thumbnailUrl = thumbnail?.getAttribute('src') || undefined;
+
+          results.push({
+            id,
+            title,
+            created_at: createdAt,
+            duration,
+            share_url: shareUrl,
+            thumbnail_url: thumbnailUrl,
+          });
+        });
+
+        return results;
+      }, fromDate.toISOString());
+
+      await page.close();
+      this.lastActivity = Date.now();
+
+      return Response.json({
+        success: true,
+        clips,
+        count: clips.length,
+        daysSearched: days,
+      });
+
+    } catch (error: any) {
+      console.error('List clips error:', error);
+      return Response.json({
+        success: false,
+        error: error.message || 'Failed to list clips',
+      }, { status: 500 });
+    }
+  }
+
+  /**
    * GET /meeting-transcript?index=N - Download VTT transcript for meeting at index N
    *
    * This navigates to the Transcripts list, clicks the Download button for the meeting
@@ -1005,47 +1177,100 @@ export class ZoomSessionManager {
   }
 
   /**
-   * Parse VTT content to plain text transcript
+   * Parse VTT content to structured transcript with timestamps
+   *
+   * Output format (for Notion):
+   * ### 00:42
+   * Ford: Hey, Danny, good morning.
+   *
+   * ### 00:44
+   * Danny Morgan: What up?
    */
   private parseVTT(vttContent: string): string {
     const lines = vttContent.split('\n');
-    const textLines: string[] = [];
+    const segments: Array<{ timestamp: string; speaker: string; text: string }> = [];
+    let currentTimestamp = '';
     let currentSpeaker = '';
+    let currentText = '';
 
-    for (const line of lines) {
-      const trimmed = line.trim();
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
 
-      // Skip WEBVTT header, timestamps, and empty lines
-      if (!trimmed ||
-          trimmed === 'WEBVTT' ||
-          trimmed.match(/^\d{2}:\d{2}:\d{2}/) ||
-          trimmed.match(/^NOTE/) ||
-          trimmed.match(/-->/)
-      ) {
+      // Skip WEBVTT header and NOTE lines
+      if (!line || line === 'WEBVTT' || line.startsWith('NOTE')) {
         continue;
       }
 
-      // Check for speaker prefix (e.g., "Danny Morgan:")
-      const speakerMatch = trimmed.match(/^([A-Za-z][A-Za-z\s]+):\s*(.*)/);
-      if (speakerMatch) {
-        const speaker = speakerMatch[1].trim();
-        const text = speakerMatch[2].trim();
-        if (speaker !== currentSpeaker) {
-          currentSpeaker = speaker;
-          if (text) {
-            textLines.push(`${speaker}: ${text}`);
-          } else {
-            textLines.push(`${speaker}:`);
-          }
-        } else if (text) {
-          textLines.push(text);
+      // Capture timestamp from "00:00:42.000 --> 00:00:44.000" format
+      const timestampMatch = line.match(/^(\d{2}):(\d{2}):(\d{2})\.\d{3}\s+-->/);
+      if (timestampMatch) {
+        // Save previous segment if exists
+        if (currentTimestamp && (currentSpeaker || currentText)) {
+          segments.push({
+            timestamp: currentTimestamp,
+            speaker: currentSpeaker,
+            text: currentText,
+          });
         }
-      } else if (trimmed.length > 1) {
-        textLines.push(trimmed);
+
+        // Convert HH:MM:SS to MM:SS (skip hours if 00)
+        const hours = parseInt(timestampMatch[1]);
+        const mins = parseInt(timestampMatch[2]);
+        const secs = timestampMatch[3];
+
+        if (hours > 0) {
+          currentTimestamp = `${hours}:${mins.toString().padStart(2, '0')}:${secs}`;
+        } else {
+          currentTimestamp = `${mins}:${secs}`;
+        }
+
+        currentSpeaker = '';
+        currentText = '';
+        continue;
+      }
+
+      // Skip standalone timestamp lines (without -->)
+      if (line.match(/^\d{2}:\d{2}:\d{2}/)) {
+        continue;
+      }
+
+      // Check for speaker prefix (e.g., "Danny Morgan: text")
+      const speakerMatch = line.match(/^([A-Za-z][A-Za-z\s]+):\s*(.*)/);
+      if (speakerMatch) {
+        currentSpeaker = speakerMatch[1].trim();
+        currentText = speakerMatch[2].trim();
+      } else if (line.length > 1) {
+        // Continuation of text without speaker prefix
+        if (currentText) {
+          currentText += ' ' + line;
+        } else {
+          currentText = line;
+        }
       }
     }
 
-    return textLines.join('\n');
+    // Don't forget the last segment
+    if (currentTimestamp && (currentSpeaker || currentText)) {
+      segments.push({
+        timestamp: currentTimestamp,
+        speaker: currentSpeaker,
+        text: currentText,
+      });
+    }
+
+    // Format output with timestamp headers
+    const outputLines: string[] = [];
+    for (const segment of segments) {
+      outputLines.push(`### ${segment.timestamp}`);
+      if (segment.speaker) {
+        outputLines.push(`${segment.speaker}: ${segment.text}`);
+      } else if (segment.text) {
+        outputLines.push(segment.text);
+      }
+      outputLines.push(''); // Blank line between segments
+    }
+
+    return outputLines.join('\n').trim();
   }
 
   /**
