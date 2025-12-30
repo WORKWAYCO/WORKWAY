@@ -169,6 +169,74 @@ describe('RepairStateManager', () => {
       expect(updated?.updated_at).not.toBe(state.updated_at);
     });
 
+    it('should transition through testing and auto_merged statuses', async () => {
+      const error = {
+        id: 'test-1',
+        fingerprint: 'abc123',
+        level: 'error' as const,
+        message: 'Test error',
+        stack: null,
+        context: {},
+        source: 'custom',
+        repo: 'Cloudflare',
+        received_at: new Date().toISOString(),
+      };
+
+      const state = await manager.createRepair(error);
+
+      // Progress through workflow states
+      await manager.updateRepair(state.id, { status: 'diagnosing' });
+      await manager.updateRepair(state.id, { status: 'fixing' });
+      await manager.updateRepair(state.id, { status: 'testing' });
+
+      const testing = await manager.getRepair(state.id);
+      expect(testing?.status).toBe('testing');
+
+      // Simulate auto-merge on successful tests
+      await manager.updateRepair(state.id, { status: 'auto_merged' });
+
+      const merged = await manager.getRepair(state.id);
+      expect(merged?.status).toBe('auto_merged');
+    });
+
+    it('should exclude auto_merged from active repairs', async () => {
+      const error1 = {
+        id: 'test-1',
+        fingerprint: 'abc123',
+        level: 'error' as const,
+        message: 'Error 1',
+        stack: null,
+        context: {},
+        source: 'custom',
+        repo: 'Cloudflare',
+        received_at: new Date().toISOString(),
+      };
+
+      const error2 = {
+        id: 'test-2',
+        fingerprint: 'def456',
+        level: 'error' as const,
+        message: 'Error 2',
+        stack: null,
+        context: {},
+        source: 'custom',
+        repo: 'Cloudflare',
+        received_at: new Date().toISOString(),
+      };
+
+      const state1 = await manager.createRepair(error1);
+      await manager.createRepair(error2);
+
+      // Mark first as auto_merged (terminal state)
+      await manager.updateRepair(state1.id, { status: 'auto_merged' });
+
+      const active = await manager.listActiveRepairs();
+
+      // Only the pending repair should be active
+      expect(active.length).toBe(1);
+      expect(active[0].status).toBe('pending');
+    });
+
     it('should retrieve repair by ID', async () => {
       const error = {
         id: 'test-1',

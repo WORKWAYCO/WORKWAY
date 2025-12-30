@@ -57,7 +57,9 @@ export type RepairStatus =
   | 'pending'
   | 'diagnosing'
   | 'fixing'
+  | 'testing'
   | 'pr_created'
+  | 'auto_merged'
   | 'approved'
   | 'deployed'
   | 'failed';
@@ -215,8 +217,11 @@ export class RepairStateManager {
     const repairs: RepairState[] = [];
     const list = await this.storage.list<RepairState>({ prefix: 'repair:' });
 
+    // Terminal states - no more work to do
+    const terminalStates: RepairStatus[] = ['deployed', 'failed', 'auto_merged'];
+
     for (const [_, state] of list) {
-      if (state.status !== 'deployed' && state.status !== 'failed') {
+      if (!terminalStates.includes(state.status)) {
         repairs.push(state);
       }
     }
