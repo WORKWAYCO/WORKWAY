@@ -124,6 +124,7 @@ export default {
           'GET /clips/:userId?days=N': 'List clips from clips library',
           'GET /meeting-transcript/:userId?index=N': 'Get transcript for meeting',
           'POST /transcript/:userId': 'Extract transcript from Zoom URL',
+          'POST /sync/:userId?days=N': 'Trigger sync of clips and meetings',
         },
         sessionMaintenance: 'automatic',
       });
@@ -233,6 +234,11 @@ export class ZoomSessionManager {
       if (path === '/clips' && request.method === 'GET') {
         const days = parseInt(url.searchParams.get('days') || '7');
         return this.listClips(days);
+      }
+
+      if (path === '/sync' && request.method === 'POST') {
+        const days = parseInt(url.searchParams.get('days') || '7');
+        return this.runSync(days);
       }
 
       return Response.json({ error: 'Unknown endpoint', path }, { status: 404 });
@@ -954,6 +960,111 @@ export class ZoomSessionManager {
       return Response.json({
         success: false,
         error: error.message || 'Failed to list clips',
+      }, { status: 500 });
+    }
+  }
+
+  /**
+   * POST /sync - Trigger a full sync of clips and meetings
+   *
+   * Fetches clips and meetings, logs the execution, and returns results.
+   * This endpoint is called by the WORKWAY platform to trigger syncs.
+   */
+  private async runSync(days: number = 7): Promise<Response> {
+    const startTime = Date.now();
+
+    // Validate cookies exist
+    const storedCookies = await this.state.storage.get<any>('zoom_cookies');
+    const cookies = Array.isArray(storedCookies) ? storedCookies : [];
+    if (cookies.length === 0) {
+      return Response.json({
+        success: false,
+        error: 'No cookies. Use Chrome extension to sync first.',
+        needsAuth: true,
+      }, { status: 401 });
+    }
+
+    try {
+      // Fetch clips
+      console.log(`[Sync] Fetching clips for last ${days} days...`);
+      const clipsResponse = await this.listClips(days);
+      const clipsData = await clipsResponse.json() as { success: boolean; clips?: any[]; error?: string };
+
+      if (!clipsData.success) {
+        return Response.json({
+          success: false,
+          error: `Failed to fetch clips: ${clipsData.error}`,
+        }, { status: 500 });
+      }
+
+      // Fetch meetings
+      console.log('[Sync] Fetching meetings...');
+      const meetingsResponse = await this.listMeetings();
+      const meetingsData = await meetingsResponse.json() as { success: boolean; meetings?: any[]; error?: string };
+
+      if (!meetingsData.success) {
+        return Response.json({
+          success: false,
+          error: `Failed to fetch meetings: ${meetingsData.error}`,
+        }, { status: 500 });
+      }
+
+      const duration = Date.now() - startTime;
+
+      // Log execution for dashboard stats
+      const executions = await this.state.storage.get<Array<{
+        started_at: string;
+        completed_at?: string;
+        success: boolean;
+        clips_count?: number;
+        meetings_count?: number;
+      }>>('executions') || [];
+
+      executions.unshift({
+        started_at: new Date(startTime).toISOString(),
+        completed_at: new Date().toISOString(),
+        success: true,
+        clips_count: clipsData.clips?.length || 0,
+        meetings_count: meetingsData.meetings?.length || 0,
+      });
+
+      // Keep only last 100 executions
+      if (executions.length > 100) {
+        executions.length = 100;
+      }
+
+      await this.state.storage.put('executions', executions);
+
+      console.log(`[Sync] Complete: ${clipsData.clips?.length || 0} clips, ${meetingsData.meetings?.length || 0} meetings in ${duration}ms`);
+
+      return Response.json({
+        success: true,
+        message: `Synced ${clipsData.clips?.length || 0} clips and ${meetingsData.meetings?.length || 0} meetings`,
+        data: {
+          clips: clipsData.clips || [],
+          meetings: meetingsData.meetings || [],
+          daysSearched: days,
+          durationMs: duration,
+        },
+      });
+
+    } catch (error: any) {
+      console.error('[Sync] Error:', error);
+
+      // Log failed execution
+      const executions = await this.state.storage.get<Array<any>>('executions') || [];
+      executions.unshift({
+        started_at: new Date(startTime).toISOString(),
+        completed_at: new Date().toISOString(),
+        success: false,
+        error: error.message,
+      });
+      if (executions.length > 100) executions.length = 100;
+      await this.state.storage.put('executions', executions);
+
+      return Response.json({
+        success: false,
+        error: error.message || 'Sync failed',
       }, { status: 500 });
     }
   }
