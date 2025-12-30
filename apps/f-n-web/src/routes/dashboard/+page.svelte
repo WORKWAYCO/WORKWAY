@@ -3,6 +3,7 @@
 	import { Mic, BookOpen, Check, X, ChevronDown, Loader2 } from 'lucide-svelte';
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
+	import { PropertyMappingCard } from '$lib/components/sync';
 
 	interface TranscriptItem {
 		id: string;
@@ -11,9 +12,23 @@
 		synced: boolean;
 	}
 
+	interface DatabaseProperty {
+		id: string;
+		name: string;
+		type: string;
+	}
+
 	interface DatabaseItem {
 		id: string;
 		title: string;
+		properties: DatabaseProperty[];
+	}
+
+	interface PropertyMapping {
+		duration?: string;
+		participants?: string;
+		keywords?: string;
+		date?: string;
 	}
 
 	interface SyncStatus {
@@ -80,6 +95,15 @@
 	let loadingTranscripts = $state(false);
 	let loadingDatabases = $state(false);
 
+	// Property mapping state
+	let savedMapping = $state<PropertyMapping | null>(null);
+	let loadingMapping = $state(false);
+
+	// Get properties for selected database
+	const selectedDatabaseProperties = $derived(
+		databases.find((db) => db.id === selectedDatabase)?.properties || []
+	);
+
 	// Subscription limits
 	const limits: Record<string, number> = {
 		free: 5,
@@ -100,6 +124,32 @@
 			loadDatabases();
 		}
 	});
+
+	// Load saved mapping when database changes
+	$effect(() => {
+		if (selectedDatabase) {
+			loadSavedMapping(selectedDatabase);
+		} else {
+			savedMapping = null;
+		}
+	});
+
+	async function loadSavedMapping(databaseId: string) {
+		loadingMapping = true;
+		try {
+			const res = await fetch(`/api/property-mappings?databaseId=${databaseId}`);
+			const json = await res.json() as { mapping?: PropertyMapping | null };
+			savedMapping = json.mapping || null;
+		} catch (e) {
+			console.error('Failed to load property mapping:', e);
+			savedMapping = null;
+		}
+		loadingMapping = false;
+	}
+
+	function handleMappingSave(mapping: PropertyMapping) {
+		savedMapping = mapping;
+	}
 
 	async function loadTranscripts() {
 		loadingTranscripts = true;
@@ -359,6 +409,18 @@
 					</select>
 				{/if}
 			</div>
+
+			<!-- Property Mapping (shows when database selected) -->
+			{#if selectedDatabase && !loadingMapping}
+				<div class="mb-6">
+					<PropertyMappingCard
+						databaseId={selectedDatabase}
+						properties={selectedDatabaseProperties}
+						savedMapping={savedMapping}
+						onSave={handleMappingSave}
+					/>
+				</div>
+			{/if}
 
 			<!-- Transcript Selection -->
 			<div class="mb-6">
