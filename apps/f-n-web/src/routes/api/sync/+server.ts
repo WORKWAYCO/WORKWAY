@@ -2,6 +2,7 @@ import { json } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
 import { createFirefliesClient } from '$lib/api/fireflies';
 import { createNotionClient, formatTranscriptBlocks } from '$lib/api/notion';
+import type { PropertyMapping } from '../property-mappings/+server';
 
 export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	if (!locals.user) {
@@ -98,6 +99,17 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		)
 		.run();
 
+	// Load property mapping for this database
+	const mappingRow = await DB.prepare(
+		'SELECT mappings FROM property_mappings WHERE user_id = ? AND database_id = ?'
+	)
+		.bind(locals.user.id, databaseId)
+		.first<{ mappings: string }>();
+
+	const propertyMapping: PropertyMapping = mappingRow
+		? JSON.parse(mappingRow.mappings)
+		: { date: dateFieldId }; // Fallback to legacy dateFieldId
+
 	// Start sync in background (using waitUntil for short syncs)
 	platform.context.waitUntil(
 		processSync({
@@ -105,7 +117,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			userId: locals.user.id,
 			databaseId,
 			transcriptIds,
-			dateFieldId,
+			propertyMapping,
 			firefliesApiKey: firefliesAccount.access_token,
 			notionAccessToken: notionAccount.access_token,
 			db: DB
@@ -120,12 +132,12 @@ async function processSync(params: {
 	userId: string;
 	databaseId: string;
 	transcriptIds: string[];
-	dateFieldId?: string;
+	propertyMapping: PropertyMapping;
 	firefliesApiKey: string;
 	notionAccessToken: string;
 	db: D1Database;
 }) {
-	const { jobId, userId, databaseId, transcriptIds, dateFieldId, firefliesApiKey, notionAccessToken, db } = params;
+	const { jobId, userId, databaseId, transcriptIds, propertyMapping, firefliesApiKey, notionAccessToken, db } = params;
 
 	const fireflies = createFirefliesClient(firefliesApiKey);
 	const notion = createNotionClient(notionAccessToken);
@@ -170,9 +182,9 @@ async function processSync(params: {
 					}
 				};
 
-				// Add date if field is specified
-				if (dateFieldId && transcript.date) {
-					properties[dateFieldId] = {
+				// Add date if mapped
+				if (propertyMapping.date && transcript.date) {
+					properties[propertyMapping.date] = {
 						date: { start: new Date(transcript.date).toISOString().split('T')[0] }
 					};
 				}
@@ -181,6 +193,27 @@ async function processSync(params: {
 				if (transcript.transcript_url) {
 					properties['Fireflies URL'] = {
 						url: transcript.transcript_url
+					};
+				}
+
+				// Add duration if mapped (convert seconds to minutes)
+				if (propertyMapping.duration && transcript.duration) {
+					properties[propertyMapping.duration] = {
+						number: Math.round(transcript.duration / 60)
+					};
+				}
+
+				// Add participants if mapped
+				if (propertyMapping.participants && transcript.participants?.length) {
+					properties[propertyMapping.participants] = {
+						multi_select: transcript.participants.map((p) => ({ name: p }))
+					};
+				}
+
+				// Add keywords if mapped
+				if (propertyMapping.keywords && transcript.summary?.keywords?.length) {
+					properties[propertyMapping.keywords] = {
+						multi_select: transcript.summary.keywords.slice(0, 10).map((k) => ({ name: k }))
 					};
 				}
 
