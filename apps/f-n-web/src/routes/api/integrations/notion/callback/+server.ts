@@ -33,7 +33,7 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 	}
 
 	// Verify state
-	const stateData = await SESSIONS.get(`notion_oauth_state:${state}`, 'json') as { userId: string } | null;
+	const stateData = await SESSIONS.get(`notion_oauth_state:${state}`, 'json') as { userId: string; email?: string } | null;
 
 	if (!stateData) {
 		throw redirect(302, '/dashboard?error=invalid_state');
@@ -70,37 +70,63 @@ export const GET: RequestHandler = async ({ url, platform }) => {
 		bot_id: string;
 	};
 
-	// Check for existing connection
-	const existing = await DB.prepare(
-		'SELECT id FROM connected_accounts WHERE user_id = ? AND provider = ?'
-	)
-		.bind(stateData.userId, 'notion')
-		.first();
+	try {
+		// Ensure user exists in local database (handles Identity Worker users without local record)
+		const userExists = await DB.prepare('SELECT id FROM users WHERE id = ?')
+			.bind(stateData.userId)
+			.first();
 
-	if (existing) {
-		// Update existing
-		await DB.prepare(
-			`UPDATE connected_accounts
-			 SET access_token = ?, workspace_id = ?, workspace_name = ?, updated_at = datetime("now")
-			 WHERE user_id = ? AND provider = ?`
-		)
-			.bind(tokenData.access_token, tokenData.workspace_id, tokenData.workspace_name, stateData.userId, 'notion')
-			.run();
-	} else {
-		// Create new
-		await DB.prepare(
-			`INSERT INTO connected_accounts (id, user_id, provider, access_token, workspace_id, workspace_name)
-			 VALUES (?, ?, ?, ?, ?, ?)`
-		)
-			.bind(
-				crypto.randomUUID(),
-				stateData.userId,
-				'notion',
-				tokenData.access_token,
-				tokenData.workspace_id,
-				tokenData.workspace_name
+		if (!userExists) {
+			// Create local user record for Identity Worker user
+			await DB.prepare(
+				'INSERT INTO users (id, email, password_hash, email_verified) VALUES (?, ?, ?, 0)'
 			)
-			.run();
+				.bind(stateData.userId, stateData.email || 'unknown@user.local', `identity:${stateData.userId}`)
+				.run();
+
+			// Create default subscription
+			await DB.prepare(
+				'INSERT INTO subscriptions (id, user_id, tier, status, sync_count, sync_count_reset_at) VALUES (?, ?, ?, ?, 0, ?)'
+			)
+				.bind(crypto.randomUUID(), stateData.userId, 'free', 'free', new Date().toISOString())
+				.run();
+		}
+
+		// Check for existing connection
+		const existing = await DB.prepare(
+			'SELECT id FROM connected_accounts WHERE user_id = ? AND provider = ?'
+		)
+			.bind(stateData.userId, 'notion')
+			.first();
+
+		if (existing) {
+			// Update existing
+			await DB.prepare(
+				`UPDATE connected_accounts
+				 SET access_token = ?, workspace_id = ?, workspace_name = ?, updated_at = datetime("now")
+				 WHERE user_id = ? AND provider = ?`
+			)
+				.bind(tokenData.access_token, tokenData.workspace_id, tokenData.workspace_name, stateData.userId, 'notion')
+				.run();
+		} else {
+			// Create new
+			await DB.prepare(
+				`INSERT INTO connected_accounts (id, user_id, provider, access_token, workspace_id, workspace_name)
+				 VALUES (?, ?, ?, ?, ?, ?)`
+			)
+				.bind(
+					crypto.randomUUID(),
+					stateData.userId,
+					'notion',
+					tokenData.access_token,
+					tokenData.workspace_id,
+					tokenData.workspace_name
+				)
+				.run();
+		}
+	} catch (dbError) {
+		console.error('Database error saving Notion connection:', dbError);
+		throw redirect(302, '/dashboard?error=database_error');
 	}
 
 	throw redirect(302, '/dashboard?success=notion_connected');

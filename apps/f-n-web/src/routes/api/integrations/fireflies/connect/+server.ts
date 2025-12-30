@@ -37,27 +37,53 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 
 	const { DB } = platform.env;
 
-	// Check for existing connection
-	const existing = await DB.prepare(
-		'SELECT id FROM connected_accounts WHERE user_id = ? AND provider = ?'
-	)
-		.bind(locals.user.id, 'fireflies')
-		.first();
+	try {
+		// Ensure user exists in local database (handles Identity Worker users without local record)
+		const userExists = await DB.prepare('SELECT id FROM users WHERE id = ?')
+			.bind(locals.user.id)
+			.first();
 
-	if (existing) {
-		// Update existing
-		await DB.prepare(
-			'UPDATE connected_accounts SET access_token = ?, updated_at = datetime("now") WHERE user_id = ? AND provider = ?'
+		if (!userExists) {
+			// Create local user record for Identity Worker user
+			await DB.prepare(
+				'INSERT INTO users (id, email, password_hash, email_verified) VALUES (?, ?, ?, 0)'
+			)
+				.bind(locals.user.id, locals.user.email || 'unknown@user.local', `identity:${locals.user.id}`)
+				.run();
+
+			// Create default subscription
+			await DB.prepare(
+				'INSERT INTO subscriptions (id, user_id, tier, status, sync_count, sync_count_reset_at) VALUES (?, ?, ?, ?, 0, ?)'
+			)
+				.bind(crypto.randomUUID(), locals.user.id, 'free', 'free', new Date().toISOString())
+				.run();
+		}
+
+		// Check for existing connection
+		const existing = await DB.prepare(
+			'SELECT id FROM connected_accounts WHERE user_id = ? AND provider = ?'
 		)
-			.bind(cleanedKey, locals.user.id, 'fireflies')
-			.run();
-	} else {
-		// Create new
-		await DB.prepare(
-			'INSERT INTO connected_accounts (id, user_id, provider, access_token) VALUES (?, ?, ?, ?)'
-		)
-			.bind(crypto.randomUUID(), locals.user.id, 'fireflies', cleanedKey)
-			.run();
+			.bind(locals.user.id, 'fireflies')
+			.first();
+
+		if (existing) {
+			// Update existing
+			await DB.prepare(
+				'UPDATE connected_accounts SET access_token = ?, updated_at = datetime("now") WHERE user_id = ? AND provider = ?'
+			)
+				.bind(cleanedKey, locals.user.id, 'fireflies')
+				.run();
+		} else {
+			// Create new
+			await DB.prepare(
+				'INSERT INTO connected_accounts (id, user_id, provider, access_token) VALUES (?, ?, ?, ?)'
+			)
+				.bind(crypto.randomUUID(), locals.user.id, 'fireflies', cleanedKey)
+				.run();
+		}
+	} catch (dbError) {
+		console.error('Database error saving Fireflies connection:', dbError);
+		return json({ error: 'Database error. Please try again.' }, { status: 500 });
 	}
 
 	return json({ success: true });

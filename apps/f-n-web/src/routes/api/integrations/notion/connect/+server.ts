@@ -22,11 +22,11 @@ export const GET: RequestHandler = async ({ locals, url, platform }) => {
 	// Generate state for CSRF protection
 	const state = crypto.randomUUID();
 
-	// Store state in KV for verification
+	// Store state in KV for verification (include email for user creation if needed)
 	if (platform?.env?.SESSIONS) {
 		await platform.env.SESSIONS.put(
 			`notion_oauth_state:${state}`,
-			JSON.stringify({ userId: locals.user.id }),
+			JSON.stringify({ userId: locals.user.id, email: locals.user.email }),
 			{ expirationTtl: 600 } // 10 minutes
 		);
 	}
