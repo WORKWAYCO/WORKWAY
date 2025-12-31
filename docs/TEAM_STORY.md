@@ -83,11 +83,11 @@ This team combines:
 
 ## Narrative Arc
 
-1. **Half Dozen Founded** (2022): Danny and Micah launch Half Dozen to build systems solutions for live events industry
-2. **Problem Discovery** (2022-2023): Building custom Zapier workflows for clients, hitting limitations repeatedly
-3. **Solution Hypothesis** (Early 2024): What if developers could build workflows in TypeScript and sell them?
-4. **Technical Validation** (Mid 2024): Cloudflare Workers + TypeScript SDK proves feasible
-5. **Market Validation** (Late 2024): Agencies want this. Enterprises need this. Waitlist grows organically.
+1. **Half Dozen Founded** (2024): Danny and Micah launch Half Dozen to build systems solutions for live events industry
+2. **Problem Discovery** (2024): Building custom Zapier workflows for clients, hitting limitations repeatedly
+3. **Solution Hypothesis** (Mid 2024): What if developers could build workflows in TypeScript and sell them?
+4. **Technical Validation** (Late 2024): Cloudflare Workers + TypeScript SDK proves feasible
+5. **Market Validation** (Early 2025): Agencies want this. Enterprises need this. Waitlist grows organically.
 6. **Now** (2025): Launch WORKWAY, acquire first 10 paying customers, apply to YC Summer 2026
 
 ## Investor FAQs
