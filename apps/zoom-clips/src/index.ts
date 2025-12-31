@@ -277,6 +277,50 @@ function getSetupPage(userId: string): Response {
     .note strong {
       color: rgba(255, 255, 255, 0.6);
     }
+
+    /* Download link */
+    .download-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #ffffff;
+      text-decoration: none;
+      padding: 0.625rem 1rem;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 6px;
+      font-size: 0.875rem;
+      font-weight: 500;
+      transition: all 0.15s ease;
+      margin-top: 0.5rem;
+    }
+    .download-link:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
+    }
+    .download-link svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Inline code */
+    .step-content code {
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 0.75rem;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.125rem 0.375rem;
+      border-radius: 3px;
+    }
+
+    /* Links in steps */
+    .step-content a:not(.download-link) {
+      color: rgba(255, 255, 255, 0.8);
+      text-decoration: underline;
+      text-underline-offset: 2px;
+    }
+    .step-content a:not(.download-link):hover {
+      color: #ffffff;
+    }
   </style>
 </head>
 <body>
@@ -300,32 +344,47 @@ function getSetupPage(userId: string): Response {
         <div class="step">
           <div class="step-number">1</div>
           <div class="step-content">
-            <h3>Install the Browser Extension</h3>
-            <p>Download the WORKWAY Zoom Sync extension for Chrome</p>
+            <h3>Download the Extension</h3>
+            <p>
+              <a href="https://github.com/WORKWAYCO/WORKWAY/raw/main/Cloudflare/apps/zoom-clips/extension.zip" class="download-link" download>
+                Download WORKWAY Zoom Sync
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+                </svg>
+              </a>
+            </p>
           </div>
         </div>
 
         <div class="step">
           <div class="step-number">2</div>
           <div class="step-content">
-            <h3>Log into Zoom</h3>
-            <p>Make sure you're signed into zoom.us in your browser</p>
+            <h3>Enable Developer Mode</h3>
+            <p>Open <code>chrome://extensions</code> and toggle <strong>Developer mode</strong> (top right)</p>
           </div>
         </div>
 
         <div class="step">
           <div class="step-number">3</div>
           <div class="step-content">
-            <h3>Open the Extension</h3>
-            <p>Click the extension icon and paste your User ID</p>
+            <h3>Load the Extension</h3>
+            <p>Click <strong>Load unpacked</strong>, select the unzipped folder</p>
           </div>
         </div>
 
         <div class="step">
           <div class="step-number">4</div>
           <div class="step-content">
-            <h3>Sync Cookies</h3>
-            <p>The extension will securely sync your Zoom session</p>
+            <h3>Log into Zoom</h3>
+            <p>Sign into <a href="https://zoom.us" target="_blank" rel="noopener">zoom.us</a> in Chrome</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">5</div>
+          <div class="step-content">
+            <h3>Sync Your Session</h3>
+            <p>Click the extension icon, paste your User ID, click <strong>Sync Now</strong></p>
           </div>
         </div>
       </div>
