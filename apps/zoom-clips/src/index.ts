@@ -81,7 +81,228 @@ const SESSION_EXPIRY_HOURS = 24;
 // Keep-alive interval (1 hour) - visits Zoom to refresh session cookies
 const KEEP_ALIVE_INTERVAL_MS = 60 * 60 * 1000;
 
-// Setup info endpoint (JSON API, not HTML - per canon)
+/**
+ * Setup page for browser extension workflow
+ *
+ * Exception to "JSON API only" pattern: Browser extension workflows
+ * require a user-facing setup experience. The "Connect" button opens
+ * in a new tab - users expect a page, not JSON.
+ *
+ * Uses CDN design tokens for consistent WORKWAY branding.
+ * This pattern can be reused for other browser extension workflows.
+ */
+function getSetupPage(userId: string): Response {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connect Zoom - WORKWAY</title>
+  <link rel="stylesheet" href="https://cdn.workway.co/fonts.css">
+  <link rel="stylesheet" href="https://cdn.workway.co/tokens.css">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: var(--space-lg);
+    }
+    .container {
+      max-width: 480px;
+      width: 100%;
+    }
+    .header {
+      text-align: center;
+      margin-bottom: var(--space-xl);
+    }
+    .header h1 {
+      font-size: var(--text-h2);
+      font-weight: 600;
+      margin-bottom: var(--space-sm);
+    }
+    .header p {
+      color: var(--fg-secondary);
+      font-size: var(--text-body);
+    }
+    .steps {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+      margin-bottom: var(--space-xl);
+    }
+    .step {
+      display: flex;
+      gap: var(--space-md);
+      padding: var(--space-md);
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+    }
+    .step-number {
+      width: 32px;
+      height: 32px;
+      background: var(--color-purple-500, #a855f7);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      flex-shrink: 0;
+    }
+    .step-content h3 {
+      font-size: var(--text-body);
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .step-content p {
+      font-size: var(--text-small);
+      color: var(--fg-secondary);
+    }
+    .user-id-box {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px;
+      padding: var(--space-md);
+      margin-bottom: var(--space-lg);
+    }
+    .user-id-box label {
+      display: block;
+      font-size: var(--text-small);
+      color: var(--fg-secondary);
+      margin-bottom: var(--space-xs);
+    }
+    .user-id-value {
+      font-family: var(--font-mono);
+      font-size: var(--text-body);
+      background: var(--bg-pure);
+      padding: var(--space-sm);
+      border-radius: 4px;
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-sm);
+    }
+    .user-id-value code {
+      word-break: break-all;
+    }
+    .copy-btn {
+      background: var(--color-purple-500, #a855f7);
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 14px;
+      white-space: nowrap;
+    }
+    .copy-btn:hover {
+      background: var(--color-purple-400, #c084fc);
+    }
+    .note {
+      text-align: center;
+      font-size: var(--text-small);
+      color: var(--fg-tertiary);
+    }
+    .note strong {
+      color: var(--fg-secondary);
+    }
+    .back-link {
+      display: block;
+      text-align: center;
+      margin-top: var(--space-lg);
+      color: var(--fg-secondary);
+      text-decoration: none;
+      font-size: var(--text-small);
+    }
+    .back-link:hover {
+      color: var(--fg-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>Connect Zoom</h1>
+      <p>Sync your Zoom meetings and clips to WORKWAY</p>
+    </div>
+
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3>Install the Browser Extension</h3>
+          <p>Download and install the WORKWAY Zoom Sync extension for Chrome</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3>Log into Zoom</h3>
+          <p>Make sure you're logged into zoom.us in your browser</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h3>Open the Extension</h3>
+          <p>Click the extension icon and paste your User ID below</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">4</div>
+        <div class="step-content">
+          <h3>Click "Sync Cookies"</h3>
+          <p>The extension will securely sync your Zoom session</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="user-id-box">
+      <label>Your User ID</label>
+      <div class="user-id-value">
+        <code id="userId">${userId}</code>
+        <button class="copy-btn" onclick="copyUserId()">Copy</button>
+      </div>
+    </div>
+
+    <p class="note">
+      <strong>Note:</strong> Cookies expire after ~24 hours.<br>
+      Re-sync when prompted in the dashboard.
+    </p>
+
+    <a href="https://workway.co/workflows" class="back-link">
+      &larr; Back to Workflows
+    </a>
+  </div>
+
+  <script>
+    function copyUserId() {
+      const userId = document.getElementById('userId').textContent;
+      navigator.clipboard.writeText(userId).then(() => {
+        const btn = document.querySelector('.copy-btn');
+        btn.textContent = 'Copied!';
+        setTimeout(() => btn.textContent = 'Copy', 2000);
+      });
+    }
+  </script>
+</body>
+</html>`;
+
+  return new Response(html, {
+    headers: { 'Content-Type': 'text/html; charset=utf-8' },
+  });
+}
+
+// JSON API for programmatic access
 function getSetupInfo(userId: string): Response {
   return Response.json({
     userId,
@@ -203,7 +424,14 @@ export class ZoomSessionManager {
       // Route handlers
       if (path === '/setup' && request.method === 'GET') {
         const userId = request.headers.get('X-User-Id') || 'unknown';
-        return getSetupInfo(userId);
+        // Serve HTML page by default (user-facing Connect button)
+        // Use Accept header or ?format=json for programmatic access
+        const acceptHeader = request.headers.get('Accept') || '';
+        const formatParam = new URL(request.url).searchParams.get('format');
+        if (formatParam === 'json' || acceptHeader.includes('application/json')) {
+          return getSetupInfo(userId);
+        }
+        return getSetupPage(userId);
       }
 
       if (path === '/health' && request.method === 'GET') {
