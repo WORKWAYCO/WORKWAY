@@ -92,6 +92,7 @@ const KEEP_ALIVE_INTERVAL_MS = 60 * 60 * 1000;
  * This pattern can be reused for other browser extension workflows.
  */
 function getSetupPage(userId: string): Response {
+  // Pure black canvas with white text - CREATE SOMETHING canon
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -102,196 +103,265 @@ function getSetupPage(userId: string): Response {
   <link rel="stylesheet" href="https://cdn.workway.co/tokens.css">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      background: #000000;
+      color: #ffffff;
+      font-family: var(--font-sans, 'Stack Sans Notch', -apple-system, BlinkMacSystemFont, sans-serif);
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
     body {
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+    }
+
+    /* Back navigation - top left, always visible */
+    .back-nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      padding: 1.5rem 2rem;
+      z-index: 100;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: rgba(255, 255, 255, 0.6);
+      text-decoration: none;
+      font-size: 0.875rem;
+      transition: color 0.15s ease;
+    }
+    .back-link:hover {
+      color: #ffffff;
+    }
+    .back-link svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    /* Main content - centered */
+    main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: var(--space-lg);
+      padding: 4rem 2rem;
     }
+
     .container {
-      max-width: 480px;
+      max-width: 440px;
       width: 100%;
     }
+
+    /* Header */
     .header {
-      text-align: center;
-      margin-bottom: var(--space-xl);
+      margin-bottom: 3rem;
     }
     .header h1 {
-      font-size: var(--text-h2);
+      font-size: clamp(2rem, 5vw, 2.5rem);
       font-weight: 600;
-      margin-bottom: var(--space-sm);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 0.75rem;
     }
     .header p {
-      color: var(--fg-secondary);
-      font-size: var(--text-body);
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 1rem;
+      line-height: 1.5;
     }
+
+    /* Steps */
     .steps {
       display: flex;
       flex-direction: column;
-      gap: var(--space-md);
-      margin-bottom: var(--space-xl);
+      gap: 1rem;
+      margin-bottom: 2.5rem;
     }
     .step {
       display: flex;
-      gap: var(--space-md);
-      padding: var(--space-md);
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-subtle);
+      gap: 1rem;
+      padding: 1.25rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
+      transition: border-color 0.15s ease;
+    }
+    .step:hover {
+      border-color: rgba(255, 255, 255, 0.2);
     }
     .step-number {
-      width: 32px;
-      height: 32px;
-      background: var(--color-purple-500, #a855f7);
-      color: white;
+      width: 28px;
+      height: 28px;
+      background: rgba(255, 255, 255, 0.1);
+      color: rgba(255, 255, 255, 0.8);
       border-radius: 50%;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-weight: 600;
-      font-size: 14px;
+      font-weight: 500;
+      font-size: 0.8125rem;
       flex-shrink: 0;
     }
     .step-content h3 {
-      font-size: var(--text-body);
+      font-size: 0.9375rem;
       font-weight: 500;
-      margin-bottom: 4px;
+      margin-bottom: 0.25rem;
+      color: #ffffff;
     }
     .step-content p {
-      font-size: var(--text-small);
-      color: var(--fg-secondary);
+      font-size: 0.8125rem;
+      color: rgba(255, 255, 255, 0.5);
+      line-height: 1.4;
     }
+
+    /* User ID box */
     .user-id-box {
-      background: var(--bg-elevated);
-      border: 1px solid var(--border-subtle);
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 8px;
-      padding: var(--space-md);
-      margin-bottom: var(--space-lg);
+      padding: 1.25rem;
+      margin-bottom: 2rem;
     }
     .user-id-box label {
       display: block;
-      font-size: var(--text-small);
-      color: var(--fg-secondary);
-      margin-bottom: var(--space-xs);
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.5);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.75rem;
     }
     .user-id-value {
-      font-family: var(--font-mono);
-      font-size: var(--text-body);
-      background: var(--bg-pure);
-      padding: var(--space-sm);
-      border-radius: 4px;
-      border: 1px solid var(--border-subtle);
+      font-family: var(--font-mono, 'JetBrains Mono', monospace);
+      font-size: 0.9375rem;
+      background: #000000;
+      padding: 0.875rem 1rem;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: var(--space-sm);
+      gap: 1rem;
     }
     .user-id-value code {
       word-break: break-all;
+      color: #ffffff;
     }
     .copy-btn {
-      background: var(--color-purple-500, #a855f7);
-      color: white;
-      border: none;
-      padding: 8px 16px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 0.5rem 1rem;
       border-radius: 4px;
       cursor: pointer;
-      font-size: 14px;
+      font-size: 0.8125rem;
+      font-weight: 500;
       white-space: nowrap;
+      transition: all 0.15s ease;
     }
     .copy-btn:hover {
-      background: var(--color-purple-400, #c084fc);
+      background: rgba(255, 255, 255, 0.15);
+      border-color: rgba(255, 255, 255, 0.3);
     }
+
+    /* Note */
     .note {
-      text-align: center;
-      font-size: var(--text-small);
-      color: var(--fg-tertiary);
+      font-size: 0.8125rem;
+      color: rgba(255, 255, 255, 0.4);
+      line-height: 1.5;
     }
     .note strong {
-      color: var(--fg-secondary);
-    }
-    .back-link {
-      display: block;
-      text-align: center;
-      margin-top: var(--space-lg);
-      color: var(--fg-secondary);
-      text-decoration: none;
-      font-size: var(--text-small);
-    }
-    .back-link:hover {
-      color: var(--fg-primary);
+      color: rgba(255, 255, 255, 0.6);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>Connect Zoom</h1>
-      <p>Sync your Zoom meetings and clips to WORKWAY</p>
-    </div>
-
-    <div class="steps">
-      <div class="step">
-        <div class="step-number">1</div>
-        <div class="step-content">
-          <h3>Install the Browser Extension</h3>
-          <p>Download and install the WORKWAY Zoom Sync extension for Chrome</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-number">2</div>
-        <div class="step-content">
-          <h3>Log into Zoom</h3>
-          <p>Make sure you're logged into zoom.us in your browser</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-number">3</div>
-        <div class="step-content">
-          <h3>Open the Extension</h3>
-          <p>Click the extension icon and paste your User ID below</p>
-        </div>
-      </div>
-
-      <div class="step">
-        <div class="step-number">4</div>
-        <div class="step-content">
-          <h3>Click "Sync Cookies"</h3>
-          <p>The extension will securely sync your Zoom session</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="user-id-box">
-      <label>Your User ID</label>
-      <div class="user-id-value">
-        <code id="userId">${userId}</code>
-        <button class="copy-btn" onclick="copyUserId()">Copy</button>
-      </div>
-    </div>
-
-    <p class="note">
-      <strong>Note:</strong> Cookies expire after ~24 hours.<br>
-      Re-sync when prompted in the dashboard.
-    </p>
-
-    <a href="https://workway.co/workflows" class="back-link">
-      &larr; Back to Workflows
+  <nav class="back-nav">
+    <a href="javascript:history.back()" class="back-link" onclick="goBack(event)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      </svg>
+      Back
     </a>
-  </div>
+  </nav>
+
+  <main>
+    <div class="container">
+      <div class="header">
+        <h1>Connect Zoom</h1>
+        <p>Sync your Zoom meetings and clips to WORKWAY</p>
+      </div>
+
+      <div class="steps">
+        <div class="step">
+          <div class="step-number">1</div>
+          <div class="step-content">
+            <h3>Install the Browser Extension</h3>
+            <p>Download the WORKWAY Zoom Sync extension for Chrome</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">2</div>
+          <div class="step-content">
+            <h3>Log into Zoom</h3>
+            <p>Make sure you're signed into zoom.us in your browser</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">3</div>
+          <div class="step-content">
+            <h3>Open the Extension</h3>
+            <p>Click the extension icon and paste your User ID</p>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-number">4</div>
+          <div class="step-content">
+            <h3>Sync Cookies</h3>
+            <p>The extension will securely sync your Zoom session</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="user-id-box">
+        <label>Your User ID</label>
+        <div class="user-id-value">
+          <code id="userId">${userId}</code>
+          <button class="copy-btn" onclick="copyUserId()">Copy</button>
+        </div>
+      </div>
+
+      <p class="note">
+        <strong>Note:</strong> Cookies expire after ~24 hours. Re-sync when prompted.
+      </p>
+    </div>
+  </main>
 
   <script>
     function copyUserId() {
       const userId = document.getElementById('userId').textContent;
       navigator.clipboard.writeText(userId).then(() => {
         const btn = document.querySelector('.copy-btn');
-        btn.textContent = 'Copied!';
+        btn.textContent = 'Copied';
         setTimeout(() => btn.textContent = 'Copy', 2000);
       });
+    }
+
+    function goBack(e) {
+      // If there's history, go back; otherwise go to workflows
+      if (document.referrer && document.referrer.includes('workway.co')) {
+        // Let the history.back() in href handle it
+        return;
+      }
+      e.preventDefault();
+      window.location.href = 'https://workway.co/workflows';
     }
   </script>
 </body>
