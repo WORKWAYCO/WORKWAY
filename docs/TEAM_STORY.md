@@ -2,21 +2,32 @@
 
 > **For investors**: Why this team is uniquely positioned to build WORKWAY.
 
-## Founder Background
+## Founders
 
-**Micah Johnson** - Founder & CEO
+WORKWAY is built by the co-founders of **Half Dozen**, a systems optimization company serving the live events industry.
 
-Micah spent years building integration workflows for enterprise clients as a software consultant. What started as custom Zapier workflows evolved into bespoke TypeScript solutions when clients hit the limits of no-code tools.
+### Danny Morgan — Co-Founder, Growth
+
+Danny leads business development and client relationships. His background in growth strategy and understanding enterprise pain points shapes WORKWAY's go-to-market approach. Danny ensures we build what customers actually need, not what technologists think they need.
+
+### Micah Johnson — Co-Founder, Technology
+
+Micah is a Systems Architect who spent years building integration workflows for enterprise clients. His day job is on Webflow's Marketplace team, designing developer experiences. What started as custom Zapier workflows evolved into bespoke TypeScript solutions when clients hit the limits of no-code tools.
 
 **The insight**: Developers want workflows, but SaaS platforms force them into visual builders. Meanwhile, enterprises need compound workflows (meeting ends → Notion + Slack + Email + CRM) that no-code tools can't orchestrate.
 
 WORKWAY emerged from this gap: A TypeScript-first workflow platform that lets developers build and monetize the integrations they're already building for clients.
 
+## Company Structure
+
+**Half Dozen** ("Systems, Simplified") is the parent company. We specialize in digital systems that optimize and streamline business operations through workflow automation and platform integration. WORKWAY is our product—the open-source marketplace for TypeScript workflows, running entirely on Cloudflare's edge infrastructure.
+
 ## Team Composition
 
 ### Current
 
-- **Micah Johnson** (Founder) - Full-stack developer, consultant background
+- **Danny Morgan** (Co-Founder, Growth) - Business development, client relationships, GTM strategy
+- **Micah Johnson** (Co-Founder, Technology) - Systems architecture, platform development, product design
 - **Claude Opus 4.5** (AI Development Partner) - Autonomous code generation, architecture design
 
 ### Hiring Roadmap (Post-Seed)
@@ -35,10 +46,11 @@ WORKWAY emerged from this gap: A TypeScript-first workflow platform that lets de
 
 ### 1. Deep Domain Expertise
 
-Micah has built hundreds of custom integrations for clients. He knows:
+Through Half Dozen, Danny and Micah have built hundreds of custom integrations for clients in live events, healthcare, and fintech. They know:
 - Where Zapier/Make break down (compound workflows, custom logic)
 - What agencies charge ($5K-$50K per workflow)
 - What developers actually want (TypeScript, not visual builders)
+- How to translate technical capabilities into business value
 
 ### 2. Lean Execution Philosophy
 
@@ -63,18 +75,20 @@ Before launch:
 **YC invests in teams, not codebases.**
 
 This team combines:
-- **Domain expertise**: Years building the exact product we're selling
+- **Complementary founders**: Danny (growth) + Micah (technology) = full-stack company
+- **Domain expertise**: Years building the exact product we're selling through Half Dozen
 - **Execution speed**: Production platform built in 6 months
 - **Economic discipline**: Profitable unit economics before raising capital
 - **Market timing**: AI makes workflow creation 10x cheaper, but SaaS platforms haven't adapted
 
 ## Narrative Arc
 
-1. **Problem Discovery** (2022-2023): Micah builds custom Zapier workflows for clients, hits limitations repeatedly
-2. **Solution Hypothesis** (Early 2024): What if developers could build workflows in TypeScript and sell them?
-3. **Technical Validation** (Mid 2024): Cloudflare Workers + TypeScript SDK proves feasible
-4. **Market Validation** (Late 2024): Agencies want this. Enterprises need this. Waitlist grows organically.
-5. **Now** (2025): Launch, acquire first 10 paying customers, apply to YC Summer 2026
+1. **Half Dozen Founded** (2022): Danny and Micah launch Half Dozen to build systems solutions for live events industry
+2. **Problem Discovery** (2022-2023): Building custom Zapier workflows for clients, hitting limitations repeatedly
+3. **Solution Hypothesis** (Early 2024): What if developers could build workflows in TypeScript and sell them?
+4. **Technical Validation** (Mid 2024): Cloudflare Workers + TypeScript SDK proves feasible
+5. **Market Validation** (Late 2024): Agencies want this. Enterprises need this. Waitlist grows organically.
+6. **Now** (2025): Launch WORKWAY, acquire first 10 paying customers, apply to YC Summer 2026
 
 ## Investor FAQs
 
@@ -96,9 +110,19 @@ This team combines:
 
 ## Contact
 
+### Danny Morgan (Growth)
+- **Email**: danny@halfdozen.co
+- **LinkedIn**: [Half Dozen About](https://www.halfdozen.co/about-us)
+
+### Micah Johnson (Technology)
 - **Email**: micah@workway.co
+- **LinkedIn**: [Micah Johnson](https://linkedin.com/in/micahryanjohnson)
 - **GitHub**: [@micahjohnson](https://github.com/micahjohnson)
-- **LinkedIn**: [Micah Johnson](https://linkedin.com/in/micahjohnson)
+
+### Company
+- **Half Dozen**: [halfdozen.co](https://www.halfdozen.co)
+- **WORKWAY**: [workway.co](https://workway.co)
+- **CREATE Something** (Micah's research): [createsomething.io](https://createsomething.io)
 
 ---
 
