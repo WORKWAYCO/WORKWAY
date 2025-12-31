@@ -509,10 +509,12 @@ beadsNotionCommand
 	.description('Initialize Notion database for Beads issues')
 	.option('--parent-page-id <id>', 'Notion page ID to create database in')
 	.option('--title <title>', 'Database title (default: WORKWAY Issues)')
+	.option('--token <token>', 'Notion internal integration token')
 	.action(handleCommand(async (options: any) => {
 		await beadsNotionInitCommand({
 			parentPageId: options.parentPageId,
 			title: options.title,
+			token: options.token,
 		});
 	}));
 

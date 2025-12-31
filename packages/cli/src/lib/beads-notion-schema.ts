@@ -16,8 +16,10 @@ export const BEADS_DATABASE_SCHEMA = {
 	Title: { title: {} },
 	'Beads ID': { rich_text: {} },
 	Description: { rich_text: {} },
+	// Note: Using select instead of status because Notion API doesn't allow
+	// pre-defining status options when creating a database
 	Status: {
-		status: {
+		select: {
 			options: [
 				{ name: 'Open', color: 'blue' },
 				{ name: 'In Progress', color: 'yellow' },
@@ -117,7 +119,7 @@ export function mapBeadsToNotionProperties(
 				: [],
 		},
 		Status: {
-			status: { name: mapBeadsStatusToNotion(issue.status) },
+			select: { name: mapBeadsStatusToNotion(issue.status) },
 		},
 		Priority: {
 			select:

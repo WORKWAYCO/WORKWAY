@@ -7,13 +7,14 @@
 
 import chalk from 'chalk';
 import { Logger } from '../../utils/logger.js';
-import { loadConfig, saveConfig, getOAuthToken } from '../../lib/config.js';
+import { loadConfig, saveConfig, getOAuthToken, setOAuthToken } from '../../lib/config.js';
 import { createBeadsDatabase } from '../../lib/beads-sync.js';
 import type { CLIConfig } from '../../types/index.js';
 
 interface NotionInitOptions {
 	parentPageId?: string;
 	title?: string;
+	token?: string;
 }
 
 export async function beadsNotionInitCommand(options: NotionInitOptions = {}): Promise<void> {
@@ -21,17 +22,34 @@ export async function beadsNotionInitCommand(options: NotionInitOptions = {}): P
 		Logger.header('Initialize Beads → Notion Database');
 		Logger.blank();
 
-		// Check Notion OAuth connection
-		const notionToken = await getOAuthToken('notion');
-		if (!notionToken?.accessToken) {
-			Logger.error('Notion is not connected.');
-			Logger.blank();
-			Logger.log('Connect Notion first:');
-			Logger.code('workway oauth connect notion');
-			process.exit(1);
-		}
+		let accessToken: string;
 
-		Logger.success('Notion connection verified');
+		// Check for provided token (internal integration)
+		if (options.token) {
+			// Save the token for future use
+			await setOAuthToken('notion', {
+				accessToken: options.token,
+				tokenType: 'internal',
+				connectedAt: Date.now(),
+			});
+			accessToken = options.token;
+			Logger.success('Internal integration token saved');
+		} else {
+			// Check Notion OAuth connection
+			const notionToken = await getOAuthToken('notion');
+			if (!notionToken?.accessToken) {
+				Logger.error('Notion is not connected.');
+				Logger.blank();
+				Logger.log('Option 1 - Use internal integration token:');
+				Logger.code('workway beads notion init --token <your-token> --parent-page-id <id>');
+				Logger.blank();
+				Logger.log('Option 2 - Connect via OAuth:');
+				Logger.code('workway oauth connect notion');
+				process.exit(1);
+			}
+			accessToken = notionToken.accessToken;
+			Logger.success('Notion connection verified');
+		}
 		Logger.blank();
 
 		// Check for existing database configuration
@@ -83,7 +101,7 @@ export async function beadsNotionInitCommand(options: NotionInitOptions = {}): P
 
 		try {
 			const result = await createBeadsDatabase(
-				{ accessToken: notionToken.accessToken },
+				{ accessToken },
 				parentPageId,
 				title
 			);
