@@ -236,6 +236,10 @@ export class ZoomSessionManager {
         return this.listClips(days);
       }
 
+      if (path === '/clips-debug' && request.method === 'GET') {
+        return this.debugClipsPage();
+      }
+
       if (path === '/sync' && request.method === 'POST') {
         const days = parseInt(url.searchParams.get('days') || '7');
         return this.runSync(days);
@@ -837,9 +841,9 @@ export class ZoomSessionManager {
         }
       }
 
-      // Navigate to clips page
-      console.log('Navigating to Clips page...');
-      await page.goto('https://us06web.zoom.us/clips', {
+      // Navigate to clips library page directly
+      console.log('Navigating to Clips library page...');
+      await page.goto('https://zoom.us/clips/library', {
         waitUntil: 'networkidle2',
         timeout: 30000,
       });
@@ -866,6 +870,11 @@ export class ZoomSessionManager {
       fromDate.setDate(fromDate.getDate() - days);
 
       // Extract clips from the page
+      // Structure: <a class="clips-grid-item-wrap" href="/clips/share/...">
+      //              <div class="clips-grid-item">
+      //                <div class="clips-grid-item-title">Title</div>
+      //              </div>
+      //            </a>
       const clips = await page.evaluate((fromDateStr: string) => {
         const results: Array<{
           id: string;
@@ -876,61 +885,71 @@ export class ZoomSessionManager {
           thumbnail_url?: string;
         }> = [];
 
-        // Try various selectors for clip items
-        const clipElements = document.querySelectorAll(
-          '[data-clip-id], .clip-item, .clip-card, [class*="clip-list"] > div, [role="listitem"]'
-        );
+        // Find all clip wrap items - these ARE the <a> tags with the share URLs
+        const clipWraps = document.querySelectorAll('a.clips-grid-item-wrap');
 
-        clipElements.forEach((el) => {
-          // Extract clip ID
-          const id =
-            el.getAttribute('data-clip-id') ||
-            el.getAttribute('data-id') ||
-            el.querySelector('a[href*="/clips/"]')?.getAttribute('href')?.match(/clips\/([^/?]+)/)?.[1] ||
-            '';
+        clipWraps.forEach((el) => {
+          const linkEl = el as HTMLAnchorElement;
+          const shareUrl = linkEl.href;
+
+          // Extract clip ID from share URL: /clips/share/DvX9KdPiT3eMcyTTb5J0-w
+          const idMatch = shareUrl.match(/\/clips\/share\/([^/?]+)/);
+          const id = idMatch?.[1] || '';
 
           if (!id) return;
 
-          // Extract title
-          const title =
-            el.querySelector('[class*="title"], .clip-title, h3, h4')?.textContent?.trim() ||
-            el.querySelector('a')?.textContent?.trim() ||
+          const allText = el.textContent || '';
+
+          // Extract title from the grid item's title element inside the wrapper
+          let title =
+            el.querySelector('.clips-grid-item-title')?.textContent?.trim() ||
+            el.textContent?.trim()?.split('\n')[0] ||
             'Untitled Clip';
 
-          // Extract date
-          const dateText =
-            el.querySelector('[class*="date"], [class*="time"], .clip-date')?.textContent?.trim() ||
-            '';
+          // Clean up title - remove duration/stats text if concatenated
+          title = title.replace(/\d+\s*plays?/i, '').replace(/duration:?\s*\d+\s*min/i, '').trim();
+
+          // Try to extract date - look for patterns like "4 days ago", "Dec 26", etc.
           let createdAt = new Date().toISOString();
-          if (dateText) {
-            const parsed = new Date(dateText);
+          const daysAgoMatch = allText.match(/(\d+)\s*days?\s*ago/i);
+          const hoursAgoMatch = allText.match(/(\d+)\s*hours?\s*ago/i);
+          const dateMatch = allText.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}/i);
+
+          if (daysAgoMatch) {
+            const daysAgo = parseInt(daysAgoMatch[1]);
+            const date = new Date();
+            date.setDate(date.getDate() - daysAgo);
+            createdAt = date.toISOString();
+          } else if (hoursAgoMatch) {
+            const hoursAgo = parseInt(hoursAgoMatch[1]);
+            const date = new Date();
+            date.setHours(date.getHours() - hoursAgo);
+            createdAt = date.toISOString();
+          } else if (dateMatch) {
+            const parsed = new Date(dateMatch[0] + ', ' + new Date().getFullYear());
             if (!isNaN(parsed.getTime())) {
               createdAt = parsed.toISOString();
             }
           }
 
-          // Extract duration (format: "1:30" or "01:30")
-          const durationText =
-            el.querySelector('[class*="duration"], .clip-duration')?.textContent?.trim() || '';
+          // Extract duration (format: "1 min", "2:30", etc.)
           let duration = 0;
-          const durationMatch = durationText.match(/(\d+):(\d+)/);
-          if (durationMatch) {
-            duration = parseInt(durationMatch[1]) * 60 + parseInt(durationMatch[2]);
-          }
-
-          // Extract share URL
-          const shareLink = el.querySelector('a[href*="/clips/share/"], a[href*="/clips/"]');
-          let shareUrl = shareLink?.getAttribute('href') || '';
-          if (shareUrl && !shareUrl.startsWith('http')) {
-            shareUrl = `https://zoom.us${shareUrl}`;
-          }
-          if (!shareUrl) {
-            shareUrl = `https://zoom.us/clips/share/${id}`;
+          const durMatch = allText.match(/duration:?\s*(\d+)\s*min/i) ||
+                          allText.match(/(\d+)\s*min\.?/i) ||
+                          allText.match(/(\d+):(\d+)/);
+          if (durMatch) {
+            if (durMatch[2]) {
+              // Format: "2:30"
+              duration = parseInt(durMatch[1]) * 60 + parseInt(durMatch[2]);
+            } else {
+              // Format: "1 min"
+              duration = parseInt(durMatch[1]) * 60;
+            }
           }
 
           // Extract thumbnail
-          const thumbnail = el.querySelector('img[src*="thumbnail"], img[class*="thumb"]');
-          const thumbnailUrl = thumbnail?.getAttribute('src') || undefined;
+          const thumbnail = el.querySelector('img') as HTMLImageElement | null;
+          const thumbnailUrl = thumbnail?.src || undefined;
 
           results.push({
             id,
@@ -960,6 +979,194 @@ export class ZoomSessionManager {
       return Response.json({
         success: false,
         error: error.message || 'Failed to list clips',
+      }, { status: 500 });
+    }
+  }
+
+  /**
+   * GET /clips-debug - Debug the clips page structure
+   *
+   * Returns information about what elements exist on the page to help
+   * diagnose why clips aren't being found.
+   */
+  private async debugClipsPage(): Promise<Response> {
+    const storedCookies = await this.state.storage.get<any>('zoom_cookies');
+    const cookies = Array.isArray(storedCookies) ? storedCookies : [];
+    if (cookies.length === 0) {
+      return Response.json({
+        success: false,
+        error: 'No cookies. Use Chrome extension to sync first.',
+        needsAuth: true,
+      }, { status: 401 });
+    }
+
+    try {
+      const browser = await this.getBrowser();
+      const page = await browser.newPage();
+      await page.setViewport({ width: 1920, height: 1080 });
+
+      // Set cookies
+      for (const cookie of cookies) {
+        try {
+          await page.setCookie({
+            ...cookie,
+            domain: cookie.domain || '.zoom.us',
+            path: cookie.path || '/',
+            secure: cookie.secure ?? true,
+            httpOnly: true,
+          });
+        } catch (e) {
+          // Skip invalid cookies
+        }
+      }
+
+      // Navigate to clips library page
+      await page.goto('https://zoom.us/clips/library', {
+        waitUntil: 'networkidle2',
+        timeout: 30000,
+      });
+
+      const currentUrl = page.url();
+      if (currentUrl.includes('/signin') || currentUrl.includes('/login')) {
+        await page.close();
+        return Response.json({
+          success: false,
+          error: 'Cookies expired. Please re-sync via Chrome extension.',
+          needsAuth: true,
+        }, { status: 401 });
+      }
+
+      // Wait for page to render
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Collect debug info
+      const debugInfo = await page.evaluate(() => {
+        // Get page title and URL
+        const pageTitle = document.title;
+        const bodyText = document.body?.innerText?.substring(0, 500) || '';
+
+        // Check various potential selectors
+        const selectorTests: Record<string, number> = {
+          '[data-clip-id]': document.querySelectorAll('[data-clip-id]').length,
+          '.clip-item': document.querySelectorAll('.clip-item').length,
+          '.clip-card': document.querySelectorAll('.clip-card').length,
+          '.clips-grid-item-wrap': document.querySelectorAll('.clips-grid-item-wrap').length,
+          '.clips-grid-item': document.querySelectorAll('.clips-grid-item').length,
+          '.clips-grid-item-title': document.querySelectorAll('.clips-grid-item-title').length,
+          '[class*="clip-list"]': document.querySelectorAll('[class*="clip-list"]').length,
+          '[role="listitem"]': document.querySelectorAll('[role="listitem"]').length,
+          '[class*="clip"]': document.querySelectorAll('[class*="clip"]').length,
+          '[class*="Clip"]': document.querySelectorAll('[class*="Clip"]').length,
+          '[class*="video"]': document.querySelectorAll('[class*="video"]').length,
+          '[class*="Video"]': document.querySelectorAll('[class*="Video"]').length,
+          '[class*="recording"]': document.querySelectorAll('[class*="recording"]').length,
+          '[class*="Recording"]': document.querySelectorAll('[class*="Recording"]').length,
+          'table': document.querySelectorAll('table').length,
+          'tr': document.querySelectorAll('tr').length,
+          '[role="row"]': document.querySelectorAll('[role="row"]').length,
+          '[role="grid"]': document.querySelectorAll('[role="grid"]').length,
+          '[role="gridcell"]': document.querySelectorAll('[role="gridcell"]').length,
+          'a[href*="/clips/"]': document.querySelectorAll('a[href*="/clips/"]').length,
+          'a[href*="/clips/share/"]': document.querySelectorAll('a[href*="/clips/share/"]').length,
+          'a[href*="/clip/"]': document.querySelectorAll('a[href*="/clip/"]').length,
+          'img': document.querySelectorAll('img').length,
+          'video': document.querySelectorAll('video').length,
+        };
+
+        // Get all unique class names on the page
+        const allClasses = new Set<string>();
+        document.querySelectorAll('*').forEach(el => {
+          el.classList.forEach(c => {
+            if (c.toLowerCase().includes('clip') ||
+                c.toLowerCase().includes('video') ||
+                c.toLowerCase().includes('list') ||
+                c.toLowerCase().includes('item') ||
+                c.toLowerCase().includes('card') ||
+                c.toLowerCase().includes('row') ||
+                c.toLowerCase().includes('grid')) {
+              allClasses.add(c);
+            }
+          });
+        });
+
+        // Get all links on the page
+        const links = Array.from(document.querySelectorAll('a[href]'))
+          .map(a => (a as HTMLAnchorElement).href)
+          .filter(h => h.includes('clip'))
+          .slice(0, 20);
+
+        // Examine each .clips-grid-item-wrap to understand structure
+        const clipWrapDetails: Array<{
+          hasShareLink: boolean;
+          shareUrl: string | null;
+          hasGridItem: boolean;
+          titleText: string | null;
+          allLinksInside: string[];
+          outerHTML: string;
+        }> = [];
+
+        document.querySelectorAll('.clips-grid-item-wrap').forEach((el, i) => {
+          if (i >= 3) return; // Just first 3 for debug
+
+          const shareLink = el.querySelector('a[href*="/clips/share/"]') as HTMLAnchorElement | null;
+          const gridItem = el.querySelector('.clips-grid-item');
+          const titleEl = el.querySelector('.clips-grid-item-title');
+          const allLinks = Array.from(el.querySelectorAll('a[href]')).map(a => (a as HTMLAnchorElement).href);
+
+          clipWrapDetails.push({
+            hasShareLink: !!shareLink,
+            shareUrl: shareLink?.href || null,
+            hasGridItem: !!gridItem,
+            titleText: titleEl?.textContent?.trim() || null,
+            allLinksInside: allLinks,
+            outerHTML: el.outerHTML.substring(0, 800),
+          });
+        });
+
+        // Check if share links are siblings - trace up to find the context
+        const shareLinkContext: Array<{
+          href: string;
+          parentHierarchy: string[];
+        }> = [];
+        document.querySelectorAll('a[href*="/clips/share/"]').forEach((link, i) => {
+          if (i >= 2) return;
+          const alink = link as HTMLAnchorElement;
+          const hierarchy: string[] = [];
+          let el = link.parentElement;
+          for (let j = 0; j < 6 && el; j++) {
+            hierarchy.push(`${el.tagName}.${el.className.split(' ').slice(0, 2).join('.')}`);
+            el = el.parentElement;
+          }
+          shareLinkContext.push({
+            href: alink.href,
+            parentHierarchy: hierarchy,
+          });
+        });
+
+        return {
+          pageTitle,
+          bodyTextPreview: bodyText,
+          selectorTests,
+          relevantClasses: Array.from(allClasses).slice(0, 50),
+          clipLinks: links,
+          clipWrapDetails,
+          shareLinkContext,
+        };
+      });
+
+      await page.close();
+
+      return Response.json({
+        success: true,
+        url: currentUrl,
+        debug: debugInfo,
+      });
+
+    } catch (error: any) {
+      console.error('Debug clips error:', error);
+      return Response.json({
+        success: false,
+        error: error.message || 'Debug failed',
       }, { status: 500 });
     }
   }
