@@ -245,6 +245,14 @@ export class ZoomSessionManager {
         return this.runSync(days);
       }
 
+      if (path === '/disconnect' && request.method === 'POST') {
+        return this.disconnect();
+      }
+
+      if (path === '/analytics' && request.method === 'GET') {
+        return this.getAnalytics();
+      }
+
       return Response.json({ error: 'Unknown endpoint', path }, { status: 404 });
     } catch (error: any) {
       console.error('DO Error:', error);
@@ -327,6 +335,85 @@ export class ZoomSessionManager {
         successfulRuns,
       },
       executions: executions.slice(0, 10), // Last 10 executions
+    });
+  }
+
+  /**
+   * POST /disconnect - Clear stored cookies and session data
+   * Called when user disconnects the workflow from workway.co/workflows
+   */
+  private async disconnect(): Promise<Response> {
+    try {
+      // Clear all session data
+      await this.state.storage.delete('zoom_cookies');
+      await this.state.storage.delete('cookies_uploaded_at');
+      await this.state.storage.delete('session_active');
+
+      // Cancel any pending alarms
+      await this.state.storage.deleteAlarm();
+
+      // Close browser if open
+      if (this.browser) {
+        try {
+          await this.browser.close();
+        } catch {
+          // Browser may already be closed
+        }
+        this.browser = null;
+      }
+
+      return Response.json({
+        success: true,
+        message: 'Disconnected successfully',
+      });
+    } catch (error: any) {
+      return Response.json(
+        { success: false, error: error.message },
+        { status: 500 }
+      );
+    }
+  }
+
+  /**
+   * GET /analytics - Get detailed analytics for the workflow
+   * Called by workway.co/workflows/private/{id}/analytics
+   */
+  private async getAnalytics(): Promise<Response> {
+    const executions = await this.state.storage.get<Array<{
+      started_at: string;
+      completed_at?: string;
+      success: boolean;
+      source_url?: string;
+      type?: string;
+      meetings_count?: number;
+      clips_count?: number;
+      transcripts_extracted?: number;
+    }>>('executions') || [];
+
+    // Calculate stats
+    const totalRuns = executions.length;
+    const successfulRuns = executions.filter(e => e.success).length;
+    const failedRuns = executions.filter(e => !e.success).length;
+    const successRate = totalRuns > 0 ? Math.round((successfulRuns / totalRuns) * 100) : 0;
+
+    // Aggregate content counts
+    const totalMeetingsSynced = executions.reduce((sum, e) => sum + (e.meetings_count || 0), 0);
+    const totalClipsSynced = executions.reduce((sum, e) => sum + (e.clips_count || 0), 0);
+    const totalTranscripts = executions.reduce((sum, e) => sum + (e.transcripts_extracted || 0), 0);
+
+    return Response.json({
+      executions: executions.slice(0, 50), // Last 50 executions for analytics
+      stats: {
+        totalRuns,
+        successfulRuns,
+        failedRuns,
+        successRate,
+        totalMeetingsSynced,
+        totalClipsSynced,
+        totalThreadsSynced: 0, // Not applicable for this workflow
+        totalContactsCreated: 0, // Not applicable
+        totalTranscripts,
+      },
     });
   }
 
