@@ -22,10 +22,7 @@ Notion users need bidirectional sync with external databases. Native integration
 
 One-way sync creates data drift. Teams maintain two sources of truth—neither accurate.
 
-**Measured impact** (from Half Dozen client work):
-- 4.2 hours/week spent manually reconciling Notion ↔ Airtable
-- 23% of records had sync discrepancies after 30 days
-- 3 missed deadlines traced to stale data in secondary system
+Someone has to manually copy changes back. That person is usually you.
 
 ## The Solution
 
@@ -67,15 +64,11 @@ Store new state
 - Conflict resolution strategy (last-write-wins, Notion-wins, external-wins)
 - Sync frequency for full reconciliation (hourly, daily)
 
-## Results
+## What You Get
 
-Measured on production deployment (60-day period):
-
-| Metric | Before | After | Change |
-|--------|--------|-------|--------|
-| Manual reconciliation time | 4.2 hrs/week | 0.3 hrs/week | -93% |
-| Sync discrepancies (30-day) | 23% | 0.4% | -98% |
-| Data staleness (avg) | 4.1 hours | 1.8 seconds | -99.98% |
+- **Sync latency under 2 seconds**: Changes propagate almost immediately via webhooks
+- **Conflict resolution with audit log**: See exactly what happened when both systems change the same record
+- **No manual reconciliation**: Stop copying data between systems
 
 ## Limitations
 
@@ -94,8 +87,6 @@ Measured on production deployment (60-day period):
 | Workflow (one-time) | $49 |
 | Per sync execution | $0.001 |
 | Estimated monthly (1,000 syncs/day) | $49 + $30 = $79 |
-
-Compare: Manual reconciliation at $50/hour × 4.2 hours/week = $840/month.
 
 ## Who This Is For
 
