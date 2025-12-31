@@ -144,11 +144,18 @@ Each outcome page targets:
 
 ## Key Documentation
 
-| Document | Purpose |
-|----------|---------|
-| `docs/PLATFORM_THESIS.md` | **Start here.** Two-sided platform model, pricing, competitive positioning |
-| `docs/DEVELOPER_CAPABILITIES.md` | What developers can/cannot do in workflows |
-| `docs/WORKERS_RUNTIME_GUIDE.md` | Cloudflare Workers constraints and patterns |
+**Start with**: [`docs/README.md`](docs/README.md) - Canonical documentation index
+
+**For developers**:
+- `docs/PLATFORM_THESIS.md` - Why WORKWAY exists, business model, competitive positioning
+- `docs/DEVELOPER_CAPABILITIES.md` - What you can/cannot do in workflows
+- `docs/ARCHITECTURE.md` - System architecture overview
+- `docs/WORKERS_RUNTIME_GUIDE.md` - Cloudflare Workers constraints
+
+**For investors**:
+- `docs/TEAM_STORY.md` - Founder background and team composition
+- `docs/ICP_AND_TARGETS.md` - Ideal customer profile and target list
+- `docs/INVESTOR_TRANSLATION.md` - Philosophy in business terms
 
 ## Commands
 
