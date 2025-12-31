@@ -52,6 +52,8 @@ import { modifyCommand } from './commands/agentic/modify.js';
 import { marketplaceNeedsCommand, marketplaceSearchCommand, marketplaceBrowseCommand, marketplaceInfoCommand } from './commands/marketplace/index.js';
 import { dbCheckCommand } from './commands/db/check.js';
 import { dbSyncWorkflowsCommand } from './commands/db/sync-workflows.js';
+import { beadsNotionInitCommand } from './commands/beads/notion-init.js';
+import { beadsNotionSyncCommand } from './commands/beads/notion.js';
 import { Logger } from './utils/logger.js';
 import { handleCommand, handleCommandError } from './utils/command-handler.js';
 
@@ -491,6 +493,38 @@ dbCommand
 			dryRun: options.dryRun,
 			local: options.local,
 			config: options.config,
+		});
+	}));
+
+// ============================================================================
+// BEADS COMMANDS - Issue Tracking Integration
+// ============================================================================
+
+const beadsCommand = program.command('beads').description('Beads issue tracking integration');
+
+const beadsNotionCommand = beadsCommand.command('notion').description('Notion sync management');
+
+beadsNotionCommand
+	.command('init')
+	.description('Initialize Notion database for Beads issues')
+	.option('--parent-page-id <id>', 'Notion page ID to create database in')
+	.option('--title <title>', 'Database title (default: WORKWAY Issues)')
+	.action(handleCommand(async (options: any) => {
+		await beadsNotionInitCommand({
+			parentPageId: options.parentPageId,
+			title: options.title,
+		});
+	}));
+
+beadsNotionCommand
+	.command('sync')
+	.description('Sync Beads issues to Notion')
+	.option('--dry-run', 'Preview changes without syncing')
+	.option('--force', 'Force update all issues (ignore timestamps)')
+	.action(handleCommand(async (options: any) => {
+		await beadsNotionSyncCommand({
+			dryRun: options.dryRun,
+			force: options.force,
 		});
 	}));
 

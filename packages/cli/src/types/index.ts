@@ -340,3 +340,55 @@ export interface OAuthAppTestResult {
 	error?: string;
 	scopes?: string[];
 }
+
+// ============================================================================
+// BEADS TYPES (Issue Tracking)
+// ============================================================================
+
+/**
+ * Beads issue from .beads/issues.jsonl
+ */
+export interface BeadsIssue {
+	id: string; // e.g., "ww-abc123", "wwp-xyz789"
+	title: string;
+	description?: string;
+	status: BeadsStatus;
+	priority?: number; // 0-4 (P0-P4)
+	issue_type?: string; // feature, bug, task, refactor, docs, etc.
+	labels?: string[];
+	assignee?: string;
+	created_at: string; // ISO timestamp
+	updated_at?: string;
+	closed_at?: string;
+	close_reason?: string;
+}
+
+/**
+ * Beads issue status
+ */
+export type BeadsStatus =
+	| 'open'
+	| 'in_progress'
+	| 'in-progress'
+	| 'code_complete'
+	| 'code-complete'
+	| 'verified'
+	| 'closed';
+
+/**
+ * Beads sync configuration
+ */
+export interface BeadsNotionConfig {
+	databaseId: string;
+	lastSyncAt?: string;
+}
+
+/**
+ * Beads sync result
+ */
+export interface BeadsSyncResult {
+	created: number;
+	updated: number;
+	skipped: number;
+	errors: Array<{ issueId: string; error: string }>;
+}
