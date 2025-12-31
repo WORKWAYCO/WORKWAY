@@ -4,36 +4,48 @@
 
 ## Lead Sources
 
-### 1. npm Package Users (@workwayco/sdk)
-
-**How to find**:
-```bash
-# Check weekly downloads
-npm info @workwayco/sdk
-
-# For detailed analytics, use npm's website:
-# https://www.npmjs.com/package/@workwayco/sdk
-```
-
-**What we know**: ~845 downloads/week (from YC readiness audit)
-
-**Outreach angle**: "You're already using @workwayco/sdk. Want early access to the marketplace?"
-
-### 2. GitHub Stargazers
-
-**How to find**:
-```bash
-# List stargazers via GitHub API
-gh api repos/WORKWAYCO/WORKWAY/stargazers --paginate
-```
-
-**Outreach angle**: "You starred WORKWAY. The marketplace is live—want to be one of our first workflow creators?"
-
-### 3. Waitlist Signups
+### 1. Waitlist Signups (Primary)
 
 **Location**: Check your email marketing tool (Mailchimp, ConvertKit, etc.) or Airtable
 
 **Outreach angle**: "You signed up for WORKWAY. We're live. Here's your early access."
+
+### 2. Half Dozen Client Network
+
+**Who**: Clients and contacts from Half Dozen's systems work
+
+**Outreach angle**: "We built something from our client work—would love your feedback."
+
+### 3. Twitter/X Automation Builders
+
+**How to find**:
+```bash
+# Search for people building automations
+# "zapier alternative" OR "make.com" OR "workflow automation" OR "typescript automation"
+```
+
+**Outreach angle**: "Saw your tweet about [specific automation]—built something that might help."
+
+### 4. LinkedIn Network
+
+**Who**: Danny and Micah's direct connections interested in automation/integrations
+
+**Outreach angle**: Personal connection + product announcement
+
+### 5. npm Package Dependents (Future)
+
+**Status**: @workwayco/sdk has downloads but npm doesn't expose individual users
+
+**How to find later**:
+- Monitor GitHub issues/discussions from users
+- Search Twitter for "@workwayco/sdk" mentions
+- Check for packages that depend on @workwayco/sdk
+
+### 6. GitHub Stars (Future)
+
+**Status**: Currently 0 stars. Build this through community launch.
+
+**Future outreach angle**: "You starred WORKWAY—want to be a founding creator?"
 
 ## 10 Warm Leads Template
 
@@ -41,15 +53,15 @@ Fill in with real data from the sources above:
 
 | # | Name | Source | Email/Contact | Company/Context | Personalization Hook | Status |
 |---|------|--------|---------------|-----------------|---------------------|--------|
-| 1 | | npm user | | | Specific package usage | ⬜ Not contacted |
-| 2 | | npm user | | | | ⬜ Not contacted |
-| 3 | | GitHub star | | | When they starred | ⬜ Not contacted |
-| 4 | | GitHub star | | | | ⬜ Not contacted |
-| 5 | | Waitlist | | | What they said they'd build | ⬜ Not contacted |
-| 6 | | Waitlist | | | | ⬜ Not contacted |
-| 7 | | Waitlist | | | | ⬜ Not contacted |
+| 1 | | Waitlist | | | What they said they'd build | ⬜ Not contacted |
+| 2 | | Waitlist | | | | ⬜ Not contacted |
+| 3 | | Waitlist | | | | ⬜ Not contacted |
+| 4 | | Half Dozen client | | | Past project together | ⬜ Not contacted |
+| 5 | | Half Dozen client | | | | ⬜ Not contacted |
+| 6 | | LinkedIn connection | | | Their integration work | ⬜ Not contacted |
+| 7 | | LinkedIn connection | | | | ⬜ Not contacted |
 | 8 | | Twitter/X | | | Their automation tweets | ⬜ Not contacted |
-| 9 | | LinkedIn | | | Their integration work | ⬜ Not contacted |
+| 9 | | Twitter/X | | | | ⬜ Not contacted |
 | 10 | | Referral | | | Who referred them | ⬜ Not contacted |
 
 **Status Legend**:
@@ -63,50 +75,7 @@ Fill in with real data from the sources above:
 
 ## Personalized Email Templates
 
-### Template A: npm Package User
-
-**Subject**: You're using @workwayco/sdk—want early marketplace access?
-
-```
-Hi [Name],
-
-I noticed you've been using @workwayco/sdk. Thanks for being an early adopter.
-
-Quick update: The WORKWAY marketplace is now live. You can:
-- Publish workflows and earn from every install
-- Get 100% of upfront revenue (we only charge per-execution)
-- Access private workflows for enterprise clients
-
-As an early SDK user, I'd love to give you priority access and hear what you're building.
-
-Worth a 15-minute chat this week?
-
-Best,
-[Danny/Micah]
-Half Dozen / WORKWAY
-```
-
-### Template B: GitHub Stargazer
-
-**Subject**: You starred WORKWAY—want to be a founding creator?
-
-```
-Hi [Name],
-
-You starred WORKWAY on GitHub [X days ago]. Thanks for the support!
-
-Since then, we've launched the marketplace. Founding creators get:
-- Featured placement for the first 30 days
-- Direct Slack access to the team
-- Priority support for your workflows
-
-We're looking for 10 developers to create the first marketplace workflows. Interested?
-
-Best,
-[Danny/Micah]
-```
-
-### Template C: Waitlist Signup
+### Template A: Waitlist Signup
 
 **Subject**: WORKWAY is live—your early access is ready
 
@@ -123,6 +92,45 @@ What you can do now:
 - Create private workflows for clients
 
 What are you hoping to automate first? I'd love to help you ship your first workflow.
+
+Best,
+[Danny/Micah]
+```
+
+### Template B: Half Dozen Client
+
+**Subject**: Built something from our work together
+
+```
+Hi [Name],
+
+Hope you're doing well! Quick update from Half Dozen:
+
+Remember the workflow automation challenges we solved for [their project]?
+
+We productized that into WORKWAY—a marketplace for TypeScript workflows. Thought of you because [specific connection to their work].
+
+Would love your feedback. Worth a quick call?
+
+Best,
+Danny & Micah
+Half Dozen
+```
+
+### Template C: LinkedIn Connection
+
+**Subject**: [Name], quick question about your automation stack
+
+```
+Hi [Name],
+
+We connected on LinkedIn a while back. I noticed you're working on [their role/company].
+
+Quick question: How are you handling workflow automation? Still using Zapier/Make, or building custom?
+
+We just launched WORKWAY—TypeScript workflows that run on Cloudflare's edge. Developers keep 100% of upfront revenue, we only charge per-execution.
+
+Worth a 15-min chat if you're exploring alternatives?
 
 Best,
 [Danny/Micah]
