@@ -282,6 +282,17 @@ export interface WorkflowContext {
 }
 
 /**
+ * Base interface for integration action helpers
+ *
+ * All integrations extend this interface. Use explicit type assertions
+ * or the PickIntegrations utility for type-safe access.
+ */
+export interface BaseIntegrationHelper {
+	/** Execute an action on this integration */
+	execute?<TInput = unknown, TOutput = unknown>(actionId: string, input: TInput): Promise<TOutput>;
+}
+
+/**
  * Helper interface for executing integration actions
  *
  * For type-safe integration access, import types from `@workwayco/sdk`:
@@ -312,10 +323,10 @@ export interface WorkflowContext {
  */
 export interface ActionHelpers {
 	/** Execute any action by ID (including custom actions) */
-	execute<TInput = any, TOutput = any>(actionId: string, input: TInput): Promise<TOutput>;
+	execute<TInput = unknown, TOutput = unknown>(actionId: string, input: TInput): Promise<TOutput>;
 
-	/** Integration-specific helpers - see generated/integration-types.ts for typed interfaces */
-	[integration: string]: any;
+	/** Integration-specific helpers - use type assertions for type safety */
+	[integration: string]: BaseIntegrationHelper | ActionHelpers['execute'];
 }
 
 /**
@@ -345,7 +356,10 @@ export interface WorkflowStorage {
 	/** Set value in storage */
 	set(key: string, value: any): Promise<void>;
 
-	/** Put value in storage (alias for set) */
+	/**
+	 * Put value in storage
+	 * @deprecated Use `set()` instead. This method will be removed in a future version.
+	 */
 	put(key: string, value: any): Promise<void>;
 
 	/** Delete value from storage */

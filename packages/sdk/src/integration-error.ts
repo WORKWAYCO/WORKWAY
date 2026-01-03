@@ -498,6 +498,7 @@ export class IntegrationError extends Error {
 				return `You've exceeded the API quota for ${this.context.integration || 'this service'}. Try again later.`;
 
 			case ErrorCode.INVALID_CONFIG:
+			case ErrorCode.CONFIGURATION_ERROR:
 				return `There's an issue with your workflow configuration. Please review your settings.`;
 
 			case ErrorCode.PERMISSION_DENIED:
@@ -506,7 +507,43 @@ export class IntegrationError extends Error {
 			case ErrorCode.PROVIDER_DOWN:
 				return `${this.context.integration || 'The service'} appears to be down. We'll retry automatically.`;
 
+			case ErrorCode.NOT_FOUND:
+				return `The requested resource could not be found.`;
+
+			case ErrorCode.CONFLICT:
+				return `This action conflicts with existing data. Please refresh and try again.`;
+
+			case ErrorCode.NETWORK_ERROR:
+				return `Unable to connect. Please check your internet connection.`;
+
+			case ErrorCode.TIMEOUT:
+				return `The request took too long. Please try again.`;
+
+			case ErrorCode.VALIDATION_ERROR:
+			case ErrorCode.INVALID_INPUT:
+			case ErrorCode.MISSING_REQUIRED_FIELD:
+				return `Please check your input and try again.`;
+
+			case ErrorCode.DATABASE_ERROR:
+			case ErrorCode.SEARCH_ERROR:
+				return `We encountered a database issue. Please try again.`;
+
+			case ErrorCode.AI_MODEL_ERROR:
+				return `The AI service is temporarily unavailable.`;
+
+			case ErrorCode.PROCESSING_ERROR:
+				return `Something went wrong processing your request.`;
+
+			case ErrorCode.PAYMENT_FAILED:
+				return `Payment could not be processed. Please check your payment method.`;
+
+			case ErrorCode.CANCELLED:
+				return `The operation was cancelled.`;
+
+			case ErrorCode.UNKNOWN:
 			default:
+				// UNKNOWN and API_ERROR preserve the original message
+				// since these are often custom messages from providers
 				return this.message;
 		}
 	}

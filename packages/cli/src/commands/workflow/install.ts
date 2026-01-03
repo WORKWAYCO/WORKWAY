@@ -258,12 +258,70 @@ function mapWorkflowToDetails(workflow: {
 }
 
 /**
+ * Validate that a directory name is safe (no path traversal, simple name only)
+ */
+function isValidDirectoryName(dir: string): boolean {
+	// Must not start with / or \
+	if (dir.startsWith('/') || dir.startsWith('\\')) return false;
+	// Must not contain path traversal
+	if (dir.includes('..')) return false;
+	// Must not contain path separators (enforce single directory name)
+	if (dir.includes('/') || dir.includes('\\')) return false;
+	// Only allow alphanumeric, hyphens, underscores
+	return /^[a-zA-Z0-9_-]+$/.test(dir);
+}
+
+/**
+ * Check if an error is a network/connectivity error
+ */
+function isNetworkError(error: any): boolean {
+	if (!error) return false;
+
+	// Common network error codes and messages
+	const networkErrorPatterns = [
+		'ENOTFOUND',
+		'ECONNREFUSED',
+		'ECONNRESET',
+		'ETIMEDOUT',
+		'ENETUNREACH',
+		'EAI_AGAIN',
+		'fetch failed',
+		'network error',
+		'Failed to fetch',
+		'Network request failed',
+	];
+
+	const errorMessage = (error.message || '').toLowerCase();
+	const errorCode = error.code || '';
+
+	return networkErrorPatterns.some(pattern =>
+		errorMessage.includes(pattern.toLowerCase()) || errorCode === pattern
+	);
+}
+
+/**
+ * Check if an error is a "not found" error (404)
+ */
+function isNotFoundError(error: any): boolean {
+	if (!error) return false;
+
+	// Check for HTTP 404 status
+	if (error.status === 404 || error.statusCode === 404) return true;
+
+	// Check for "not found" in message
+	const errorMessage = (error.message || '').toLowerCase();
+	return errorMessage.includes('not found') || errorMessage.includes('404');
+}
+
+/**
  * Fetch workflow from marketplace API
  */
 async function fetchWorkflowDetails(
 	identifier: string,
 	apiClient: { getWorkflow: (id: string) => Promise<any>; searchWorkflows: (query: string, filters?: any) => Promise<any[]> }
 ): Promise<WorkflowDetails | null> {
+	let lastError: any = null;
+
 	try {
 		// Try to get workflow by ID first
 		const workflow = await apiClient.getWorkflow(identifier);
@@ -271,7 +329,15 @@ async function fetchWorkflowDetails(
 			return mapWorkflowToDetails(workflow);
 		}
 	} catch (error: any) {
-		// API call failed, will try search
+		// If it's a network error, throw immediately with a clear message
+		if (isNetworkError(error)) {
+			throw new Error('Unable to connect to WORKWAY API. Please check your internet connection.');
+		}
+		// If it's not a "not found" error, it's an unexpected API error
+		if (!isNotFoundError(error)) {
+			lastError = error;
+		}
+		// Otherwise, it's a "not found" - try search
 	}
 
 	// Try searching by name
@@ -281,7 +347,20 @@ async function fetchWorkflowDetails(
 			return mapWorkflowToDetails(results[0]);
 		}
 	} catch (error: any) {
-		// Search also failed
+		// If it's a network error, throw immediately with a clear message
+		if (isNetworkError(error)) {
+			throw new Error('Unable to connect to WORKWAY API. Please check your internet connection.');
+		}
+		// If it's not a "not found" error, it's an unexpected API error
+		if (!isNotFoundError(error)) {
+			lastError = error;
+		}
+		// Otherwise, it's a "not found" - return null below
+	}
+
+	// If we had an unexpected API error (not network, not 404), throw it
+	if (lastError) {
+		throw new Error(`WORKWAY API error: ${lastError.message || 'Unknown error'}`);
 	}
 
 	return null;
@@ -328,7 +407,15 @@ export async function workflowInstallCommand(
 	// Fetch workflow details
 	const spinner = Logger.spinner('Fetching workflow from marketplace...');
 
-	const workflow = await fetchWorkflowDetails(targetId!, apiClient);
+	let workflow: WorkflowDetails | null;
+	try {
+		workflow = await fetchWorkflowDetails(targetId!, apiClient);
+	} catch (error: any) {
+		spinner.fail('Failed to fetch workflow');
+		Logger.blank();
+		Logger.error(error.message);
+		process.exit(1);
+	}
 
 	if (!workflow) {
 		spinner.fail('Workflow not found');
@@ -386,6 +473,12 @@ export async function workflowInstallCommand(
 			Logger.warn('Installation cancelled');
 			process.exit(0);
 		}
+	}
+
+	// Validate --dir option if provided
+	if (options.dir && !isValidDirectoryName(options.dir)) {
+		Logger.error('Invalid directory name. Use a simple name like \'my-workflow\' (letters, numbers, hyphens, underscores only).');
+		process.exit(1);
 	}
 
 	// Determine project directory

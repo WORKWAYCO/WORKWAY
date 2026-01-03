@@ -310,6 +310,152 @@ describe('workflow install command', () => {
 			expect(fs.remove).toHaveBeenCalled();
 			exitSpy.mockRestore();
 		});
+
+		it('should show network error when API is unreachable', async () => {
+			const networkError = new Error('fetch failed');
+			mockApiClient.getWorkflow.mockRejectedValue(networkError);
+			mockApiClient.searchWorkflows.mockRejectedValue(networkError);
+
+			const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+				throw new Error('process.exit');
+			});
+
+			await expect(workflowInstallCommand('meeting-intelligence', { force: true })).rejects.toThrow('process.exit');
+
+			expect(Logger.error).toHaveBeenCalledWith('Unable to connect to WORKWAY API. Please check your internet connection.');
+			exitSpy.mockRestore();
+		});
+
+		it('should show network error for ECONNREFUSED', async () => {
+			const networkError = Object.assign(new Error('Connection refused'), { code: 'ECONNREFUSED' });
+			mockApiClient.getWorkflow.mockRejectedValue(networkError);
+
+			const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+				throw new Error('process.exit');
+			});
+
+			await expect(workflowInstallCommand('meeting-intelligence', { force: true })).rejects.toThrow('process.exit');
+
+			expect(Logger.error).toHaveBeenCalledWith('Unable to connect to WORKWAY API. Please check your internet connection.');
+			exitSpy.mockRestore();
+		});
+
+		it('should show network error for ETIMEDOUT', async () => {
+			const networkError = Object.assign(new Error('Connection timed out'), { code: 'ETIMEDOUT' });
+			mockApiClient.getWorkflow.mockRejectedValue(networkError);
+
+			const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+				throw new Error('process.exit');
+			});
+
+			await expect(workflowInstallCommand('meeting-intelligence', { force: true })).rejects.toThrow('process.exit');
+
+			expect(Logger.error).toHaveBeenCalledWith('Unable to connect to WORKWAY API. Please check your internet connection.');
+			exitSpy.mockRestore();
+		});
+
+		it('should show API error for unexpected errors', async () => {
+			const apiError = Object.assign(new Error('Internal server error'), { status: 500 });
+			mockApiClient.getWorkflow.mockRejectedValue(apiError);
+			mockApiClient.searchWorkflows.mockRejectedValue(apiError);
+
+			const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+				throw new Error('process.exit');
+			});
+
+			await expect(workflowInstallCommand('meeting-intelligence', { force: true })).rejects.toThrow('process.exit');
+
+			expect(Logger.error).toHaveBeenCalledWith('WORKWAY API error: Internal server error');
+			exitSpy.mockRestore();
+		});
+	});
+
+	describe('--dir option validation', () => {
+		it('should reject absolute paths', async () => {
+			mockApiClient.getWorkflow.mockResolvedValue(mockWorkflow);
+			vi.mocked(inquirer.prompt).mockResolvedValue({ install: true });
+
+			const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+				throw new Error('process.exit');
+			});
+
+			await expect(workflowInstallCommand('meeting-intelligence', { dir: '/etc/passwd', force: true })).rejects.toThrow('process.exit');
+
+			expect(Logger.error).toHaveBeenCalledWith(expect.stringContaining('Invalid directory name'));
+			exitSpy.mockRestore();
+		});
+
+		it('should reject path traversal attempts', async () => {
+			mockApiClient.getWorkflow.mockResolvedValue(mockWorkflow);
+			vi.mocked(inquirer.prompt).mockResolvedValue({ install: true });
+
+			const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+				throw new Error('process.exit');
+			});
+
+			await expect(workflowInstallCommand('meeting-intelligence', { dir: '../../../sensitive', force: true })).rejects.toThrow('process.exit');
+
+			expect(Logger.error).toHaveBeenCalledWith(expect.stringContaining('Invalid directory name'));
+			exitSpy.mockRestore();
+		});
+
+		it('should reject paths with slashes', async () => {
+			mockApiClient.getWorkflow.mockResolvedValue(mockWorkflow);
+			vi.mocked(inquirer.prompt).mockResolvedValue({ install: true });
+
+			const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+				throw new Error('process.exit');
+			});
+
+			await expect(workflowInstallCommand('meeting-intelligence', { dir: 'foo/bar', force: true })).rejects.toThrow('process.exit');
+
+			expect(Logger.error).toHaveBeenCalledWith(expect.stringContaining('Invalid directory name'));
+			exitSpy.mockRestore();
+		});
+
+		it('should reject paths with special characters', async () => {
+			mockApiClient.getWorkflow.mockResolvedValue(mockWorkflow);
+			vi.mocked(inquirer.prompt).mockResolvedValue({ install: true });
+
+			const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
+				throw new Error('process.exit');
+			});
+
+			await expect(workflowInstallCommand('meeting-intelligence', { dir: 'my@project!', force: true })).rejects.toThrow('process.exit');
+
+			expect(Logger.error).toHaveBeenCalledWith(expect.stringContaining('Invalid directory name'));
+			exitSpy.mockRestore();
+		});
+
+		it('should accept valid directory names with hyphens', async () => {
+			mockApiClient.getWorkflow.mockResolvedValue(mockWorkflow);
+			vi.mocked(inquirer.prompt).mockResolvedValue({ install: true });
+
+			await workflowInstallCommand('meeting-intelligence', { dir: 'my-workflow', force: true });
+
+			expect(fs.ensureDir).toHaveBeenCalledWith(expect.stringContaining('my-workflow'));
+			expect(Logger.success).toHaveBeenCalled();
+		});
+
+		it('should accept valid directory names with underscores', async () => {
+			mockApiClient.getWorkflow.mockResolvedValue(mockWorkflow);
+			vi.mocked(inquirer.prompt).mockResolvedValue({ install: true });
+
+			await workflowInstallCommand('meeting-intelligence', { dir: 'my_workflow', force: true });
+
+			expect(fs.ensureDir).toHaveBeenCalledWith(expect.stringContaining('my_workflow'));
+			expect(Logger.success).toHaveBeenCalled();
+		});
+
+		it('should accept valid directory names with numbers', async () => {
+			mockApiClient.getWorkflow.mockResolvedValue(mockWorkflow);
+			vi.mocked(inquirer.prompt).mockResolvedValue({ install: true });
+
+			await workflowInstallCommand('meeting-intelligence', { dir: 'workflow123', force: true });
+
+			expect(fs.ensureDir).toHaveBeenCalledWith(expect.stringContaining('workflow123'));
+			expect(Logger.success).toHaveBeenCalled();
+		});
 	});
 
 	describe('authentication', () => {
