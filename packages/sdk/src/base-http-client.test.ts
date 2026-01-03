@@ -232,8 +232,8 @@ describe('AuthenticatedHTTPClient with token refresh', () => {
 			})
 		);
 
-		// Verify onTokenRefreshed callback was called
-		expect(onTokenRefreshed).toHaveBeenCalledWith('new-token', 'new-refresh-token');
+		// Verify onTokenRefreshed callback was called (third arg is expires_in, undefined in this case)
+		expect(onTokenRefreshed).toHaveBeenCalledWith('new-token', 'new-refresh-token', undefined);
 
 		// Verify final response
 		expect(data).toEqual({ data: 'success' });
@@ -356,5 +356,329 @@ describe('AuthenticatedHTTPClient with token refresh', () => {
 
 		// Should have made only 1 fetch call (no refresh attempt)
 		expect(global.fetch).toHaveBeenCalledTimes(1);
+	});
+});
+
+// ============================================================================
+// PROACTIVE TOKEN REFRESH TESTS
+// ============================================================================
+
+describe('AuthenticatedHTTPClient proactive token refresh', () => {
+	it('should detect token expiring soon', () => {
+		const now = Date.now();
+		const client = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'test-token',
+			tokenExpiresAt: now + 2 * 60 * 1000, // Expires in 2 minutes
+			proactiveRefreshThreshold: 5 * 60 * 1000, // 5 minute threshold
+		});
+
+		// Token expires in 2 minutes, threshold is 5 minutes -> should be expiring soon
+		expect(client.isTokenExpiringSoon()).toBe(true);
+	});
+
+	it('should detect token not expiring soon', () => {
+		const now = Date.now();
+		const client = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'test-token',
+			tokenExpiresAt: now + 10 * 60 * 1000, // Expires in 10 minutes
+			proactiveRefreshThreshold: 5 * 60 * 1000, // 5 minute threshold
+		});
+
+		// Token expires in 10 minutes, threshold is 5 minutes -> not expiring soon
+		expect(client.isTokenExpiringSoon()).toBe(false);
+	});
+
+	it('should detect expired token', () => {
+		const now = Date.now();
+		const client = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'test-token',
+			tokenExpiresAt: now - 1000, // Expired 1 second ago
+		});
+
+		expect(client.isTokenExpired()).toBe(true);
+		expect(client.isTokenExpiringSoon()).toBe(true);
+	});
+
+	it('should return null for time until expiry when no expiration set', () => {
+		const client = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'test-token',
+		});
+
+		expect(client.getTimeUntilExpiry()).toBeNull();
+		expect(client.isTokenExpired()).toBe(false);
+		expect(client.isTokenExpiringSoon()).toBe(false);
+	});
+
+	it('should proactively refresh token before request when expiring soon', async () => {
+		const onTokenRefreshed = vi.fn();
+		const now = Date.now();
+
+		// Token refresh succeeds
+		const tokenRefreshResponse = new Response(
+			JSON.stringify({
+				access_token: 'new-token',
+				refresh_token: 'new-refresh-token',
+				expires_in: 3600,
+			}),
+			{
+				status: 200,
+				headers: { 'Content-Type': 'application/json' },
+			}
+		);
+
+		// API request succeeds
+		const successResponse = new Response(JSON.stringify({ data: 'success' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi
+			.fn()
+			.mockResolvedValueOnce(tokenRefreshResponse)
+			.mockResolvedValueOnce(successResponse);
+
+		const tokenRefresh: TokenRefreshHandler = {
+			refreshToken: 'old-refresh-token',
+			tokenEndpoint: 'https://auth.example.com/token',
+			clientId: 'test-client-id',
+			clientSecret: 'test-client-secret',
+			onTokenRefreshed,
+		};
+
+		const client = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'old-token',
+			tokenExpiresAt: now + 2 * 60 * 1000, // Expires in 2 minutes
+			proactiveRefreshThreshold: 5 * 60 * 1000, // 5 minute threshold
+			tokenRefresh,
+		});
+
+		const data = await client.getJson<{ data: string }>('/protected');
+
+		// Should have made 2 fetch calls: token refresh FIRST, then API request
+		expect(global.fetch).toHaveBeenCalledTimes(2);
+
+		// First call should be token refresh
+		expect(global.fetch).toHaveBeenNthCalledWith(
+			1,
+			'https://auth.example.com/token',
+			expect.objectContaining({
+				method: 'POST',
+			})
+		);
+
+		// Second call should be the actual API request
+		expect(global.fetch).toHaveBeenNthCalledWith(
+			2,
+			'https://api.example.com/protected',
+			expect.objectContaining({
+				method: 'GET',
+			})
+		);
+
+		// Callback should have been called with expires_in
+		expect(onTokenRefreshed).toHaveBeenCalledWith('new-token', 'new-refresh-token', 3600);
+
+		// Verify final response
+		expect(data).toEqual({ data: 'success' });
+	});
+
+	it('should not proactively refresh when token has plenty of time left', async () => {
+		const onTokenRefreshed = vi.fn();
+		const now = Date.now();
+
+		// API request succeeds
+		const successResponse = new Response(JSON.stringify({ data: 'success' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi.fn().mockResolvedValue(successResponse);
+
+		const tokenRefresh: TokenRefreshHandler = {
+			refreshToken: 'old-refresh-token',
+			tokenEndpoint: 'https://auth.example.com/token',
+			clientId: 'test-client-id',
+			clientSecret: 'test-client-secret',
+			onTokenRefreshed,
+		};
+
+		const client = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'valid-token',
+			tokenExpiresAt: now + 30 * 60 * 1000, // Expires in 30 minutes
+			proactiveRefreshThreshold: 5 * 60 * 1000, // 5 minute threshold
+			tokenRefresh,
+		});
+
+		await client.getJson('/protected');
+
+		// Should have made only 1 fetch call (no refresh needed)
+		expect(global.fetch).toHaveBeenCalledTimes(1);
+
+		// Callback should NOT have been called
+		expect(onTokenRefreshed).not.toHaveBeenCalled();
+	});
+
+	it('should deduplicate concurrent refresh requests', async () => {
+		const onTokenRefreshed = vi.fn();
+		const now = Date.now();
+
+		// Token refresh succeeds (add delay to simulate network latency)
+		const tokenRefreshResponse = new Response(
+			JSON.stringify({
+				access_token: 'new-token',
+				refresh_token: 'new-refresh-token',
+				expires_in: 3600,
+			}),
+			{
+				status: 200,
+				headers: { 'Content-Type': 'application/json' },
+			}
+		);
+
+		// API requests succeed
+		const successResponse = new Response(JSON.stringify({ data: 'success' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		let refreshCallCount = 0;
+		global.fetch = vi.fn().mockImplementation((url: string) => {
+			if (url.includes('/token')) {
+				refreshCallCount++;
+				return Promise.resolve(tokenRefreshResponse.clone());
+			}
+			return Promise.resolve(successResponse.clone());
+		});
+
+		const tokenRefresh: TokenRefreshHandler = {
+			refreshToken: 'old-refresh-token',
+			tokenEndpoint: 'https://auth.example.com/token',
+			clientId: 'test-client-id',
+			clientSecret: 'test-client-secret',
+			onTokenRefreshed,
+		};
+
+		const client = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'old-token',
+			tokenExpiresAt: now + 2 * 60 * 1000, // Expires in 2 minutes
+			proactiveRefreshThreshold: 5 * 60 * 1000, // 5 minute threshold
+			tokenRefresh,
+		});
+
+		// Make 3 concurrent requests
+		const [result1, result2, result3] = await Promise.all([
+			client.getJson<{ data: string }>('/protected1'),
+			client.getJson<{ data: string }>('/protected2'),
+			client.getJson<{ data: string }>('/protected3'),
+		]);
+
+		// All requests should succeed
+		expect(result1).toEqual({ data: 'success' });
+		expect(result2).toEqual({ data: 'success' });
+		expect(result3).toEqual({ data: 'success' });
+
+		// Token refresh should only be called ONCE (deduplicated)
+		expect(refreshCallCount).toBe(1);
+		expect(onTokenRefreshed).toHaveBeenCalledTimes(1);
+	});
+
+	it('should update tokenExpiresAt after refresh', async () => {
+		const onTokenRefreshed = vi.fn();
+		const now = Date.now();
+
+		// Token refresh succeeds with expires_in
+		const tokenRefreshResponse = new Response(
+			JSON.stringify({
+				access_token: 'new-token',
+				refresh_token: 'new-refresh-token',
+				expires_in: 3600, // 1 hour
+			}),
+			{
+				status: 200,
+				headers: { 'Content-Type': 'application/json' },
+			}
+		);
+
+		// API request succeeds
+		const successResponse = new Response(JSON.stringify({ data: 'success' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi
+			.fn()
+			.mockResolvedValueOnce(tokenRefreshResponse)
+			.mockResolvedValueOnce(successResponse);
+
+		const tokenRefresh: TokenRefreshHandler = {
+			refreshToken: 'old-refresh-token',
+			tokenEndpoint: 'https://auth.example.com/token',
+			clientId: 'test-client-id',
+			clientSecret: 'test-client-secret',
+			onTokenRefreshed,
+		};
+
+		const client = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'old-token',
+			tokenExpiresAt: now + 2 * 60 * 1000, // Expires in 2 minutes
+			proactiveRefreshThreshold: 5 * 60 * 1000,
+			tokenRefresh,
+		});
+
+		await client.getJson('/protected');
+
+		// After refresh, getTokenExpiresAt should return a future time (~1 hour from now)
+		const newExpiresAt = client.getTokenExpiresAt();
+		expect(newExpiresAt).toBeDefined();
+		expect(newExpiresAt).toBeGreaterThan(now + 3500 * 1000); // At least ~58 minutes from now
+		expect(newExpiresAt).toBeLessThan(now + 3700 * 1000); // At most ~62 minutes from now
+	});
+
+	it('should use custom proactiveRefreshThreshold', () => {
+		const now = Date.now();
+
+		// With 1 minute threshold
+		const client1 = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'test-token',
+			tokenExpiresAt: now + 2 * 60 * 1000, // Expires in 2 minutes
+			proactiveRefreshThreshold: 1 * 60 * 1000, // 1 minute threshold
+		});
+
+		// Token expires in 2 min, threshold is 1 min -> NOT expiring soon
+		expect(client1.isTokenExpiringSoon()).toBe(false);
+
+		// With 10 minute threshold
+		const client2 = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'test-token',
+			tokenExpiresAt: now + 2 * 60 * 1000, // Expires in 2 minutes
+			proactiveRefreshThreshold: 10 * 60 * 1000, // 10 minute threshold
+		});
+
+		// Token expires in 2 min, threshold is 10 min -> IS expiring soon
+		expect(client2.isTokenExpiringSoon()).toBe(true);
+	});
+
+	it('should use default 5 minute threshold when not specified', () => {
+		const now = Date.now();
+
+		const client = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'test-token',
+			tokenExpiresAt: now + 4 * 60 * 1000, // Expires in 4 minutes
+			// proactiveRefreshThreshold not specified -> defaults to 5 minutes
+		});
+
+		// Token expires in 4 min, default threshold is 5 min -> IS expiring soon
+		expect(client.isTokenExpiringSoon()).toBe(true);
 	});
 });

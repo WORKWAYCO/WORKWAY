@@ -56,8 +56,17 @@ export interface TokenRefreshHandler {
 	clientId: string;
 	/** Client secret for OAuth token refresh */
 	clientSecret: string;
-	/** Callback to update the access token after refresh */
-	onTokenRefreshed: (newAccessToken: string, newRefreshToken?: string) => void | Promise<void>;
+	/**
+	 * Callback to update the access token after refresh
+	 * @param newAccessToken - The new access token
+	 * @param newRefreshToken - The new refresh token (if rotated)
+	 * @param expiresIn - Token lifetime in seconds (if provided by OAuth server)
+	 */
+	onTokenRefreshed: (
+		newAccessToken: string,
+		newRefreshToken?: string,
+		expiresIn?: number
+	) => void | Promise<void>;
 }
 
 /**
@@ -83,6 +92,12 @@ export interface HTTPClientConfig {
 export interface AuthenticatedHTTPClientConfig extends HTTPClientConfig {
 	/** Bearer token for authentication */
 	accessToken: string;
+
+	/** Optional: Token expiration timestamp (Unix ms) for proactive refresh */
+	tokenExpiresAt?: number;
+
+	/** Optional: How many ms before expiration to proactively refresh (default: 5 minutes) */
+	proactiveRefreshThreshold?: number;
 
 	/** Optional: OAuth token refresh configuration */
 	tokenRefresh?: TokenRefreshHandler;
@@ -368,15 +383,27 @@ export class BaseHTTPClient {
 // AUTHENTICATED HTTP CLIENT
 // ============================================================================
 
+/** Default proactive refresh threshold: 5 minutes before expiration */
+const DEFAULT_PROACTIVE_REFRESH_THRESHOLD = 5 * 60 * 1000; // 5 minutes in ms
+
 /**
  * HTTP client with Bearer token authentication
  *
  * Extends BaseHTTPClient with automatic Authorization header injection
  * and optional automatic token refresh on 401 responses.
+ *
+ * Supports proactive token refresh: if tokenExpiresAt is provided and
+ * the token is about to expire (within proactiveRefreshThreshold),
+ * the token will be refreshed BEFORE making the request, avoiding
+ * failed requests and reducing latency.
  */
 export class AuthenticatedHTTPClient extends BaseHTTPClient {
 	protected accessToken: string;
+	protected tokenExpiresAt?: number;
+	protected readonly proactiveRefreshThreshold: number;
 	protected readonly tokenRefresh?: TokenRefreshHandler;
+	private isRefreshing = false;
+	private refreshPromise: Promise<void> | null = null;
 
 	constructor(config: AuthenticatedHTTPClientConfig) {
 		super({
@@ -387,11 +414,40 @@ export class AuthenticatedHTTPClient extends BaseHTTPClient {
 			},
 		});
 		this.accessToken = config.accessToken;
+		this.tokenExpiresAt = config.tokenExpiresAt;
+		this.proactiveRefreshThreshold = config.proactiveRefreshThreshold ?? DEFAULT_PROACTIVE_REFRESH_THRESHOLD;
 		this.tokenRefresh = config.tokenRefresh;
 	}
 
 	/**
-	 * Make an HTTP request with automatic token refresh on 401
+	 * Check if the token is expiring soon (within proactive refresh threshold)
+	 */
+	isTokenExpiringSoon(): boolean {
+		if (!this.tokenExpiresAt) return false;
+		return Date.now() >= this.tokenExpiresAt - this.proactiveRefreshThreshold;
+	}
+
+	/**
+	 * Check if the token has already expired
+	 */
+	isTokenExpired(): boolean {
+		if (!this.tokenExpiresAt) return false;
+		return Date.now() >= this.tokenExpiresAt;
+	}
+
+	/**
+	 * Get time until token expires in milliseconds (negative if expired)
+	 */
+	getTimeUntilExpiry(): number | null {
+		if (!this.tokenExpiresAt) return null;
+		return this.tokenExpiresAt - Date.now();
+	}
+
+	/**
+	 * Make an HTTP request with proactive and reactive token refresh
+	 *
+	 * Proactive: If token is expiring soon, refresh BEFORE making request
+	 * Reactive: If 401 received, refresh and retry (fallback)
 	 */
 	protected override async request(
 		method: string,
@@ -399,16 +455,46 @@ export class AuthenticatedHTTPClient extends BaseHTTPClient {
 		options: RequestWithBodyOptions = {},
 		isRetry = false
 	): Promise<Response> {
+		// Proactive refresh: if token is expiring soon, refresh before request
+		if (!isRetry && this.tokenRefresh && this.isTokenExpiringSoon()) {
+			await this.ensureTokenRefreshed();
+		}
+
 		const response = await super.request(method, path, options);
 
-		// Handle 401 Unauthorized - attempt token refresh if configured
+		// Reactive refresh: handle 401 Unauthorized as fallback
 		if (response.status === 401 && !isRetry && this.tokenRefresh) {
-			await this.refreshAccessToken();
+			await this.ensureTokenRefreshed();
 			// Retry the request once with the new token
 			return this.request(method, path, options, true);
 		}
 
 		return response;
+	}
+
+	/**
+	 * Ensure token is refreshed, with deduplication for concurrent requests
+	 *
+	 * If multiple requests trigger refresh simultaneously, only one refresh
+	 * occurs and all requests wait for the same refresh to complete.
+	 */
+	private async ensureTokenRefreshed(): Promise<void> {
+		// If already refreshing, wait for the existing refresh to complete
+		if (this.isRefreshing && this.refreshPromise) {
+			await this.refreshPromise;
+			return;
+		}
+
+		// Start refresh
+		this.isRefreshing = true;
+		this.refreshPromise = this.refreshAccessToken();
+
+		try {
+			await this.refreshPromise;
+		} finally {
+			this.isRefreshing = false;
+			this.refreshPromise = null;
+		}
 	}
 
 	/**
@@ -456,6 +542,7 @@ export class AuthenticatedHTTPClient extends BaseHTTPClient {
 			const data = await response.json() as {
 				access_token: string;
 				refresh_token?: string;
+				expires_in?: number;
 			};
 
 			if (!data.access_token) {
@@ -470,8 +557,13 @@ export class AuthenticatedHTTPClient extends BaseHTTPClient {
 			this.accessToken = data.access_token;
 			this.defaultHeaders['Authorization'] = `Bearer ${data.access_token}`;
 
+			// Update token expiration if expires_in is provided
+			if (data.expires_in) {
+				this.tokenExpiresAt = Date.now() + data.expires_in * 1000;
+			}
+
 			// Call the callback to persist the new token
-			await onTokenRefreshed(data.access_token, data.refresh_token);
+			await onTokenRefreshed(data.access_token, data.refresh_token, data.expires_in);
 		} catch (error) {
 			if (error instanceof IntegrationError) {
 				throw error;
@@ -489,16 +581,27 @@ export class AuthenticatedHTTPClient extends BaseHTTPClient {
 
 	/**
 	 * Update the access token (for token refresh)
+	 * @param token - New access token
+	 * @param expiresAt - Optional expiration timestamp (Unix ms)
 	 */
-	setAccessToken(token: string): AuthenticatedHTTPClient {
+	setAccessToken(token: string, expiresAt?: number): AuthenticatedHTTPClient {
 		return new AuthenticatedHTTPClient({
 			baseUrl: this.baseUrl,
 			timeout: this.timeout,
 			defaultHeaders: { ...this.defaultHeaders },
 			accessToken: token,
+			tokenExpiresAt: expiresAt ?? this.tokenExpiresAt,
+			proactiveRefreshThreshold: this.proactiveRefreshThreshold,
 			errorContext: this.errorContext,
 			tokenRefresh: this.tokenRefresh,
 		});
+	}
+
+	/**
+	 * Get the current token expiration timestamp
+	 */
+	getTokenExpiresAt(): number | undefined {
+		return this.tokenExpiresAt;
 	}
 }
 
