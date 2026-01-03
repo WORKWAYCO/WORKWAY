@@ -419,3 +419,213 @@ export interface DetectedModel {
   /** Whether this is a "latest" alias (e.g., "opus", "sonnet") */
   isLatest: boolean;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Molecular Workflows (GAS TOWN-inspired step-level state tracking)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Step state within a molecule.
+ * Maps to GAS TOWN's crash-resilient step tracking.
+ */
+export type MoleculeStepState = 'pending' | 'in_progress' | 'complete' | 'failed' | 'skipped';
+
+/**
+ * A single step within a molecular workflow.
+ * Steps are atomic units of work with crash-resilient state tracking.
+ */
+export interface MoleculeStep {
+  /** Unique step ID within the molecule */
+  id: string;
+  /** Human-readable step title */
+  title: string;
+  /** Step description */
+  description?: string;
+  /** Current state */
+  state: MoleculeStepState;
+  /** Step IDs this depends on */
+  dependsOn: string[];
+  /** Beads issue ID for this step (if created) */
+  issueId?: string;
+  /** Start timestamp (when moved to in_progress) */
+  startedAt?: string;
+  /** Completion timestamp (when moved to complete) */
+  completedAt?: string;
+  /** Failure reason (if failed) */
+  failureReason?: string;
+  /** Retry count */
+  retryCount: number;
+  /** Maximum retry attempts */
+  maxRetries: number;
+  /** Checkpoint data for resume */
+  checkpoint?: MoleculeStepCheckpoint;
+}
+
+/**
+ * Checkpoint data stored in a molecule step for crash recovery.
+ * Enables auto-resume from last successful step.
+ */
+export interface MoleculeStepCheckpoint {
+  /** Files modified during this step */
+  filesModified: string[];
+  /** Git commit hash (if committed) */
+  gitCommit?: string;
+  /** Test results */
+  testsPassed: boolean;
+  /** Context notes from agent */
+  notes: string;
+  /** Timestamp when checkpoint was captured */
+  capturedAt: string;
+}
+
+/**
+ * A molecule represents a multi-step workflow with crash-resilient execution.
+ * Inspired by GAS TOWN's molecular formulas with step-level state tracking.
+ */
+export interface Molecule {
+  /** Unique molecule ID */
+  id: string;
+  /** Molecule title */
+  title: string;
+  /** Molecule description */
+  description?: string;
+  /** Parent Beads issue ID (epic/molecule container) */
+  parentIssueId: string;
+  /** All steps in this molecule */
+  steps: MoleculeStep[];
+  /** Overall molecule state (derived from steps) */
+  state: MoleculeState;
+  /** Creation timestamp */
+  createdAt: string;
+  /** Last update timestamp */
+  updatedAt: string;
+  /** Metadata for molecule execution */
+  metadata: MoleculeMetadata;
+}
+
+/**
+ * Overall molecule state (derived from step states).
+ */
+export type MoleculeState = 'pending' | 'in_progress' | 'complete' | 'failed' | 'paused';
+
+/**
+ * Metadata for molecule execution.
+ */
+export interface MoleculeMetadata {
+  /** Template ID if spawned from proto */
+  templateId?: string;
+  /** Variables used during spawn */
+  variables?: Record<string, string>;
+  /** Agent that created this molecule */
+  createdBy: string;
+  /** Labels for categorization */
+  labels: string[];
+}
+
+/**
+ * Result of advancing a molecule to the next step.
+ */
+export interface MoleculeAdvanceResult {
+  /** Whether advance was successful */
+  success: boolean;
+  /** Next step to execute (if successful) */
+  nextStep?: MoleculeStep;
+  /** Reason for failure (if unsuccessful) */
+  reason?: string;
+  /** Completed step (if this was a step completion) */
+  completedStep?: MoleculeStep;
+}
+
+/**
+ * Configuration for molecule execution.
+ */
+export interface MoleculeExecutionConfig {
+  /** Auto-commit after each step */
+  autoCommit: boolean;
+  /** Auto-create Beads issues for each step */
+  createStepIssues: boolean;
+  /** Capture checkpoints after each step */
+  captureCheckpoints: boolean;
+  /** Max retries per step (default from step config) */
+  defaultMaxRetries: number;
+}
+
+/**
+ * Default molecule execution configuration.
+ */
+export const DEFAULT_MOLECULE_CONFIG: MoleculeExecutionConfig = {
+  autoCommit: false,
+  createStepIssues: true,
+  captureCheckpoints: true,
+  defaultMaxRetries: 2,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Convoy System (GAS TOWN Pattern - cross-project work grouping)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Convoy metadata for grouping related work across projects.
+ */
+export interface Convoy {
+  /** Convoy name (from convoy:<name> label) */
+  name: string;
+  /** Human-readable title */
+  title: string;
+  /** Description of the convoy's purpose */
+  description: string;
+  /** Total issues in convoy */
+  totalIssues: number;
+  /** Completed issues */
+  completedIssues: number;
+  /** In-progress issues */
+  inProgressIssues: number;
+  /** Failed issues */
+  failedIssues: number;
+  /** Progress percentage (0-100) */
+  progress: number;
+  /** Issue IDs in convoy */
+  issueIds: string[];
+  /** Repository paths participating in convoy */
+  repos: string[];
+  /** Creation timestamp */
+  createdAt: string;
+  /** Last updated timestamp */
+  updatedAt: string;
+}
+
+/**
+ * Convoy creation options.
+ */
+export interface ConvoyCreateOptions {
+  /** Convoy name (will be prefixed with convoy:) */
+  name: string;
+  /** Human-readable title */
+  title: string;
+  /** Description of the convoy's purpose */
+  description?: string;
+  /** Initial issue IDs to add to convoy */
+  issueIds?: string[];
+  /** Working directory */
+  cwd?: string;
+}
+
+/**
+ * Convoy progress snapshot.
+ */
+export interface ConvoyProgress {
+  /** Convoy name */
+  name: string;
+  /** Progress percentage (0-100) */
+  progress: number;
+  /** Total issues */
+  total: number;
+  /** Completed issues */
+  completed: number;
+  /** In-progress issues */
+  inProgress: number;
+  /** Failed issues */
+  failed: number;
+  /** Timestamp */
+  timestamp: string;
+}

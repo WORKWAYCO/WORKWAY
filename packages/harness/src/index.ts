@@ -95,6 +95,21 @@ export {
   createHookQueue,
 } from './hook-queue.js';
 
+// Convoy System (cross-project work grouping)
+export {
+  ConvoySystem,
+  createConvoySystem,
+  createConvoy,
+  getConvoy,
+  displayConvoy,
+} from './convoy.js';
+
+// Molecular Workflows (step-level state tracking)
+export {
+  MoleculeManager,
+  createMoleculeManager,
+} from './molecule.js';
+
 // Types
 export type {
   HarnessMode,
@@ -123,6 +138,17 @@ export type {
   ClaimResult,
   ClaudeModelFamily,
   DetectedModel,
+  Convoy,
+  ConvoyCreateOptions,
+  ConvoyProgress,
+  Molecule,
+  MoleculeStep,
+  MoleculeStepState,
+  MoleculeState,
+  MoleculeStepCheckpoint,
+  MoleculeAdvanceResult,
+  MoleculeExecutionConfig,
+  MoleculeMetadata,
 } from './types.js';
 
-export { DEFAULT_CHECKPOINT_POLICY, DEFAULT_HOOK_CONFIG } from './types.js';
+export { DEFAULT_CHECKPOINT_POLICY, DEFAULT_HOOK_CONFIG, DEFAULT_MOLECULE_CONFIG } from './types.js';

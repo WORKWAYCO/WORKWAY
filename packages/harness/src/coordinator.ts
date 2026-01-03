@@ -21,6 +21,7 @@ import type { BeadsIssue } from './types.js';
 import type { WorkerResult } from './worker.js';
 import { Worker, WorkerPool } from './worker.js';
 import { Observer } from './observer.js';
+import { ConvoySystem } from './convoy.js';
 import {
   getHarnessReadyIssues,
   updateIssueStatus,
@@ -55,6 +56,8 @@ export interface CoordinatorOptions {
   maxWorkers?: number;
   /** Dry run mode */
   dryRun?: boolean;
+  /** Optional convoy name for convoy-aware work distribution */
+  convoy?: string;
 }
 
 export interface WorkAssignment {
@@ -83,6 +86,8 @@ export class Coordinator {
   private harnessState: HarnessState;
   private workerPool: WorkerPool;
   private observer: Observer;
+  private convoySystem: ConvoySystem | null;
+  private convoyName: string | null;
   private checkpointTracker: ReturnType<typeof createCheckpointTracker>;
   private cwd: string;
   private dryRun: boolean;
@@ -98,6 +103,8 @@ export class Coordinator {
     this.harnessState = harnessState;
     this.cwd = options.cwd;
     this.dryRun = options.dryRun || false;
+    this.convoyName = options.convoy || null;
+    this.convoySystem = this.convoyName ? new ConvoySystem(this.cwd) : null;
 
     // Initialize worker pool with maxWorkers (default: 1 for single-agent mode)
     const maxWorkers = options.maxWorkers || 1;
@@ -230,8 +237,18 @@ export class Coordinator {
   /**
    * Get next issue from queue.
    * Non-blocking delegation - coordinator doesn't execute.
+   * Convoy-aware: If convoy is set, prioritize convoy issues.
    */
   private async getNextIssue(): Promise<BeadsIssue | null> {
+    // If convoy mode is enabled, get next issue from convoy
+    if (this.convoySystem && this.convoyName) {
+      const convoyIssue = await this.convoySystem.getNextIssue(this.convoyName, this.cwd);
+      if (convoyIssue) {
+        return convoyIssue;
+      }
+    }
+
+    // Fall back to harness-scoped issues
     const harnessIssues = await getHarnessReadyIssues(this.harnessState.id, this.cwd);
     return harnessIssues.length > 0 ? harnessIssues[0] : null;
   }
@@ -442,6 +459,7 @@ export class Coordinator {
     featuresCompleted: number;
     featuresTotal: number;
     sessionsCompleted: number;
+    convoy?: string;
   } {
     return {
       harnessId: this.harnessState.id,
@@ -450,7 +468,18 @@ export class Coordinator {
       featuresCompleted: this.harnessState.featuresCompleted,
       featuresTotal: this.harnessState.featuresTotal,
       sessionsCompleted: this.harnessState.sessionsCompleted,
+      convoy: this.convoyName || undefined,
     };
+  }
+
+  /**
+   * Get convoy progress (if convoy mode enabled).
+   */
+  async getConvoyProgress() {
+    if (!this.convoySystem || !this.convoyName) {
+      return null;
+    }
+    return this.convoySystem.getProgress(this.convoyName, this.cwd);
   }
 
   /**
