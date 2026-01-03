@@ -321,6 +321,7 @@ export {
 	type RequestOptions,
 	type RequestWithBodyOptions,
 	type TokenRefreshHandler,
+	type TracingConfig,
 } from './base-http-client';
 
 // ============================================================================

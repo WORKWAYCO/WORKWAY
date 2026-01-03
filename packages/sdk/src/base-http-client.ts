@@ -45,6 +45,52 @@ import {
 // ============================================================================
 
 /**
+ * Configuration for request tracing
+ *
+ * Enables correlation ID propagation for distributed tracing.
+ * Each request gets a unique ID that flows through the system.
+ */
+export interface TracingConfig {
+	/**
+	 * Whether tracing is enabled (default: true)
+	 */
+	enabled?: boolean;
+
+	/**
+	 * Header name for correlation ID (default: 'X-Correlation-ID')
+	 *
+	 * Common alternatives:
+	 * - 'X-Request-ID'
+	 * - 'X-Trace-ID'
+	 * - 'traceparent' (W3C Trace Context)
+	 */
+	headerName?: string;
+
+	/**
+	 * Custom correlation ID generator
+	 *
+	 * Default: crypto.randomUUID() (RFC 4122 v4)
+	 *
+	 * @example
+	 * ```typescript
+	 * generateId: () => `req_${Date.now()}_${Math.random().toString(36).slice(2)}`
+	 * ```
+	 */
+	generateId?: () => string;
+
+	/**
+	 * Whether to propagate correlation IDs from incoming requests
+	 *
+	 * If true, the client will use a correlation ID passed via
+	 * `options.headers[headerName]` instead of generating a new one.
+	 * This maintains trace continuity across service boundaries.
+	 *
+	 * Default: true
+	 */
+	propagate?: boolean;
+}
+
+/**
  * Token refresh handler for OAuth token refresh
  */
 export interface TokenRefreshHandler {
@@ -84,6 +130,16 @@ export interface HTTPClientConfig {
 
 	/** Context for error reporting */
 	errorContext?: Partial<ErrorContext>;
+
+	/**
+	 * Request tracing configuration
+	 *
+	 * When enabled, adds correlation IDs to all requests for distributed tracing.
+	 * IDs are included in error context for debugging.
+	 *
+	 * @default { enabled: true, headerName: 'X-Correlation-ID' }
+	 */
+	tracing?: TracingConfig;
 }
 
 /**
@@ -118,6 +174,23 @@ export interface RequestOptions {
 
 	/** Signal for request cancellation */
 	signal?: AbortSignal;
+
+	/**
+	 * Correlation ID for request tracing
+	 *
+	 * If provided, this ID is used instead of generating a new one.
+	 * Use this to propagate correlation IDs from incoming requests.
+	 *
+	 * @example
+	 * ```typescript
+	 * // In a Cloudflare Worker
+	 * const incomingId = request.headers.get('X-Correlation-ID');
+	 * const data = await client.getJson('/users', {
+	 *   correlationId: incomingId || undefined
+	 * });
+	 * ```
+	 */
+	correlationId?: string;
 }
 
 /**
@@ -132,6 +205,23 @@ export interface RequestWithBodyOptions extends RequestOptions {
 // BASE HTTP CLIENT
 // ============================================================================
 
+/** Default correlation ID header name */
+const DEFAULT_CORRELATION_HEADER = 'X-Correlation-ID';
+
+/**
+ * Generate a correlation ID using crypto.randomUUID()
+ *
+ * This is available in Cloudflare Workers and modern browsers.
+ * Falls back to a simple random string if not available.
+ */
+function generateCorrelationId(): string {
+	if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+		return crypto.randomUUID();
+	}
+	// Fallback for environments without crypto.randomUUID
+	return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`;
+}
+
 /**
  * Base HTTP client providing core request functionality
  *
@@ -143,6 +233,15 @@ export class BaseHTTPClient {
 	protected readonly timeout: number;
 	protected readonly defaultHeaders: Record<string, string>;
 	protected readonly errorContext: Partial<ErrorContext>;
+	protected readonly tracing: {
+		enabled: boolean;
+		headerName: string;
+		generateId: () => string;
+		propagate: boolean;
+	};
+
+	/** The correlation ID from the last request (for debugging) */
+	protected lastCorrelationId?: string;
 
 	constructor(config: HTTPClientConfig) {
 		this.baseUrl = config.baseUrl.replace(/\/$/, ''); // Remove trailing slash
@@ -152,6 +251,23 @@ export class BaseHTTPClient {
 			...config.defaultHeaders,
 		};
 		this.errorContext = config.errorContext ?? {};
+
+		// Initialize tracing with defaults
+		this.tracing = {
+			enabled: config.tracing?.enabled ?? true,
+			headerName: config.tracing?.headerName ?? DEFAULT_CORRELATION_HEADER,
+			generateId: config.tracing?.generateId ?? generateCorrelationId,
+			propagate: config.tracing?.propagate ?? true,
+		};
+	}
+
+	/**
+	 * Get the correlation ID from the last request
+	 *
+	 * Useful for logging and debugging.
+	 */
+	getLastCorrelationId(): string | undefined {
+		return this.lastCorrelationId;
 	}
 
 	/**
@@ -165,12 +281,37 @@ export class BaseHTTPClient {
 		const url = this.buildUrl(path, options.query);
 		const headers = new Headers(this.defaultHeaders);
 
+		// Generate or propagate correlation ID
+		let correlationId: string | undefined;
+		if (this.tracing.enabled) {
+			// Check for propagated ID first (from options or headers)
+			if (this.tracing.propagate && options.correlationId) {
+				correlationId = options.correlationId;
+			} else if (this.tracing.propagate && options.headers?.[this.tracing.headerName]) {
+				correlationId = options.headers[this.tracing.headerName];
+			} else {
+				correlationId = this.tracing.generateId();
+			}
+
+			// Store for debugging
+			this.lastCorrelationId = correlationId;
+
+			// Add to request headers
+			headers.set(this.tracing.headerName, correlationId);
+		}
+
 		// Add request-specific headers
 		if (options.headers) {
 			for (const [key, value] of Object.entries(options.headers)) {
 				headers.set(key, value);
 			}
 		}
+
+		// Build error context with correlation ID
+		const errorContextWithTrace: Partial<ErrorContext> = {
+			...this.errorContext,
+			...(correlationId && { correlationId }),
+		};
 
 		// Setup timeout
 		const timeoutMs = options.timeout ?? this.timeout;
@@ -194,12 +335,12 @@ export class BaseHTTPClient {
 		} catch (error) {
 			if (error instanceof Error && error.name === 'AbortError') {
 				throw new IntegrationError(ErrorCode.TIMEOUT, `Request timed out after ${timeoutMs}ms`, {
-					...this.errorContext,
+					...errorContextWithTrace,
 					retryable: true,
 				});
 			}
 			throw new IntegrationError(ErrorCode.NETWORK_ERROR, `Network request failed: ${error}`, {
-				...this.errorContext,
+				...errorContextWithTrace,
 				retryable: true,
 			});
 		} finally {
@@ -347,13 +488,23 @@ export class BaseHTTPClient {
 	}
 
 	/**
+	 * Get error context with correlation ID
+	 */
+	protected getErrorContext(): Partial<ErrorContext> {
+		return {
+			...this.errorContext,
+			...(this.lastCorrelationId && { correlationId: this.lastCorrelationId }),
+		};
+	}
+
+	/**
 	 * Parse JSON response with error handling
 	 *
 	 * Throws IntegrationError if response is not OK or parsing fails.
 	 */
 	protected async parseJsonResponse<T>(response: Response): Promise<T> {
 		if (!response.ok) {
-			throw await createErrorFromResponse(response, this.errorContext);
+			throw await createErrorFromResponse(response, this.getErrorContext());
 		}
 
 		try {
@@ -362,7 +513,7 @@ export class BaseHTTPClient {
 			throw new IntegrationError(
 				ErrorCode.API_ERROR,
 				'Failed to parse JSON response',
-				this.errorContext
+				this.getErrorContext()
 			);
 		}
 	}
@@ -374,7 +525,7 @@ export class BaseHTTPClient {
 	 */
 	protected async assertResponseOk(response: Response): Promise<void> {
 		if (!response.ok) {
-			throw await createErrorFromResponse(response, this.errorContext);
+			throw await createErrorFromResponse(response, this.getErrorContext());
 		}
 	}
 }

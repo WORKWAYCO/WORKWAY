@@ -1,7 +1,7 @@
 /**
  * BaseHTTPClient Tests
  *
- * Tests for the unified HTTP client with token refresh support.
+ * Tests for the unified HTTP client with token refresh support and request tracing.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -10,6 +10,7 @@ import {
 	AuthenticatedHTTPClient,
 	type TokenRefreshHandler,
 	type AuthenticatedHTTPClientConfig,
+	type TracingConfig,
 } from './base-http-client.js';
 import { IntegrationError, ErrorCode } from './integration-error.js';
 
@@ -680,5 +681,333 @@ describe('AuthenticatedHTTPClient proactive token refresh', () => {
 
 		// Token expires in 4 min, default threshold is 5 min -> IS expiring soon
 		expect(client.isTokenExpiringSoon()).toBe(true);
+	});
+});
+
+// ============================================================================
+// REQUEST TRACING TESTS
+// ============================================================================
+
+describe('BaseHTTPClient request tracing', () => {
+	it('should add X-Correlation-ID header by default', async () => {
+		const mockResponse = new Response(JSON.stringify({ data: 'test' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+		const client = new BaseHTTPClient({ baseUrl: 'https://api.example.com' });
+		await client.get('/test');
+
+		// Check that X-Correlation-ID header was set
+		const callArgs = (global.fetch as any).mock.calls[0];
+		const headers = callArgs[1].headers as Headers;
+		const correlationId = headers.get('X-Correlation-ID');
+
+		expect(correlationId).toBeDefined();
+		expect(correlationId).not.toBe('');
+		// Should be a UUID format
+		expect(correlationId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+	});
+
+	it('should store correlation ID for debugging', async () => {
+		const mockResponse = new Response(JSON.stringify({ data: 'test' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+		const client = new BaseHTTPClient({ baseUrl: 'https://api.example.com' });
+
+		// No correlation ID before request
+		expect(client.getLastCorrelationId()).toBeUndefined();
+
+		await client.get('/test');
+
+		// Correlation ID available after request
+		const correlationId = client.getLastCorrelationId();
+		expect(correlationId).toBeDefined();
+		expect(correlationId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i);
+	});
+
+	it('should propagate provided correlation ID', async () => {
+		const mockResponse = new Response(JSON.stringify({ data: 'test' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+		const client = new BaseHTTPClient({ baseUrl: 'https://api.example.com' });
+		const incomingId = 'incoming-trace-id-12345';
+
+		await client.get('/test', { correlationId: incomingId });
+
+		// Check that provided ID was used
+		const callArgs = (global.fetch as any).mock.calls[0];
+		const headers = callArgs[1].headers as Headers;
+		expect(headers.get('X-Correlation-ID')).toBe(incomingId);
+
+		// getLastCorrelationId should return the propagated ID
+		expect(client.getLastCorrelationId()).toBe(incomingId);
+	});
+
+	it('should use custom header name', async () => {
+		const mockResponse = new Response(JSON.stringify({ data: 'test' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+		const client = new BaseHTTPClient({
+			baseUrl: 'https://api.example.com',
+			tracing: {
+				headerName: 'X-Request-ID',
+			},
+		});
+
+		await client.get('/test');
+
+		const callArgs = (global.fetch as any).mock.calls[0];
+		const headers = callArgs[1].headers as Headers;
+
+		// Should use custom header name
+		expect(headers.get('X-Request-ID')).toBeDefined();
+		expect(headers.get('X-Correlation-ID')).toBeNull();
+	});
+
+	it('should use custom ID generator', async () => {
+		const mockResponse = new Response(JSON.stringify({ data: 'test' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+		let callCount = 0;
+		const customGenerator = () => `custom-id-${++callCount}`;
+
+		const client = new BaseHTTPClient({
+			baseUrl: 'https://api.example.com',
+			tracing: {
+				generateId: customGenerator,
+			},
+		});
+
+		await client.get('/test1');
+		expect(client.getLastCorrelationId()).toBe('custom-id-1');
+
+		await client.get('/test2');
+		expect(client.getLastCorrelationId()).toBe('custom-id-2');
+	});
+
+	it('should disable tracing when enabled: false', async () => {
+		const mockResponse = new Response(JSON.stringify({ data: 'test' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+		const client = new BaseHTTPClient({
+			baseUrl: 'https://api.example.com',
+			tracing: {
+				enabled: false,
+			},
+		});
+
+		await client.get('/test');
+
+		// No correlation ID header should be set
+		const callArgs = (global.fetch as any).mock.calls[0];
+		const headers = callArgs[1].headers as Headers;
+		expect(headers.get('X-Correlation-ID')).toBeNull();
+
+		// getLastCorrelationId should be undefined
+		expect(client.getLastCorrelationId()).toBeUndefined();
+	});
+
+	it('should include correlation ID in error context on timeout', async () => {
+		global.fetch = vi.fn().mockImplementation(
+			(_url, options) => {
+				return new Promise((_, reject) => {
+					if (options?.signal) {
+						options.signal.addEventListener('abort', () => {
+							const error = new Error('The operation was aborted');
+							error.name = 'AbortError';
+							reject(error);
+						});
+					}
+				});
+			}
+		);
+
+		const client = new BaseHTTPClient({
+			baseUrl: 'https://api.example.com',
+			timeout: 10,
+		});
+
+		try {
+			await client.get('/test');
+			expect.fail('Should have thrown IntegrationError');
+		} catch (error) {
+			expect(error).toBeInstanceOf(IntegrationError);
+			const integrationError = error as IntegrationError;
+			expect(integrationError.code).toBe(ErrorCode.TIMEOUT);
+			// Error context should include correlation ID
+			expect(integrationError.context.correlationId).toBeDefined();
+		}
+	});
+
+	it('should include correlation ID in error context on API error', async () => {
+		const mockResponse = new Response(JSON.stringify({ error: 'Not found' }), {
+			status: 404,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+		const client = new BaseHTTPClient({ baseUrl: 'https://api.example.com' });
+
+		try {
+			await client.getJson('/test');
+			expect.fail('Should have thrown IntegrationError');
+		} catch (error) {
+			expect(error).toBeInstanceOf(IntegrationError);
+			const integrationError = error as IntegrationError;
+			// Error context should include correlation ID
+			expect(integrationError.context.correlationId).toBeDefined();
+			expect(integrationError.context.correlationId).toMatch(
+				/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+			);
+		}
+	});
+
+	it('should propagate correlation ID from request headers', async () => {
+		const mockResponse = new Response(JSON.stringify({ data: 'test' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+		const client = new BaseHTTPClient({ baseUrl: 'https://api.example.com' });
+		const incomingId = 'header-propagated-id';
+
+		await client.get('/test', {
+			headers: { 'X-Correlation-ID': incomingId },
+		});
+
+		// Should use the ID from headers
+		expect(client.getLastCorrelationId()).toBe(incomingId);
+	});
+
+	it('should not propagate when propagate: false', async () => {
+		const mockResponse = new Response(JSON.stringify({ data: 'test' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+		const client = new BaseHTTPClient({
+			baseUrl: 'https://api.example.com',
+			tracing: {
+				propagate: false,
+			},
+		});
+
+		const providedId = 'provided-id-should-be-ignored';
+		await client.get('/test', { correlationId: providedId });
+
+		// Should generate new ID, not use provided one
+		const correlationId = client.getLastCorrelationId();
+		expect(correlationId).toBeDefined();
+		expect(correlationId).not.toBe(providedId);
+	});
+});
+
+describe('AuthenticatedHTTPClient request tracing', () => {
+	it('should include correlation ID in requests with auth', async () => {
+		const mockResponse = new Response(JSON.stringify({ data: 'test' }), {
+			status: 200,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi.fn().mockResolvedValue(mockResponse);
+
+		const client = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'test-token',
+		});
+
+		await client.get('/protected');
+
+		// Check both Authorization and X-Correlation-ID headers
+		const callArgs = (global.fetch as any).mock.calls[0];
+		const headers = callArgs[1].headers as Headers;
+
+		expect(headers.get('Authorization')).toBe('Bearer test-token');
+		expect(headers.get('X-Correlation-ID')).toBeDefined();
+	});
+
+	it('should include correlation ID in error context after token refresh', async () => {
+		const onTokenRefreshed = vi.fn();
+
+		// First request returns 401
+		const unauthorizedResponse = new Response(JSON.stringify({ error: 'Unauthorized' }), {
+			status: 401,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		// Token refresh succeeds
+		const tokenRefreshResponse = new Response(
+			JSON.stringify({
+				access_token: 'new-token',
+			}),
+			{
+				status: 200,
+				headers: { 'Content-Type': 'application/json' },
+			}
+		);
+
+		// Retry request also fails (for testing error context)
+		const notFoundResponse = new Response(JSON.stringify({ error: 'Not found' }), {
+			status: 404,
+			headers: { 'Content-Type': 'application/json' },
+		});
+
+		global.fetch = vi
+			.fn()
+			.mockResolvedValueOnce(unauthorizedResponse)
+			.mockResolvedValueOnce(tokenRefreshResponse)
+			.mockResolvedValueOnce(notFoundResponse);
+
+		const tokenRefresh: TokenRefreshHandler = {
+			refreshToken: 'refresh-token',
+			tokenEndpoint: 'https://auth.example.com/token',
+			clientId: 'client-id',
+			clientSecret: 'client-secret',
+			onTokenRefreshed,
+		};
+
+		const client = new AuthenticatedHTTPClient({
+			baseUrl: 'https://api.example.com',
+			accessToken: 'old-token',
+			tokenRefresh,
+		});
+
+		try {
+			await client.getJson('/protected');
+			expect.fail('Should have thrown IntegrationError');
+		} catch (error) {
+			expect(error).toBeInstanceOf(IntegrationError);
+			const integrationError = error as IntegrationError;
+			// Error context should include correlation ID
+			expect(integrationError.context.correlationId).toBeDefined();
+		}
 	});
 });

@@ -159,6 +159,14 @@ export interface ErrorContext {
 	maxRetries?: number;
 
 	/**
+	 * Correlation ID for request tracing
+	 *
+	 * Links this error to a specific request for distributed tracing.
+	 * Automatically populated by BaseHTTPClient when tracing is enabled.
+	 */
+	correlationId?: string;
+
+	/**
 	 * Additional arbitrary context
 	 */
 	metadata?: Record<string, unknown>;
