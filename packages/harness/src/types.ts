@@ -629,3 +629,87 @@ export interface ConvoyProgress {
   /** Timestamp */
   timestamp: string;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scale Management (Phase 2 GAS TOWN - 20-30 concurrent agents)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Scale configuration for managing 20-30 concurrent agents.
+ */
+export interface ScaleConfig {
+  /** Minimum workers in pool */
+  minWorkers: number;
+  /** Maximum workers in pool */
+  maxWorkers: number;
+  /** Target queue depth to maintain */
+  targetQueueDepth: number;
+  /** Maximum queue depth before applying backpressure */
+  maxQueueDepth: number;
+  /** Worker stall timeout (ms) */
+  workerStallTimeoutMs: number;
+  /** Health check interval (ms) */
+  healthCheckIntervalMs: number;
+  /** Scale up threshold (queue/workers ratio) */
+  scaleUpThreshold: number;
+  /** Scale down threshold (queue/workers ratio) */
+  scaleDownThreshold: number;
+  /** Cooldown period (ms) between scale operations */
+  scaleCooldownMs: number;
+  /** Maximum sessions per worker (resource quota) */
+  maxSessionsPerWorker: number;
+}
+
+/**
+ * Scale metrics for monitoring and capacity planning.
+ */
+export interface ScaleMetrics {
+  /** Current worker count */
+  currentWorkers: number;
+  /** Active (working) workers */
+  activeWorkers: number;
+  /** Idle workers */
+  idleWorkers: number;
+  /** Stalled workers detected */
+  stalledWorkers: number;
+  /** Current queue depth */
+  queueDepth: number;
+  /** Throughput (sessions completed / minute) */
+  throughputPerMinute: number;
+  /** Average session duration (ms) */
+  avgSessionDurationMs: number;
+  /** P95 session duration (ms) */
+  p95SessionDurationMs: number;
+  /** Total sessions completed */
+  totalSessionsCompleted: number;
+  /** Total sessions failed */
+  totalSessionsFailed: number;
+  /** Success rate (0-1) */
+  successRate: number;
+  /** Backpressure active */
+  backpressureActive: boolean;
+  /** Last scale operation timestamp */
+  lastScaleAt: string | null;
+  /** Scale operations count */
+  scaleOperations: number;
+  /** Merge queue depth */
+  mergeQueueDepth: number;
+  /** Health status */
+  health: 'healthy' | 'degraded' | 'unhealthy';
+}
+
+/**
+ * Default scale configuration (Phase 2: 20-30 agents).
+ */
+export const DEFAULT_SCALE_CONFIG: ScaleConfig = {
+  minWorkers: 4,
+  maxWorkers: 30,
+  targetQueueDepth: 10,
+  maxQueueDepth: 100,
+  workerStallTimeoutMs: 10 * 60 * 1000, // 10 minutes
+  healthCheckIntervalMs: 30 * 1000, // 30 seconds
+  scaleUpThreshold: 2.0,
+  scaleDownThreshold: 0.5,
+  scaleCooldownMs: 60 * 1000, // 1 minute
+  maxSessionsPerWorker: 50,
+};

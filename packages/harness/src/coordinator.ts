@@ -16,12 +16,14 @@ import type {
   PrimingContext,
   Checkpoint,
   CheckpointPolicy,
+  ScaleConfig,
 } from './types.js';
 import type { BeadsIssue } from './types.js';
 import type { WorkerResult } from './worker.js';
 import { Worker, WorkerPool } from './worker.js';
 import { Observer } from './observer.js';
 import { ConvoySystem } from './convoy.js';
+import { ScaleManager } from './scale-manager.js';
 import {
   getHarnessReadyIssues,
   updateIssueStatus,
@@ -58,6 +60,10 @@ export interface CoordinatorOptions {
   dryRun?: boolean;
   /** Optional convoy name for convoy-aware work distribution */
   convoy?: string;
+  /** Enable scale management (auto-scaling, health checks) */
+  enableScaleManager?: boolean;
+  /** Scale configuration override */
+  scaleConfig?: Partial<ScaleConfig>;
 }
 
 export interface WorkAssignment {
@@ -88,6 +94,7 @@ export class Coordinator {
   private observer: Observer;
   private convoySystem: ConvoySystem | null;
   private convoyName: string | null;
+  private scaleManager: ScaleManager | null;
   private checkpointTracker: ReturnType<typeof createCheckpointTracker>;
   private cwd: string;
   private dryRun: boolean;
@@ -116,6 +123,11 @@ export class Coordinator {
     // Initialize observer
     this.observer = new Observer(this.cwd);
 
+    // Initialize scale manager if enabled
+    this.scaleManager = options.enableScaleManager
+      ? new ScaleManager(this.workerPool, this.cwd, null, options.scaleConfig)
+      : null;
+
     // Initialize checkpoint tracker
     this.checkpointTracker = createCheckpointTracker();
 
@@ -133,6 +145,11 @@ export class Coordinator {
   async initialize(): Promise<void> {
     // Take initial beads snapshot for redirect detection
     this.beadsSnapshot = await takeSnapshot(this.cwd);
+
+    // Start scale manager if enabled
+    if (this.scaleManager) {
+      await this.scaleManager.start();
+    }
   }
 
   /**
@@ -147,9 +164,18 @@ export class Coordinator {
     console.log(`  Mode: ${this.harnessState.mode}`);
     console.log(`  Workers: ${this.workerPool.getMetrics().totalWorkers}`);
     console.log(`  Features: ${this.harnessState.featuresTotal}`);
+    if (this.scaleManager) {
+      console.log(`  Scale: Enabled (${this.scaleManager.getMetrics().currentWorkers} workers)`);
+    }
     console.log(`${'═'.repeat(63)}\n`);
 
     while (this.harnessState.status === 'running') {
+      // Apply backpressure if queue is too deep
+      if (this.scaleManager?.shouldApplyBackpressure()) {
+        console.log(chalk.yellow('⏸ Backpressure: Queue depth exceeded, throttling...'));
+        await this.sleep(2000);
+        continue;
+      }
       // 1. Check for redirects
       const redirectCheck = await checkForRedirects(
         this.beadsSnapshot,
@@ -232,6 +258,12 @@ export class Coordinator {
       }
       console.log(`${'═'.repeat(63)}\n`);
     }
+
+    // Stop scale manager
+    if (this.scaleManager) {
+      await this.scaleManager.stop();
+      this.scaleManager.displayMetrics();
+    }
   }
 
   /**
@@ -295,12 +327,22 @@ export class Coordinator {
     this.harnessState.currentSession++;
     console.log(`🤖 ${worker.getState().id} starting session #${this.harnessState.currentSession}...`);
 
+    // Record session start for scale metrics
+    if (this.scaleManager) {
+      this.scaleManager.recordSessionStart(worker.getState().id, issue.id);
+    }
+
     try {
       const result = await worker.execute(primingContext);
       await this.handleWorkerResult(result);
     } catch (error) {
       console.log(chalk.red(`  Worker ${worker.getState().id} failed: ${error}`));
       worker.reset();
+
+      // Record failed session
+      if (this.scaleManager) {
+        this.scaleManager.recordSessionComplete(worker.getState().id, issue.id, false);
+      }
     }
 
     // Clear assignment
@@ -312,10 +354,16 @@ export class Coordinator {
    * Coordinator processes completion but doesn't execute.
    */
   private async handleWorkerResult(result: WorkerResult): Promise<void> {
-    const { sessionResult } = result;
+    const { sessionResult, workerId } = result;
 
     // Record session in checkpoint tracker
     recordSession(this.checkpointTracker, sessionResult);
+
+    // Record session completion for scale metrics
+    const success = sessionResult.outcome === 'success' || sessionResult.outcome === 'code_complete';
+    if (this.scaleManager) {
+      this.scaleManager.recordSessionComplete(workerId, sessionResult.issueId, success);
+    }
 
     // Handle outcome (Two-Stage Verification)
     if (sessionResult.outcome === 'success') {
@@ -339,6 +387,11 @@ export class Coordinator {
     } else if (sessionResult.outcome === 'context_overflow') {
       this.harnessState.sessionsCompleted++;
       console.log(chalk.yellow(`⚠ Context overflow: ${sessionResult.issueId}`));
+    }
+
+    // Display scale metrics periodically
+    if (this.scaleManager && this.harnessState.sessionsCompleted % 5 === 0) {
+      this.scaleManager.displayMetrics();
     }
 
     // Check checkpoint policy

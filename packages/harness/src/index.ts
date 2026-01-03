@@ -110,6 +110,13 @@ export {
   createMoleculeManager,
 } from './molecule.js';
 
+// Scale Management (Phase 2: 20-30 concurrent agents)
+export {
+  ScaleManager,
+  createScaleManager,
+} from './scale-manager.js';
+export type { ScaleMetrics } from './scale-manager.js';
+
 // Types
 export type {
   HarnessMode,
@@ -149,6 +156,7 @@ export type {
   MoleculeAdvanceResult,
   MoleculeExecutionConfig,
   MoleculeMetadata,
+  ScaleConfig,
 } from './types.js';
 
-export { DEFAULT_CHECKPOINT_POLICY, DEFAULT_HOOK_CONFIG, DEFAULT_MOLECULE_CONFIG } from './types.js';
+export { DEFAULT_CHECKPOINT_POLICY, DEFAULT_HOOK_CONFIG, DEFAULT_MOLECULE_CONFIG, DEFAULT_SCALE_CONFIG } from './types.js';
