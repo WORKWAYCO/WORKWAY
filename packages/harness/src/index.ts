@@ -121,6 +121,8 @@ export type {
   HookClaim,
   HookQueueConfig,
   ClaimResult,
+  ClaudeModelFamily,
+  DetectedModel,
 } from './types.js';
 
 export { DEFAULT_CHECKPOINT_POLICY, DEFAULT_HOOK_CONFIG } from './types.js';

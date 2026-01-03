@@ -394,3 +394,28 @@ export interface MergeQueueState {
   /** Failed merge requests */
   failed: Array<{ request: MergeRequest; reason: string }>;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Model Detection (for adaptive behavior)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Claude model family.
+ */
+export type ClaudeModelFamily = 'opus' | 'sonnet' | 'haiku' | 'unknown';
+
+/**
+ * Detected model information from Claude Code output.
+ */
+export interface DetectedModel {
+  /** Normalized model ID */
+  modelId: string;
+  /** Raw model ID string */
+  raw: string;
+  /** Model family (opus, sonnet, haiku) */
+  family: ClaudeModelFamily;
+  /** Version date (YYYYMMDD) if present */
+  versionDate: string | null;
+  /** Whether this is a "latest" alias (e.g., "opus", "sonnet") */
+  isLatest: boolean;
+}
