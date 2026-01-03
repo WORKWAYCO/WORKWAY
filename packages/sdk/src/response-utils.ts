@@ -22,11 +22,210 @@
  *
  * Features:
  * - StandardList builder for pagination
+ * - Success response wrapper for consistent API responses
  * - Response metadata extraction
  * - Rate limit parsing
+ *
+ * ## Success Response Pattern
+ *
+ * Use the standardized success wrapper for consistent API responses:
+ *
+ * ```typescript
+ * // For data responses
+ * return buildSuccessResponse({ users: [...] });
+ * // Returns: { success: true, data: { users: [...] } }
+ *
+ * // For empty success (mutations)
+ * return buildSuccessResponse();
+ * // Returns: { success: true }
+ *
+ * // For responses with metadata
+ * return buildSuccessResponse(data, { cached: true, ttl: 3600 });
+ * // Returns: { success: true, data: {...}, meta: { cached: true, ttl: 3600 } }
+ * ```
  */
 
 import type { StandardList, ActionCapabilities } from './action-result';
+
+// ============================================================================
+// SUCCESS RESPONSE UTILITIES
+// ============================================================================
+
+/**
+ * Standard success response envelope
+ *
+ * Provides consistent structure for all API success responses.
+ * Use this instead of returning raw data or ad-hoc { success: true } objects.
+ */
+export interface SuccessResponse<T = undefined> {
+	/** Always true for success responses */
+	success: true;
+
+	/** The response payload (omitted for empty success responses) */
+	data?: T;
+
+	/** Optional metadata about the response */
+	meta?: ResponseMeta;
+}
+
+/**
+ * Response metadata for success responses
+ */
+export interface ResponseMeta {
+	/** Whether the response was served from cache */
+	cached?: boolean;
+
+	/** Cache TTL in seconds */
+	ttl?: number;
+
+	/** Request ID for tracing */
+	requestId?: string;
+
+	/** Processing time in milliseconds */
+	durationMs?: number;
+
+	/** Any additional metadata */
+	[key: string]: unknown;
+}
+
+/**
+ * Standard error response envelope
+ *
+ * Mirrors the success response structure for consistency.
+ * Prefer using IntegrationError.toJSON() for error responses.
+ */
+export interface ErrorResponse {
+	/** Always false for error responses */
+	success: false;
+
+	/** Human-readable error message */
+	error: string;
+
+	/** Machine-parseable error code */
+	code: string;
+
+	/** Optional additional error details */
+	details?: Record<string, unknown>;
+}
+
+/**
+ * Union type for all API responses
+ */
+export type ApiResponse<T = undefined> = SuccessResponse<T> | ErrorResponse;
+
+/**
+ * Build a standardized success response
+ *
+ * Weniger, aber besser: One function for all success response needs.
+ *
+ * @param data - Optional response payload
+ * @param meta - Optional response metadata
+ * @returns Standardized success response envelope
+ *
+ * @example Empty success (mutations, deletes)
+ * ```typescript
+ * return buildSuccessResponse();
+ * // { success: true }
+ * ```
+ *
+ * @example Data response
+ * ```typescript
+ * return buildSuccessResponse({ user: { id: '123', name: 'Alice' } });
+ * // { success: true, data: { user: { id: '123', name: 'Alice' } } }
+ * ```
+ *
+ * @example With metadata
+ * ```typescript
+ * return buildSuccessResponse(data, { cached: true, durationMs: 42 });
+ * // { success: true, data: {...}, meta: { cached: true, durationMs: 42 } }
+ * ```
+ */
+export function buildSuccessResponse<T = undefined>(
+	data?: T,
+	meta?: ResponseMeta
+): SuccessResponse<T> {
+	const response: SuccessResponse<T> = { success: true };
+
+	if (data !== undefined) {
+		response.data = data;
+	}
+
+	if (meta !== undefined && Object.keys(meta).length > 0) {
+		response.meta = meta;
+	}
+
+	return response;
+}
+
+/**
+ * Build a standardized error response
+ *
+ * Prefer using IntegrationError for throwing errors.
+ * Use this only when you need to return an error response without throwing.
+ *
+ * @param error - Error message
+ * @param code - Error code (from ErrorCode enum)
+ * @param details - Optional additional details
+ * @returns Standardized error response envelope
+ *
+ * @example
+ * ```typescript
+ * return buildErrorResponse('User not found', 'not_found');
+ * // { success: false, error: 'User not found', code: 'not_found' }
+ * ```
+ */
+export function buildErrorResponse(
+	error: string,
+	code: string,
+	details?: Record<string, unknown>
+): ErrorResponse {
+	const response: ErrorResponse = {
+		success: false,
+		error,
+		code,
+	};
+
+	if (details !== undefined && Object.keys(details).length > 0) {
+		response.details = details;
+	}
+
+	return response;
+}
+
+/**
+ * Type guard to check if a response is a success response
+ */
+export function isSuccessResponse<T>(response: ApiResponse<T>): response is SuccessResponse<T> {
+	return response.success === true;
+}
+
+/**
+ * Type guard to check if a response is an error response
+ */
+export function isErrorResponse(response: ApiResponse<unknown>): response is ErrorResponse {
+	return response.success === false;
+}
+
+/**
+ * Unwrap a success response, throwing if it's an error
+ *
+ * @param response - API response to unwrap
+ * @returns The data from a success response
+ * @throws Error if response is an error response
+ *
+ * @example
+ * ```typescript
+ * const response = await api.getUser();
+ * const data = unwrapResponse(response);
+ * // data is typed as the success response data
+ * ```
+ */
+export function unwrapResponse<T>(response: ApiResponse<T>): T | undefined {
+	if (isErrorResponse(response)) {
+		throw new Error(`API Error [${response.code}]: ${response.error}`);
+	}
+	return response.data;
+}
 
 // ============================================================================
 // PAGINATION UTILITIES
