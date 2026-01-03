@@ -119,22 +119,47 @@ export interface StandardListItem {
  * Standard List - List of items (channels, users, files, etc.)
  * Generic type parameter allows typed items while maintaining StandardData compatibility
  *
- * Supports two formats:
- * 1. Full format with metadata: { type: 'list', items, metadata: { total, hasMore, cursor } }
- * 2. Simple format: { type?: 'list', items, hasMore?, cursor?, total? }
+ * CANONICAL FORMAT (use this):
+ * ```typescript
+ * {
+ *   type: 'list',
+ *   items: T[],
+ *   metadata: { total?: number, hasMore?: boolean, cursor?: string }
+ * }
+ * ```
+ *
+ * Use `buildStandardList()` from response-utils.ts to construct properly formatted lists.
+ *
+ * @see buildStandardList
  */
 export interface StandardList<T = StandardListItem> {
 	type?: 'list';
 	items: T[];
-	// Full metadata format
+
+	/**
+	 * Pagination metadata (CANONICAL FORMAT)
+	 *
+	 * Use this nested format for all new code.
+	 */
 	metadata?: {
 		total?: number;
 		hasMore?: boolean;
 		cursor?: string;
 	};
-	// Simple flat format (for convenience)
+
+	/**
+	 * @deprecated Use `metadata.total` instead. Will be removed in v2.0.
+	 */
 	total?: number;
+
+	/**
+	 * @deprecated Use `metadata.hasMore` instead. Will be removed in v2.0.
+	 */
 	hasMore?: boolean;
+
+	/**
+	 * @deprecated Use `metadata.cursor` instead. Will be removed in v2.0.
+	 */
 	cursor?: string;
 }
 

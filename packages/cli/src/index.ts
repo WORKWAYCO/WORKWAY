@@ -161,12 +161,10 @@ workflowCommand
 	.description('Install a workflow from the marketplace')
 	.option('--dir <name>', 'Custom directory name for the project')
 	.option('--force', 'Skip confirmation prompt')
-	.option('--with-tests', 'Include test data template')
 	.action(handleCommand(async (workflow: string | undefined, options: any) => {
 		await workflowInstallCommand(workflow, {
 			dir: options.dir,
 			force: options.force,
-			withTests: options.withTests,
 		});
 	}));
 

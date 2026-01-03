@@ -389,6 +389,11 @@ export class BaseHTTPClient {
 
 	/**
 	 * GET request returning Response
+	 *
+	 * @param path - The API endpoint path
+	 * @param options - Request options (headers, query params, timeout)
+	 * @returns The raw Response object
+	 * @throws {IntegrationError} When the request fails due to network error or timeout
 	 */
 	get(path: string, options: RequestOptions = {}): Promise<Response> {
 		return this.request('GET', path, options);
@@ -396,6 +401,11 @@ export class BaseHTTPClient {
 
 	/**
 	 * POST request returning Response
+	 *
+	 * @param path - The API endpoint path
+	 * @param options - Request options including body
+	 * @returns The raw Response object
+	 * @throws {IntegrationError} When the request fails due to network error or timeout
 	 */
 	post(path: string, options: RequestWithBodyOptions = {}): Promise<Response> {
 		return this.request('POST', path, options);
@@ -403,6 +413,11 @@ export class BaseHTTPClient {
 
 	/**
 	 * PATCH request returning Response
+	 *
+	 * @param path - The API endpoint path
+	 * @param options - Request options including body
+	 * @returns The raw Response object
+	 * @throws {IntegrationError} When the request fails due to network error or timeout
 	 */
 	patch(path: string, options: RequestWithBodyOptions = {}): Promise<Response> {
 		return this.request('PATCH', path, options);
@@ -410,6 +425,11 @@ export class BaseHTTPClient {
 
 	/**
 	 * PUT request returning Response
+	 *
+	 * @param path - The API endpoint path
+	 * @param options - Request options including body
+	 * @returns The raw Response object
+	 * @throws {IntegrationError} When the request fails due to network error or timeout
 	 */
 	put(path: string, options: RequestWithBodyOptions = {}): Promise<Response> {
 		return this.request('PUT', path, options);
@@ -417,6 +437,11 @@ export class BaseHTTPClient {
 
 	/**
 	 * DELETE request returning Response
+	 *
+	 * @param path - The API endpoint path
+	 * @param options - Request options (headers, query params, timeout)
+	 * @returns The raw Response object
+	 * @throws {IntegrationError} When the request fails due to network error or timeout
 	 */
 	delete(path: string, options: RequestOptions = {}): Promise<Response> {
 		return this.request('DELETE', path, options);
@@ -430,6 +455,11 @@ export class BaseHTTPClient {
 
 	/**
 	 * GET request with automatic JSON parsing
+	 *
+	 * @param path - The API endpoint path
+	 * @param options - Request options (headers, query params, timeout)
+	 * @returns Parsed JSON response
+	 * @throws {IntegrationError} When the request fails or response is not OK
 	 *
 	 * @example
 	 * ```typescript
@@ -445,6 +475,11 @@ export class BaseHTTPClient {
 	/**
 	 * POST request with automatic JSON parsing
 	 *
+	 * @param path - The API endpoint path
+	 * @param options - Request options including body
+	 * @returns Parsed JSON response
+	 * @throws {IntegrationError} When the request fails or response is not OK
+	 *
 	 * @example
 	 * ```typescript
 	 * const user = await client.postJson<User>('/users', {
@@ -459,6 +494,11 @@ export class BaseHTTPClient {
 
 	/**
 	 * PATCH request with automatic JSON parsing
+	 *
+	 * @param path - The API endpoint path
+	 * @param options - Request options including body
+	 * @returns Parsed JSON response
+	 * @throws {IntegrationError} When the request fails or response is not OK
 	 */
 	async patchJson<T>(path: string, options: RequestWithBodyOptions = {}): Promise<T> {
 		const response = await this.patch(path, options);
@@ -467,6 +507,11 @@ export class BaseHTTPClient {
 
 	/**
 	 * PUT request with automatic JSON parsing
+	 *
+	 * @param path - The API endpoint path
+	 * @param options - Request options including body
+	 * @returns Parsed JSON response
+	 * @throws {IntegrationError} When the request fails or response is not OK
 	 */
 	async putJson<T>(path: string, options: RequestWithBodyOptions = {}): Promise<T> {
 		const response = await this.put(path, options);
@@ -475,6 +520,11 @@ export class BaseHTTPClient {
 
 	/**
 	 * DELETE request with automatic JSON parsing (if response has body)
+	 *
+	 * @param path - The API endpoint path
+	 * @param options - Request options (headers, query params, timeout)
+	 * @returns Parsed JSON response, or undefined for 204 No Content
+	 * @throws {IntegrationError} When the request fails or response is not OK
 	 */
 	async deleteJson<T = void>(path: string, options: RequestOptions = {}): Promise<T> {
 		const response = await this.delete(path, options);

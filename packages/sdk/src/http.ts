@@ -5,6 +5,8 @@
  * Wraps native fetch with retry logic, timeout handling, and error normalization.
  */
 
+import { ErrorCode } from './integration-error.js';
+
 // ============================================================================
 // TYPES
 // ============================================================================
@@ -31,14 +33,114 @@ export interface HttpResponse<T = any> {
 	ok: boolean;
 }
 
+/**
+ * HTTP Error with standardized error code
+ *
+ * Includes both human-readable message and machine-parseable code
+ * for consistent client-side error handling.
+ */
 export class HttpError extends Error {
+	public readonly code: ErrorCode;
+
 	constructor(
 		message: string,
 		public status: number,
-		public response?: any
+		public response?: any,
+		code?: ErrorCode
 	) {
 		super(message);
 		this.name = 'HttpError';
+		this.code = code ?? this.mapStatusToCode(status);
+	}
+
+	/**
+	 * Map HTTP status to standardized ErrorCode
+	 */
+	private mapStatusToCode(status: number): ErrorCode {
+		switch (status) {
+			case 401:
+				return ErrorCode.AUTH_EXPIRED;
+			case 403:
+				return ErrorCode.PERMISSION_DENIED;
+			case 404:
+				return ErrorCode.NOT_FOUND;
+			case 409:
+				return ErrorCode.CONFLICT;
+			case 422:
+				return ErrorCode.VALIDATION_ERROR;
+			case 429:
+				return ErrorCode.RATE_LIMITED;
+			default:
+				if (status >= 500) {
+					return ErrorCode.PROVIDER_DOWN;
+				}
+				return ErrorCode.API_ERROR;
+		}
+	}
+
+	/**
+	 * Serialize error for API responses
+	 *
+	 * Returns standardized format: { error: string, code: string }
+	 */
+	toJSON(): {
+		error: string;
+		code: string;
+		status: number;
+		response?: any;
+	} {
+		return {
+			error: this.message,
+			code: this.code,
+			status: this.status,
+			response: this.response,
+		};
+	}
+
+	/**
+	 * Check if this is an authentication error (401)
+	 */
+	isUnauthorized(): boolean {
+		return this.status === 401;
+	}
+
+	/**
+	 * Check if this is a permission error (403)
+	 */
+	isForbidden(): boolean {
+		return this.status === 403;
+	}
+
+	/**
+	 * Check if this is a not found error (404)
+	 */
+	isNotFound(): boolean {
+		return this.status === 404;
+	}
+
+	/**
+	 * Check if this is a rate limit error (429)
+	 */
+	isRateLimited(): boolean {
+		return this.status === 429;
+	}
+
+	/**
+	 * Check if this is a server error (5xx)
+	 */
+	isServerError(): boolean {
+		return this.status >= 500;
+	}
+
+	/**
+	 * Check if this error is retryable
+	 */
+	isRetryable(): boolean {
+		return (
+			this.status === 429 ||
+			this.status === 503 ||
+			this.status >= 500
+		);
 	}
 }
 

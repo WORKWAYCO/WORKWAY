@@ -462,6 +462,15 @@ export class WorkersAI {
 
   /**
    * Stream text generation
+   *
+   * @param options - Streaming text generation options
+   * @param options.prompt - The input prompt
+   * @param options.model - Model to use (default: LLAMA_3_8B)
+   * @param options.temperature - Sampling temperature (default: 0.7)
+   * @param options.max_tokens - Maximum tokens to generate (default: 1024)
+   * @param options.system - Optional system prompt
+   * @yields Text chunks as they are generated
+   * @throws {IntegrationError} When streaming fails
    */
   async *streamText(options: {
     prompt: string;

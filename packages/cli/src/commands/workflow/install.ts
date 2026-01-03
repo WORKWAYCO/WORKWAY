@@ -26,8 +26,6 @@ interface InstallOptions {
 	dir?: string;
 	/** Skip confirmation prompt */
 	force?: boolean;
-	/** Include test data template */
-	withTests?: boolean;
 }
 
 interface WorkflowDetails {
@@ -155,10 +153,54 @@ function generatePackageJson(workflow: WorkflowDetails): string {
 }
 
 /**
+ * Integration setup documentation URLs
+ */
+const INTEGRATION_DOCS: Record<string, { name: string; url: string }> = {
+	zoom: { name: 'Zoom', url: 'https://workway.co/docs/integrations/zoom' },
+	notion: { name: 'Notion', url: 'https://workway.co/docs/integrations/notion' },
+	slack: { name: 'Slack', url: 'https://workway.co/docs/integrations/slack' },
+	gmail: { name: 'Gmail', url: 'https://workway.co/docs/integrations/gmail' },
+	stripe: { name: 'Stripe', url: 'https://workway.co/docs/integrations/stripe' },
+	linear: { name: 'Linear', url: 'https://workway.co/docs/integrations/linear' },
+	github: { name: 'GitHub', url: 'https://workway.co/docs/integrations/github' },
+	google: { name: 'Google', url: 'https://workway.co/docs/integrations/google' },
+	dropbox: { name: 'Dropbox', url: 'https://workway.co/docs/integrations/dropbox' },
+	airtable: { name: 'Airtable', url: 'https://workway.co/docs/integrations/airtable' },
+};
+
+/**
+ * Generate integration setup links for README
+ */
+function generateIntegrationLinks(integrations: string[]): string {
+	if (integrations.length === 0) return '';
+
+	const links = integrations.map((integration) => {
+		const doc = INTEGRATION_DOCS[integration.toLowerCase()];
+		if (doc) {
+			return `- [${doc.name} OAuth Setup](${doc.url})`;
+		}
+		// Fallback for unknown integrations
+		const name = integration.charAt(0).toUpperCase() + integration.slice(1);
+		return `- [${name} OAuth Setup](https://workway.co/docs/integrations/${integration.toLowerCase()})`;
+	});
+
+	return `
+## Integration Setup
+
+Before running this workflow, you'll need to configure OAuth for each integration:
+
+${links.join('\n')}
+
+Each link provides step-by-step instructions for setting up the OAuth connection.
+`;
+}
+
+/**
  * Generate README for installed workflow
  */
 function generateReadme(workflow: WorkflowDetails): string {
 	const integrationsList = workflow.integrations.map((i) => `- ${i}`).join('\n');
+	const integrationLinks = generateIntegrationLinks(workflow.integrations);
 
 	return `# ${workflow.name}
 
@@ -169,7 +211,7 @@ ${workflow.description}
 ## Integrations
 
 ${integrationsList}
-
+${integrationLinks}
 ## Getting Started
 
 ### 1. Configure OAuth Connections
