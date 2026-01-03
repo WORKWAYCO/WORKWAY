@@ -267,3 +267,130 @@ export interface CheckpointTracker {
   /** Total elapsed time in ms */
   elapsedMs: number;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hook System (GAS TOWN-inspired crash recovery)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Hook state labels used in Beads for work lifecycle tracking.
+ *
+ * State transitions:
+ * - hook:ready → hook:in-progress (agent claims work)
+ * - hook:in-progress → hook:ready (agent crashes/releases)
+ * - hook:in-progress → closed (work completed)
+ * - hook:in-progress → hook:failed (work failed after retries)
+ */
+export type HookState = 'hook:ready' | 'hook:in-progress' | 'hook:failed';
+
+/**
+ * Hook claim represents an agent's active work on an issue.
+ * Stored in the issue's labels and metadata.
+ */
+export interface HookClaim {
+  /** Issue ID */
+  issueId: string;
+  /** Agent identifier (e.g., process PID, session ID) */
+  agentId: string;
+  /** When the claim was made */
+  claimedAt: string;
+  /** Last heartbeat timestamp */
+  lastHeartbeat: string;
+  /** Issue title for logging */
+  title: string;
+}
+
+/**
+ * Configuration for hook queue behavior.
+ */
+export interface HookQueueConfig {
+  /** How long (ms) before a claim is considered stale and auto-released */
+  claimTimeoutMs: number;
+  /** How often (ms) to send heartbeats to keep claim alive */
+  heartbeatIntervalMs: number;
+  /** Maximum retry attempts for failed work */
+  maxRetries: number;
+}
+
+/**
+ * Default hook queue configuration.
+ */
+export const DEFAULT_HOOK_CONFIG: HookQueueConfig = {
+  claimTimeoutMs: 10 * 60 * 1000, // 10 minutes
+  heartbeatIntervalMs: 60 * 1000, // 1 minute
+  maxRetries: 2,
+};
+
+/**
+ * Result of attempting to claim work from the hook queue.
+ */
+export interface ClaimResult {
+  /** Whether claim was successful */
+  success: boolean;
+  /** Claimed issue (if successful) */
+  issue?: BeadsIssue;
+  /** Reason for failure (if unsuccessful) */
+  reason?: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Merge Queue (Refinery Pattern from GAS TOWN)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Merge conflict type.
+ * - none: No conflicts detected
+ * - overlapping_files: Same files modified (auto-mergeable if non-overlapping hunks)
+ * - complex: Requires manual resolution
+ */
+export type MergeConflictType = 'none' | 'overlapping_files' | 'complex';
+
+/**
+ * Merge request from a worker session.
+ */
+export interface MergeRequest {
+  /** Worker/session ID making the request */
+  workerId: string;
+  /** Issue ID being merged */
+  issueId: string;
+  /** Git commit hash to merge */
+  commitHash: string;
+  /** Files modified in this commit */
+  filesModified: string[];
+  /** Branch name (if using branches) */
+  branchName?: string;
+  /** Request timestamp */
+  requestedAt: string;
+}
+
+/**
+ * Result of merge validation.
+ */
+export interface MergeResult {
+  /** Whether merge is allowed */
+  allowed: boolean;
+  /** Conflict type detected */
+  conflictType: MergeConflictType;
+  /** Conflicting files (if any) */
+  conflictingFiles: string[];
+  /** Conflicting worker IDs (if any) */
+  conflictsWith: string[];
+  /** Human-readable reason */
+  reason: string;
+  /** Whether this can be auto-merged despite conflicts */
+  autoMergeable: boolean;
+}
+
+/**
+ * Merge queue state for coordinating concurrent workers.
+ */
+export interface MergeQueueState {
+  /** Pending merge requests */
+  pending: MergeRequest[];
+  /** Currently merging request (lock) */
+  merging: MergeRequest | null;
+  /** Completed merge requests */
+  completed: MergeRequest[];
+  /** Failed merge requests */
+  failed: Array<{ request: MergeRequest; reason: string }>;
+}

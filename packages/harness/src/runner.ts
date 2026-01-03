@@ -22,39 +22,16 @@ import type {
   StartOptions,
   Checkpoint,
   CheckpointPolicy,
-  PrimingContext,
 } from './types.js';
 import { DEFAULT_CHECKPOINT_POLICY } from './types.js';
 import { parseSpec, formatSpecSummary, validateSpec } from './spec-parser.js';
 import {
-  runSession,
-  getRecentCommits,
   createHarnessBranch,
-  discoverDryContext,
 } from './session.js';
-import {
-  createCheckpointTracker,
-  recordSession,
-  shouldCreateCheckpoint,
-  shouldPauseForConfidence,
-  generateCheckpoint,
-  resetTracker,
-  formatCheckpointDisplay,
-  calculateConfidence,
-} from './checkpoint.js';
-import {
-  takeSnapshot,
-  checkForRedirects,
-  formatRedirectNotes,
-  requiresImmediateAction,
-  logRedirect,
-} from './redirect.js';
 import {
   createIssue,
   createHarnessIssue,
   createIssuesFromFeatures,
-  getHarnessReadyIssues,
-  updateIssueStatus,
   readAllIssues,
   getOpenIssues,
   getIssue,
@@ -70,54 +47,6 @@ import {
  */
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Format duration in human-readable form.
- */
-function formatDuration(ms: number): string {
-  const seconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(seconds / 60);
-  const hours = Math.floor(minutes / 60);
-
-  if (hours > 0) {
-    return `${hours}h ${minutes % 60}m`;
-  } else if (minutes > 0) {
-    return `${minutes}m ${seconds % 60}s`;
-  }
-  return `${seconds}s`;
-}
-
-/**
- * Display success feedback when harness completes successfully.
- */
-function displaySuccessFeedback(state: HarnessState, startTime: Date): void {
-  const duration = Date.now() - startTime.getTime();
-  const successRate = state.featuresTotal > 0
-    ? ((state.featuresCompleted / state.featuresTotal) * 100).toFixed(0)
-    : '100';
-
-  console.log('');
-  console.log(chalk.green.bold('╔════════════════════════════════════════════════════════════════╗'));
-  console.log(chalk.green.bold('║                                                                ║'));
-  console.log(chalk.green.bold('║                    🎉 HARNESS COMPLETE 🎉                      ║'));
-  console.log(chalk.green.bold('║                                                                ║'));
-  console.log(chalk.green.bold('╚════════════════════════════════════════════════════════════════╝'));
-  console.log('');
-  console.log(chalk.green(`  ✅ All ${state.featuresCompleted} tasks completed successfully!`));
-  console.log('');
-  console.log(chalk.white('  Summary:'));
-  console.log(chalk.white(`    • Features completed: ${state.featuresCompleted}/${state.featuresTotal}`));
-  console.log(chalk.white(`    • Sessions run: ${state.sessionsCompleted}`));
-  console.log(chalk.white(`    • Success rate: ${successRate}%`));
-  console.log(chalk.white(`    • Duration: ${formatDuration(duration)}`));
-  console.log(chalk.white(`    • Branch: ${state.gitBranch}`));
-  console.log('');
-  console.log(chalk.cyan('  Next steps:'));
-  console.log(chalk.cyan('    1. Review changes: git diff main'));
-  console.log(chalk.cyan('    2. Run tests: pnpm test'));
-  console.log(chalk.cyan('    3. Merge to main: git checkout main && git merge ' + state.gitBranch));
-  console.log('');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -290,208 +219,23 @@ export async function initializeHarness(
 
 /**
  * Run the harness loop.
- * Uses bd CLI for all beads operations - no daemon/sync conflicts.
+ * Uses Coordinator (Mayor pattern) to delegate work to workers.
  */
 export async function runHarness(
   harnessState: HarnessState,
-  options: { cwd: string; dryRun?: boolean }
+  options: { cwd: string; dryRun?: boolean; maxWorkers?: number }
 ): Promise<void> {
-  const checkpointTracker = createCheckpointTracker();
-  let beadsSnapshot = await takeSnapshot(options.cwd);
-  let lastCheckpoint: Checkpoint | null = null;
-  let redirectNotes: string[] = [];
-  const startTime = new Date();
+  // Use Coordinator pattern (GAS TOWN Mayor)
+  const { Coordinator } = await import('./coordinator.js');
 
-  console.log(`\n${'═'.repeat(63)}`);
-  console.log(`  HARNESS RUNNING: ${harnessState.id}`);
-  console.log(`  Mode: ${harnessState.mode}`);
-  console.log(`  Branch: ${harnessState.gitBranch}`);
-  console.log(`  Features: ${harnessState.featuresTotal}`);
-  console.log(`${'═'.repeat(63)}\n`);
+  const coordinator = new Coordinator(harnessState, {
+    cwd: options.cwd,
+    maxWorkers: options.maxWorkers || 1,
+    dryRun: options.dryRun,
+  });
 
-  while (harnessState.status === 'running') {
-    // 1. Check for redirects
-    const redirectCheck = await checkForRedirects(
-      beadsSnapshot,
-      harnessState.id,
-      options.cwd
-    );
-
-    beadsSnapshot = redirectCheck.newSnapshot;
-
-    if (redirectCheck.redirects.length > 0) {
-      console.log('\n📢 Redirects detected:');
-      for (const redirect of redirectCheck.redirects) {
-        console.log('  ' + logRedirect(redirect));
-      }
-      redirectNotes.push(...redirectCheck.redirects.map((r) => r.description));
-    }
-
-    // Check for pause request
-    if (redirectCheck.shouldPause) {
-      harnessState.status = 'paused';
-      harnessState.pauseReason = redirectCheck.pauseReason;
-      console.log(`\n⏸ Harness paused: ${redirectCheck.pauseReason}`);
-      break;
-    }
-
-    // Check if redirects require immediate action
-    if (requiresImmediateAction(redirectCheck.redirects)) {
-      // Create checkpoint before handling redirect
-      if (checkpointTracker.sessionsResults.length > 0) {
-        lastCheckpoint = await generateCheckpoint(
-          checkpointTracker,
-          harnessState,
-          formatRedirectNotes(redirectCheck.redirects),
-          options.cwd
-        );
-        console.log('\n' + formatCheckpointDisplay(lastCheckpoint));
-        resetTracker(checkpointTracker);
-        harnessState.lastCheckpoint = lastCheckpoint.id;
-      }
-    }
-
-    // 2. Get next work item via bd CLI
-    const harnessIssues = await getHarnessReadyIssues(harnessState.id, options.cwd);
-
-    if (harnessIssues.length === 0) {
-      // No more work - all tasks completed
-      harnessState.status = 'completed';
-      displaySuccessFeedback(harnessState, startTime);
-      break;
-    }
-
-    const nextIssue = harnessIssues[0];
-    console.log(`\n📋 Next task: ${nextIssue.id} - ${nextIssue.title}`);
-
-    // Mark as in progress via bd CLI
-    await updateIssueStatus(nextIssue.id, 'in_progress', options.cwd);
-
-    // 3. Build priming context with DRY discovery
-    const recentCommits = await getRecentCommits(options.cwd, 10);
-
-    // Discover existing patterns and relevant files (DRY)
-    const dryContext = await discoverDryContext(nextIssue.title, options.cwd);
-    if (dryContext.existingPatterns.length > 0 || dryContext.relevantFiles.length > 0) {
-      console.log(`   Found ${dryContext.existingPatterns.length} patterns, ${dryContext.relevantFiles.length} relevant files`);
-    }
-
-    const primingContext: PrimingContext = {
-      currentIssue: nextIssue,
-      recentCommits,
-      lastCheckpoint,
-      redirectNotes,
-      sessionGoal: `Complete: ${nextIssue.title}\n\n${nextIssue.description || ''}`,
-      mode: harnessState.mode,
-      existingPatterns: dryContext.existingPatterns,
-      relevantFiles: dryContext.relevantFiles,
-    };
-
-    // Clear redirect notes for next iteration
-    redirectNotes = [];
-
-    // 4. Run session
-    harnessState.currentSession++;
-    console.log(`\n🤖 Starting session #${harnessState.currentSession}...`);
-
-    const sessionResult = await runSession(nextIssue, primingContext, {
-      cwd: options.cwd,
-      dryRun: options.dryRun,
-    });
-
-    // 5. Handle session result (Two-Stage Verification)
-    recordSession(checkpointTracker, sessionResult);
-
-    if (sessionResult.outcome === 'success') {
-      // Fully verified - close the issue
-      await updateIssueStatus(nextIssue.id, 'closed', options.cwd);
-      harnessState.featuresCompleted++;
-      harnessState.sessionsCompleted++;
-      console.log(chalk.green(`✅ Task verified and completed: ${nextIssue.id}`));
-    } else if (sessionResult.outcome === 'code_complete') {
-      // Code complete but not verified - keep in_progress, add label
-      // Next session should verify this feature before moving on
-      harnessState.sessionsCompleted++;
-      console.log(chalk.cyan(`◑ Code complete (awaiting verification): ${nextIssue.id}`));
-      console.log(chalk.cyan(`   Feature needs E2E verification before closing`));
-    } else if (sessionResult.outcome === 'failure') {
-      // Keep as in_progress for retry, but track failure
-      harnessState.featuresFailed++;
-      harnessState.sessionsCompleted++;
-      console.log(chalk.red(`❌ Task failed: ${nextIssue.id}`));
-      if (sessionResult.error) {
-        console.log(chalk.red(`   Error: ${sessionResult.error}`));
-      }
-    } else if (sessionResult.outcome === 'partial') {
-      harnessState.sessionsCompleted++;
-      console.log(chalk.yellow(`◐ Task partially completed: ${nextIssue.id}`));
-    } else if (sessionResult.outcome === 'context_overflow') {
-      harnessState.sessionsCompleted++;
-      console.log(chalk.yellow(`⚠ Context overflow: ${nextIssue.id}`));
-    }
-
-    // 6. Check checkpoint policy
-    const checkpointCheck = shouldCreateCheckpoint(
-      checkpointTracker,
-      harnessState.checkpointPolicy,
-      sessionResult,
-      redirectCheck.redirects.length > 0
-    );
-
-    if (checkpointCheck.create) {
-      console.log(`\n📊 Creating checkpoint: ${checkpointCheck.reason}`);
-      lastCheckpoint = await generateCheckpoint(
-        checkpointTracker,
-        harnessState,
-        formatRedirectNotes(redirectCheck.redirects),
-        options.cwd
-      );
-      console.log('\n' + formatCheckpointDisplay(lastCheckpoint));
-      resetTracker(checkpointTracker);
-      harnessState.lastCheckpoint = lastCheckpoint.id;
-    }
-
-    // 7. Check confidence threshold
-    if (shouldPauseForConfidence(
-      checkpointTracker.sessionsResults,
-      harnessState.checkpointPolicy.onConfidenceBelow
-    )) {
-      const confidence = calculateConfidence(checkpointTracker.sessionsResults);
-      harnessState.status = 'paused';
-      harnessState.pauseReason = `Confidence dropped to ${(confidence * 100).toFixed(0)}%`;
-      console.log(`\n⏸ Harness paused: ${harnessState.pauseReason}`);
-
-      // Create final checkpoint before pausing
-      if (checkpointTracker.sessionsResults.length > 0) {
-        lastCheckpoint = await generateCheckpoint(
-          checkpointTracker,
-          harnessState,
-          `Low confidence pause`,
-          options.cwd
-        );
-        console.log('\n' + formatCheckpointDisplay(lastCheckpoint));
-      }
-      break;
-    }
-
-    // Small delay between sessions to avoid overwhelming resources
-    if (!options.dryRun) {
-      await sleep(2000);
-    }
-  }
-
-  // Final summary (only for non-completed states - success already shown above)
-  if (harnessState.status !== 'completed') {
-    console.log(`\n${'═'.repeat(63)}`);
-    console.log(`  HARNESS ${harnessState.status.toUpperCase()}`);
-    console.log(`  Sessions: ${harnessState.sessionsCompleted}`);
-    console.log(`  Features: ${harnessState.featuresCompleted}/${harnessState.featuresTotal} completed`);
-    console.log(`  Failed: ${harnessState.featuresFailed}`);
-    if (harnessState.pauseReason) {
-      console.log(`  Pause Reason: ${harnessState.pauseReason}`);
-    }
-    console.log(`${'═'.repeat(63)}\n`);
-  }
+  await coordinator.initialize();
+  await coordinator.run();
 
   // CRITICAL: Restart bd daemon now that harness is done
   console.log('   Restarting bd daemon...');

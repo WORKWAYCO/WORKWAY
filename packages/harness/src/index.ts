@@ -72,6 +72,29 @@ export {
 } from './redirect.js';
 export type { BeadsSnapshot, RedirectCheckResult } from './redirect.js';
 
+// GAS TOWN Pattern: Role-based agents
+export { Coordinator } from './coordinator.js';
+export type { CoordinatorOptions, WorkAssignment } from './coordinator.js';
+
+export { Worker, WorkerPool } from './worker.js';
+export type { WorkerState, WorkerResult } from './worker.js';
+
+export { Observer } from './observer.js';
+export type { ProgressSnapshot, HealthCheck } from './observer.js';
+
+// Merge queue (Refinery pattern)
+export {
+  MergeQueue,
+  createMergeQueue,
+  createMergeRequest,
+} from './merge-queue.js';
+
+// Hook Queue (crash-resilient work distribution)
+export {
+  HookQueue,
+  createHookQueue,
+} from './hook-queue.js';
+
 // Types
 export type {
   HarnessMode,
@@ -90,6 +113,14 @@ export type {
   ResumeOptions,
   PauseOptions,
   CheckpointTracker,
+  MergeRequest,
+  MergeResult,
+  MergeConflictType,
+  MergeQueueState,
+  HookState,
+  HookClaim,
+  HookQueueConfig,
+  ClaimResult,
 } from './types.js';
 
-export { DEFAULT_CHECKPOINT_POLICY } from './types.js';
+export { DEFAULT_CHECKPOINT_POLICY, DEFAULT_HOOK_CONFIG } from './types.js';

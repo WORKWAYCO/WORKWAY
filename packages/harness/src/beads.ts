@@ -646,3 +646,69 @@ export async function resetIssueForRetry(
     // Don't fail if label removal fails
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Hook System Integration
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Add hook:ready label to an issue.
+ * Marks work as available for agents to claim.
+ */
+export async function markAsHookReady(
+  issueId: string,
+  cwd?: string
+): Promise<void> {
+  await bd(`label add ${issueId} hook:ready`, cwd);
+}
+
+/**
+ * Add hook:in-progress label to an issue.
+ * Marks work as actively claimed by an agent.
+ */
+export async function markAsHookInProgress(
+  issueId: string,
+  cwd?: string
+): Promise<void> {
+  await bd(`label remove ${issueId} hook:ready`, cwd).catch(() => {});
+  await bd(`label add ${issueId} hook:in-progress`, cwd);
+}
+
+/**
+ * Add hook:failed label to an issue.
+ * Marks work as failed after max retries.
+ */
+export async function markAsHookFailed(
+  issueId: string,
+  cwd?: string
+): Promise<void> {
+  await bd(`label remove ${issueId} hook:in-progress`, cwd).catch(() => {});
+  await bd(`label remove ${issueId} hook:ready`, cwd).catch(() => {});
+  await bd(`label add ${issueId} hook:failed`, cwd);
+}
+
+/**
+ * Remove all hook labels from an issue.
+ * Called when work is completed or manually removed from hook system.
+ */
+export async function removeHookLabels(
+  issueId: string,
+  cwd?: string
+): Promise<void> {
+  await bd(`label remove ${issueId} hook:ready`, cwd).catch(() => {});
+  await bd(`label remove ${issueId} hook:in-progress`, cwd).catch(() => {});
+  await bd(`label remove ${issueId} hook:failed`, cwd).catch(() => {});
+}
+
+/**
+ * Get all issues with any hook label.
+ */
+export async function getHookIssues(cwd?: string): Promise<BeadsIssue[]> {
+  const issues = await readAllIssues(cwd);
+  return issues.filter(
+    (issue) =>
+      issue.labels?.some((label) =>
+        label.startsWith('hook:')
+      )
+  );
+}
