@@ -20,10 +20,10 @@ pnpm audit:with-issues
 
 The audit suite analyzes all workflows in `/packages/workflows/src/` for:
 
-1. **Scoring Rules** - Keyword strategies and tier consistency
-2. **Required Properties** - Property requirements and weight distribution
-3. **API Endpoints** - Health checks and accessibility _(not yet implemented)_
-4. **OAuth Coverage** - Provider registration and scopes _(not yet implemented)_
+1. **Scoring Rules** - Keyword strategies and tier consistency ✅
+2. **Required Properties** - Property requirements and weight distribution ✅
+3. **API Endpoint Health** - HTTP endpoint accessibility, status codes, method validation ✅
+4. **OAuth Provider Coverage** - Provider registration, scope validation, duplicate detection ✅
 5. **User Input Quality** - Field labels, descriptions, defaults _(not yet implemented)_
 6. **Error Messages** - Actionability and user-friendliness _(not yet implemented)_
 7. **Schema Consistency** - Naming conventions and structure _(not yet implemented)_
@@ -39,6 +39,10 @@ audit-reports/
 ├── scoring-rules-report.json         # Machine-readable JSON
 ├── required-properties-report.md
 ├── required-properties-report.json
+├── api-endpoint-health-report.md
+├── api-endpoint-health-report.json
+├── oauth-provider-coverage-report.md
+├── oauth-provider-coverage-report.json
 └── audit-suite-combined.json         # Combined summary
 ```
 
@@ -252,12 +256,7 @@ Parallel execution uses Promise.all() for independent audits.
 
 ## Future Enhancements
 
-### Phase 2: Remaining P1 Audits
-
-- API Endpoint Health Check
-- OAuth Provider Coverage
-
-### Phase 3: P2/P3 Audits
+### Phase 2: P2/P3 Audits (Next Priority)
 
 - User Input Field Quality
 - Error Message Helpfulness

@@ -1,10 +1,10 @@
 {
-  "executedAt": "2026-01-05T19:46:45.390Z",
+  "executedAt": "2026-01-05T20:52:21.830Z",
   "audits": [
     {
       "name": "scoring-rules",
       "auditType": "scoring-rules",
-      "executedAt": "2026-01-05T19:46:45.386Z",
+      "executedAt": "2026-01-05T20:52:21.820Z",
       "totalWorkflows": 49,
       "workflowsAudited": 0,
       "findingsCount": 0,
@@ -20,7 +20,7 @@
     {
       "name": "required-properties",
       "auditType": "required-properties",
-      "executedAt": "2026-01-05T19:46:45.388Z",
+      "executedAt": "2026-01-05T20:52:21.822Z",
       "totalWorkflows": 49,
       "workflowsAudited": 9,
       "findingsCount": 9,
@@ -294,10 +294,42 @@
         "low": 0,
         "autoFixable": 0
       }
+    },
+    {
+      "name": "api-endpoint-health",
+      "auditType": "api-endpoint-health",
+      "executedAt": "2026-01-05T20:52:21.827Z",
+      "totalWorkflows": 49,
+      "workflowsAudited": 0,
+      "findingsCount": 0,
+      "findings": [],
+      "summary": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "autoFixable": 0
+      }
+    },
+    {
+      "name": "oauth-provider-coverage",
+      "auditType": "oauth-provider-coverage",
+      "executedAt": "2026-01-05T20:52:21.827Z",
+      "totalWorkflows": 49,
+      "workflowsAudited": 0,
+      "findingsCount": 0,
+      "findings": [],
+      "summary": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "autoFixable": 0
+      }
     }
   ],
   "summary": {
-    "totalAudits": 2,
+    "totalAudits": 4,
     "totalFindings": 9,
     "bySeverity": {
       "critical": 0,

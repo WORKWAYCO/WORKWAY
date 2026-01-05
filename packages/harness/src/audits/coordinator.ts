@@ -11,6 +11,8 @@ import * as path from 'path';
 import type { AuditConfig, AuditReport, AuditFinding } from './types';
 import { ScoringRulesAuditor } from './scoring-rules';
 import { RequiredPropertiesAuditor } from './required-properties';
+import { ApiEndpointHealthAuditor } from './api-endpoint-health';
+import { OAuthProviderCoverageAuditor } from './oauth-provider-coverage';
 
 /**
  * All available audit executors
@@ -18,6 +20,8 @@ import { RequiredPropertiesAuditor } from './required-properties';
 const AUDIT_EXECUTORS = [
 	new ScoringRulesAuditor(),
 	new RequiredPropertiesAuditor(),
+	new ApiEndpointHealthAuditor(),
+	new OAuthProviderCoverageAuditor(),
 	// Additional auditors will be added as they're implemented
 ];
 
