@@ -1,0 +1,158 @@
+title: Workflow Configuration Audit Suite
+property: cloudflare
+complexity: standard
+
+overview: |
+  Systematic audit of 60 production workflows to ensure quality, consistency,
+  and compliance with WORKWAY standards. Leverages Gas Town Coordinator/Worker
+  pattern for parallel execution.
+
+features:
+  - title: Scoring Rules Audit
+    priority: 1
+    description: |
+      Review nameKeywords (strong/moderate) and scoring tiers for semantic appropriateness.
+      Ensure keywords match workflow use cases and tiers follow consistent thresholds.
+    files:
+      - packages/harness/src/audits/scoring-rules.ts
+    acceptance:
+      - test: All workflows have reasonable keyword strategies
+        verify: pnpm test packages/harness
+      - Report generated with workflows needing keyword improvements
+      - Score tiers follow platform-wide consistency (excellent: 0.7, good: 0.5, fair: 0.3)
+    labels:
+      - audit
+      - workflows
+
+  - title: Required Properties Validation
+    priority: 1
+    description: |
+      Validate that requiredProperties match actual workflow use cases.
+      Check property weights are balanced and sum to reasonable totals.
+    files:
+      - packages/harness/src/audits/required-properties.ts
+    acceptance:
+      - Property requirements align with workflow purpose
+      - Property weights are distributed reasonably (no single property > 0.5)
+      - Report shows workflows missing critical property requirements
+    labels:
+      - audit
+      - workflows
+
+  - title: API Endpoint Health Check
+    priority: 1
+    description: |
+      Verify all fetchConfig.endpoint URLs are accessible and return expected status codes.
+      200 = working, 401 = needs auth (expected), others = investigate.
+    files:
+      - packages/harness/src/audits/endpoint-health.ts
+    acceptance:
+      - test: All endpoints return 200 or 401
+        verify: pnpm test packages/harness
+      - Dead/broken endpoints identified
+      - HTTP methods (GET vs POST) validated
+    labels:
+      - audit
+      - workflows
+      - integration
+
+  - title: OAuth Provider Coverage
+    priority: 1
+    description: |
+      Ensure all OAuth providers referenced in verify_oauth steps are configured in platform.
+      Cross-reference with workway-platform OAuth registry.
+    files:
+      - packages/harness/src/audits/oauth-coverage.ts
+    depends_on:
+      - API Endpoint Health Check
+    acceptance:
+      - All OAuth providers exist in platform registry
+      - Report shows workflows with non-existent providers
+      - OAuth scopes match provider capabilities
+    labels:
+      - audit
+      - workflows
+      - oauth
+
+  - title: User Input Field Quality
+    priority: 2
+    description: |
+      Review user_input step fields for UX quality:
+      - Clear, concise labels
+      - Helpful descriptions (not restating label)
+      - Reasonable default values
+    files:
+      - packages/harness/src/audits/user-input-quality.ts
+    acceptance:
+      - All fields have descriptions
+      - Labels are action-oriented and concise
+      - Default values make sense
+      - Report identifies fields needing improvement
+    labels:
+      - audit
+      - workflows
+      - ux
+
+  - title: Error Message Helpfulness
+    priority: 2
+    description: |
+      Audit failureMessage strings for actionability and user-friendliness.
+      Bad: "OAuth failed". Good: "Please connect Typeform and Notion to continue".
+    files:
+      - packages/harness/src/audits/error-messages.ts
+    acceptance:
+      - All error messages are actionable
+      - Messages specify what user needs to do
+      - Report shows vague error messages
+    labels:
+      - audit
+      - workflows
+      - ux
+
+  - title: Schema Consistency Check
+    priority: 2
+    description: |
+      Verify naming conventions and structure consistency across workflows:
+      - Step naming (verify_oauth vs oauth_verification)
+      - Config wrapper usage consistency
+      - Version format ("1.0" everywhere)
+    files:
+      - packages/harness/src/audits/schema-consistency.ts
+    acceptance:
+      - Naming conventions documented
+      - Inconsistencies identified
+      - Automated fix suggestions where possible
+    labels:
+      - audit
+      - workflows
+      - refactor
+
+  - title: Field Mapping Completeness
+    priority: 3
+    description: |
+      For resource_selection steps, check if fieldMappings are defined where needed.
+      Verify target properties exist in destination system.
+    files:
+      - packages/harness/src/audits/field-mappings.ts
+    acceptance:
+      - Critical field mappings identified
+      - Report shows workflows missing mappings
+      - Target property validation
+    labels:
+      - audit
+      - workflows
+      - integration
+
+requirements:
+  - All audits use Gas Town Worker pattern for parallel execution
+  - Results stored in Beads as issues (one per finding)
+  - Priority assigned automatically (P0 for broken, P3 for polish)
+  - Each audit generates machine-readable JSON + human-readable markdown
+  - Audits are idempotent (can be re-run safely)
+
+success:
+  - All 8 audit types implemented
+  - Gas Town Coordinator distributes work to Workers
+  - Findings tracked in Beads with priority/labels
+  - Documentation generated for manual review items
+  - Automated fix PRs for trivial issues (naming, formatting)

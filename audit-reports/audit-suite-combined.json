@@ -1,0 +1,310 @@
+{
+  "executedAt": "2026-01-05T19:46:45.390Z",
+  "audits": [
+    {
+      "name": "scoring-rules",
+      "auditType": "scoring-rules",
+      "executedAt": "2026-01-05T19:46:45.386Z",
+      "totalWorkflows": 49,
+      "workflowsAudited": 0,
+      "findingsCount": 0,
+      "findings": [],
+      "summary": {
+        "critical": 0,
+        "high": 0,
+        "medium": 0,
+        "low": 0,
+        "autoFixable": 0
+      }
+    },
+    {
+      "name": "required-properties",
+      "auditType": "required-properties",
+      "executedAt": "2026-01-05T19:46:45.388Z",
+      "totalWorkflows": 49,
+      "workflowsAudited": 9,
+      "findingsCount": 9,
+      "findings": [
+        {
+          "workflowId": "accounting-stays-current",
+          "workflowName": "Stripe to QuickBooks Payment Sync",
+          "severity": "medium",
+          "category": "required-properties",
+          "issue": "Missing requiredProperties configuration",
+          "recommendation": "Add requiredProperties to ensure workflow has necessary data inputs",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "required-properties"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/accounting-stays-current/index.ts",
+          "context": {
+            "category": "finance-billing",
+            "suggestedProperties": [
+              {
+                "name": "invoice_amount",
+                "rationale": "Financial workflows typically need amount tracking"
+              },
+              {
+                "name": "customer_email",
+                "rationale": "Customer identification for billing"
+              }
+            ]
+          }
+        },
+        {
+          "workflowId": "deal-tracker",
+          "workflowName": "Deal Tracker",
+          "severity": "medium",
+          "category": "required-properties",
+          "issue": "Missing requiredProperties configuration",
+          "recommendation": "Add requiredProperties to ensure workflow has necessary data inputs",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "required-properties"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/deal-tracker/index.ts",
+          "context": {
+            "category": "sales-crm",
+            "suggestedProperties": [
+              {
+                "name": "customer_email",
+                "rationale": "Customer identification"
+              },
+              {
+                "name": "deal_stage",
+                "rationale": "Sales pipeline tracking"
+              }
+            ]
+          }
+        },
+        {
+          "workflowId": "invoice-generator",
+          "workflowName": "Invoice Generator",
+          "severity": "medium",
+          "category": "required-properties",
+          "issue": "Missing requiredProperties configuration",
+          "recommendation": "Add requiredProperties to ensure workflow has necessary data inputs",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "required-properties"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/invoice-generator/index.ts",
+          "context": {
+            "category": "finance-billing",
+            "suggestedProperties": [
+              {
+                "name": "invoice_amount",
+                "rationale": "Financial workflows typically need amount tracking"
+              },
+              {
+                "name": "customer_email",
+                "rationale": "Customer identification for billing"
+              }
+            ]
+          }
+        },
+        {
+          "workflowId": "meeting-expense-tracker",
+          "workflowName": "Meeting Expense Tracker",
+          "severity": "medium",
+          "category": "required-properties",
+          "issue": "Missing requiredProperties configuration",
+          "recommendation": "Add requiredProperties to ensure workflow has necessary data inputs",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "required-properties"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+          "context": {
+            "category": "finance",
+            "suggestedProperties": [
+              {
+                "name": "invoice_amount",
+                "rationale": "Financial workflows typically need amount tracking"
+              },
+              {
+                "name": "customer_email",
+                "rationale": "Customer identification for billing"
+              }
+            ]
+          }
+        },
+        {
+          "workflowId": "payment-celebration",
+          "workflowName": "Payment Celebration",
+          "severity": "medium",
+          "category": "required-properties",
+          "issue": "Missing requiredProperties configuration",
+          "recommendation": "Add requiredProperties to ensure workflow has necessary data inputs",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "required-properties"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-celebration/index.ts",
+          "context": {
+            "category": "finance-billing",
+            "suggestedProperties": [
+              {
+                "name": "invoice_amount",
+                "rationale": "Financial workflows typically need amount tracking"
+              },
+              {
+                "name": "customer_email",
+                "rationale": "Customer identification for billing"
+              }
+            ]
+          }
+        },
+        {
+          "workflowId": "payment-reminders",
+          "workflowName": "Payment Reminder System",
+          "severity": "medium",
+          "category": "required-properties",
+          "issue": "Missing requiredProperties configuration",
+          "recommendation": "Add requiredProperties to ensure workflow has necessary data inputs",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "required-properties"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-reminders/index.ts",
+          "context": {
+            "category": "finance-billing",
+            "suggestedProperties": [
+              {
+                "name": "invoice_amount",
+                "rationale": "Financial workflows typically need amount tracking"
+              },
+              {
+                "name": "customer_email",
+                "rationale": "Customer identification for billing"
+              }
+            ]
+          }
+        },
+        {
+          "workflowId": "quickbooks-cash-flow-monitor",
+          "workflowName": "QuickBooks Cash Flow Monitor",
+          "severity": "medium",
+          "category": "required-properties",
+          "issue": "Missing requiredProperties configuration",
+          "recommendation": "Add requiredProperties to ensure workflow has necessary data inputs",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "required-properties"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-cash-flow-monitor/index.ts",
+          "context": {
+            "category": "finance-billing",
+            "suggestedProperties": [
+              {
+                "name": "invoice_amount",
+                "rationale": "Financial workflows typically need amount tracking"
+              },
+              {
+                "name": "customer_email",
+                "rationale": "Customer identification for billing"
+              }
+            ]
+          }
+        },
+        {
+          "workflowId": "quickbooks-invoice-collector",
+          "workflowName": "QuickBooks Invoice Collector",
+          "severity": "medium",
+          "category": "required-properties",
+          "issue": "Missing requiredProperties configuration",
+          "recommendation": "Add requiredProperties to ensure workflow has necessary data inputs",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "required-properties"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-invoice-collector/index.ts",
+          "context": {
+            "category": "finance-billing",
+            "suggestedProperties": [
+              {
+                "name": "invoice_amount",
+                "rationale": "Financial workflows typically need amount tracking"
+              },
+              {
+                "name": "customer_email",
+                "rationale": "Customer identification for billing"
+              }
+            ]
+          }
+        },
+        {
+          "workflowId": "revenue-radar",
+          "workflowName": "Revenue Radar",
+          "severity": "medium",
+          "category": "required-properties",
+          "issue": "Missing requiredProperties configuration",
+          "recommendation": "Add requiredProperties to ensure workflow has necessary data inputs",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "required-properties"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/revenue-radar/index.ts",
+          "context": {
+            "category": "finance-accounting",
+            "suggestedProperties": [
+              {
+                "name": "invoice_amount",
+                "rationale": "Financial workflows typically need amount tracking"
+              },
+              {
+                "name": "customer_email",
+                "rationale": "Customer identification for billing"
+              }
+            ]
+          }
+        }
+      ],
+      "summary": {
+        "critical": 0,
+        "high": 0,
+        "medium": 9,
+        "low": 0,
+        "autoFixable": 0
+      }
+    }
+  ],
+  "summary": {
+    "totalAudits": 2,
+    "totalFindings": 9,
+    "bySeverity": {
+      "critical": 0,
+      "high": 0,
+      "medium": 9,
+      "low": 0
+    },
+    "autoFixable": 0
+  }
+}
