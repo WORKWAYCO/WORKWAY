@@ -53,7 +53,7 @@ export default defineWorkflow({
 			syncFrequency: { value: 'hourly' },
 		},
 
-		essentialFields: ['notionDatabaseId'],
+		essentialFields: ['notion_database_id'],
 
 		zuhandenheit: {
 			timeToValue: 60,
@@ -76,32 +76,32 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['chat:write'], optional: true },
 	],
 
-	inputs: {
-		notionDatabaseId: {
+	config: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Task Log Database',
 			required: true,
 			description: 'Database to log completed tasks',
 		},
-		todoistProjectId: {
+		todoist_project_id: {
 			type: 'text',
 			label: 'Todoist Project ID',
 			required: false,
 			description: 'Optional: Only sync tasks from this project',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Weekly Summary Channel',
 			required: false,
 			description: 'Optional: Post weekly productivity summary',
 		},
-		includeSubtasks: {
+		include_subtasks: {
 			type: 'boolean',
 			label: 'Include Subtasks',
 			default: false,
 			description: 'Also log completed subtasks',
 		},
-		groupByProject: {
+		group_by_project: {
 			type: 'boolean',
 			label: 'Group by Project',
 			default: true,

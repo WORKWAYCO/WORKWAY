@@ -59,6 +59,8 @@ export default defineWorkflow({
 
 		essentialFields: [],
 
+		requiredProperties: ['invoice_number', 'invoice_amount', 'invoice_date', 'payment_status', 'customer_email'],
+
 		zuhandenheit: {
 			timeToValue: 1,
 			worksOutOfBox: true,
@@ -80,35 +82,35 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['send_messages'], optional: true },
 	],
 
-	inputs: {
-		autoMatchInvoices: {
+	config: {
+		auto_match_invoices: {
 			type: 'boolean',
 			label: 'Auto-match to Invoices',
 			default: true,
 			description: 'Attempt to match payments to existing QuickBooks invoices',
 		},
-		createCustomerIfMissing: {
+		create_customer_if_missing: {
 			type: 'boolean',
 			label: 'Create Customer if Missing',
 			default: true,
 			description: 'Create QuickBooks customer if not found',
 		},
-		depositAccountId: {
+		deposit_account_id: {
 			type: 'text',
 			label: 'Deposit Account ID',
 			description: 'QuickBooks account to deposit payments (leave empty for Undeposited Funds)',
 		},
-		paymentMethodId: {
+		payment_method_id: {
 			type: 'text',
 			label: 'Payment Method ID',
 			description: 'QuickBooks payment method for Stripe payments',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Notification Channel (optional)',
 			description: 'Slack channel for sync notifications',
 		},
-		minimumAmount: {
+		minimum_amount: {
 			type: 'number',
 			label: 'Minimum Amount ($)',
 			default: 0,

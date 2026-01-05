@@ -1,0 +1,1024 @@
+{
+  "auditType": "schema-consistency",
+  "executedAt": "2026-01-05T21:27:03.158Z",
+  "totalWorkflows": 49,
+  "workflowsAudited": 50,
+  "findingsCount": 48,
+  "findings": [
+    {
+      "workflowId": "accounting-stays-current",
+      "workflowName": "Stripe to QuickBooks Payment Sync",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow uses deprecated \"inputs\" wrapper",
+      "recommendation": "Rename \"inputs\" to \"config\" for consistency with current schema",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/accounting-stays-current/index.ts",
+      "context": {
+        "deprecatedPattern": "inputs: {...}",
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "accounting-stays-current",
+      "workflowName": "Stripe to QuickBooks Payment Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"autoMatchInvoices\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/accounting-stays-current/index.ts",
+      "context": {
+        "currentName": "autoMatchInvoices",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "accounting-stays-current",
+      "workflowName": "Stripe to QuickBooks Payment Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"createCustomerIfMissing\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/accounting-stays-current/index.ts",
+      "context": {
+        "currentName": "createCustomerIfMissing",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "accounting-stays-current",
+      "workflowName": "Stripe to QuickBooks Payment Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"depositAccountId\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/accounting-stays-current/index.ts",
+      "context": {
+        "currentName": "depositAccountId",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "accounting-stays-current",
+      "workflowName": "Stripe to QuickBooks Payment Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"paymentMethodId\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/accounting-stays-current/index.ts",
+      "context": {
+        "currentName": "paymentMethodId",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "accounting-stays-current",
+      "workflowName": "Stripe to QuickBooks Payment Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"slackChannel\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/accounting-stays-current/index.ts",
+      "context": {
+        "currentName": "slackChannel",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "accounting-stays-current",
+      "workflowName": "Stripe to QuickBooks Payment Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"minimumAmount\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/accounting-stays-current/index.ts",
+      "context": {
+        "currentName": "minimumAmount",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "ai-newsletter",
+      "workflowName": "Daily AI Newsletter",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow uses deprecated \"inputs\" wrapper",
+      "recommendation": "Rename \"inputs\" to \"config\" for consistency with current schema",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/ai-newsletter/index.ts",
+      "context": {
+        "deprecatedPattern": "inputs: {...}",
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "ai-newsletter",
+      "workflowName": "Daily AI Newsletter",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"recipientEmail\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/ai-newsletter/index.ts",
+      "context": {
+        "currentName": "recipientEmail",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "ai-newsletter",
+      "workflowName": "Daily AI Newsletter",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"newsletterName\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/ai-newsletter/index.ts",
+      "context": {
+        "currentName": "newsletterName",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "ai-newsletter",
+      "workflowName": "Daily AI Newsletter",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"sendTime\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/ai-newsletter/index.ts",
+      "context": {
+        "currentName": "sendTime",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow uses deprecated \"inputs\" wrapper",
+      "recommendation": "Rename \"inputs\" to \"config\" for consistency with current schema",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "deprecatedPattern": "inputs: {...}",
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"meetingStatus\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "meetingStatus",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"meetingEmoji\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "meetingEmoji",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"focusStatus\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "focusStatus",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"focusEmoji\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "focusEmoji",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"oooStatus\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "oooStatus",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"oooEmoji\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "oooEmoji",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"syncMeetings\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "syncMeetings",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"syncFocusTime\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "syncFocusTime",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"syncOOO\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "syncOOO",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"respectExistingStatus\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "respectExistingStatus",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"clearAfterEvent\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "clearAfterEvent",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"includeEventTitle\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "includeEventTitle",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"calendarsToSync\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "calendarsToSync",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"ignoreDeclined\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "ignoreDeclined",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"ignoreAllDay\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "ignoreAllDay",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"respectWorkingHours\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "respectWorkingHours",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"workingHoursStart\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "workingHoursStart",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-availability-sync",
+      "workflowName": "Calendar Availability Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"workingHoursEnd\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-availability-sync/index.ts",
+      "context": {
+        "currentName": "workingHoursEnd",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow uses deprecated \"inputs\" wrapper",
+      "recommendation": "Rename \"inputs\" to \"config\" for consistency with current schema",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "deprecatedPattern": "inputs: {...}",
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"notionWorkspaceId\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "currentName": "notionWorkspaceId",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"slackChannel\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "currentName": "slackChannel",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"minutesBefore\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "currentName": "minutesBefore",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"includeAttendeeContext\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "currentName": "includeAttendeeContext",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"searchNotionForContext\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "currentName": "searchNotionForContext",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"maxContextPages\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "currentName": "maxContextPages",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"enableAI\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "currentName": "enableAI",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"excludeAllDayEvents\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "currentName": "excludeAllDayEvents",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"excludeRecurring\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "currentName": "excludeRecurring",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"minimumAttendees\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "currentName": "minimumAttendees",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "client-onboarding",
+      "workflowName": "Client Onboarding Pipeline",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow uses deprecated \"inputs\" wrapper",
+      "recommendation": "Rename \"inputs\" to \"config\" for consistency with current schema",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/client-onboarding/index.ts",
+      "context": {
+        "deprecatedPattern": "inputs: {...}",
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "client-onboarding",
+      "workflowName": "Client Onboarding Pipeline",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"notionDatabaseId\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/client-onboarding/index.ts",
+      "context": {
+        "currentName": "notionDatabaseId",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "client-onboarding",
+      "workflowName": "Client Onboarding Pipeline",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"todoistProjectId\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/client-onboarding/index.ts",
+      "context": {
+        "currentName": "todoistProjectId",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "client-onboarding",
+      "workflowName": "Client Onboarding Pipeline",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"slackChannel\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/client-onboarding/index.ts",
+      "context": {
+        "currentName": "slackChannel",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "client-onboarding",
+      "workflowName": "Client Onboarding Pipeline",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"onboardingTemplate\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/client-onboarding/index.ts",
+      "context": {
+        "currentName": "onboardingTemplate",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "client-onboarding",
+      "workflowName": "Client Onboarding Pipeline",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"enableAIRecommendations\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/client-onboarding/index.ts",
+      "context": {
+        "currentName": "enableAIRecommendations",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "client-onboarding",
+      "workflowName": "Client Onboarding Pipeline",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"assigneeEmail\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/client-onboarding/index.ts",
+      "context": {
+        "currentName": "assigneeEmail",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 49,
+    "low": 360,
+    "autoFixable": 409
+  }
+}

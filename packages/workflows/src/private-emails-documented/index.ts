@@ -490,7 +490,7 @@ export default defineWorkflow({
 			gmailLabel: { value: 'Log to Notion' },
 		},
 
-		essentialFields: ['gmailConnectionId'],
+		essentialFields: ['gmail_connection_id'],
 
 		zuhandenheit: {
 			timeToValue: 5, // Minutes - be honest about BYOO setup
@@ -512,8 +512,8 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
 	],
 
-	inputs: {
-		gmailConnectionId: {
+	config: {
+		gmail_connection_id: {
 			type: 'string',
 			label: 'Gmail Connection ID',
 			required: true,
@@ -524,7 +524,7 @@ export default defineWorkflow({
 		// interactionsDatabaseId removed - all data goes to central hub
 		// contactsDatabaseId removed - all data goes to central hub
 
-		gmailLabel: {
+		gmail_label: {
 			type: 'string',
 			label: 'Gmail Label',
 			default: 'Log to Notion',

@@ -13,16 +13,26 @@ import { ScoringRulesAuditor } from './scoring-rules';
 import { RequiredPropertiesAuditor } from './required-properties';
 import { ApiEndpointHealthAuditor } from './api-endpoint-health';
 import { OAuthProviderCoverageAuditor } from './oauth-provider-coverage';
+import { UserInputFieldQualityAuditor } from './user-input-field-quality';
+import { ErrorMessageHelpfulnessAuditor } from './error-message-helpfulness';
+import { SchemaConsistencyAuditor } from './schema-consistency';
+import { FieldMappingCompletenessAuditor } from './field-mapping-completeness';
 
 /**
  * All available audit executors
  */
 const AUDIT_EXECUTORS = [
+	// P1 Priority Audits
 	new ScoringRulesAuditor(),
 	new RequiredPropertiesAuditor(),
 	new ApiEndpointHealthAuditor(),
 	new OAuthProviderCoverageAuditor(),
-	// Additional auditors will be added as they're implemented
+	// P2 Priority Audits
+	new UserInputFieldQualityAuditor(),
+	new ErrorMessageHelpfulnessAuditor(),
+	new SchemaConsistencyAuditor(),
+	// P3 Priority Audits
+	new FieldMappingCompletenessAuditor(),
 ];
 
 /**

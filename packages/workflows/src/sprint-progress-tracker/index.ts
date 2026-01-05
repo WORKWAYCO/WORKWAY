@@ -62,7 +62,7 @@ export default defineWorkflow({
 			enableAIInsights: { value: true },
 		},
 
-		essentialFields: ['slackChannel'],
+		essentialFields: ['slack_channel'],
 
 		zuhandenheit: {
 			timeToValue: 1440, // Next morning
@@ -85,26 +85,26 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['write_pages', 'read_databases'], optional: true },
 	],
 
-	inputs: {
-		linearTeamId: {
+	config: {
+		linear_team_id: {
 			type: 'text',
 			label: 'Linear Team',
 			required: true,
 			description: 'Select the Linear team to track',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Updates Channel',
 			required: true,
 			description: 'Channel for daily sprint updates',
 		},
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Sprint History Database',
 			required: false,
 			description: 'Optional: Notion database to log sprint metrics',
 		},
-		scheduleHour: {
+		schedule_hour: {
 			type: 'number',
 			label: 'Update Hour (24h)',
 			default: 9,
@@ -112,19 +112,19 @@ export default defineWorkflow({
 			max: 23,
 			description: 'Hour to post daily update',
 		},
-		includeBlockers: {
+		include_blockers: {
 			type: 'boolean',
 			label: 'Highlight Blockers',
 			default: true,
 			description: 'Flag issues marked as blocked',
 		},
-		includeVelocity: {
+		include_velocity: {
 			type: 'boolean',
 			label: 'Show Velocity Stats',
 			default: true,
 			description: 'Include points completed vs planned',
 		},
-		enableAIInsights: {
+		enable_a_i_insights: {
 			type: 'boolean',
 			label: 'AI Sprint Insights',
 			default: true,

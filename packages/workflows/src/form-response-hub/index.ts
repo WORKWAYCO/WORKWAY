@@ -67,7 +67,7 @@ export default defineWorkflow({
 			notifyOnResponse: { value: true },
 		},
 
-		essentialFields: ['typeformFormId'],
+		essentialFields: ['typeform_form_id'],
 
 		zuhandenheit: {
 			timeToValue: 1,
@@ -93,14 +93,14 @@ export default defineWorkflow({
 
 	// Weniger, aber besser: 2 essential fields
 	// Destinations auto-detect from connected integrations
-	inputs: {
-		typeformFormId: {
+	config: {
+		typeform_form_id: {
 			type: 'text',
 			label: 'Form to Monitor',
 			required: true,
 			description: 'The Typeform form to monitor for responses',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Notification Channel',
 			required: false,

@@ -60,7 +60,7 @@ export default defineWorkflow({
 			]},
 		},
 
-		essentialFields: ['teamDatabase', 'announcementChannel'],
+		essentialFields: ['team_database', 'announcement_channel'],
 
 		zuhandenheit: {
 			timeToValue: 5,
@@ -82,33 +82,33 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['send_messages', 'invite_users'] },
 	],
 
-	inputs: {
-		teamDatabase: {
+	config: {
+		team_database: {
 			type: 'text',
 			label: 'Team Members Database',
 			required: true,
 		},
-		onboardingTasksDatabase: {
+		onboarding_tasks_database: {
 			type: 'text',
 			label: 'Onboarding Tasks Database',
 			required: true,
 		},
-		announcementChannel: {
+		announcement_channel: {
 			type: 'text',
 			label: 'Team Announcement Channel',
 			required: true,
 		},
-		hrEmail: {
+		hr_email: {
 			type: 'email',
 			label: 'HR/Admin Email',
 			required: true,
 		},
-		companyName: {
+		company_name: {
 			type: 'string',
 			label: 'Company Name',
 			required: true,
 		},
-		defaultOnboardingTasks: {
+		default_onboarding_tasks: {
 			type: 'array',
 			label: 'Default Onboarding Tasks',
 			items: { type: 'string' },

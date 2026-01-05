@@ -1,9 +1,9 @@
 # REQUIRED-PROPERTIES Audit Report
 
-**Executed:** 2026-01-05T20:52:21.822Z
+**Executed:** 2026-01-05T21:42:41.949Z
 **Total Workflows:** 49
-**Workflows Audited:** 9
-**Findings:** 9
+**Workflows Audited:** 8
+**Findings:** 8
 
 ## Summary
 
@@ -11,67 +11,35 @@
 |----------|-------|
 | Critical | 0 |
 | High | 0 |
-| Medium | 9 |
-| Low | 0 |
-| **Total** | **9** |
+| Medium | 0 |
+| Low | 8 |
+| **Total** | **8** |
 
 **Auto-fixable:** 0 findings
 
-## Medium Severity Findings
+## Low Severity Findings
 
 ### Stripe to QuickBooks Payment Sync (`accounting-stays-current`)
 
-**Issue:** Missing requiredProperties configuration
+**Issue:** Property "customer_email" may not align with workflow purpose
 
-**Recommendation:** Add requiredProperties to ensure workflow has necessary data inputs
+**Recommendation:** Review if "customer_email" is necessary for this workflow. Typically used in: crm, sales, support, customer
 
-**Priority:** P2
+**Priority:** P3
 **Auto-fixable:** No
 **File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/accounting-stays-current/index.ts`
 
 **Context:**
 ```json
 {
-  "category": "finance-billing",
-  "suggestedProperties": [
-    {
-      "name": "invoice_amount",
-      "rationale": "Financial workflows typically need amount tracking"
-    },
-    {
-      "name": "customer_email",
-      "rationale": "Customer identification for billing"
-    }
-  ]
-}
-```
-
----
-
-### Deal Tracker (`deal-tracker`)
-
-**Issue:** Missing requiredProperties configuration
-
-**Recommendation:** Add requiredProperties to ensure workflow has necessary data inputs
-
-**Priority:** P2
-**Auto-fixable:** No
-**File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/deal-tracker/index.ts`
-
-**Context:**
-```json
-{
-  "category": "sales-crm",
-  "suggestedProperties": [
-    {
-      "name": "customer_email",
-      "rationale": "Customer identification"
-    },
-    {
-      "name": "deal_stage",
-      "rationale": "Sales pipeline tracking"
-    }
-  ]
+  "property": "customer_email",
+  "typicalUseCases": [
+    "crm",
+    "sales",
+    "support",
+    "customer"
+  ],
+  "workflowCategory": "finance-billing"
 }
 ```
 
@@ -79,28 +47,25 @@
 
 ### Invoice Generator (`invoice-generator`)
 
-**Issue:** Missing requiredProperties configuration
+**Issue:** Property "customer_email" may not align with workflow purpose
 
-**Recommendation:** Add requiredProperties to ensure workflow has necessary data inputs
+**Recommendation:** Review if "customer_email" is necessary for this workflow. Typically used in: crm, sales, support, customer
 
-**Priority:** P2
+**Priority:** P3
 **Auto-fixable:** No
 **File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/invoice-generator/index.ts`
 
 **Context:**
 ```json
 {
-  "category": "finance-billing",
-  "suggestedProperties": [
-    {
-      "name": "invoice_amount",
-      "rationale": "Financial workflows typically need amount tracking"
-    },
-    {
-      "name": "customer_email",
-      "rationale": "Customer identification for billing"
-    }
-  ]
+  "property": "customer_email",
+  "typicalUseCases": [
+    "crm",
+    "sales",
+    "support",
+    "customer"
+  ],
+  "workflowCategory": "finance-billing"
 }
 ```
 
@@ -108,28 +73,25 @@
 
 ### Meeting Expense Tracker (`meeting-expense-tracker`)
 
-**Issue:** Missing requiredProperties configuration
+**Issue:** Property "customer_email" may not align with workflow purpose
 
-**Recommendation:** Add requiredProperties to ensure workflow has necessary data inputs
+**Recommendation:** Review if "customer_email" is necessary for this workflow. Typically used in: crm, sales, support, customer
 
-**Priority:** P2
+**Priority:** P3
 **Auto-fixable:** No
 **File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts`
 
 **Context:**
 ```json
 {
-  "category": "finance",
-  "suggestedProperties": [
-    {
-      "name": "invoice_amount",
-      "rationale": "Financial workflows typically need amount tracking"
-    },
-    {
-      "name": "customer_email",
-      "rationale": "Customer identification for billing"
-    }
-  ]
+  "property": "customer_email",
+  "typicalUseCases": [
+    "crm",
+    "sales",
+    "support",
+    "customer"
+  ],
+  "workflowCategory": "finance"
 }
 ```
 
@@ -137,28 +99,25 @@
 
 ### Payment Celebration (`payment-celebration`)
 
-**Issue:** Missing requiredProperties configuration
+**Issue:** Property "customer_email" may not align with workflow purpose
 
-**Recommendation:** Add requiredProperties to ensure workflow has necessary data inputs
+**Recommendation:** Review if "customer_email" is necessary for this workflow. Typically used in: crm, sales, support, customer
 
-**Priority:** P2
+**Priority:** P3
 **Auto-fixable:** No
 **File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-celebration/index.ts`
 
 **Context:**
 ```json
 {
-  "category": "finance-billing",
-  "suggestedProperties": [
-    {
-      "name": "invoice_amount",
-      "rationale": "Financial workflows typically need amount tracking"
-    },
-    {
-      "name": "customer_email",
-      "rationale": "Customer identification for billing"
-    }
-  ]
+  "property": "customer_email",
+  "typicalUseCases": [
+    "crm",
+    "sales",
+    "support",
+    "customer"
+  ],
+  "workflowCategory": "finance-billing"
 }
 ```
 
@@ -166,28 +125,25 @@
 
 ### Payment Reminder System (`payment-reminders`)
 
-**Issue:** Missing requiredProperties configuration
+**Issue:** Property "customer_email" may not align with workflow purpose
 
-**Recommendation:** Add requiredProperties to ensure workflow has necessary data inputs
+**Recommendation:** Review if "customer_email" is necessary for this workflow. Typically used in: crm, sales, support, customer
 
-**Priority:** P2
+**Priority:** P3
 **Auto-fixable:** No
 **File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-reminders/index.ts`
 
 **Context:**
 ```json
 {
-  "category": "finance-billing",
-  "suggestedProperties": [
-    {
-      "name": "invoice_amount",
-      "rationale": "Financial workflows typically need amount tracking"
-    },
-    {
-      "name": "customer_email",
-      "rationale": "Customer identification for billing"
-    }
-  ]
+  "property": "customer_email",
+  "typicalUseCases": [
+    "crm",
+    "sales",
+    "support",
+    "customer"
+  ],
+  "workflowCategory": "finance-billing"
 }
 ```
 
@@ -195,28 +151,25 @@
 
 ### QuickBooks Cash Flow Monitor (`quickbooks-cash-flow-monitor`)
 
-**Issue:** Missing requiredProperties configuration
+**Issue:** Property "customer_email" may not align with workflow purpose
 
-**Recommendation:** Add requiredProperties to ensure workflow has necessary data inputs
+**Recommendation:** Review if "customer_email" is necessary for this workflow. Typically used in: crm, sales, support, customer
 
-**Priority:** P2
+**Priority:** P3
 **Auto-fixable:** No
 **File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-cash-flow-monitor/index.ts`
 
 **Context:**
 ```json
 {
-  "category": "finance-billing",
-  "suggestedProperties": [
-    {
-      "name": "invoice_amount",
-      "rationale": "Financial workflows typically need amount tracking"
-    },
-    {
-      "name": "customer_email",
-      "rationale": "Customer identification for billing"
-    }
-  ]
+  "property": "customer_email",
+  "typicalUseCases": [
+    "crm",
+    "sales",
+    "support",
+    "customer"
+  ],
+  "workflowCategory": "finance-billing"
 }
 ```
 
@@ -224,28 +177,25 @@
 
 ### QuickBooks Invoice Collector (`quickbooks-invoice-collector`)
 
-**Issue:** Missing requiredProperties configuration
+**Issue:** Property "customer_email" may not align with workflow purpose
 
-**Recommendation:** Add requiredProperties to ensure workflow has necessary data inputs
+**Recommendation:** Review if "customer_email" is necessary for this workflow. Typically used in: crm, sales, support, customer
 
-**Priority:** P2
+**Priority:** P3
 **Auto-fixable:** No
 **File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-invoice-collector/index.ts`
 
 **Context:**
 ```json
 {
-  "category": "finance-billing",
-  "suggestedProperties": [
-    {
-      "name": "invoice_amount",
-      "rationale": "Financial workflows typically need amount tracking"
-    },
-    {
-      "name": "customer_email",
-      "rationale": "Customer identification for billing"
-    }
-  ]
+  "property": "customer_email",
+  "typicalUseCases": [
+    "crm",
+    "sales",
+    "support",
+    "customer"
+  ],
+  "workflowCategory": "finance-billing"
 }
 ```
 
@@ -253,28 +203,25 @@
 
 ### Revenue Radar (`revenue-radar`)
 
-**Issue:** Missing requiredProperties configuration
+**Issue:** Property "customer_email" may not align with workflow purpose
 
-**Recommendation:** Add requiredProperties to ensure workflow has necessary data inputs
+**Recommendation:** Review if "customer_email" is necessary for this workflow. Typically used in: crm, sales, support, customer
 
-**Priority:** P2
+**Priority:** P3
 **Auto-fixable:** No
 **File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/revenue-radar/index.ts`
 
 **Context:**
 ```json
 {
-  "category": "finance-accounting",
-  "suggestedProperties": [
-    {
-      "name": "invoice_amount",
-      "rationale": "Financial workflows typically need amount tracking"
-    },
-    {
-      "name": "customer_email",
-      "rationale": "Customer identification for billing"
-    }
-  ]
+  "property": "customer_email",
+  "typicalUseCases": [
+    "crm",
+    "sales",
+    "support",
+    "customer"
+  ],
+  "workflowCategory": "finance-accounting"
 }
 ```
 

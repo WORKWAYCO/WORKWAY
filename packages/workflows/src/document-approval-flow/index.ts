@@ -56,7 +56,7 @@ export default defineWorkflow({
 			trackInNotion: { value: true },
 		},
 
-		essentialFields: ['approvalFolderId', 'approverChannel'],
+		essentialFields: ['approval_folder_id', 'approver_channel'],
 
 		zuhandenheit: {
 			timeToValue: 2,
@@ -79,21 +79,21 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_databases', 'write_databases'], optional: true },
 	],
 
-	inputs: {
+	config: {
 		// Folder configuration
-		approvalFolderId: {
+		approval_folder_id: {
 			type: 'text',
 			label: 'Approval Folder',
 			required: true,
 			description: 'Folder to watch for documents needing approval',
 		},
-		approvedFolderId: {
+		approved_folder_id: {
 			type: 'text',
 			label: 'Approved Folder',
 			required: false,
 			description: 'Move approved documents here (optional)',
 		},
-		rejectedFolderId: {
+		rejected_folder_id: {
 			type: 'text',
 			label: 'Rejected Folder',
 			required: false,
@@ -101,19 +101,19 @@ export default defineWorkflow({
 		},
 
 		// Approver settings
-		approverChannel: {
+		approver_channel: {
 			type: 'text',
 			label: 'Approver Channel',
 			required: true,
 			description: 'Channel where approval requests are posted',
 		},
-		approverUsers: {
+		approver_users: {
 			type: 'text',
 			label: 'Approvers',
 			required: false,
 			description: 'Specific users who can approve (empty = anyone in channel)',
 		},
-		requireAllApprovers: {
+		require_all_approvers: {
 			type: 'boolean',
 			label: 'Require All Approvers',
 			default: false,
@@ -121,19 +121,19 @@ export default defineWorkflow({
 		},
 
 		// Notification settings
-		notifyOnApproval: {
+		notify_on_approval: {
 			type: 'boolean',
 			label: 'Notify on Approval',
 			default: true,
 			description: 'Post when document is approved',
 		},
-		notifyOnRejection: {
+		notify_on_rejection: {
 			type: 'boolean',
 			label: 'Notify on Rejection',
 			default: true,
 			description: 'Post when document is rejected',
 		},
-		notifyUploader: {
+		notify_uploader: {
 			type: 'boolean',
 			label: 'Notify Document Owner',
 			default: true,
@@ -141,13 +141,13 @@ export default defineWorkflow({
 		},
 
 		// Reminder settings
-		autoRemind: {
+		auto_remind: {
 			type: 'boolean',
 			label: 'Auto Remind',
 			default: true,
 			description: 'Remind approvers of pending requests',
 		},
-		reminderHours: {
+		reminder_hours: {
 			type: 'number',
 			label: 'Reminder After (hours)',
 			default: 24,
@@ -155,7 +155,7 @@ export default defineWorkflow({
 		},
 
 		// Tracking
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Approval Tracking Database',
 			required: false,

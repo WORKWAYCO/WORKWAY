@@ -61,7 +61,7 @@ export default defineWorkflow({
 			watchFolders: { value: [] },
 		},
 
-		essentialFields: ['notionDatabaseId'],
+		essentialFields: ['notion_database_id'],
 
 		zuhandenheit: {
 			timeToValue: 3,
@@ -84,15 +84,15 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['send_messages'], optional: true },
 	],
 
-	inputs: {
+	config: {
 		// Folder selection
-		watchFolders: {
+		watch_folders: {
 			type: 'text',
 			label: 'Folders to Watch',
 			required: false,
 			description: 'Leave empty to watch entire Drive',
 		},
-		includeSharedDrives: {
+		include_shared_drives: {
 			type: 'boolean',
 			label: 'Include Shared Drives',
 			default: false,
@@ -100,19 +100,19 @@ export default defineWorkflow({
 		},
 
 		// Notion destination
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Notion Database',
 			required: true,
 			description: 'Database to sync documents to',
 		},
-		notionTitleProperty: {
+		notion_title_property: {
 			type: 'text',
 			label: 'Title Property Name',
 			default: 'Name',
 			description: 'Property name for file title',
 		},
-		notionUrlProperty: {
+		notion_url_property: {
 			type: 'text',
 			label: 'URL Property Name',
 			default: 'Drive URL',
@@ -120,14 +120,14 @@ export default defineWorkflow({
 		},
 
 		// File filtering
-		fileTypes: {
+		file_types: {
 			type: 'multiselect',
 			label: 'File Types',
 			options: ['documents', 'spreadsheets', 'presentations', 'pdfs', 'images', 'all'],
 			default: ['documents', 'spreadsheets', 'presentations'],
 			description: 'Types of files to sync',
 		},
-		excludePatterns: {
+		exclude_patterns: {
 			type: 'text',
 			label: 'Exclude Patterns',
 			default: '',
@@ -135,14 +135,14 @@ export default defineWorkflow({
 		},
 
 		// Sync settings
-		syncFrequency: {
+		sync_frequency: {
 			type: 'select',
 			label: 'Sync Frequency',
 			options: ['hourly', 'daily', 'weekly'],
 			default: 'daily',
 			description: 'How often to check for changes',
 		},
-		lookbackHours: {
+		lookback_hours: {
 			type: 'number',
 			label: 'Lookback Hours',
 			default: 24,
@@ -150,25 +150,25 @@ export default defineWorkflow({
 		},
 
 		// Notifications
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Notification Channel',
 			required: false,
 			description: 'Channel for file update notifications',
 		},
-		notifyOnNew: {
+		notify_on_new: {
 			type: 'boolean',
 			label: 'Notify on New Files',
 			default: true,
 			description: 'Post when new files are added',
 		},
-		notifyOnUpdate: {
+		notify_on_update: {
 			type: 'boolean',
 			label: 'Notify on Updates',
 			default: false,
 			description: 'Post when existing files are modified',
 		},
-		includeFilePreview: {
+		include_file_preview: {
 			type: 'boolean',
 			label: 'Include Preview',
 			default: true,

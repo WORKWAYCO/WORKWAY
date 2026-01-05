@@ -55,7 +55,9 @@ export default defineWorkflow({
 			defaultDueDays: { value: 30 },
 		},
 
-		essentialFields: ['projectsDatabase', 'companyName'],
+		essentialFields: ['projects_database', 'company_name'],
+
+		requiredProperties: ['invoice_number', 'invoice_amount', 'invoice_date', 'payment_status', 'customer_email'],
 
 		zuhandenheit: {
 			timeToValue: 5,
@@ -77,30 +79,30 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_pages', 'write_pages'] },
 	],
 
-	inputs: {
-		projectsDatabase: {
+	config: {
+		projects_database: {
 			type: 'text',
 			label: 'Projects Database',
 			required: true,
 			description: 'Database with project details',
 		},
-		triggerStatus: {
+		trigger_status: {
 			type: 'string',
 			label: 'Invoice Trigger Status',
 			default: 'Completed',
 			description: 'Status that triggers invoice creation',
 		},
-		companyName: {
+		company_name: {
 			type: 'string',
 			label: 'Your Company Name',
 			required: true,
 		},
-		companyEmail: {
+		company_email: {
 			type: 'email',
 			label: 'Your Email',
 			required: true,
 		},
-		defaultDueDays: {
+		default_due_days: {
 			type: 'number',
 			label: 'Payment Due (days)',
 			default: 30,
@@ -111,7 +113,7 @@ export default defineWorkflow({
 			options: ['usd', 'eur', 'gbp'],
 			default: 'usd',
 		},
-		sendViaStripe: {
+		send_via_stripe: {
 			type: 'boolean',
 			label: 'Create Stripe Invoice',
 			default: true,

@@ -68,7 +68,9 @@ export default defineWorkflow({
 			minimumAmount: { value: 0 },
 		},
 
-		essentialFields: ['slackChannel'],
+		essentialFields: ['slack_channel'],
+
+		requiredProperties: ['invoice_number', 'invoice_amount', 'invoice_date', 'payment_status', 'customer_email'],
 
 		zuhandenheit: {
 			timeToValue: 1, // Instant
@@ -91,39 +93,39 @@ export default defineWorkflow({
 		{ service: 'hubspot', scopes: ['crm.objects.deals.write', 'crm.objects.contacts.read'], optional: true },
 	],
 
-	inputs: {
-		slackChannel: {
+	config: {
+		slack_channel: {
 			type: 'text',
 			label: 'Revenue Channel',
 			required: true,
 			description: 'Channel for payment notifications',
 		},
-		alertOnSuccess: {
+		alert_on_success: {
 			type: 'boolean',
 			label: 'Alert on Success',
 			default: true,
 			description: 'Send notification for successful payments',
 		},
-		alertOnFailure: {
+		alert_on_failure: {
 			type: 'boolean',
 			label: 'Alert on Failure',
 			default: true,
 			description: 'Send notification for failed payments',
 		},
-		minimumAmount: {
+		minimum_amount: {
 			type: 'number',
 			label: 'Minimum Amount ($)',
 			default: 0,
 			min: 0,
 			description: 'Only alert for payments above this amount',
 		},
-		updateHubSpot: {
+		update_hub_spot: {
 			type: 'boolean',
 			label: 'Update HubSpot Deals',
 			default: true,
 			description: 'Automatically update deal amounts in HubSpot',
 		},
-		celebrateMilestones: {
+		celebrate_milestones: {
 			type: 'boolean',
 			label: 'Celebrate Milestones',
 			default: true,

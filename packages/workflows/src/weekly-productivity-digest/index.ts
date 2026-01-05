@@ -64,7 +64,7 @@ export default defineWorkflow({
 			enableAIInsights: { value: true },
 		},
 
-		essentialFields: ['slackChannel'],
+		essentialFields: ['slack_channel'],
 
 		zuhandenheit: {
 			timeToValue: 10080, // One week until first digest
@@ -87,27 +87,27 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['write_pages', 'read_databases'], optional: true },
 	],
 
-	inputs: {
-		todoistProjectIds: {
+	config: {
+		todoist_project_ids: {
 			type: 'text',
 			label: 'Projects to Analyze',
 			required: true,
 			multiple: true,
 			description: 'Select Todoist projects to include in the digest',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Digest Channel',
 			required: true,
 			description: 'Channel to post weekly digests',
 		},
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Digest Archive',
 			required: false,
 			description: 'Optional: Notion database to archive weekly digests',
 		},
-		scheduleDay: {
+		schedule_day: {
 			type: 'select',
 			label: 'Digest Day',
 			required: true,
@@ -119,7 +119,7 @@ export default defineWorkflow({
 			default: 'monday',
 			description: 'Day of week to receive digest',
 		},
-		scheduleHour: {
+		schedule_hour: {
 			type: 'number',
 			label: 'Digest Hour (24h)',
 			default: 9,
@@ -127,19 +127,19 @@ export default defineWorkflow({
 			max: 23,
 			description: 'Hour to send digest (in your timezone)',
 		},
-		enableAIInsights: {
+		enable_a_i_insights: {
 			type: 'boolean',
 			label: 'AI Productivity Insights',
 			default: true,
 			description: 'Get AI-powered analysis of your productivity patterns',
 		},
-		includeOverdueTasks: {
+		include_overdue_tasks: {
 			type: 'boolean',
 			label: 'Include Overdue Tasks',
 			default: true,
 			description: 'Highlight overdue tasks in the digest',
 		},
-		lookbackDays: {
+		lookback_days: {
 			type: 'number',
 			label: 'Lookback Period (days)',
 			default: 7,

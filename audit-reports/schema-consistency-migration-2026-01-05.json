@@ -1,0 +1,2519 @@
+{
+  "executedAt": "2026-01-05T21:31:17.075Z",
+  "dryRun": false,
+  "totalFindings": 409,
+  "fixedFindings": 358,
+  "failedFixes": 0,
+  "skippedFindings": 50,
+  "filesModified": 44,
+  "backupPath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/.schema-backup",
+  "changes": [
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "findingType": "naming",
+      "before": "companyId",
+      "after": "company_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "findingType": "naming",
+      "before": "projectId",
+      "after": "project_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "findingType": "naming",
+      "before": "morningReminder",
+      "after": "morning_reminder",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "findingType": "naming",
+      "before": "morningReminderTime",
+      "after": "morning_reminder_time",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "findingType": "naming",
+      "before": "eveningSummary",
+      "after": "evening_summary",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "findingType": "naming",
+      "before": "eveningSummaryTime",
+      "after": "evening_summary_time",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "findingType": "naming",
+      "before": "archiveToNotion",
+      "after": "archive_to_notion",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "findingType": "naming",
+      "before": "flagMissingLogs",
+      "after": "flag_missing_logs",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "findingType": "naming",
+      "before": "companyId",
+      "after": "company_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "findingType": "naming",
+      "before": "projectIds",
+      "after": "project_ids",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "findingType": "naming",
+      "before": "executiveChannel",
+      "after": "executive_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "findingType": "naming",
+      "before": "weeklyDigest",
+      "after": "weekly_digest",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "findingType": "naming",
+      "before": "riskAlerts",
+      "after": "risk_alerts",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "findingType": "naming",
+      "before": "healthThreshold",
+      "after": "health_threshold",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "findingType": "naming",
+      "before": "criticalThreshold",
+      "after": "critical_threshold",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "findingType": "naming",
+      "before": "archiveToNotion",
+      "after": "archive_to_notion",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-rfi-tracker/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-rfi-tracker/index.ts",
+      "findingType": "naming",
+      "before": "companyId",
+      "after": "company_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-rfi-tracker/index.ts",
+      "findingType": "naming",
+      "before": "projectId",
+      "after": "project_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-rfi-tracker/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-rfi-tracker/index.ts",
+      "findingType": "naming",
+      "before": "escalationChannel",
+      "after": "escalation_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-rfi-tracker/index.ts",
+      "findingType": "naming",
+      "before": "dailyDigest",
+      "after": "daily_digest",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-rfi-tracker/index.ts",
+      "findingType": "naming",
+      "before": "overdueAlerts",
+      "after": "overdue_alerts",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-rfi-tracker/index.ts",
+      "findingType": "naming",
+      "before": "escalationDays",
+      "after": "escalation_days",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-rfi-tracker/index.ts",
+      "findingType": "naming",
+      "before": "logToNotion",
+      "after": "log_to_notion",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-rfi-tracker/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "findingType": "naming",
+      "before": "airtableBaseId",
+      "after": "airtable_base_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "findingType": "naming",
+      "before": "airtableTableId",
+      "after": "airtable_table_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "findingType": "naming",
+      "before": "dateFieldName",
+      "after": "date_field_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "findingType": "naming",
+      "before": "titleFieldName",
+      "after": "title_field_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "findingType": "naming",
+      "before": "ownerFieldName",
+      "after": "owner_field_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "findingType": "naming",
+      "before": "statusFieldName",
+      "after": "status_field_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "findingType": "naming",
+      "before": "scheduleHour",
+      "after": "schedule_hour",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "findingType": "naming",
+      "before": "lookAheadDays",
+      "after": "look_ahead_days",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "findingType": "naming",
+      "before": "enableAIBriefs",
+      "after": "enable_a_i_briefs",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/data-stays-consistent/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/data-stays-consistent/index.ts",
+      "findingType": "naming",
+      "before": "spreadsheetId",
+      "after": "spreadsheet_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/data-stays-consistent/index.ts",
+      "findingType": "naming",
+      "before": "sheetName",
+      "after": "sheet_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/data-stays-consistent/index.ts",
+      "findingType": "naming",
+      "before": "airtableBaseId",
+      "after": "airtable_base_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/data-stays-consistent/index.ts",
+      "findingType": "naming",
+      "before": "airtableTableId",
+      "after": "airtable_table_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/data-stays-consistent/index.ts",
+      "findingType": "naming",
+      "before": "syncInterval",
+      "after": "sync_interval",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/data-stays-consistent/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/data-stays-consistent/index.ts",
+      "findingType": "naming",
+      "before": "keyColumn",
+      "after": "key_column",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/data-stays-consistent/index.ts",
+      "findingType": "naming",
+      "before": "enableAnomalyDetection",
+      "after": "enable_anomaly_detection",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/data-stays-consistent/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnSync",
+      "after": "notify_on_sync",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/data-stays-consistent/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnlyOnChanges",
+      "after": "notify_only_on_changes",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
+      "findingType": "naming",
+      "before": "internalDatabase",
+      "after": "internal_database",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
+      "findingType": "naming",
+      "before": "_clientNotionToken",
+      "after": "_client_notion_token",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
+      "findingType": "naming",
+      "before": "_clientDatabase",
+      "after": "_client_database",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
+      "findingType": "naming",
+      "before": "_clientEmail",
+      "after": "_client_email",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/deal-tracker/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/deal-tracker/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/deal-tracker/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/deal-tracker/index.ts",
+      "findingType": "naming",
+      "before": "celebrateWins",
+      "after": "celebrate_wins",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/deal-tracker/index.ts",
+      "findingType": "naming",
+      "before": "trackLostDeals",
+      "after": "track_lost_deals",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/deal-tracker/index.ts",
+      "findingType": "naming",
+      "before": "minimumDealAmount",
+      "after": "minimum_deal_amount",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-appointment-autopilot/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-appointment-autopilot/index.ts",
+      "findingType": "naming",
+      "before": "practiceId",
+      "after": "practice_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-appointment-autopilot/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-appointment-autopilot/index.ts",
+      "findingType": "naming",
+      "before": "enableWaitlistBackfill",
+      "after": "enable_waitlist_backfill",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-appointment-autopilot/index.ts",
+      "findingType": "naming",
+      "before": "highRiskThreshold",
+      "after": "high_risk_threshold",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-appointment-autopilot/index.ts",
+      "findingType": "naming",
+      "before": "messageTemplate",
+      "after": "message_template",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "practiceId",
+      "after": "practice_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "practiceName",
+      "after": "practice_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "googleReviewUrl",
+      "after": "google_review_url",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "yelpReviewUrl",
+      "after": "yelp_review_url",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "sendAfterMinutes",
+      "after": "send_after_minutes",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "happyThreshold",
+      "after": "happy_threshold",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "enableRecovery",
+      "after": "enable_recovery",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "satisfactionMessage",
+      "after": "satisfaction_message",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "reviewRequestMessage",
+      "after": "review_request_message",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "recoveryMessage",
+      "after": "recovery_message",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-review-booster/index.ts",
+      "findingType": "naming",
+      "before": "officeManagerName",
+      "after": "office_manager_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/design-portfolio-sync/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/design-portfolio-sync/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/design-portfolio-sync/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/design-portfolio-sync/index.ts",
+      "findingType": "naming",
+      "before": "syncLimit",
+      "after": "sync_limit",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/design-portfolio-sync/index.ts",
+      "findingType": "naming",
+      "before": "includeAnimated",
+      "after": "include_animated",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/design-portfolio-sync/index.ts",
+      "findingType": "naming",
+      "before": "tagFilter",
+      "after": "tag_filter",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/design-portfolio-sync/index.ts",
+      "findingType": "naming",
+      "before": "notifyNewOnly",
+      "after": "notify_new_only",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/discord-standup-bot/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/discord-standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "discordChannelId",
+      "after": "discord_channel_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/discord-standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "standupTime",
+      "after": "standup_time",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/discord-standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "collectDuration",
+      "after": "collect_duration",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/discord-standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "customQuestions",
+      "after": "custom_questions",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/discord-standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/discord-standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "mentionRole",
+      "after": "mention_role",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/discord-standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "skipWeekends",
+      "after": "skip_weekends",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/discord-standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "enableAISummary",
+      "after": "enable_a_i_summary",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "approvalFolderId",
+      "after": "approval_folder_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "approvedFolderId",
+      "after": "approved_folder_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "rejectedFolderId",
+      "after": "rejected_folder_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "approverChannel",
+      "after": "approver_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "approverUsers",
+      "after": "approver_users",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "requireAllApprovers",
+      "after": "require_all_approvers",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnApproval",
+      "after": "notify_on_approval",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnRejection",
+      "after": "notify_on_rejection",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "notifyUploader",
+      "after": "notify_uploader",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "autoRemind",
+      "after": "auto_remind",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "reminderHours",
+      "after": "reminder_hours",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "watchFolders",
+      "after": "watch_folders",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "includeSharedDrives",
+      "after": "include_shared_drives",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "notionTitleProperty",
+      "after": "notion_title_property",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "notionUrlProperty",
+      "after": "notion_url_property",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "fileTypes",
+      "after": "file_types",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "excludePatterns",
+      "after": "exclude_patterns",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "syncFrequency",
+      "after": "sync_frequency",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "lookbackHours",
+      "after": "lookback_hours",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnNew",
+      "after": "notify_on_new",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnUpdate",
+      "after": "notify_on_update",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "findingType": "naming",
+      "before": "includeFilePreview",
+      "after": "include_file_preview",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/error-incident-manager/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/error-incident-manager/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabase",
+      "after": "notion_database",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/error-incident-manager/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/error-incident-manager/index.ts",
+      "findingType": "naming",
+      "before": "severityFilter",
+      "after": "severity_filter",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/error-incident-manager/index.ts",
+      "findingType": "naming",
+      "before": "autoResolve",
+      "after": "auto_resolve",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/error-incident-manager/index.ts",
+      "findingType": "naming",
+      "before": "includeStackTrace",
+      "after": "include_stack_trace",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/feedback-analyzer/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/feedback-analyzer/index.ts",
+      "findingType": "naming",
+      "before": "feedbackDatabase",
+      "after": "feedback_database",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/feedback-analyzer/index.ts",
+      "findingType": "naming",
+      "before": "emailQuery",
+      "after": "email_query",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/feedback-analyzer/index.ts",
+      "findingType": "naming",
+      "before": "pollInterval",
+      "after": "poll_interval",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/feedback-analyzer/index.ts",
+      "findingType": "naming",
+      "before": "sentimentThreshold",
+      "after": "sentiment_threshold",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/feedback-analyzer/index.ts",
+      "findingType": "naming",
+      "before": "alertEmail",
+      "after": "alert_email",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/form-response-hub/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/form-response-hub/index.ts",
+      "findingType": "naming",
+      "before": "typeformFormId",
+      "after": "typeform_form_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/form-response-hub/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/invoice-generator/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/invoice-generator/index.ts",
+      "findingType": "naming",
+      "before": "projectsDatabase",
+      "after": "projects_database",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/invoice-generator/index.ts",
+      "findingType": "naming",
+      "before": "triggerStatus",
+      "after": "trigger_status",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/invoice-generator/index.ts",
+      "findingType": "naming",
+      "before": "companyName",
+      "after": "company_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/invoice-generator/index.ts",
+      "findingType": "naming",
+      "before": "companyEmail",
+      "after": "company_email",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/invoice-generator/index.ts",
+      "findingType": "naming",
+      "before": "defaultDueDays",
+      "after": "default_due_days",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/invoice-generator/index.ts",
+      "findingType": "naming",
+      "before": "sendViaStripe",
+      "after": "send_via_stripe",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/issues-synced-to-sprint/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/issues-synced-to-sprint/index.ts",
+      "findingType": "naming",
+      "before": "linearTeamId",
+      "after": "linear_team_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/issues-synced-to-sprint/index.ts",
+      "findingType": "naming",
+      "before": "linearProjectId",
+      "after": "linear_project_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/issues-synced-to-sprint/index.ts",
+      "findingType": "naming",
+      "before": "syncComments",
+      "after": "sync_comments",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/issues-synced-to-sprint/index.ts",
+      "findingType": "naming",
+      "before": "syncAssignees",
+      "after": "sync_assignees",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/issues-synced-to-sprint/index.ts",
+      "findingType": "naming",
+      "before": "labelPrefix",
+      "after": "label_prefix",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/issues-synced-to-sprint/index.ts",
+      "findingType": "naming",
+      "before": "filterLabels",
+      "after": "filter_labels",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "defaultHourlyRate",
+      "after": "default_hourly_rate",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "roundUpMinutes",
+      "after": "round_up_minutes",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "minimumMinutes",
+      "after": "minimum_minutes",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "clientMatchingMode",
+      "after": "client_matching_mode",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "clientMapping",
+      "after": "client_mapping",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "createDraftInvoice",
+      "after": "create_draft_invoice",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "autoFinalizeInvoice",
+      "after": "auto_finalize_invoice",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "invoicePrefix",
+      "after": "invoice_prefix",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "billableKeywords",
+      "after": "billable_keywords",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "excludeInternalMeetings",
+      "after": "exclude_internal_meetings",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "internalDomains",
+      "after": "internal_domains",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "findingType": "naming",
+      "before": "lookbackDays",
+      "after": "lookback_days",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-followup-engine/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-followup-engine/index.ts",
+      "findingType": "naming",
+      "before": "todoistProjectId",
+      "after": "todoist_project_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-followup-engine/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-followup-engine/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-followup-engine/index.ts",
+      "findingType": "naming",
+      "before": "triggerOn",
+      "after": "trigger_on",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-followup-engine/index.ts",
+      "findingType": "naming",
+      "before": "createPrepTasks",
+      "after": "create_prep_tasks",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-followup-engine/index.ts",
+      "findingType": "naming",
+      "before": "createFollowUpTasks",
+      "after": "create_follow_up_tasks",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-followup-engine/index.ts",
+      "findingType": "naming",
+      "before": "enableAIAgenda",
+      "after": "enable_a_i_agenda",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-followup-engine/index.ts",
+      "findingType": "naming",
+      "before": "followUpHours",
+      "after": "follow_up_hours",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "syncMode",
+      "after": "sync_mode",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "lookbackDays",
+      "after": "lookback_days",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "transcriptMode",
+      "after": "transcript_mode",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "browserScraperUrl",
+      "after": "browser_scraper_url",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "enableAI",
+      "after": "enable_a_i",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "analysisDepth",
+      "after": "analysis_depth",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "postToSlack",
+      "after": "post_to_slack",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "updateCRM",
+      "after": "update_c_r_m",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "crmDealSearchEnabled",
+      "after": "crm_deal_search_enabled",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "crmLogMeetingActivity",
+      "after": "crm_log_meeting_activity",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "findingType": "naming",
+      "before": "crmUpdateDealNotes",
+      "after": "crm_update_deal_notes",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence-private/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence-private/index.ts",
+      "findingType": "naming",
+      "before": "zoomConnectionId",
+      "after": "zoom_connection_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence-private/index.ts",
+      "findingType": "naming",
+      "before": "lookbackDays",
+      "after": "lookback_days",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence-private/index.ts",
+      "findingType": "naming",
+      "before": "enableAI",
+      "after": "enable_a_i",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence-private/index.ts",
+      "findingType": "naming",
+      "before": "analysisDepth",
+      "after": "analysis_depth",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-summarizer/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-summarizer/index.ts",
+      "findingType": "naming",
+      "before": "meetingNotesDatabase",
+      "after": "meeting_notes_database",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-summarizer/index.ts",
+      "findingType": "naming",
+      "before": "notifyChannel",
+      "after": "notify_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-summarizer/index.ts",
+      "findingType": "naming",
+      "before": "autoAssignTasks",
+      "after": "auto_assign_tasks",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-summarizer/index.ts",
+      "findingType": "naming",
+      "before": "summaryLength",
+      "after": "summary_length",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "taskDestination",
+      "after": "task_destination",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "todoistProject",
+      "after": "todoist_project",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "linearTeam",
+      "after": "linear_team",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "linearProject",
+      "after": "linear_project",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "minimumConfidence",
+      "after": "minimum_confidence",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "createSubtasks",
+      "after": "create_subtasks",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "defaultPriority",
+      "after": "default_priority",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "matchAssignees",
+      "after": "match_assignees",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "teamMemberMapping",
+      "after": "team_member_mapping",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "postToSlack",
+      "after": "post_to_slack",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "findingType": "naming",
+      "before": "lookbackDays",
+      "after": "lookback_days",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/nexhealth-appointment-flow/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/nexhealth-appointment-flow/index.ts",
+      "findingType": "naming",
+      "before": "practiceName",
+      "after": "practice_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/nexhealth-appointment-flow/index.ts",
+      "findingType": "naming",
+      "before": "practicePhone",
+      "after": "practice_phone",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/nexhealth-appointment-flow/index.ts",
+      "findingType": "naming",
+      "before": "confirmationHoursAfter",
+      "after": "confirmation_hours_after",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/nexhealth-appointment-flow/index.ts",
+      "findingType": "naming",
+      "before": "reminderHoursBefore",
+      "after": "reminder_hours_before",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/nexhealth-appointment-flow/index.ts",
+      "findingType": "naming",
+      "before": "formHoursBefore",
+      "after": "form_hours_before",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/nexhealth-appointment-flow/index.ts",
+      "findingType": "naming",
+      "before": "enableReplyToConfirm",
+      "after": "enable_reply_to_confirm",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/nexhealth-appointment-flow/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/onboarding/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/onboarding/index.ts",
+      "findingType": "naming",
+      "before": "teamDatabase",
+      "after": "team_database",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/onboarding/index.ts",
+      "findingType": "naming",
+      "before": "onboardingTasksDatabase",
+      "after": "onboarding_tasks_database",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/onboarding/index.ts",
+      "findingType": "naming",
+      "before": "announcementChannel",
+      "after": "announcement_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/onboarding/index.ts",
+      "findingType": "naming",
+      "before": "hrEmail",
+      "after": "hr_email",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/onboarding/index.ts",
+      "findingType": "naming",
+      "before": "companyName",
+      "after": "company_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/onboarding/index.ts",
+      "findingType": "naming",
+      "before": "defaultOnboardingTasks",
+      "after": "default_onboarding_tasks",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-celebration/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-celebration/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-celebration/index.ts",
+      "findingType": "naming",
+      "before": "celebrateMinimum",
+      "after": "celebrate_minimum",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-celebration/index.ts",
+      "findingType": "naming",
+      "before": "includeCustomerDetails",
+      "after": "include_customer_details",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-celebration/index.ts",
+      "findingType": "naming",
+      "before": "closeDealInCRM",
+      "after": "close_deal_in_c_r_m",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-celebration/index.ts",
+      "findingType": "naming",
+      "before": "draftThankYouEmail",
+      "after": "draft_thank_you_email",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-celebration/index.ts",
+      "findingType": "naming",
+      "before": "customCelebrationEmoji",
+      "after": "custom_celebration_emoji",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-celebration/index.ts",
+      "findingType": "naming",
+      "before": "includeMRR",
+      "after": "include_m_r_r",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-celebration/index.ts",
+      "findingType": "naming",
+      "before": "companyName",
+      "after": "company_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-reminders/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-reminders/index.ts",
+      "findingType": "naming",
+      "before": "companyName",
+      "after": "company_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-reminders/index.ts",
+      "findingType": "naming",
+      "before": "companyEmail",
+      "after": "company_email",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-reminders/index.ts",
+      "findingType": "naming",
+      "before": "reminderDays",
+      "after": "reminder_days",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-reminders/index.ts",
+      "findingType": "naming",
+      "before": "escalationEmail",
+      "after": "escalation_email",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-reminders/index.ts",
+      "findingType": "naming",
+      "before": "checkTime",
+      "after": "check_time",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payments-tracked/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payments-tracked/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payments-tracked/index.ts",
+      "findingType": "naming",
+      "before": "includeRefunds",
+      "after": "include_refunds",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payments-tracked/index.ts",
+      "findingType": "naming",
+      "before": "currencyFormat",
+      "after": "currency_format",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "notificationPlatform",
+      "after": "notification_platform",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "slackChannelId",
+      "after": "slack_channel_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "discordChannelId",
+      "after": "discord_channel_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnOpen",
+      "after": "notify_on_open",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnReviewRequest",
+      "after": "notify_on_review_request",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnApproval",
+      "after": "notify_on_approval",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnChangesRequested",
+      "after": "notify_on_changes_requested",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnMerge",
+      "after": "notify_on_merge",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "staleThresholdHours",
+      "after": "stale_threshold_hours",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "userMapping",
+      "after": "user_mapping",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "excludeDraft",
+      "after": "exclude_draft",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "findingType": "naming",
+      "before": "filterLabels",
+      "after": "filter_labels",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/private-emails-documented/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/private-emails-documented/index.ts",
+      "findingType": "naming",
+      "before": "gmailConnectionId",
+      "after": "gmail_connection_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/private-emails-documented/index.ts",
+      "findingType": "naming",
+      "before": "gmailLabel",
+      "after": "gmail_label",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "spreadsheetId",
+      "after": "spreadsheet_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "sheetName",
+      "after": "sheet_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "trackByIssue",
+      "after": "track_by_issue",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "groupByProject",
+      "after": "group_by_project",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "includeEstimates",
+      "after": "include_estimates",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "useLinearEstimates",
+      "after": "use_linear_estimates",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "estimateToHours",
+      "after": "estimate_to_hours",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "trackCycleTime",
+      "after": "track_cycle_time",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "teamIds",
+      "after": "team_ids",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "projectIds",
+      "after": "project_ids",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "completedStates",
+      "after": "completed_states",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "findingType": "naming",
+      "before": "weeklyDigest",
+      "after": "weekly_digest",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-cash-flow-monitor/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-cash-flow-monitor/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-cash-flow-monitor/index.ts",
+      "findingType": "naming",
+      "before": "reportTime",
+      "after": "report_time",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-cash-flow-monitor/index.ts",
+      "findingType": "naming",
+      "before": "alertThreshold",
+      "after": "alert_threshold",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-cash-flow-monitor/index.ts",
+      "findingType": "naming",
+      "before": "criticalAgingDays",
+      "after": "critical_aging_days",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-cash-flow-monitor/index.ts",
+      "findingType": "naming",
+      "before": "includeCustomerBreakdown",
+      "after": "include_customer_breakdown",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-cash-flow-monitor/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-invoice-collector/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-invoice-collector/index.ts",
+      "findingType": "naming",
+      "before": "companyName",
+      "after": "company_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-invoice-collector/index.ts",
+      "findingType": "naming",
+      "before": "companyEmail",
+      "after": "company_email",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-invoice-collector/index.ts",
+      "findingType": "naming",
+      "before": "reminderDays",
+      "after": "reminder_days",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-invoice-collector/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/quickbooks-invoice-collector/index.ts",
+      "findingType": "naming",
+      "before": "checkTime",
+      "after": "check_time",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/real-estate-lead-nurture/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/real-estate-lead-nurture/index.ts",
+      "findingType": "naming",
+      "before": "agentName",
+      "after": "agent_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/real-estate-lead-nurture/index.ts",
+      "findingType": "naming",
+      "before": "agentEmail",
+      "after": "agent_email",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/real-estate-lead-nurture/index.ts",
+      "findingType": "naming",
+      "before": "agentPhone",
+      "after": "agent_phone",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/real-estate-lead-nurture/index.ts",
+      "findingType": "naming",
+      "before": "brokerageName",
+      "after": "brokerage_name",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/real-estate-lead-nurture/index.ts",
+      "findingType": "naming",
+      "before": "followUpDays",
+      "after": "follow_up_days",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/real-estate-lead-nurture/index.ts",
+      "findingType": "naming",
+      "before": "calendlyLink",
+      "after": "calendly_link",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/real-estate-lead-nurture/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/real-estate-lead-nurture/index.ts",
+      "findingType": "naming",
+      "before": "minHotLeadPrice",
+      "after": "min_hot_lead_price",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/revenue-radar/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/revenue-radar/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/revenue-radar/index.ts",
+      "findingType": "naming",
+      "before": "alertOnSuccess",
+      "after": "alert_on_success",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/revenue-radar/index.ts",
+      "findingType": "naming",
+      "before": "alertOnFailure",
+      "after": "alert_on_failure",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/revenue-radar/index.ts",
+      "findingType": "naming",
+      "before": "minimumAmount",
+      "after": "minimum_amount",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/revenue-radar/index.ts",
+      "findingType": "naming",
+      "before": "updateHubSpot",
+      "after": "update_hub_spot",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/revenue-radar/index.ts",
+      "findingType": "naming",
+      "before": "celebrateMilestones",
+      "after": "celebrate_milestones",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sales-lead-pipeline/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sales-lead-pipeline/index.ts",
+      "findingType": "naming",
+      "before": "typeformId",
+      "after": "typeform_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sales-lead-pipeline/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sales-lead-pipeline/index.ts",
+      "findingType": "naming",
+      "before": "todoistProjectId",
+      "after": "todoist_project_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/scheduling-autopilot/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/scheduling-autopilot/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/scheduling-autopilot/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/scheduling-autopilot/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnBooking",
+      "after": "notify_on_booking",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/scheduling-autopilot/index.ts",
+      "findingType": "naming",
+      "before": "notifyOnCancellation",
+      "after": "notify_on_cancellation",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/scheduling-autopilot/index.ts",
+      "findingType": "naming",
+      "before": "includeQuestionsInNotion",
+      "after": "include_questions_in_notion",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sprint-progress-tracker/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sprint-progress-tracker/index.ts",
+      "findingType": "naming",
+      "before": "linearTeamId",
+      "after": "linear_team_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sprint-progress-tracker/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sprint-progress-tracker/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sprint-progress-tracker/index.ts",
+      "findingType": "naming",
+      "before": "scheduleHour",
+      "after": "schedule_hour",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sprint-progress-tracker/index.ts",
+      "findingType": "naming",
+      "before": "includeBlockers",
+      "after": "include_blockers",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sprint-progress-tracker/index.ts",
+      "findingType": "naming",
+      "before": "includeVelocity",
+      "after": "include_velocity",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sprint-progress-tracker/index.ts",
+      "findingType": "naming",
+      "before": "enableAIInsights",
+      "after": "enable_a_i_insights",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/standup-bot/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "standupChannel",
+      "after": "standup_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "standupTime",
+      "after": "standup_time",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "summaryTime",
+      "after": "summary_time",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "standupDatabase",
+      "after": "standup_database",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "promptQuestions",
+      "after": "prompt_questions",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/standup-bot/index.ts",
+      "findingType": "naming",
+      "before": "excludeWeekends",
+      "after": "exclude_weekends",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/support-ticket-router/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/support-ticket-router/index.ts",
+      "findingType": "naming",
+      "before": "supportChannel",
+      "after": "support_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/support-ticket-router/index.ts",
+      "findingType": "naming",
+      "before": "routingChannels",
+      "after": "routing_channels",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/support-ticket-router/index.ts",
+      "findingType": "naming",
+      "before": "urgencyThreshold",
+      "after": "urgency_threshold",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/task-sync-bridge/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/task-sync-bridge/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/task-sync-bridge/index.ts",
+      "findingType": "naming",
+      "before": "todoistProjectId",
+      "after": "todoist_project_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/task-sync-bridge/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/task-sync-bridge/index.ts",
+      "findingType": "naming",
+      "before": "includeSubtasks",
+      "after": "include_subtasks",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/task-sync-bridge/index.ts",
+      "findingType": "naming",
+      "before": "groupByProject",
+      "after": "group_by_project",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/team-digest/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/team-digest/index.ts",
+      "findingType": "naming",
+      "before": "digestChannel",
+      "after": "digest_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/team-digest/index.ts",
+      "findingType": "naming",
+      "before": "digestTime",
+      "after": "digest_time",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/team-digest/index.ts",
+      "findingType": "naming",
+      "before": "slackChannels",
+      "after": "slack_channels",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/team-digest/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabase",
+      "after": "notion_database",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/weekly-productivity-digest/index.ts",
+      "findingType": "config-wrapper",
+      "before": "inputs: {...}",
+      "after": "config: {...}",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/weekly-productivity-digest/index.ts",
+      "findingType": "naming",
+      "before": "todoistProjectIds",
+      "after": "todoist_project_ids",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/weekly-productivity-digest/index.ts",
+      "findingType": "naming",
+      "before": "slackChannel",
+      "after": "slack_channel",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/weekly-productivity-digest/index.ts",
+      "findingType": "naming",
+      "before": "notionDatabaseId",
+      "after": "notion_database_id",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/weekly-productivity-digest/index.ts",
+      "findingType": "naming",
+      "before": "scheduleDay",
+      "after": "schedule_day",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/weekly-productivity-digest/index.ts",
+      "findingType": "naming",
+      "before": "scheduleHour",
+      "after": "schedule_hour",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/weekly-productivity-digest/index.ts",
+      "findingType": "naming",
+      "before": "enableAIInsights",
+      "after": "enable_a_i_insights",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/weekly-productivity-digest/index.ts",
+      "findingType": "naming",
+      "before": "includeOverdueTasks",
+      "after": "include_overdue_tasks",
+      "success": true
+    },
+    {
+      "file": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/weekly-productivity-digest/index.ts",
+      "findingType": "naming",
+      "before": "lookbackDays",
+      "after": "lookback_days",
+      "success": true
+    }
+  ],
+  "errors": []
+}

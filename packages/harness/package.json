@@ -27,7 +27,11 @@
     "typecheck": "tsc --noEmit",
     "audit": "tsx src/audits/coordinator.ts",
     "audit:dry-run": "tsx src/audits/coordinator.ts --dry-run",
-    "audit:with-issues": "tsx src/audits/coordinator.ts --create-issues"
+    "audit:with-issues": "tsx src/audits/coordinator.ts --create-issues",
+    "migrate:schema": "tsx src/migrations/cli.ts",
+    "migrate:schema:dry-run": "tsx src/migrations/cli.ts --dry-run",
+    "migrate:schema:rollback": "tsx src/migrations/cli.ts --rollback",
+    "migrate:schema:test": "tsx src/migrations/cli.ts --dry-run --subset 5"
   },
   "dependencies": {
     "@workwayco/beads": "workspace:*",

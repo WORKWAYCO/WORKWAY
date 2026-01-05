@@ -1,0 +1,528 @@
+{
+  "auditType": "schema-consistency",
+  "executedAt": "2026-01-05T21:42:41.978Z",
+  "totalWorkflows": 49,
+  "workflowsAudited": 22,
+  "findingsCount": 24,
+  "findings": [
+    {
+      "workflowId": "calendar-meeting-prep",
+      "workflowName": "Calendar Meeting Prep",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/calendar-meeting-prep/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "construction-daily-log",
+      "workflowName": "Construction Daily Log Autopilot",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-daily-log/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "construction-project-digest",
+      "workflowName": "Construction Project Status Digest",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-project-digest/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "construction-rfi-tracker",
+      "workflowName": "Construction RFI Tracker",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/construction-rfi-tracker/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "content-calendar",
+      "workflowName": "Content Calendar Automation",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "databases-mirrored",
+      "workflowName": "Notion Two-Way Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"_client_notion_token\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
+      "context": {
+        "currentName": "_client_notion_token",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "databases-mirrored",
+      "workflowName": "Notion Two-Way Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"_client_database\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
+      "context": {
+        "currentName": "_client_database",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "databases-mirrored",
+      "workflowName": "Notion Two-Way Sync",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Step name \"_client_email\" doesn't follow convention",
+      "recommendation": "Use lowercase with underscores (snake_case) for step names",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "naming"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
+      "context": {
+        "currentName": "_client_email",
+        "expectedPattern": "lowercase with underscores (snake_case)"
+      }
+    },
+    {
+      "workflowId": "dental-appointment-autopilot",
+      "workflowName": "Dental Appointment Autopilot",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/dental-appointment-autopilot/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "discord-standup-bot",
+      "workflowName": "Discord Standup Bot",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/discord-standup-bot/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "document-approval-flow",
+      "workflowName": "Document Approval Flow",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/document-approval-flow/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "documents-organized",
+      "workflowName": "Drive Document Hub",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/documents-organized/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "issues-synced-to-sprint",
+      "workflowName": "GitHub to Linear Issue Sync",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/issues-synced-to-sprint/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "meeting-expense-tracker",
+      "workflowName": "Meeting Expense Tracker",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-expense-tracker/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "meeting-followup-engine",
+      "workflowName": "Meeting Follow-up Engine",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-followup-engine/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "meeting-intelligence",
+      "workflowName": "Meeting Intelligence",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-intelligence/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "meeting-to-action",
+      "workflowName": "Meeting to Action",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/meeting-to-action/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "pr-review-notifier",
+      "workflowName": "PR Review Notifier",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/pr-review-notifier/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "project-time-tracker",
+      "workflowName": "Project Time Tracker",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/project-time-tracker/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "real-estate-lead-nurture",
+      "workflowName": "Real Estate Lead Nurture",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/real-estate-lead-nurture/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "scheduling-autopilot",
+      "workflowName": "Scheduling Autopilot",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/scheduling-autopilot/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "sprint-progress-tracker",
+      "workflowName": "Sprint Progress Tracker",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sprint-progress-tracker/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "weekly-productivity-digest",
+      "workflowName": "Weekly Productivity Digest",
+      "severity": "medium",
+      "category": "schema-consistency",
+      "issue": "Workflow mixes \"config\" and \"inputs\" wrappers",
+      "recommendation": "Standardize on \"config\" wrapper throughout the workflow",
+      "autoFixable": true,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "config-wrapper"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/weekly-productivity-digest/index.ts",
+      "context": {
+        "correctPattern": "config: {...}"
+      }
+    },
+    {
+      "workflowId": "GLOBAL",
+      "workflowName": "All Workflows",
+      "severity": "low",
+      "category": "schema-consistency",
+      "issue": "Inconsistent version formats across workflows (3 different formats)",
+      "recommendation": "Standardize on \"1.0.0\" format (used by 46/49 workflows)",
+      "autoFixable": true,
+      "priority": "P3",
+      "labels": [
+        "audit",
+        "workflows",
+        "consistency",
+        "version",
+        "global"
+      ],
+      "filePath": "MULTIPLE",
+      "context": {
+        "versionFormats": [
+          {
+            "format": "1.0.0",
+            "workflowCount": 46,
+            "workflows": [
+              "accounting-stays-current",
+              "ai-newsletter",
+              "calendar-availability-sync",
+              "calendar-meeting-prep",
+              "client-onboarding"
+            ]
+          },
+          {
+            "format": "2.0.0",
+            "workflowCount": 2,
+            "workflows": [
+              "databases-mirrored",
+              "private-emails-documented"
+            ]
+          },
+          {
+            "format": "3.5.0",
+            "workflowCount": 1,
+            "workflows": [
+              "meeting-intelligence-private"
+            ]
+          }
+        ],
+        "recommendedFormat": "1.0.0"
+      }
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 20,
+    "low": 4,
+    "autoFixable": 24
+  }
+}

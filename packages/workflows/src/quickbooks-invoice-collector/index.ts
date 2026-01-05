@@ -60,7 +60,9 @@ export default defineWorkflow({
 			tone: { value: 'professional' },
 		},
 
-		essentialFields: ['companyName', 'companyEmail'],
+		essentialFields: ['company_name', 'company_email'],
+
+		requiredProperties: ['invoice_number', 'invoice_amount', 'invoice_date', 'payment_status', 'customer_email'],
 
 		zuhandenheit: {
 			timeToValue: 1440, // 24 hours until first check
@@ -83,18 +85,18 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['send_messages'], optional: true },
 	],
 
-	inputs: {
-		companyName: {
+	config: {
+		company_name: {
 			type: 'string',
 			label: 'Your Company Name',
 			required: true,
 		},
-		companyEmail: {
+		company_email: {
 			type: 'email',
 			label: 'Reply-to Email',
 			required: true,
 		},
-		reminderDays: {
+		reminder_days: {
 			type: 'array',
 			label: 'Reminder Schedule (days overdue)',
 			items: { type: 'number' },
@@ -110,12 +112,12 @@ export default defineWorkflow({
 			],
 			default: 'professional',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'string',
 			label: 'Slack Channel for Escalations',
 			description: 'Get notified when invoices are 30+ days overdue',
 		},
-		checkTime: {
+		check_time: {
 			type: 'time',
 			label: 'Daily Check Time',
 			default: '09:00',

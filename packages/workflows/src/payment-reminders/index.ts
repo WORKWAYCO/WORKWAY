@@ -47,7 +47,9 @@ export default defineWorkflow({
 			timezone: { inferFrom: 'user_timezone' },
 		},
 
-		essentialFields: ['companyName', 'companyEmail'],
+		essentialFields: ['company_name', 'company_email'],
+
+		requiredProperties: ['invoice_number', 'invoice_amount', 'invoice_date', 'payment_status', 'customer_email'],
 
 		zuhandenheit: {
 			timeToValue: 1440, // 24 hours until first check
@@ -69,29 +71,29 @@ export default defineWorkflow({
 		{ service: 'gmail', scopes: ['send_emails'] },
 	],
 
-	inputs: {
-		companyName: {
+	config: {
+		company_name: {
 			type: 'string',
 			label: 'Your Company Name',
 			required: true,
 		},
-		companyEmail: {
+		company_email: {
 			type: 'email',
 			label: 'Reply-to Email',
 			required: true,
 		},
-		reminderDays: {
+		reminder_days: {
 			type: 'array',
 			label: 'Reminder Schedule (days overdue)',
 			items: { type: 'number' },
 			default: [1, 7, 14, 30],
 		},
-		escalationEmail: {
+		escalation_email: {
 			type: 'email',
 			label: 'Escalation Email',
 			description: 'Notify when invoice is 30+ days overdue',
 		},
-		checkTime: {
+		check_time: {
 			type: 'time',
 			label: 'Daily Check Time',
 			default: '09:00',

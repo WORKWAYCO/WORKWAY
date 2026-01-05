@@ -55,7 +55,7 @@ export default defineWorkflow({
 			notifyOnSync: { value: true },
 		},
 
-		essentialFields: ['spreadsheetId', 'airtableBaseId', 'airtableTableId'],
+		essentialFields: ['spreadsheet_id', 'airtable_base_id', 'airtable_table_id'],
 
 		zuhandenheit: {
 			timeToValue: 15, // 15 minutes until first sync
@@ -78,33 +78,33 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['chat:write', 'channels:read'], optional: true },
 	],
 
-	inputs: {
-		spreadsheetId: {
+	config: {
+		spreadsheet_id: {
 			type: 'text',
 			label: 'Google Sheet ID',
 			required: true,
 			description: 'The ID from your Google Sheets URL',
 		},
-		sheetName: {
+		sheet_name: {
 			type: 'text',
 			label: 'Sheet Tab Name',
 			required: false,
 			default: 'Sheet1',
 			description: 'Name of the specific sheet tab to sync',
 		},
-		airtableBaseId: {
+		airtable_base_id: {
 			type: 'text',
 			label: 'Airtable Base',
 			required: true,
 			description: 'Destination Airtable base',
 		},
-		airtableTableId: {
+		airtable_table_id: {
 			type: 'text',
 			label: 'Airtable Table',
 			required: true,
 			description: 'Destination table in the base',
 		},
-		syncInterval: {
+		sync_interval: {
 			type: 'select',
 			label: 'Sync Interval',
 			required: true,
@@ -117,32 +117,32 @@ export default defineWorkflow({
 			default: '15',
 			description: 'How often to check for changes',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Notification Channel',
 			required: false,
 			description: 'Optional: Channel for sync notifications',
 		},
-		keyColumn: {
+		key_column: {
 			type: 'text',
 			label: 'Key Column',
 			required: false,
 			default: 'A',
 			description: 'Column to use as unique identifier (e.g., A for email)',
 		},
-		enableAnomalyDetection: {
+		enable_anomaly_detection: {
 			type: 'boolean',
 			label: 'AI Anomaly Detection',
 			default: true,
 			description: 'Detect unusual data patterns during sync',
 		},
-		notifyOnSync: {
+		notify_on_sync: {
 			type: 'boolean',
 			label: 'Notify on Sync',
 			default: true,
 			description: 'Post to Slack after each sync',
 		},
-		notifyOnlyOnChanges: {
+		notify_only_on_changes: {
 			type: 'boolean',
 			label: 'Only Notify on Changes',
 			default: true,

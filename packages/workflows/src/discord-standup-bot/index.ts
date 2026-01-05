@@ -63,7 +63,7 @@ export default defineWorkflow({
 			collectDuration: { value: 60 },
 		},
 
-		essentialFields: ['discordChannelId'],
+		essentialFields: ['discord_channel_id'],
 
 		zuhandenheit: {
 			timeToValue: 5,
@@ -86,14 +86,14 @@ export default defineWorkflow({
 		{ service: 'workers-ai', scopes: ['text-generation'], optional: true },
 	],
 
-	inputs: {
-		discordChannelId: {
+	config: {
+		discord_channel_id: {
 			type: 'text',
 			label: 'Standup Channel',
 			required: true,
 			description: 'Channel where standups will be posted',
 		},
-		standupTime: {
+		standup_time: {
 			type: 'time',
 			label: 'Standup Time',
 			default: '09:00',
@@ -105,37 +105,37 @@ export default defineWorkflow({
 			default: 'America/New_York',
 			description: 'Your team\'s timezone',
 		},
-		collectDuration: {
+		collect_duration: {
 			type: 'number',
 			label: 'Collection Window (minutes)',
 			default: 60,
 			description: 'How long to wait for responses before summarizing',
 		},
-		customQuestions: {
+		custom_questions: {
 			type: 'text_list',
 			label: 'Custom Questions',
 			required: false,
 			description: 'Override default standup questions (one per line)',
 		},
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Archive to Notion (optional)',
 			required: false,
 			description: 'Optionally save standup summaries to Notion',
 		},
-		mentionRole: {
+		mention_role: {
 			type: 'text',
 			label: 'Role to Mention',
 			required: false,
 			description: 'Role to @mention when posting standup prompt',
 		},
-		skipWeekends: {
+		skip_weekends: {
 			type: 'boolean',
 			label: 'Skip Weekends',
 			default: true,
 			description: 'Don\'t post standups on Saturday/Sunday',
 		},
-		enableAISummary: {
+		enable_a_i_summary: {
 			type: 'boolean',
 			label: 'AI Summary',
 			default: true,

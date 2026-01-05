@@ -99,7 +99,7 @@ export default defineWorkflow({
 			archiveToNotion: { value: true },
 		},
 
-		essentialFields: ['companyId', 'projectId'],
+		essentialFields: ['company_id', 'project_id'],
 
 		zuhandenheit: {
 			timeToValue: 1,
@@ -122,62 +122,62 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_content', 'insert_content'], optional: true },
 	],
 
-	inputs: {
-		companyId: {
+	config: {
+		company_id: {
 			type: 'text',
 			label: 'Procore Company ID',
 			required: true,
 			description: 'Your company ID from Procore',
 		},
-		projectId: {
+		project_id: {
 			type: 'text',
 			label: 'Procore Project ID',
 			required: true,
 			description: 'The project to track daily logs for',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Daily Log Channel',
 			required: true,
 			description: 'Channel for daily log summaries',
 		},
-		morningReminder: {
+		morning_reminder: {
 			type: 'boolean',
 			label: 'Morning Reminder',
 			default: true,
 			description: 'Send reminder at start of day to submit logs',
 		},
-		morningReminderTime: {
+		morning_reminder_time: {
 			type: 'text',
 			label: 'Morning Reminder Time',
 			default: '07:00',
 			description: 'Time to send morning reminder (24h format)',
 		},
-		eveningSummary: {
+		evening_summary: {
 			type: 'boolean',
 			label: 'Evening Summary',
 			default: true,
 			description: 'Send aggregated daily summary at end of day',
 		},
-		eveningSummaryTime: {
+		evening_summary_time: {
 			type: 'text',
 			label: 'Evening Summary Time',
 			default: '17:00',
 			description: 'Time to send evening summary (24h format)',
 		},
-		archiveToNotion: {
+		archive_to_notion: {
 			type: 'boolean',
 			label: 'Archive to Notion',
 			default: true,
 			description: 'Archive daily logs to Notion database',
 		},
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Notion Database ID',
 			required: false,
 			description: 'Notion database for daily log archives',
 		},
-		flagMissingLogs: {
+		flag_missing_logs: {
 			type: 'boolean',
 			label: 'Flag Missing Logs',
 			default: true,

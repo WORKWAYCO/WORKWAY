@@ -59,7 +59,7 @@ export default defineWorkflow({
 			sentimentThreshold: { value: 0.7 },
 		},
 
-		essentialFields: ['feedbackDatabase'],
+		essentialFields: ['feedback_database'],
 
 		zuhandenheit: {
 			timeToValue: 15, // Minutes until first analysis
@@ -81,32 +81,32 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['write_pages', 'read_databases'] },
 	],
 
-	inputs: {
-		feedbackDatabase: {
+	config: {
+		feedback_database: {
 			type: 'text',
 			label: 'Feedback Database',
 			required: true,
 			description: 'Where to store analyzed feedback',
 		},
-		emailQuery: {
+		email_query: {
 			type: 'string',
 			label: 'Gmail Search Query',
 			default: 'subject:(feedback OR review OR suggestion) is:unread',
 			description: 'Gmail search query to find feedback emails',
 		},
-		pollInterval: {
+		poll_interval: {
 			type: 'select',
 			label: 'Check Frequency',
 			options: ['5min', '15min', '30min', '1hour'],
 			default: '15min',
 		},
-		sentimentThreshold: {
+		sentiment_threshold: {
 			type: 'number',
 			label: 'Alert Threshold (negative sentiment)',
 			default: 0.7,
 			description: 'Send alert for feedback above this negative score (0-1)',
 		},
-		alertEmail: {
+		alert_email: {
 			type: 'email',
 			label: 'Alert Email',
 			description: 'Email for urgent negative feedback alerts',

@@ -59,6 +59,70 @@ packages/integrations/src/{service}/
 └── {service}.test.ts  # Tests
 ```
 
+### Gas Town Integration (Autonomous Multi-Agent Orchestration)
+
+WORKWAY has integrated Steve Yegge's [Gas Town](https://github.com/steveyegge/gastown) pattern for coordinating multiple AI agents at scale. Implementation lives in `packages/harness/`.
+
+**Architecture** (Coordinator/Worker/Observer pattern):
+
+```
+Coordinator (Mayor)
+  ├─ Distributes work to Workers
+  ├─ Never executes work directly (prevents context sprawl)
+  └─ Monitors progress via Observer
+
+Worker (Polecat)
+  ├─ Claims work from queue
+  ├─ Executes in isolated session
+  └─ Reports completion
+
+Observer (Witness)
+  ├─ Non-blocking progress monitoring
+  └─ Real-time status without interfering
+
+Merge Queue (Refinery)
+  ├─ Validates concurrent commits
+  └─ Resolves conflicts automatically
+```
+
+**When to use Gas Town**:
+- Systematic reviews/audits (e.g., 60 workflows quality check)
+- Parallel refactoring across multiple packages
+- Large-scale code generation tasks
+- Cross-repo dependency resolution
+
+**Formula Pattern**:
+1. Define work in `specs/*.yaml` (features with dependencies)
+2. Coordinator spawns Workers for each feature
+3. Workers execute in parallel (respecting dependencies)
+4. Findings tracked in Beads automatically
+5. Merge Queue handles concurrent commits
+
+**Example Use Case**: Workflow Configuration Audits
+```bash
+# Create formula for auditing all 60 workflows
+bd work specs/workflow-audit-suite.yaml
+
+# Coordinator distributes 8 audit types to Workers:
+# - Scoring rules validation
+# - Required properties check
+# - API endpoint health
+# - OAuth provider coverage
+# - User input field quality
+# - Error message helpfulness
+# - Schema consistency
+# - Field mapping completeness
+
+# Workers run audits in parallel, create Beads issues for findings
+```
+
+**Current Scale**: Comfortable at 2-4 concurrent workers (Phase 1). Designed to scale to 10-30 workers (Phase 2-3).
+
+**Documentation**:
+- Implementation: `packages/harness/GASTOWN_IMPLEMENTATION.md`
+- Evaluation: `docs/GASTOWN_EVALUATION.md`
+- Molecular workflows: `packages/harness/MOLECULAR_WORKFLOWS.md`
+
 ## Workflow Developer Capabilities
 
 **The Honest Truth**: Workflows are TypeScript-based, but with Cloudflare Workers runtime constraints.

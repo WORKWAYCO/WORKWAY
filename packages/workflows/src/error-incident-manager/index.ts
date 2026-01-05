@@ -62,7 +62,7 @@ export default defineWorkflow({
 			autoResolve: { value: true }, // Auto-close Notion page when Sentry resolves
 		},
 
-		essentialFields: ['notionDatabase', 'slackChannel'],
+		essentialFields: ['notion_database', 'slack_channel'],
 
 		zuhandenheit: {
 			timeToValue: 2, // Immediate value after setup
@@ -84,33 +84,33 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['send_messages'], optional: true },
 	],
 
-	inputs: {
-		notionDatabase: {
+	config: {
+		notion_database: {
 			type: 'text',
 			label: 'Incident Database',
 			required: true,
 			description: 'Notion database where incident pages will be created',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Alert Channel',
 			required: false,
 			description: 'Slack channel for incident alerts (optional)',
 		},
-		severityFilter: {
+		severity_filter: {
 			type: 'select',
 			label: 'Minimum Severity',
 			options: ['debug', 'info', 'warning', 'error', 'fatal'],
 			default: 'error',
 			description: 'Only create incidents for issues at this level or higher',
 		},
-		autoResolve: {
+		auto_resolve: {
 			type: 'boolean',
 			label: 'Auto-resolve Incidents',
 			default: true,
 			description: 'Automatically update Notion page when issue is resolved in Sentry',
 		},
-		includeStackTrace: {
+		include_stack_trace: {
 			type: 'boolean',
 			label: 'Include Stack Trace',
 			default: true,

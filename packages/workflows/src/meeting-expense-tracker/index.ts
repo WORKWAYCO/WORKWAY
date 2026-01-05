@@ -65,6 +65,8 @@ export default defineWorkflow({
 
 		essentialFields: [],
 
+		requiredProperties: ['invoice_number', 'invoice_amount', 'invoice_date', 'payment_status', 'customer_email'],
+
 		zuhandenheit: {
 			timeToValue: 3,
 			worksOutOfBox: true,
@@ -86,9 +88,9 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_databases', 'write_databases'], optional: true },
 	],
 
-	inputs: {
+	config: {
 		// Billing settings
-		defaultHourlyRate: {
+		default_hourly_rate: {
 			type: 'number',
 			label: 'Default Hourly Rate',
 			default: 150,
@@ -101,13 +103,13 @@ export default defineWorkflow({
 			default: 'usd',
 			description: 'Billing currency',
 		},
-		roundUpMinutes: {
+		round_up_minutes: {
 			type: 'number',
 			label: 'Round Up To',
 			default: 15,
 			description: 'Round meeting duration up to nearest N minutes',
 		},
-		minimumMinutes: {
+		minimum_minutes: {
 			type: 'number',
 			label: 'Minimum Billable',
 			default: 15,
@@ -115,14 +117,14 @@ export default defineWorkflow({
 		},
 
 		// Client matching
-		clientMatchingMode: {
+		client_matching_mode: {
 			type: 'select',
 			label: 'Client Matching',
 			options: ['email_domain', 'meeting_title', 'manual_mapping'],
 			default: 'email_domain',
 			description: 'How to match meetings to Stripe customers',
 		},
-		clientMapping: {
+		client_mapping: {
 			type: 'json',
 			label: 'Client Mapping',
 			default: '{}',
@@ -130,19 +132,19 @@ export default defineWorkflow({
 		},
 
 		// Invoice settings
-		createDraftInvoice: {
+		create_draft_invoice: {
 			type: 'boolean',
 			label: 'Create Draft Invoice',
 			default: true,
 			description: 'Create invoice if none exists (vs add to existing)',
 		},
-		autoFinalizeInvoice: {
+		auto_finalize_invoice: {
 			type: 'boolean',
 			label: 'Auto-Finalize',
 			default: false,
 			description: 'Automatically finalize and send invoices',
 		},
-		invoicePrefix: {
+		invoice_prefix: {
 			type: 'text',
 			label: 'Invoice Description Prefix',
 			default: 'Meeting: ',
@@ -150,19 +152,19 @@ export default defineWorkflow({
 		},
 
 		// Filtering
-		billableKeywords: {
+		billable_keywords: {
 			type: 'text',
 			label: 'Billable Keywords',
 			default: 'client, consulting, coaching, session',
 			description: 'Meeting titles containing these are billable',
 		},
-		excludeInternalMeetings: {
+		exclude_internal_meetings: {
 			type: 'boolean',
 			label: 'Exclude Internal',
 			default: true,
 			description: 'Skip meetings with only internal attendees',
 		},
-		internalDomains: {
+		internal_domains: {
 			type: 'text',
 			label: 'Internal Domains',
 			default: '',
@@ -170,7 +172,7 @@ export default defineWorkflow({
 		},
 
 		// Notion tracking
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Time Tracking Database',
 			required: false,
@@ -178,7 +180,7 @@ export default defineWorkflow({
 		},
 
 		// Sync settings
-		lookbackDays: {
+		lookback_days: {
 			type: 'number',
 			label: 'Lookback Days',
 			default: 1,

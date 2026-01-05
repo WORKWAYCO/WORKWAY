@@ -67,7 +67,7 @@ export default defineWorkflow({
 			announceInSlack: { value: true },
 		},
 
-		essentialFields: ['notionDatabaseId'],
+		essentialFields: ['notion_database_id'],
 
 		zuhandenheit: {
 			timeToValue: 60, // First sync within an hour
@@ -90,20 +90,20 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['chat:write', 'channels:read'], optional: true },
 	],
 
-	inputs: {
-		notionDatabaseId: {
+	config: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Portfolio Database',
 			required: true,
 			description: 'Notion database for your design portfolio',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Announcement Channel',
 			required: false,
 			description: 'Optional: Channel to announce new shots',
 		},
-		syncLimit: {
+		sync_limit: {
 			type: 'number',
 			label: 'Shots to Sync',
 			default: 12,
@@ -111,19 +111,19 @@ export default defineWorkflow({
 			max: 100,
 			description: 'Maximum number of recent shots to sync',
 		},
-		includeAnimated: {
+		include_animated: {
 			type: 'boolean',
 			label: 'Include Animated',
 			default: true,
 			description: 'Include animated shots (GIFs/videos)',
 		},
-		tagFilter: {
+		tag_filter: {
 			type: 'text',
 			label: 'Tag Filter',
 			required: false,
 			description: 'Only sync shots with this tag (leave empty for all)',
 		},
-		notifyNewOnly: {
+		notify_new_only: {
 			type: 'boolean',
 			label: 'Notify New Shots Only',
 			default: true,

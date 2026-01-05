@@ -135,7 +135,7 @@ export default defineWorkflow({
 			analysisDepth: { value: 'standard' },
 		},
 
-		essentialFields: ['zoomConnectionId'],
+		essentialFields: ['zoom_connection_id'],
 
 		zuhandenheit: {
 			timeToValue: 5, // Minutes, not seconds - be honest
@@ -156,8 +156,8 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
 	],
 
-	inputs: {
-		zoomConnectionId: {
+	config: {
+		zoom_connection_id: {
 			type: 'string',
 			label: 'Zoom Connection ID',
 			required: true,
@@ -167,21 +167,21 @@ export default defineWorkflow({
 		// Database is hardcoded to Internal LLM for @halfdozen.co users
 		// notionDatabaseId removed - all data goes to central hub
 
-		lookbackDays: {
+		lookback_days: {
 			type: 'number',
 			label: 'Days to Look Back',
 			default: 1,
 			description: 'How many days of meetings to include',
 		},
 
-		enableAI: {
+		enable_a_i: {
 			type: 'boolean',
 			label: 'AI Analysis',
 			default: true,
 			description: 'Extract action items, decisions, and key topics',
 		},
 
-		analysisDepth: {
+		analysis_depth: {
 			type: 'select',
 			label: 'Analysis Depth',
 			options: ['brief', 'standard', 'detailed'],

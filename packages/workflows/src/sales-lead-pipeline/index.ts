@@ -74,7 +74,7 @@ export default defineWorkflow({
 			followUpDays: { value: 1 },
 		},
 
-		essentialFields: ['typeformId', 'slackChannel'],
+		essentialFields: ['typeform_id', 'slack_channel'],
 
 		zuhandenheit: {
 			timeToValue: 5,
@@ -102,21 +102,21 @@ export default defineWorkflow({
 	// Weniger, aber besser: Only 2 essential fields
 	// Smart defaults handle enableCRM, enableAIScoring, followUpDays
 	// Optional integrations auto-detected from connected services
-	inputs: {
-		typeformId: {
+	config: {
+		typeform_id: {
 			type: 'text',
 			label: 'Lead Capture Form',
 			required: true,
 			description: 'Select the Typeform that captures leads',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Sales Notifications Channel',
 			required: true,
 			description: 'Channel where lead alerts will be posted',
 		},
 		// Optional: Only shown if Todoist connected and user wants to customize
-		todoistProjectId: {
+		todoist_project_id: {
 			type: 'text',
 			label: 'Follow-up Tasks Project',
 			required: false,

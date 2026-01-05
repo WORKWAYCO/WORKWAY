@@ -57,7 +57,7 @@ export default defineWorkflow({
 			urgencyThreshold: { value: 'critical' },
 		},
 
-		essentialFields: ['supportChannel'],
+		essentialFields: ['support_channel'],
 
 		zuhandenheit: {
 			timeToValue: 3,
@@ -78,14 +78,14 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['read_messages', 'send_messages', 'reactions'] },
 	],
 
-	inputs: {
-		supportChannel: {
+	config: {
+		support_channel: {
 			type: 'text',
 			label: 'Support Intake Channel',
 			required: true,
 			description: 'Channel where support requests come in',
 		},
-		routingChannels: {
+		routing_channels: {
 			type: 'object',
 			label: 'Routing Channels',
 			properties: {
@@ -95,7 +95,7 @@ export default defineWorkflow({
 				general: { type: 'text', label: 'General Inquiries' },
 			},
 		},
-		urgencyThreshold: {
+		urgency_threshold: {
 			type: 'select',
 			label: 'Auto-escalate Urgency',
 			options: ['high', 'critical', 'never'],

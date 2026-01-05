@@ -56,7 +56,7 @@ export default defineWorkflow({
 			]},
 		},
 
-		essentialFields: ['standupChannel'],
+		essentialFields: ['standup_channel'],
 
 		zuhandenheit: {
 			timeToValue: 1440, // 24 hours until first standup
@@ -76,19 +76,19 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['write_pages', 'read_databases'] },
 	],
 
-	inputs: {
-		standupChannel: {
+	config: {
+		standup_channel: {
 			type: 'text',
 			label: 'Standup Channel',
 			required: true,
 			description: 'Channel for daily standups',
 		},
-		standupTime: {
+		standup_time: {
 			type: 'time',
 			label: 'Standup Prompt Time',
 			default: '09:00',
 		},
-		summaryTime: {
+		summary_time: {
 			type: 'time',
 			label: 'Summary Post Time',
 			default: '10:00',
@@ -98,12 +98,12 @@ export default defineWorkflow({
 			label: 'Timezone',
 			default: 'America/New_York',
 		},
-		standupDatabase: {
+		standup_database: {
 			type: 'text',
 			label: 'Standup Archive (Notion)',
 			description: 'Optional: Archive standups in Notion',
 		},
-		promptQuestions: {
+		prompt_questions: {
 			type: 'array',
 			label: 'Standup Questions',
 			items: { type: 'string' },
@@ -113,7 +113,7 @@ export default defineWorkflow({
 				"Any blockers or things you need help with?",
 			],
 		},
-		excludeWeekends: {
+		exclude_weekends: {
 			type: 'boolean',
 			label: 'Skip Weekends',
 			default: true,
@@ -244,13 +244,13 @@ export const standupSummary = defineWorkflow({
 		{ service: 'notion', scopes: ['write_pages'] },
 	],
 
-	inputs: {
-		standupChannel: {
+	config: {
+		standup_channel: {
 			type: 'text',
 			label: 'Standup Channel',
 			required: true,
 		},
-		summaryTime: {
+		summary_time: {
 			type: 'time',
 			label: 'Summary Time',
 			default: '10:00',

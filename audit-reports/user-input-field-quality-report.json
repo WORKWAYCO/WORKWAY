@@ -1,0 +1,15 @@
+{
+  "auditType": "user-input-field-quality",
+  "executedAt": "2026-01-05T21:42:41.960Z",
+  "totalWorkflows": 49,
+  "workflowsAudited": 0,
+  "findingsCount": 0,
+  "findings": [],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "autoFixable": 0
+  }
+}

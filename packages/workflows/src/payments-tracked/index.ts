@@ -53,7 +53,7 @@ export default defineWorkflow({
 			currencyFormat: { value: 'symbol' },
 		},
 
-		essentialFields: ['notionDatabaseId'],
+		essentialFields: ['notion_database_id'],
 
 		zuhandenheit: {
 			timeToValue: 2,
@@ -75,20 +75,20 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['write_pages', 'read_databases'] },
 	],
 
-	inputs: {
-		notionDatabaseId: {
+	config: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Notion Database for Payments',
 			required: true,
 			description: 'Select the database where payments will be logged',
 		},
-		includeRefunds: {
+		include_refunds: {
 			type: 'boolean',
 			label: 'Track Refunds',
 			default: true,
 			description: 'Also log refunds to the database',
 		},
-		currencyFormat: {
+		currency_format: {
 			type: 'select',
 			label: 'Currency Display',
 			options: ['symbol', 'code', 'both'],

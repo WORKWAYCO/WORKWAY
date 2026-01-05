@@ -1,0 +1,101 @@
+{
+  "auditType": "error-message-helpfulness",
+  "executedAt": "2026-01-05T21:42:41.961Z",
+  "totalWorkflows": 49,
+  "workflowsAudited": 5,
+  "findingsCount": 5,
+  "findings": [
+    {
+      "workflowId": "invoice-generator",
+      "workflowName": "Invoice Generator",
+      "severity": "medium",
+      "category": "error-message-helpfulness",
+      "issue": "Workflow lacks explicit error handling",
+      "recommendation": "Add failureMessage to critical steps to provide user feedback when things go wrong.",
+      "autoFixable": false,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "error-handling",
+        "missing"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/invoice-generator/index.ts"
+    },
+    {
+      "workflowId": "onboarding",
+      "workflowName": "Onboarding Automation",
+      "severity": "medium",
+      "category": "error-message-helpfulness",
+      "issue": "Workflow lacks explicit error handling",
+      "recommendation": "Add failureMessage to critical steps to provide user feedback when things go wrong.",
+      "autoFixable": false,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "error-handling",
+        "missing"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/onboarding/index.ts"
+    },
+    {
+      "workflowId": "payment-reminders",
+      "workflowName": "Payment Reminder System",
+      "severity": "medium",
+      "category": "error-message-helpfulness",
+      "issue": "Workflow lacks explicit error handling",
+      "recommendation": "Add failureMessage to critical steps to provide user feedback when things go wrong.",
+      "autoFixable": false,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "error-handling",
+        "missing"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-reminders/index.ts"
+    },
+    {
+      "workflowId": "standup-bot",
+      "workflowName": "Standup Reminder Bot",
+      "severity": "medium",
+      "category": "error-message-helpfulness",
+      "issue": "Workflow lacks explicit error handling",
+      "recommendation": "Add failureMessage to critical steps to provide user feedback when things go wrong.",
+      "autoFixable": false,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "error-handling",
+        "missing"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/standup-bot/index.ts"
+    },
+    {
+      "workflowId": "team-digest",
+      "workflowName": "Team Digest Generator",
+      "severity": "medium",
+      "category": "error-message-helpfulness",
+      "issue": "Workflow lacks explicit error handling",
+      "recommendation": "Add failureMessage to critical steps to provide user feedback when things go wrong.",
+      "autoFixable": false,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "error-handling",
+        "missing"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/team-digest/index.ts"
+    }
+  ],
+  "summary": {
+    "critical": 0,
+    "high": 0,
+    "medium": 5,
+    "low": 0,
+    "autoFixable": 0
+  }
+}
