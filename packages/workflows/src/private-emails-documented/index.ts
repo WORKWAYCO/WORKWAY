@@ -85,7 +85,7 @@ function getOrgConfig(config?: Record<string, unknown>) {
 		connectionUrl:
 			(config?.connectionUrl as string) ||
 			(typeof process !== 'undefined' ? process.env.GMAIL_CONNECTION_URL : undefined) ||
-			'https://arc.halfdozen.co', // Default for backwards compatibility
+			'https://arc.workway.co', // Default for backwards compatibility
 	};
 }
 
@@ -893,7 +893,7 @@ export const metadata = {
 	analyticsUrl: 'https://workway.co/workflows/private/private-emails-documented/analytics',
 
 	// Setup URL - initial BYOO connection setup (configurable via GMAIL_CONNECTION_URL env var)
-	setupUrl: 'https://arc.halfdozen.co/setup',
+	setupUrl: 'https://arc.workway.co/setup',
 
 	stats: { rating: 0, users: 0, reviews: 0 },
 };
