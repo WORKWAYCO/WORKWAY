@@ -430,6 +430,11 @@ export async function runSession(
  *
  * We disable hooks in spawned sessions since the harness manages its own
  * workflow through the bd CLI abstraction layer.
+ *
+ * Agent SDK best practices:
+ * - Use --allowedTools instead of --dangerously-skip-permissions
+ * - Limit tools to safe, necessary subset
+ * - Enable max-turns for bounded execution
  */
 async function runClaudeCode(
   prompt: string,
@@ -439,11 +444,16 @@ async function runClaudeCode(
     // Disable hooks to prevent spawned sessions from running bd commands
     const harnessSettings = JSON.stringify({ hooks: {} });
 
+    // Safe tool allowlist for harness execution
+    // Allows: file ops, git, package managers, search - no dangerous operations
+    const allowedTools = 'Read,Write,Edit,Bash(git:*),Bash(pnpm:*),Bash(npm:*),Bash(wrangler:*),Glob,Grep,Task';
+
     const args = [
       '-p',
-      '--dangerously-skip-permissions',
+      '--allowedTools', allowedTools,
       '--output-format', 'json',
       '--settings', harnessSettings,
+      '--max-turns', '50', // Bounded execution
     ];
 
     const child = spawn('claude', args, {

@@ -117,6 +117,31 @@ export {
 } from './scale-manager.js';
 export type { ScaleMetrics } from './scale-manager.js';
 
+// Model Routing (Cost Optimization)
+export {
+  getModelFromConfig,
+  escalateModel,
+  estimateModelCost,
+  calculateCostSavings,
+  formatModelSelection,
+  DEFAULT_MODEL_ROUTING,
+} from './model-routing.js';
+export type { ModelRoutingConfig } from './model-routing.js';
+
+// Reviewer System (Specialized Reviews)
+export {
+  getReviewerModel,
+  escalateReviewer,
+  formatReviewerSelection,
+} from './reviewer.js';
+export type {
+  ReviewerType,
+  FindingSeverity,
+  ReviewFinding,
+  ReviewResult,
+  ReviewerConfig,
+} from './reviewer.js';
+
 // Types
 export type {
   HarnessMode,
