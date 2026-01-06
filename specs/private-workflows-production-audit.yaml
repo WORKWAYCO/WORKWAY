@@ -1,0 +1,93 @@
+title: Private Workflows Production Readiness Audit
+property: cloudflare
+complexity: standard
+
+overview: |
+  Systematic audit and testing of both private workflows (Meeting Intelligence + Gmail to Notion)
+  to ensure production readiness. Includes configuration fixes, endpoint testing, and E2E validation.
+
+features:
+  - title: Fix Gmail workflow URL configuration
+    priority: 0
+    files:
+      - packages/workflows/src/private-emails-documented/index.ts
+    acceptance:
+      - test: URL changed from arc.halfdozen.co to arc.workway.co
+        verify: grep -q "arc.workway.co" packages/workflows/src/private-emails-documented/index.ts
+      - Configuration matches deployed worker domain
+      - Git commit created with fix
+
+  - title: Validate Meeting Intelligence worker endpoints
+    priority: 1
+    depends_on:
+      - Fix Gmail workflow URL configuration
+    acceptance:
+      - test: Health endpoint responds
+        verify: curl -f https://meetings.workway.co/health || curl -I https://meetings.workway.co | grep -q "HTTP/2"
+      - Worker configuration matches workflow expectations
+      - Cron triggers are active
+      - Durable Objects namespace verified
+
+  - title: Validate Gmail worker endpoints
+    priority: 1
+    depends_on:
+      - Fix Gmail workflow URL configuration
+    acceptance:
+      - test: Health endpoint responds
+        verify: curl -f https://arc.workway.co/health || curl -I https://arc.workway.co | grep -q "HTTP/2 200"
+      - Worker configuration matches workflow expectations
+      - Cron triggers are active (every 5 minutes)
+      - KV namespace THREAD_TRACKING exists
+
+  - title: Verify database workflow records
+    priority: 2
+    depends_on:
+      - Validate Meeting Intelligence worker endpoints
+      - Validate Gmail worker endpoints
+    acceptance:
+      - test: Meeting Intelligence workflow exists in DB
+        verify: cd ../../workway-platform/apps/api && wrangler d1 execute marketplace-production --remote --command="SELECT id FROM marketplace_integrations WHERE id='int_meeting_intelligence_workaround'" | grep -q "int_meeting_intelligence_workaround"
+      - test: Gmail workflow exists in DB
+        verify: cd ../../workway-platform/apps/api && wrangler d1 execute marketplace-production --remote --command="SELECT id FROM marketplace_integrations WHERE id='int_gmail_notion_private'" | grep -q "int_gmail_notion_private"
+      - Both workflows have status='published'
+      - Both workflows have visibility='private'
+      - Access grants for @halfdozen.co domain exist
+
+  - title: Code quality and security audit
+    priority: 2
+    files:
+      - packages/workflows/src/private-emails-documented/index.ts
+      - packages/workflows/src/meeting-intelligence-private/index.ts
+    acceptance:
+      - No hardcoded API keys or secrets in code
+      - Error handling present in all async operations
+      - Execution tracking properly implemented
+      - AI integration uses proper error fallbacks
+      - HTML sanitization prevents XSS (Gmail workflow)
+
+  - title: Generate production readiness report
+    priority: 3
+    depends_on:
+      - Fix Gmail workflow URL configuration
+      - Validate Meeting Intelligence worker endpoints
+      - Validate Gmail worker endpoints
+      - Verify database workflow records
+      - Code quality and security audit
+    acceptance:
+      - Markdown report created with all findings
+      - Report includes deployment status for each component
+      - Report includes any blocking issues found
+      - Report includes recommendations for monitoring
+
+requirements:
+  - Both workers must be accessible via HTTPS
+  - Database records must match workflow metadata
+  - No security vulnerabilities in workflow code
+  - Configuration matches deployment reality
+
+success:
+  - Gmail workflow URL configuration fixed
+  - All endpoints respond correctly
+  - Database records validated
+  - No security issues found
+  - Production readiness report generated
