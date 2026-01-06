@@ -1,0 +1,206 @@
+# Harness Configuration
+# Model routing, review policies, and quality gates
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Model Routing
+# ─────────────────────────────────────────────────────────────────────────────
+
+modelRouting:
+  # Default model when no patterns match
+  default: sonnet
+
+  # Complexity-based routing
+  complexity:
+    trivial: haiku    # 1 file, simple changes (~$0.001)
+    simple: sonnet    # 2-5 files, straightforward logic (~$0.01)
+    standard: sonnet  # 5-15 files, moderate complexity (~$0.01)
+    complex: opus     # 15+ files, architectural changes (~$0.10)
+
+  # Pattern matching on issue titles (case-insensitive substring)
+  patterns:
+    # Haiku: Fast, cheap pattern detection
+    haiku:
+      - rename
+      - typo
+      - comment
+      - import
+      - export
+      - lint
+      - format
+      - cleanup
+      - bump
+      - version
+      - update deps
+      - update dependencies
+      - add types
+      - fix types
+
+    # Opus: Deep analysis for complex work
+    opus:
+      - architect
+      - design
+      - refactor
+      - migrate
+      - optimize
+      - performance
+      - security
+      - integration
+      - system
+      - scale
+      - architecture
+      - distributed
+      - concurrency
+
+    # Sonnet: Balanced default for most work
+    sonnet:
+      - add
+      - update
+      - fix
+      - implement
+      - create
+      - remove
+      - delete
+      - improve
+      - enhance
+      - build
+      - feature
+
+  # Model escalation on failure
+  escalation:
+    enabled: true
+    maxRetries: 2
+    escalateTo: opus  # Ultimate fallback
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Review Pipeline
+# ─────────────────────────────────────────────────────────────────────────────
+
+reviewers:
+  # Security Reviewer: Pattern detection for vulnerabilities
+  security:
+    model: haiku  # Fast pattern scanning (~$0.001)
+    enabled: true
+    confidence: 0.7  # Threshold for blocking findings
+
+  # Architecture Reviewer: Deep DRY violation analysis
+  architecture:
+    model: opus  # Full harness diff analysis (~$0.10)
+    enabled: true
+    confidence: 0.8
+    criticalThreshold: 3  # Flag if same pattern in 3+ files
+
+  # Quality Reviewer: Balanced review of conventions
+  quality:
+    model: sonnet  # Balanced assessment (~$0.01)
+    enabled: true
+    confidence: 0.75
+
+  # Custom Reviewer: User-defined review logic
+  custom:
+    model: sonnet
+    enabled: false
+
+# Checkpoint review policy
+checkpointReview:
+  enabled: true
+  triggers:
+    afterSessions: 3      # Review every 3 sessions
+    afterHours: 4         # Review every 4 hours
+    onFailure: true       # Review on task failure
+    onRedirect: true      # Review when human redirects
+  parallelReviews: true   # Run reviewers in parallel
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Quality Gates
+# ─────────────────────────────────────────────────────────────────────────────
+
+qualityGates:
+  # Self-healing baseline
+  baseline:
+    enabled: true
+    gates:
+      tests: true
+      typecheck: true
+      lint: true
+      build: false  # Expensive, skip by default
+    autoFix: true
+    createBlockers: true  # Create Beads issues for failures
+    maxAutoFixAttempts: 1
+    gateTimeoutMs: 300000  # 5 minutes
+
+  # Two-stage completion
+  completion:
+    requireCodeComplete: true   # Tests must pass
+    requireVerified: true       # E2E must pass
+    requireCommit: true         # Commit hash required
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Gas Town Integration
+# ─────────────────────────────────────────────────────────────────────────────
+
+gastown:
+  # Map Beads labels to Gas Town quality levels
+  qualityMapping:
+    model:haiku: basic      # ~$0.001
+    complexity:trivial: basic
+    model:sonnet: shiny     # ~$0.01
+    complexity:simple: shiny
+    complexity:standard: shiny
+    model:opus: chrome      # ~$0.10
+    complexity:complex: chrome
+
+  # Coordination settings
+  coordination:
+    maxConcurrentWorkers: 4     # Phase 1 scale
+    workerTimeout: 3600000      # 1 hour
+    coordinatorCheckInterval: 30000  # 30 seconds
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Session Management
+# ─────────────────────────────────────────────────────────────────────────────
+
+session:
+  # One feature per session (scope guard)
+  enforceSingleFeature: true
+
+  # Daemon coordination
+  stopDaemonOnStart: true
+  restartDaemonOnEnd: true
+
+  # Failure handling
+  maxRetries: 2
+  pauseAfterConsecutiveFailures: 3
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Beads Integration
+# ─────────────────────────────────────────────────────────────────────────────
+
+beads:
+  # Label taxonomy
+  labels:
+    harness: harness          # All harness-created issues
+    blocker: harness:blocker  # Blocks current work
+    related: harness:related  # Related work discovered
+    supervisor: harness:supervisor  # Checkpoint review finding
+    selfHeal: harness:self-heal     # Baseline fix needed
+
+  # Discovered work priority boost
+  priorityBoost:
+    blocker: 1  # +1 priority level (P2 → P1)
+    related: 0
+    supervisor: 0
+    selfHeal: 0
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Monitoring & Metrics
+# ─────────────────────────────────────────────────────────────────────────────
+
+monitoring:
+  # Track model usage and costs
+  trackModelCosts: true
+
+  # Report cost savings from routing
+  reportSavings: true
+
+  # Log model selection reasoning
+  logModelSelection: true
