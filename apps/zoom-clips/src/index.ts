@@ -499,7 +499,7 @@ export default {
           'GET /clips/:userId?days=N': 'List clips from clips library',
           'GET /meeting-transcript/:userId?index=N': 'Get transcript for meeting',
           'POST /transcript/:userId': 'Extract transcript from Zoom URL',
-          'POST /sync/:userId?days=N': 'Trigger sync of clips and meetings',
+          'POST /sync/:userId?days=N&writeToNotion=true': 'Trigger sync of clips and meetings (optionally write to Notion)',
         },
         sessionMaintenance: 'automatic',
       });
@@ -636,7 +636,8 @@ export class ZoomSessionManager {
 
       if (path === '/sync' && request.method === 'POST') {
         const days = parseInt(url.searchParams.get('days') || '7');
-        return this.runSync(days);
+        const writeToNotion = url.searchParams.get('writeToNotion') === 'true';
+        return this.runSync(days, writeToNotion);
       }
 
       if (path === '/disconnect' && request.method === 'POST') {
@@ -1657,8 +1658,11 @@ export class ZoomSessionManager {
    *
    * Fetches clips and meetings, logs the execution, and returns results.
    * This endpoint is called by the WORKWAY platform to trigger syncs.
+   *
+   * @param days - Number of days to look back for clips/meetings
+   * @param writeToNotion - If true, triggers Notion workflow after fetching data
    */
-  private async runSync(days: number = 7): Promise<Response> {
+  private async runSync(days: number = 7, writeToNotion: boolean = false): Promise<Response> {
     const startTime = Date.now();
 
     // Validate cookies exist
@@ -1725,14 +1729,30 @@ export class ZoomSessionManager {
 
       console.log(`[Sync] Complete: ${clipsData.clips?.length || 0} clips, ${meetingsData.meetings?.length || 0} meetings in ${duration}ms`);
 
+      // NEW: Trigger Notion workflow if requested
+      let notionResult = null;
+      if (writeToNotion) {
+        console.log('[Sync] Triggering Notion workflow...');
+        const userId = await this.state.storage.get<string>('userId') || 'unknown';
+        notionResult = await this.triggerNotionWorkflow(
+          userId,
+          clipsData.clips || [],
+          meetingsData.meetings || []
+        );
+        console.log(`[Sync] Notion result: ${notionResult.written} written, ${notionResult.failed} failed`);
+      }
+
       return Response.json({
         success: true,
-        message: `Synced ${clipsData.clips?.length || 0} clips and ${meetingsData.meetings?.length || 0} meetings`,
+        message: writeToNotion
+          ? `Synced ${clipsData.clips?.length || 0} clips and ${meetingsData.meetings?.length || 0} meetings to Notion`
+          : `Synced ${clipsData.clips?.length || 0} clips and ${meetingsData.meetings?.length || 0} meetings`,
         data: {
           clips: clipsData.clips || [],
           meetings: meetingsData.meetings || [],
           daysSearched: days,
           durationMs: duration,
+          ...(notionResult && { notion: notionResult })
         },
       });
 
@@ -1754,6 +1774,59 @@ export class ZoomSessionManager {
         success: false,
         error: error.message || 'Sync failed',
       }, { status: 500 });
+    }
+  }
+
+  /**
+   * Trigger Notion sync workflow with pre-fetched data
+   * Called when writeToNotion=true query parameter is provided
+   * @private
+   */
+  private async triggerNotionWorkflow(
+    userId: string,
+    clips: any[],
+    meetings: any[]
+  ): Promise<{ written: number; skipped: number; failed: number }> {
+    try {
+      // Note: For this private workflow, we call the workflow execution directly
+      // The workflow is deployed as a Cloudflare Worker and handles its own execution
+      const workflowUrl = `https://api.workway.co/workflows/trigger`;
+
+      const response = await fetch(workflowUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.env.ZOOM_API_SECRET || ''}`,
+        },
+        body: JSON.stringify({
+          installationId: userId, // For private workflows, userId serves as installation ID
+          triggerData: {
+            type: 'manual',
+            data: {
+              clips,
+              meetings,
+            }
+          }
+        })
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Worker] Failed to trigger workflow:', errorText);
+        return { written: 0, skipped: 0, failed: clips.length + meetings.length };
+      }
+
+      const result = await response.json() as any;
+
+      // Return simplified stats
+      return {
+        written: result.synced || 0,
+        skipped: 0,
+        failed: 0,
+      };
+    } catch (error: any) {
+      console.error('[Worker] Error triggering Notion workflow:', error);
+      return { written: 0, skipped: 0, failed: clips.length + meetings.length };
     }
   }
 

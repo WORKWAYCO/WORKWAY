@@ -118,8 +118,8 @@ async function syncWorkflow() {
   message.textContent = '';
 
   try {
-    // Call the workflow sync endpoint
-    const response = await fetch(`https://meetings.workway.co/sync/${userId}?days=${days}`, {
+    // Call the workflow sync endpoint with Notion write enabled
+    const response = await fetch(`https://meetings.workway.co/sync/${userId}?days=${days}&writeToNotion=true`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
@@ -131,7 +131,14 @@ async function syncWorkflow() {
     if (result.success) {
       const clipCount = result.data?.clips?.length || 0;
       const meetingCount = result.data?.meetings?.length || 0;
-      message.innerHTML = `<span style="color: #10b981;">✓ Synced ${clipCount} clips, ${meetingCount} meetings</span>`;
+      const notionWritten = result.data?.notion?.written || 0;
+
+      // Show enhanced message if Notion write succeeded
+      if (notionWritten > 0) {
+        message.innerHTML = `<span style="color: #10b981;">✓ Synced ${clipCount} clips, ${meetingCount} meetings → ${notionWritten} written to Notion</span>`;
+      } else {
+        message.innerHTML = `<span style="color: #10b981;">✓ Synced ${clipCount} clips, ${meetingCount} meetings</span>`;
+      }
     } else {
       message.innerHTML = `<span style="color: #ef4444;">${result.message || 'Sync failed'}</span>`;
     }
