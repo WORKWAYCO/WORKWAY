@@ -26,8 +26,11 @@ function setupEventListeners() {
   // Save User ID button
   document.getElementById('saveButton').addEventListener('click', saveUserId);
 
-  // Sync Now button
-  document.getElementById('syncButton').addEventListener('click', syncNow);
+  // Sync Cookies button
+  document.getElementById('syncButton').addEventListener('click', syncCookies);
+
+  // Sync Workflow button (new - triggers full Zoom → Notion sync)
+  document.getElementById('syncWorkflowButton').addEventListener('click', syncWorkflow);
 
   // Save on Enter key in userId field
   document.getElementById('userId').addEventListener('keypress', (e) => {
@@ -60,8 +63,8 @@ async function saveUserId() {
   }
 }
 
-// Sync cookies now
-async function syncNow() {
+// Sync cookies only (browser → worker)
+async function syncCookies() {
   const button = document.getElementById('syncButton');
   const message = document.getElementById('message');
   const userId = document.getElementById('userId').value.trim();
@@ -93,7 +96,50 @@ async function syncNow() {
     message.innerHTML = `<span style="color: #ef4444;">${error.message}</span>`;
   } finally {
     button.disabled = false;
-    button.textContent = 'Sync Now';
+    button.textContent = 'Sync Cookies Only';
+  }
+}
+
+// Sync full workflow (Zoom → Notion)
+async function syncWorkflow() {
+  const button = document.getElementById('syncWorkflowButton');
+  const message = document.getElementById('message');
+  const userId = document.getElementById('userId').value.trim();
+  const days = parseInt(document.getElementById('syncDays').value) || 7;
+
+  if (!userId) {
+    message.innerHTML = '<span style="color: #f59e0b;">Please set User ID first</span>';
+    return;
+  }
+
+  // Disable button and show loading
+  button.disabled = true;
+  button.textContent = 'Syncing...';
+  message.textContent = '';
+
+  try {
+    // Call the workflow sync endpoint
+    const response = await fetch(`https://meetings.workway.co/sync/${userId}?days=${days}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    const result = await response.json();
+
+    if (result.success) {
+      const clipCount = result.data?.clips?.length || 0;
+      const meetingCount = result.data?.meetings?.length || 0;
+      message.innerHTML = `<span style="color: #10b981;">✓ Synced ${clipCount} clips, ${meetingCount} meetings</span>`;
+    } else {
+      message.innerHTML = `<span style="color: #ef4444;">${result.message || 'Sync failed'}</span>`;
+    }
+  } catch (error) {
+    message.innerHTML = `<span style="color: #ef4444;">${error.message}</span>`;
+  } finally {
+    button.disabled = false;
+    button.textContent = 'Sync Meetings & Clips';
   }
 }
 

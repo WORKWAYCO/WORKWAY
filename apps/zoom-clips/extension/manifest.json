@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "WORKWAY Zoom Sync",
-  "version": "2.0.0",
-  "description": "Sync Zoom cookies for Meeting Intelligence workflows.",
+  "version": "2.1.0",
+  "description": "Sync Zoom meetings and clips to Notion with one click.",
   "permissions": [
     "cookies",
     "alarms",
