@@ -490,6 +490,7 @@ export default {
         service: 'zoom-clips',
         description: 'Zoom transcript extraction',
         endpoints: {
+          'GET /health': 'Service health check (unauthenticated)',
           'GET /setup/:userId': 'Setup instructions',
           'GET /health/:userId': 'Check session status',
           'GET /dashboard-data/:userId': 'Dashboard data',
@@ -501,6 +502,18 @@ export default {
           'POST /sync/:userId?days=N': 'Trigger sync of clips and meetings',
         },
         sessionMaintenance: 'automatic',
+      });
+    }
+
+    // Route: GET /health - Standard health check (no authentication required)
+    if (path === '/health' && request.method === 'GET') {
+      return Response.json({
+        status: 'healthy',
+        service: 'zoom-clips',
+        timestamp: Date.now(),
+        version: '2.0.0',
+      }, {
+        headers: getCorsHeaders(request),
       });
     }
 
