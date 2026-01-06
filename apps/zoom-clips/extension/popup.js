@@ -105,7 +105,7 @@ async function syncWorkflow() {
   const button = document.getElementById('syncWorkflowButton');
   const message = document.getElementById('message');
   const userId = document.getElementById('userId').value.trim();
-  const days = parseInt(document.getElementById('syncDays').value) || 7;
+  const days = parseInt(document.getElementById('syncDays').value) || 1;
 
   if (!userId) {
     message.innerHTML = '<span style="color: #f59e0b;">Please set User ID first</span>';
