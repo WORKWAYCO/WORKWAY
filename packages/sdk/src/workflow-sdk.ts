@@ -646,6 +646,40 @@ export interface WorkflowDefinition<TConfig = any, TInputs = Record<string, any>
 		}
 	>;
 
+	/**
+	 * User-configurable fields (legacy pattern for backward compatibility)
+	 * 
+	 * @deprecated Use 'inputs' for new workflows. This property exists for backward
+	 * compatibility with existing workflows that use the 'config' pattern.
+	 * 
+	 * The structure is identical to 'inputs'. In future releases, all workflows
+	 * should migrate to using 'inputs' instead.
+	 */
+	config?: Record<
+		string,
+		{
+			type: string;
+			label: string;
+			required?: boolean;
+			default?: any;
+			description?: string;
+			options?: string[] | Array<{ label: string; value: string }>;
+			// Extended input properties for complex field types
+			/** Items for array/list inputs */
+			items?: { type: string };
+			/** Minimum value for number inputs */
+			min?: number;
+			/** Maximum value for number inputs */
+			max?: number;
+			/** Allow multiple selections */
+			multiple?: boolean;
+			/** Nested properties for object inputs */
+			properties?: Record<string, { type: string; label?: string; default?: any }>;
+			/** Placeholder text */
+			placeholder?: string;
+		}
+	>;
+
 	/** Trigger configuration - use webhook(), schedule(), manual(), or poll() helpers */
 	trigger: Trigger;
 
@@ -1079,6 +1113,33 @@ export interface PathwayMetadata {
 
 	/** Essential fields - the 1-3 fields users MUST configure */
 	essentialFields: string[];
+
+	/**
+	 * Required OAuth properties for workflow execution
+	 * 
+	 * Used by the scoring system to rank workflows based on available OAuth properties.
+	 * Can be specified as simple string array or objects with weights.
+	 * 
+	 * @example Simple array (most common):
+	 * ```typescript
+	 * requiredProperties: ['customer_email', 'invoice_amount', 'due_date']
+	 * ```
+	 * 
+	 * @example With weights (advanced):
+	 * ```typescript
+	 * requiredProperties: [
+	 *   { property: 'customer_email', weight: 0.4 },
+	 *   { property: 'invoice_amount', weight: 0.3 },
+	 *   { property: 'due_date', weight: 0.3 }
+	 * ]
+	 * ```
+	 */
+	requiredProperties?: string[] | Array<{
+		/** OAuth property name (e.g., 'customer_email', 'invoice_amount') */
+		property: string;
+		/** Importance weight (0-1, should sum to ~1.0 across all properties) */
+		weight: number;
+	}>;
 
 	/** Zuhandenheit indicators */
 	zuhandenheit: {
