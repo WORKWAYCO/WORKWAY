@@ -1,6 +1,6 @@
 {
   "auditType": "schema-consistency",
-  "executedAt": "2026-01-05T21:42:41.978Z",
+  "executedAt": "2026-01-07T19:49:02.821Z",
   "totalWorkflows": 49,
   "workflowsAudited": 22,
   "findingsCount": 24,
