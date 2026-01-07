@@ -131,8 +131,16 @@ export type { ModelRoutingConfig } from './model-routing.js';
 // Reviewer System (Specialized Reviews)
 export {
   getReviewerModel,
-  escalateReviewer,
-  formatReviewerSelection,
+  getReviewerFocusAreas,
+  estimateReviewCost,
+  calculateReviewPipelineCost,
+  calculateReviewerSavings,
+  formatReviewer,
+  isBlockingFinding,
+  getBlockingFindings,
+  groupFindingsByFile,
+  formatFindings,
+  DEFAULT_REVIEWER_CONFIG,
 } from './reviewer.js';
 export type {
   ReviewerType,
@@ -145,6 +153,7 @@ export type {
 // Types
 export type {
   HarnessMode,
+  HarnessModeConfig,
   Feature,
   ParsedSpec,
   HarnessStatus,
@@ -184,4 +193,4 @@ export type {
   ScaleConfig,
 } from './types.js';
 
-export { DEFAULT_CHECKPOINT_POLICY, DEFAULT_HOOK_CONFIG, DEFAULT_MOLECULE_CONFIG, DEFAULT_SCALE_CONFIG } from './types.js';
+export { DEFAULT_CHECKPOINT_POLICY, DEFAULT_HOOK_CONFIG, DEFAULT_MOLECULE_CONFIG, DEFAULT_SCALE_CONFIG, DEFAULT_MODE_CONFIGS } from './types.js';

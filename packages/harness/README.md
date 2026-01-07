@@ -103,6 +103,7 @@ Optimized for building WORKWAY marketplace workflows:
 - Primes agent with `defineWorkflow()` patterns
 - Expects `workway test` for validation
 - Follows Zuhandenheit principles
+- **Tool restrictions** (Claude Code 2.1.0+): `read_file`, `write`, `grep`, `run_terminal_cmd`, `web_search`, `codebase_search`
 
 ### Platform Mode
 
@@ -110,6 +111,7 @@ Optimized for developing WORKWAY platform:
 - Primes agent with package conventions
 - TypeScript compilation checks
 - Test suite execution
+- **Tool restrictions** (Claude Code 2.1.0+): `read_file`, `write`, `grep`, `run_terminal_cmd`, `web_search`, `codebase_search`, `read_lints`, `list_dir`, `glob_file_search`
 
 ## Architecture
 
@@ -178,6 +180,42 @@ When detected, the harness adapts its execution plan.
 
 **Zuhandenheit**: The harness recedes into transparent operation. Humans engage through progress reports—reactive steering rather than proactive management.
 
-**Bounded Attention**: Each session gets focused priming context with only relevant information.
+**Bounded Attention**: Each session gets focused priming context with only relevant information. Claude Code 2.1.0+ tool restrictions enforce this at the tool level.
 
 **Graceful Degradation**: Pause on low confidence rather than making poor decisions.
+
+## Claude Code 2.1.0 Integration
+
+The harness integrates Claude Code 2.1.0 features for improved performance and reliability:
+
+### Tool Restrictions
+
+Mode-specific tool access using the `--tools` flag:
+
+```typescript
+import { DEFAULT_MODE_CONFIGS } from '@workwayco/harness';
+
+// Workflow mode: Limited tools
+const workflowConfig = DEFAULT_MODE_CONFIGS.workflow;
+
+// Platform mode: Full tools
+const platformConfig = DEFAULT_MODE_CONFIGS.platform;
+```
+
+### Skills Integration
+
+Three skills available in `.claude/skills/`:
+
+1. **BEADS Sync** (`/beads-sync`) - Sync work with issue tracking
+2. **Harness Checkpoint** (`/harness-checkpoint`) - Automatic checkpoint monitoring
+3. **Polecat Worker** (`/polecat-worker`) - Forked context worker execution
+
+### Forked Workers (Prototype)
+
+Lightweight worker execution using forked sub-agent contexts:
+
+- **10-20x faster startup** (100-200ms vs 2-3s)
+- **4x less memory** (50MB vs 200MB)
+- **Better coordination** (direct skill invocation)
+
+See [Claude Code 2.1.0 Integration Guide](../../docs/CLAUDE_CODE_2.1.0_INTEGRATION.md) for details.

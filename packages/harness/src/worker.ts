@@ -15,12 +15,15 @@ import type {
   BeadsIssue,
   PrimingContext,
   SessionResult,
+  HarnessMode,
+  HarnessModeConfig,
 } from './types.js';
 import {
   runSession,
   getRecentCommits,
   discoverDryContext,
 } from './session.js';
+import { DEFAULT_MODE_CONFIGS } from './types.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Worker State
@@ -68,8 +71,10 @@ export class Worker {
   private state: WorkerState;
   private cwd: string;
   private dryRun: boolean;
+  private mode?: HarnessMode;
+  private modeConfig?: HarnessModeConfig;
 
-  constructor(id: string, cwd: string, dryRun = false) {
+  constructor(id: string, cwd: string, dryRun = false, mode?: HarnessMode, modeConfig?: HarnessModeConfig) {
     this.state = {
       id,
       status: 'idle',
@@ -80,6 +85,8 @@ export class Worker {
     };
     this.cwd = cwd;
     this.dryRun = dryRun;
+    this.mode = mode;
+    this.modeConfig = modeConfig || (mode ? DEFAULT_MODE_CONFIGS[mode] : undefined);
   }
 
   /**
@@ -143,11 +150,16 @@ export class Worker {
         ],
       };
 
-      // Execute session
+      // Execute session with mode config
       const sessionResult = await runSession(
         issue,
         enhancedContext,
-        { cwd: this.cwd, dryRun: this.dryRun }
+        { 
+          cwd: this.cwd, 
+          dryRun: this.dryRun,
+          mode: this.mode,
+          modeConfig: this.modeConfig,
+        }
       );
 
       // Update worker state
@@ -217,18 +229,22 @@ export class WorkerPool {
   private workers: Map<string, Worker>;
   private cwd: string;
   private dryRun: boolean;
+  private mode?: HarnessMode;
+  private modeConfig?: HarnessModeConfig;
 
-  constructor(cwd: string, dryRun = false) {
+  constructor(cwd: string, dryRun = false, mode?: HarnessMode, modeConfig?: HarnessModeConfig) {
     this.workers = new Map();
     this.cwd = cwd;
     this.dryRun = dryRun;
+    this.mode = mode;
+    this.modeConfig = modeConfig;
   }
 
   /**
    * Add a worker to the pool.
    */
   addWorker(id: string): Worker {
-    const worker = new Worker(id, this.cwd, this.dryRun);
+    const worker = new Worker(id, this.cwd, this.dryRun, this.mode, this.modeConfig);
     this.workers.set(id, worker);
     return worker;
   }

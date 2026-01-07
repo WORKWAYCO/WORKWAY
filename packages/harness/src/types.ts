@@ -32,6 +32,51 @@ export interface BeadsIssue {
 
 export type HarnessMode = 'workflow' | 'platform';
 
+/**
+ * Mode-specific configuration for harness execution.
+ * Includes tool restrictions for bounded attention.
+ */
+export interface HarnessModeConfig {
+  /** Mode name */
+  mode: HarnessMode;
+  /** Allowed Claude Code tools (for --tools flag) */
+  allowedTools?: string[];
+  /** Mode-specific priming context */
+  primingContext?: string;
+}
+
+/**
+ * Default tool configurations for each mode.
+ * Claude Code 2.1.0+ supports --tools flag for tool restriction.
+ */
+export const DEFAULT_MODE_CONFIGS: Record<HarnessMode, HarnessModeConfig> = {
+  workflow: {
+    mode: 'workflow',
+    allowedTools: [
+      'read_file',
+      'write',
+      'grep',
+      'run_terminal_cmd',
+      'web_search',
+      'codebase_search',
+    ],
+  },
+  platform: {
+    mode: 'platform',
+    allowedTools: [
+      'read_file',
+      'write',
+      'grep',
+      'run_terminal_cmd',
+      'web_search',
+      'codebase_search',
+      'read_lints',
+      'list_dir',
+      'glob_file_search',
+    ],
+  },
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Spec & Features
 // ─────────────────────────────────────────────────────────────────────────────

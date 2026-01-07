@@ -16,7 +16,9 @@ import type {
   SessionOutcome,
   HarnessMode,
   Checkpoint,
+  HarnessModeConfig,
 } from './types.js';
+import { DEFAULT_MODE_CONFIGS } from './types.js';
 
 const execAsync = promisify(exec);
 
@@ -354,7 +356,7 @@ export function generatePrimingPrompt(context: PrimingContext): string {
 export async function runSession(
   issue: BeadsIssue,
   context: PrimingContext,
-  options: { cwd: string; dryRun?: boolean }
+  options: { cwd: string; dryRun?: boolean; mode?: HarnessMode; modeConfig?: HarnessModeConfig }
 ): Promise<SessionResult> {
 
   const startTime = Date.now();
@@ -386,9 +388,12 @@ export async function runSession(
     const promptFile = join(promptDir, 'current-prompt.md');
     await writeFile(promptFile, prompt);
 
+    // Get mode config (use provided or default)
+    const modeConfig = options.modeConfig || (options.mode ? DEFAULT_MODE_CONFIGS[options.mode] : undefined);
+
     // Spawn Claude Code with the prompt
     // Using -p flag to pass prompt, --dangerously-skip-permissions for automation
-    const result = await runClaudeCode(prompt, options.cwd);
+    const result = await runClaudeCode(prompt, options.cwd, modeConfig);
 
     // Log session output for debugging
     const sessionLog = join(promptDir, `session-${issue.id}-${Date.now()}.log`);
@@ -438,23 +443,33 @@ export async function runSession(
  */
 async function runClaudeCode(
   prompt: string,
-  cwd: string
+  cwd: string,
+  modeConfig?: HarnessModeConfig
 ): Promise<{ output: string; exitCode: number; contextUsed: number }> {
   return new Promise((resolve) => {
     // Disable hooks to prevent spawned sessions from running bd commands
     const harnessSettings = JSON.stringify({ hooks: {} });
 
-    // Safe tool allowlist for harness execution
-    // Allows: file ops, git, package managers, search - no dangerous operations
-    const allowedTools = 'Read,Write,Edit,Bash(git:*),Bash(pnpm:*),Bash(npm:*),Bash(wrangler:*),Glob,Grep,Task';
+    // Build args array
+    const args: string[] = ['-p'];
 
-    const args = [
-      '-p',
-      '--allowedTools', allowedTools,
+    // Claude Code 2.1.0+: Use --tools flag for mode-specific tool restrictions
+    // This provides better bounded attention than --allowedTools
+    if (modeConfig?.allowedTools && modeConfig.allowedTools.length > 0) {
+      args.push('--tools', modeConfig.allowedTools.join(','));
+      console.log(`   [Session] Tool restrictions: ${modeConfig.allowedTools.join(', ')}`);
+    } else {
+      // Fallback: Safe tool allowlist for harness execution
+      // Allows: file ops, git, package managers, search - no dangerous operations
+      const allowedTools = 'Read,Write,Edit,Bash(git:*),Bash(pnpm:*),Bash(npm:*),Bash(wrangler:*),Glob,Grep,Task';
+      args.push('--allowedTools', allowedTools);
+    }
+
+    args.push(
       '--output-format', 'json',
       '--settings', harnessSettings,
       '--max-turns', '50', // Bounded execution
-    ];
+    );
 
     const child = spawn('claude', args, {
       cwd,
