@@ -38,6 +38,8 @@ interface Env {
   SESSIONS: DurableObjectNamespace;
   UPLOAD_SECRET?: string;
   WORKER_URL?: string;
+  NOTION_API_KEY?: string;
+  WORKWAY_API_TOKEN?: string;
 }
 
 // CORS and security headers helper
@@ -505,6 +507,39 @@ export default {
       });
     }
 
+    // Route: GET /notion-debug - Test Notion API integration
+    if (path === '/notion-debug' && request.method === 'GET') {
+      try {
+        const notionApiKey = env.NOTION_API_KEY;
+        if (!notionApiKey) {
+          return Response.json({ error: 'NOTION_API_KEY not set' }, { status: 500 });
+        }
+
+        const HALFDOZEN_INTERNAL_LLM_DATABASE = '27a019187ac580b797fec563c98afbbc';
+
+        // Get database schema to see what properties exist
+        const schemaResponse = await fetch(`https://api.notion.com/v1/databases/${HALFDOZEN_INTERNAL_LLM_DATABASE}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${notionApiKey}`,
+            'Notion-Version': '2022-06-28',
+          },
+        });
+
+        const schemaData = await schemaResponse.json();
+
+        return Response.json({
+          success: schemaResponse.ok,
+          status: schemaResponse.status,
+          schema: schemaData,
+        }, {
+          headers: getCorsHeaders(request),
+        });
+      } catch (error: any) {
+        return Response.json({ error: 'Debug failed', details: error.message }, { status: 500 });
+      }
+    }
+
     // Route: GET /health - Standard health check (no authentication required)
     if (path === '/health' && request.method === 'GET') {
       return Response.json({
@@ -848,6 +883,301 @@ export class ZoomSessionManager {
       });
     } catch (error: any) {
       return Response.json({ error: error.message }, { status: 400 });
+    }
+  }
+
+  /**
+   * Extract meeting transcript by row index and return just the text
+   * @private
+   */
+  private async extractMeetingTranscriptByIndex(index: number): Promise<string | null> {
+    const storedCookies = await this.state.storage.get<any>('zoom_cookies');
+    const cookies = Array.isArray(storedCookies) ? storedCookies : [];
+
+    if (cookies.length === 0) {
+      return null;
+    }
+
+    try {
+      const browser = await this.getBrowser();
+      const page = await browser.newPage();
+
+      // Set cookies
+      for (const cookie of cookies) {
+        try {
+          await page.setCookie(cookie);
+        } catch (e) {
+          // Skip invalid cookies
+        }
+      }
+
+      // Set up CDP to capture download response (VTT content)
+      let downloadResponse: { content: string; url: string } | null = null;
+      const client = await page.target().createCDPSession();
+      await client.send('Network.enable');
+
+      // Listen for response body
+      client.on('Network.responseReceived', async (event: any) => {
+        const url = event.response.url;
+        if (url.includes('transcript') && url.includes('download')) {
+          console.log(`[Worker] Download response received: ${url}, status: ${event.response.status}`);
+          try {
+            const body = await client.send('Network.getResponseBody', { requestId: event.requestId });
+            if (body.body) {
+              downloadResponse = { content: body.body, url };
+              console.log(`[Worker] Captured response body, length: ${body.body.length}`);
+            }
+          } catch (e: any) {
+            console.log(`[Worker] Could not get response body: ${e.message}`);
+          }
+        }
+      });
+
+      // Navigate to Recordings page
+      await page.goto('https://zoom.us/recording', { waitUntil: 'networkidle2', timeout: 30000 });
+
+      // Check if redirected to login
+      if (page.url().includes('/signin') || page.url().includes('/login')) {
+        await page.close();
+        return null;
+      }
+
+      // Wait and click Transcripts tab
+      await new Promise(r => setTimeout(r, 2000));
+      await page.evaluate(() => {
+        const tabs = Array.from(document.querySelectorAll('a, button, [role="tab"]'));
+        for (const tab of tabs) {
+          const text = (tab as HTMLElement).textContent || '';
+          if (text.trim() === 'Transcripts') {
+            (tab as HTMLElement).click();
+            break;
+          }
+        }
+      });
+
+      // Wait for table to load
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Click the Download button for the specified row
+      const clickResult = await page.evaluate((rowIndex: number) => {
+        const downloadButtons = Array.from(document.querySelectorAll('button[aria-label^="Download"]'));
+        if (rowIndex >= downloadButtons.length) {
+          return { success: false, error: `Index ${rowIndex} out of range (${downloadButtons.length} meetings)` };
+        }
+        const btn = downloadButtons[rowIndex] as HTMLElement;
+        btn.click();
+        return { success: true };
+      }, index);
+
+      if (!clickResult.success) {
+        console.warn(`[Worker] ${clickResult.error}`);
+        await page.close();
+        return null;
+      }
+
+      // Wait for the download response to be captured
+      await new Promise(r => setTimeout(r, 5000));
+
+      await page.close();
+
+      // If we captured a download response, parse it
+      if (downloadResponse) {
+        console.log(`[Worker] Processing captured response from: ${downloadResponse.url}`);
+
+        const vttContent = downloadResponse.content;
+
+        // Check if response is JSON (error) or VTT
+        if (vttContent.startsWith('{')) {
+          // It's JSON, likely an error or wrapped response
+          try {
+            const jsonResponse = JSON.parse(vttContent);
+
+            if (jsonResponse.errorMessage) {
+              console.error(`[Worker] Zoom API error: ${jsonResponse.errorMessage}`);
+              return null;
+            }
+
+            // Check if VTT is in result field
+            if (jsonResponse.result) {
+              return this.parseVTT(jsonResponse.result);
+            }
+          } catch {
+            // Not valid JSON, treat as VTT
+          }
+        }
+
+        // It's VTT content
+        if (vttContent.includes('WEBVTT') || vttContent.includes('-->')) {
+          return this.parseVTT(vttContent);
+        }
+
+        console.log(`[Worker] Unexpected response format: ${vttContent.substring(0, 200)}`);
+      }
+
+      // Fallback: couldn't capture download
+      console.warn('[Worker] Could not capture download response for meeting transcript');
+      return null;
+
+    } catch (error) {
+      console.error(`[Worker] Meeting transcript extraction failed for index ${index}:`, error);
+      return null;
+    }
+  }
+
+  /**
+   * Extract transcript from Zoom Clip share URL and return just the text
+   * Uses the same proven virtual scrolling pattern as extractTranscript()
+   * @private
+   */
+  private async extractTranscriptFromUrl(clipUrl: string): Promise<string | null> {
+    const storedCookies = await this.state.storage.get<any>('zoom_cookies');
+    const cookies = Array.isArray(storedCookies) ? storedCookies : [];
+
+    if (cookies.length === 0 || !clipUrl) {
+      return null;
+    }
+
+    try {
+      const browser = await this.getBrowser();
+      const page = await browser.newPage();
+
+      // Set cookies
+      for (const cookie of cookies) {
+        try {
+          await page.setCookie(cookie);
+        } catch (e) {
+          // Skip invalid cookies
+        }
+      }
+
+      // Navigate to clip
+      await page.goto(clipUrl, { waitUntil: 'networkidle2', timeout: 30000 });
+
+      // Check if redirected to login
+      if (page.url().includes('/signin') || page.url().includes('/login')) {
+        await page.close();
+        return null;
+      }
+
+      // Wait for page to fully render
+      await new Promise(r => setTimeout(r, 3000));
+
+      // Wait for video player or transcript button
+      try {
+        await page.waitForSelector('button[aria-label], .zoom-player, video', { timeout: 10000 });
+      } catch {
+        // Continue anyway
+      }
+
+      await new Promise(r => setTimeout(r, 2000));
+
+      // Extract transcript using CANONICAL PATTERN (virtual scrolling)
+      const result = await page.evaluate(async () => {
+        const wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+
+        // Click Transcript tab/button
+        const transcriptBtn = document.querySelector('button[aria-label="View transcript"], button[aria-label="Transcript"]');
+        if (transcriptBtn) {
+          (transcriptBtn as HTMLElement).click();
+          await wait(3000);
+        } else {
+          const tabElements = Array.from(document.querySelectorAll('button, a, div[role="tab"]'));
+          for (const el of tabElements) {
+            const text = (el as HTMLElement).textContent || '';
+            if (text.toLowerCase().includes('transcript')) {
+              (el as HTMLElement).click();
+              await wait(3000);
+              break;
+            }
+          }
+        }
+
+        // Find scrollable container
+        let scrollContainer: Element | null = null;
+        const transcriptList = document.querySelector('.transcript-list.zoom-scrollbar, .zm-vod-transcript-wrapper .zoom-scrollbar__wrap');
+        if (transcriptList && transcriptList.scrollHeight > transcriptList.clientHeight) {
+          scrollContainer = transcriptList;
+        }
+
+        if (!scrollContainer) {
+          const scrollContainers = Array.from(document.querySelectorAll('.zoom-scrollbar__wrap'));
+          let maxHeight = 0;
+          for (const container of scrollContainers) {
+            const scrollH = container.scrollHeight;
+            const clientH = container.clientHeight;
+            if (scrollH > clientH && scrollH > maxHeight) {
+              maxHeight = scrollH;
+              scrollContainer = container;
+            }
+          }
+        }
+
+        // Collect transcript items via virtual scrolling
+        const collectedItems: { [key: string]: string } = {};
+
+        if (scrollContainer) {
+          // Pre-load by scrolling to bottom
+          for (let i = 0; i < 5; i++) {
+            scrollContainer.scrollTop = scrollContainer.scrollHeight;
+            scrollContainer.dispatchEvent(new Event('scroll'));
+            await wait(500);
+          }
+
+          scrollContainer.scrollTop = 0;
+          await wait(1000);
+
+          // Scroll incrementally to collect all items
+          const scrollStep = 500;
+          let currentScroll = 0;
+
+          while (currentScroll <= scrollContainer.scrollHeight) {
+            const items = Array.from(document.querySelectorAll('.transcript-list-item, .mv-transcript-list-item'));
+            for (const item of items) {
+              const text = (item as HTMLElement).innerText?.trim();
+              if (text) {
+                const key = text.split('\n')[0];
+                if (!collectedItems[key]) {
+                  collectedItems[key] = text;
+                }
+              }
+            }
+
+            scrollContainer.scrollTop = currentScroll;
+            scrollContainer.dispatchEvent(new Event('scroll'));
+            await wait(300);
+            currentScroll += scrollStep;
+          }
+        } else {
+          // Fallback: static extraction
+          const items = Array.from(document.querySelectorAll('.transcript-list-item, .mv-transcript-list-item, [class*="transcript-item"]'));
+          for (const item of items) {
+            const text = (item as HTMLElement).innerText?.trim();
+            if (text && text.length > 3) {
+              const key = text.split('\n')[0];
+              collectedItems[key] = text;
+            }
+          }
+        }
+
+        // Sort by timestamp
+        const sortedItems = Object.values(collectedItems).sort((a, b) => {
+          const getSeconds = (text: string) => {
+            const match = text.match(/^(\d{1,3}):(\d{2})/);
+            if (!match) return 0;
+            return parseInt(match[1]) * 60 + parseInt(match[2]);
+          };
+          return getSeconds(a) - getSeconds(b);
+        });
+
+        return sortedItems.join('\n\n');
+      });
+
+      await page.close();
+      return result || null;
+
+    } catch (error) {
+      console.error(`[Worker] Transcript extraction failed for ${clipUrl}:`, error);
+      return null;
     }
   }
 
@@ -1788,46 +2118,208 @@ export class ZoomSessionManager {
     meetings: any[]
   ): Promise<{ written: number; skipped: number; failed: number }> {
     try {
-      // Note: For this private workflow, we call the workflow execution directly
-      // The workflow is deployed as a Cloudflare Worker and handles its own execution
-      const workflowUrl = `https://api.workway.co/workflows/trigger`;
+      const notionApiKey = this.env.NOTION_API_KEY;
 
-      const response = await fetch(workflowUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.env.ZOOM_API_SECRET || ''}`,
-        },
-        body: JSON.stringify({
-          installationId: userId, // For private workflows, userId serves as installation ID
-          triggerData: {
-            type: 'manual',
-            data: {
-              clips,
-              meetings,
-            }
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('[Worker] Failed to trigger workflow:', errorText);
+      if (!notionApiKey) {
+        console.error('[Worker] NOTION_API_KEY not set - cannot write to Notion');
         return { written: 0, skipped: 0, failed: clips.length + meetings.length };
       }
 
-      const result = await response.json() as any;
+      // Half Dozen's central LLM database in Notion
+      const HALFDOZEN_INTERNAL_LLM_DATABASE = '27a019187ac580b797fec563c98afbbc';
 
-      // Return simplified stats
+      let written = 0;
+      let failed = 0;
+
+      // Write clips to Notion (with transcript extraction)
+      for (const clip of clips) {
+        try {
+          // Extract transcript for this clip
+          let transcript = '(Transcript not available)';
+          if (clip.share_url) {
+            try {
+              console.log(`[Worker] Extracting transcript for clip: ${clip.title}`);
+              const transcriptResponse = await this.extractTranscriptFromUrl(clip.share_url);
+              transcript = transcriptResponse || '(Transcript extraction failed)';
+            } catch (error) {
+              console.warn(`[Worker] Failed to extract transcript for clip ${clip.id}:`, error);
+            }
+          }
+
+          await this.createNotionPage(notionApiKey, HALFDOZEN_INTERNAL_LLM_DATABASE, {
+            title: clip.title || 'Untitled Clip',
+            type: 'Clip',
+            date: clip.created_at,
+            url: clip.share_url,
+            duration: clip.duration,
+            content: transcript,
+          });
+          written++;
+        } catch (error) {
+          console.error('[Worker] Failed to write clip to Notion:', clip.id, error);
+          failed++;
+        }
+      }
+
+      // Write meetings to Notion (with transcript extraction)
+      for (let i = 0; i < meetings.length; i++) {
+        const meeting = meetings[i];
+        try {
+          // Convert meeting dateTime from "Jan 6, 2026 06:39 PM" to ISO 8601
+          let meetingDate = null;
+          if (meeting.dateTime) {
+            try {
+              meetingDate = new Date(meeting.dateTime).toISOString();
+            } catch (e) {
+              console.warn('[Worker] Failed to parse meeting date:', meeting.dateTime);
+            }
+          }
+
+          // Extract transcript for this meeting using row index
+          let transcript = '(Transcript not available)';
+          try {
+            console.log(`[Worker] Extracting transcript for meeting: ${meeting.topic}`);
+            const transcriptText = await this.extractMeetingTranscriptByIndex(i);
+            transcript = transcriptText || '(Transcript extraction failed)';
+          } catch (error) {
+            console.warn(`[Worker] Failed to extract transcript for meeting ${meeting.meetingId}:`, error);
+          }
+
+          await this.createNotionPage(notionApiKey, HALFDOZEN_INTERNAL_LLM_DATABASE, {
+            title: meeting.topic || 'Untitled Meeting',
+            type: 'Meeting',
+            date: meetingDate,
+            url: meeting.shareUrl || null,
+            duration: null,
+            content: transcript,
+          });
+          written++;
+        } catch (error) {
+          console.error('[Worker] Failed to write meeting to Notion:', meeting.meetingId, error);
+          failed++;
+        }
+      }
+
+      console.log(`[Worker] Notion sync complete: ${written} written, ${failed} failed`);
+
       return {
-        written: result.synced || 0,
+        written,
         skipped: 0,
-        failed: 0,
+        failed,
       };
     } catch (error: any) {
-      console.error('[Worker] Error triggering Notion workflow:', error);
+      console.error('[Worker] Error in Notion workflow:', error);
       return { written: 0, skipped: 0, failed: clips.length + meetings.length };
     }
+  }
+
+  /**
+   * Create a Notion page in the LLM database
+   * @private
+   */
+  private async createNotionPage(
+    notionApiKey: string,
+    databaseId: string,
+    data: {
+      title: string;
+      type: string;
+      date: string | null;
+      url: string | null;
+      duration: number | null;
+      content: string;
+    }
+  ): Promise<void> {
+    // Build page properties (matching Half Dozen LLM database schema)
+    const properties: any = {
+      Item: {
+        title: [{
+          text: { content: data.title },
+        }],
+      },
+      Type: {
+        select: { name: data.type },
+      },
+    };
+
+    // Add Date if available
+    if (data.date) {
+      properties.Date = {
+        date: { start: data.date },
+      };
+    }
+
+    // Add Source URL if available
+    if (data.url) {
+      properties['Source URL'] = {
+        url: data.url,
+      };
+    }
+
+    // Build page content blocks
+    const blocks: any[] = [];
+
+    // Add transcript as paragraph blocks (split into 2000 char chunks)
+    const contentChunks = this.splitTextIntoChunks(data.content, 2000);
+    for (const chunk of contentChunks) {
+      blocks.push({
+        object: 'block',
+        type: 'paragraph',
+        paragraph: {
+          rich_text: [{
+            type: 'text',
+            text: { content: chunk },
+          }],
+        },
+      });
+    }
+
+    // Create the page
+    const response = await fetch('https://api.notion.com/v1/pages', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${notionApiKey}`,
+        'Notion-Version': '2022-06-28',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        parent: { database_id: databaseId },
+        properties,
+        children: blocks,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Worker] Notion API Error (${response.status}):`, errorText);
+      console.error(`[Worker] Attempted to create page in database: ${databaseId}`);
+      console.error(`[Worker] Page title: ${data.title}`);
+      throw new Error(`Failed to create Notion page: ${response.status} ${errorText}`);
+    }
+
+    console.log(`[Worker] Created Notion page: ${data.title}`);
+  }
+
+  /**
+   * Split text into chunks of specified size
+   * @private
+   */
+  private splitTextIntoChunks(text: string, chunkSize: number): string[] {
+    const chunks: string[] = [];
+    let currentChunk = '';
+
+    for (const char of text) {
+      currentChunk += char;
+      if (currentChunk.length >= chunkSize) {
+        chunks.push(currentChunk);
+        currentChunk = '';
+      }
+    }
+
+    if (currentChunk.length > 0) {
+      chunks.push(currentChunk);
+    }
+
+    return chunks.length > 0 ? chunks : [''];
   }
 
   /**
