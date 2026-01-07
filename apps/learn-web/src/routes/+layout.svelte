@@ -47,6 +47,12 @@
 						</div>
 					{:else}
 						<a
+							href="/progress"
+							class="text-sm font-medium transition-colors text-[var(--color-fg-secondary)] hover:text-[var(--color-fg-primary)]"
+						>
+							Sign In
+						</a>
+						<a
 							href="/auth/signup"
 							class="button-primary text-sm font-semibold"
 						>
@@ -86,28 +92,35 @@
 					</a>
 				{/each}
 
-				{#if data.user}
-					<div class="pt-md border-t border-[var(--color-border-default)] flex flex-col gap-md">
-						<span class="text-sm text-[var(--color-fg-tertiary)]">
-							{data.user.displayName || data.user.email}
-						</span>
-						<a
-							href="/auth/signout"
-							onclick={() => (isMenuOpen = false)}
-							class="text-sm font-medium transition-colors py-2 text-[var(--color-fg-secondary)] hover:text-[var(--color-fg-primary)]"
-						>
-							Sign Out
-						</a>
-					</div>
-				{:else}
+			{#if data.user}
+				<div class="pt-md border-t border-[var(--color-border-default)] flex flex-col gap-md">
+					<span class="text-sm text-[var(--color-fg-tertiary)]">
+						{data.user.displayName || data.user.email}
+					</span>
 					<a
-						href="/auth/signup"
+						href="/auth/signout"
 						onclick={() => (isMenuOpen = false)}
-						class="button-primary text-sm font-semibold text-center w-full"
+						class="text-sm font-medium transition-colors py-2 text-[var(--color-fg-secondary)] hover:text-[var(--color-fg-primary)]"
 					>
-						Sign Up
+						Sign Out
 					</a>
-				{/if}
+				</div>
+			{:else}
+				<a
+					href="/progress"
+					onclick={() => (isMenuOpen = false)}
+					class="text-sm font-medium transition-colors py-2 text-center text-[var(--color-fg-secondary)] hover:text-[var(--color-fg-primary)]"
+				>
+					Sign In
+				</a>
+				<a
+					href="/auth/signup"
+					onclick={() => (isMenuOpen = false)}
+					class="button-primary text-sm font-semibold text-center w-full"
+				>
+					Sign Up
+				</a>
+			{/if}
 			</div>
 		</div>
 	{/if}
