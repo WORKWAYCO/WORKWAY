@@ -3,7 +3,9 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![CI](https://github.com/workwayco/workway/actions/workflows/ci.yml/badge.svg)](https://github.com/workwayco/workway/actions/workflows/ci.yml)
 
-Build and monetize TypeScript workflows on the edge. The first marketplace for TypeScript workflow automation.
+**Automation infrastructure for AI-native developers.**
+
+TypeScript-native workflows on Cloudflare Workers. Built for developers, cheaper at scale.
 
 ## 🚀 Quick Start
 
