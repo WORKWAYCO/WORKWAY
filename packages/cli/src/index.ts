@@ -95,6 +95,7 @@ workflowCommand
 	.command('init [name]')
 	.description('Create a new workflow project')
 	.option('--ai', 'Create AI-powered workflow using Cloudflare Workers AI')
+	.option('--with-claude', 'Generate .claude/ directory for Claude Code integration')
 	.action(handleCommand(workflowInitCommand));
 
 workflowCommand

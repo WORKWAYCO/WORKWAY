@@ -28,15 +28,139 @@ import { WORKFLOW_CATEGORIES } from '../../constants.js';
 interface InitOptions {
 	ai?: boolean;
 	name?: string;
+	withClaude?: boolean;
+}
+
+/**
+ * Generate CLAUDE.md for workflow-specific context
+ */
+function generateClaudeMd(workflowName: string, description: string, projectName: string): string {
+	return `# ${workflowName}
+
+> **Zuhandenheit**: The tool recedes; the outcome remains.
+
+## Overview
+
+${description || 'Workflow description...'}
+
+## Development Context
+
+This workflow was initialized with Claude Code integration. Use the WORKWAY SDK patterns:
+
+### Quick Reference
+
+\`\`\`typescript
+import { defineWorkflow, cron, webhook } from '@workwayco/sdk';
+import { createAIClient } from '@workwayco/sdk/workers-ai';
+
+export default defineWorkflow({
+  name: '${workflowName}',
+  version: '1.0.0',
+
+  integrations: [
+    // Add your integrations here
+  ],
+
+  inputs: {
+    // Define user-facing inputs
+  },
+
+  trigger: cron('0 9 * * 1-5'), // Weekdays at 9am
+
+  async execute({ trigger, inputs, integrations, env }) {
+    // Implement workflow logic
+
+    // AI client (optional)
+    const ai = createAIClient(env).for('synthesis', 'standard');
+
+    return {
+      success: true,
+      message: 'Workflow executed successfully'
+    };
+  }
+});
+\`\`\`
+
+### Available Patterns
+
+**AI Synthesis**:
+\`\`\`typescript
+const result = await ai.synthesize(content, {
+  type: 'meeting' | 'email' | 'support' | 'feedback',
+  output: { themes: 'string[]', summary: 'string' }
+});
+\`\`\`
+
+**Notion Documents**:
+\`\`\`typescript
+await integrations.notion.createDocument({
+  database: inputs.notionDatabaseId,
+  template: 'summary' | 'report' | 'meeting',
+  data: { title, summary, sections }
+});
+\`\`\`
+
+**Linear Tasks**:
+\`\`\`typescript
+await integrations.linear.issues.create({
+  teamId: inputs.linearTeamId,
+  title: 'Task title',
+  assigneeByName: 'john',  // Zuhandenheit: no ID lookup needed
+  labels: ['bug', 'urgent']  // Labels by name
+});
+\`\`\`
+
+**Slack Messages**:
+\`\`\`typescript
+await integrations.slack.sendMessage({
+  channel: inputs.slackChannel,
+  text: 'Message content'
+});
+\`\`\`
+
+## Commands
+
+\`\`\`bash
+# Test workflow
+workway workflow test
+
+# Run with test data
+workway workflow run --test
+
+# Validate configuration
+workway workflow validate
+
+# Publish to marketplace
+workway workflow publish
+\`\`\`
+
+## Architecture Guidelines
+
+1. **Zuhandenheit**: Does the tool recede? Can you describe the outcome without mentioning technology?
+2. **Weniger, aber besser**: Can anything be removed?
+3. **Outcome Test**: "After [trigger], [outcome happens]"
+
+## Related Documentation
+
+- Root: \`../../UNDERSTANDING.md\` - All 49 WORKWAY workflows mapped
+- SDK: \`../../packages/sdk/README.md\` - Full SDK reference
+- Examples: \`../../packages/workflows/src/\` - Production workflow examples
+`;
 }
 
 export async function workflowInitCommand(nameArg?: string, options?: InitOptions): Promise<void> {
 	const isAI = options?.ai || false;
+	const withClaude = options?.withClaude || false;
 
 	Logger.header(isAI ? 'Create AI Workflow' : 'Create New Workflow');
 
 	if (isAI) {
 		Logger.info('Using Cloudflare Workers AI (no external API keys required)');
+		Logger.blank();
+	}
+
+	if (withClaude) {
+		Logger.info('Claude Code integration enabled - will generate .claude/ directory');
 		Logger.blank();
 	}
 
@@ -202,6 +326,45 @@ export async function workflowInitCommand(nameArg?: string, options?: InitOption
 
 			const configContent = workwayConfigTemplate();
 			await fs.writeFile(path.join(projectPath, 'workway.config.json'), configContent);
+
+			// Claude Code integration
+			if (withClaude) {
+				const claudeDir = path.join(projectPath, '.claude');
+				await fs.ensureDir(claudeDir);
+
+				// Generate CLAUDE.md with workflow-specific context
+				const claudeMdContent = generateClaudeMd(answers.name, answers.description || answers.aiTask || '', projectName);
+				await fs.writeFile(path.join(claudeDir, 'CLAUDE.md'), claudeMdContent);
+
+				// Generate context.json with integration metadata
+				const contextContent = JSON.stringify({
+					workflowId: projectName,
+					name: answers.name,
+					category: answers.category,
+					isAI: isAI,
+					createdAt: new Date().toISOString(),
+					integrations: [],
+					beadsIssue: null,
+				}, null, 2);
+				await fs.writeFile(path.join(claudeDir, 'context.json'), contextContent);
+
+				// Generate workflow-meta.yaml for Beads integration
+				const metaContent = `# Workflow Metadata for Beads Integration
+workflow_id: ${projectName}
+name: "${answers.name}"
+status: draft
+created: ${new Date().toISOString().split('T')[0]}
+
+# Beads issue will be created on first publish
+beads_issue: null
+
+# Track key milestones
+milestones:
+  - name: workflow_created
+    date: ${new Date().toISOString().split('T')[0]}
+`;
+				await fs.writeFile(path.join(claudeDir, 'workflow-meta.yaml'), metaContent);
+			}
 
 			spinner.succeed(`Created ${isAI ? 'AI ' : ''}workflow project "${projectName}"`);
 

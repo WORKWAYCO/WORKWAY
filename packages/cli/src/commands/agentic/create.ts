@@ -221,6 +221,76 @@ function detectConfig(prompt: string): DetectedConfig {
 }
 
 /**
+ * Get outcome statement for a given frame
+ */
+function getOutcomeStatement(frame: string | null): string {
+	if (!frame) return 'This workflow automates my work';
+
+	const statements: Record<string, string> = {
+		after_meetings: 'After meetings, everything is documented',
+		before_meetings: 'Before meetings, I have all the context I need',
+		after_calls: 'After calls, follow-ups happen automatically',
+		when_payments_arrive: 'When payments arrive, everything updates',
+		when_leads_come_in: 'When leads come in, they route themselves',
+		when_tickets_arrive: 'When tickets arrive, they go to the right team',
+		when_clients_onboard: 'When clients onboard, the process runs itself',
+		when_data_changes: 'When data changes, everything stays in sync',
+		every_morning: 'Every morning, I have my digest ready',
+		weekly_automatically: 'Weekly reports write themselves',
+		when_tasks_complete: 'When tasks complete, they log themselves',
+		when_code_changes: 'When code changes, everyone knows',
+		when_issues_arrive: 'When issues arrive, they sync across tools',
+		when_errors_happen: 'When errors happen, they document themselves',
+	};
+
+	return statements[frame] || 'This workflow automates my work';
+}
+
+/**
+ * Detect outcome frame from prompt
+ * Maps to UNDERSTANDING.md outcome taxonomy
+ */
+function detectOutcomeFrame(prompt: string): string | null {
+	const lower = prompt.toLowerCase();
+
+	// Meeting-related
+	if (lower.includes('after meeting') || lower.includes('meeting end')) return 'after_meetings';
+	if (lower.includes('before meeting') || lower.includes('meeting prep')) return 'before_meetings';
+	if (lower.includes('after call')) return 'after_calls';
+
+	// Payment-related
+	if (lower.includes('payment') || lower.includes('invoice')) return 'when_payments_arrive';
+
+	// Lead-related
+	if (lower.includes('lead') || lower.includes('form submit')) return 'when_leads_come_in';
+
+	// Ticket-related
+	if (lower.includes('ticket') || lower.includes('support')) return 'when_tickets_arrive';
+
+	// Client-related
+	if (lower.includes('onboard') || lower.includes('new client')) return 'when_clients_onboard';
+
+	// Data sync
+	if (lower.includes('sync') || lower.includes('data change')) return 'when_data_changes';
+
+	// Time-based
+	if (lower.includes('daily') || lower.includes('every morning')) return 'every_morning';
+	if (lower.includes('weekly')) return 'weekly_automatically';
+
+	// Task-related
+	if (lower.includes('task complete') || lower.includes('todo complete')) return 'when_tasks_complete';
+
+	// Code-related
+	if (lower.includes('pr') || lower.includes('pull request') || lower.includes('code review')) return 'when_code_changes';
+	if (lower.includes('issue')) return 'when_issues_arrive';
+
+	// Error-related
+	if (lower.includes('error') || lower.includes('incident')) return 'when_errors_happen';
+
+	return null;
+}
+
+/**
  * Get applicable clarification questions
  */
 function getApplicableQuestions(prompt: string, detected: DetectedConfig): ClarificationQuestion[] {
@@ -322,7 +392,7 @@ function applyClarifications(
 }
 
 /**
- * Generate workflow code from prompt
+ * Generate workflow code from prompt with context from UNDERSTANDING.md
  */
 function generateWorkflowCode(config: {
 	name: string;
@@ -332,18 +402,24 @@ function generateWorkflowCode(config: {
 	prompt: string;
 }): string {
 	const integrationImports = config.integrations.length > 0
-		? `// Integrations: ${config.integrations.join(', ')}`
+		? `// Detected integrations: ${config.integrations.join(', ')}\n// See: UNDERSTANDING.md for all 49 WORKWAY workflows and integration pairs`
 		: '';
 
 	const triggerCode = config.trigger === 'schedule'
-		? `schedule('0 9 * * 1-5') // Weekdays at 9am`
+		? `cron('0 9 * * 1-5') // Weekdays at 9am`
 		: config.trigger === 'webhook'
 		? `webhook({ service: '${config.integrations[0] || 'github'}', event: 'EVENT_TYPE' })`
-		: `manual()`;
+		: `manual() // Triggered via CLI or API`;
 
 	const integrationArray = config.integrations
 		.map((i) => `    { service: '${i}', scopes: ['read', 'write'] }`)
 		.join(',\n');
+
+	// Detect outcome frame based on prompt
+	const outcomeFrame = detectOutcomeFrame(config.prompt);
+	const outcomeComment = outcomeFrame
+		? `// Outcome frame: ${outcomeFrame}\n  // See: UNDERSTANDING.md for all outcome frames`
+		: '';
 
 	return `/**
  * ${config.name}
@@ -351,13 +427,17 @@ function generateWorkflowCode(config: {
  * ${config.description}
  *
  * Generated from: "${config.prompt}"
+ * ${outcomeComment}
  *
- * ZUHANDENHEIT: Tools recede, intent remains.
+ * ZUHANDENHEIT: Tools recede, outcomes remain.
+ * Users think: "${getOutcomeStatement(outcomeFrame)}"
+ *
  * Edit the execute() function to implement your workflow logic.
+ * Refer to UNDERSTANDING.md for patterns from 49 production workflows.
  */
 
-import { defineWorkflow, ${config.trigger === 'schedule' ? 'schedule' : config.trigger === 'webhook' ? 'webhook' : 'manual'} } from '@workway/sdk';
-import { createAIClient } from '@workway/sdk/workers-ai';
+import { defineWorkflow, ${config.trigger === 'schedule' ? 'cron' : config.trigger === 'webhook' ? 'webhook' : 'manual'} } from '@workwayco/sdk';
+import { createAIClient } from '@workwayco/sdk/workers-ai';
 
 ${integrationImports}
 
@@ -366,33 +446,43 @@ export default defineWorkflow({
   description: '${config.description}',
   version: '1.0.0',
 
+  // Pricing model
   pricing: {
     model: 'usage',
     pricePerExecution: 0.10,
     description: 'Per execution pricing'
   },
 
+  // Integration connections
   integrations: [
-${integrationArray}
+${integrationArray || '    // Add integrations here'}
   ],
 
+  // User-facing inputs
   inputs: {
-    // TODO: Add your workflow inputs here
-    // Example:
-    // targetChannel: {
-    //   type: 'slack_channel_picker',
-    //   label: 'Target Channel',
+    // TODO: Define your inputs
+    // Examples:
+    // notionDatabaseId: {
+    //   type: 'notion_database_picker',
+    //   label: 'Target Database',
     //   required: true
+    // },
+    // slackChannel: {
+    //   type: 'slack_channel_picker',
+    //   label: 'Notification Channel',
+    //   required: false
     // }
   },
 
+  // Execution trigger
   trigger: ${triggerCode},
 
+  // Main workflow logic
   async execute({ trigger, inputs, integrations, env }) {
-    // Initialize AI client with intent-based model selection
+    // Initialize AI client (if needed)
     const ai = createAIClient(env).for('synthesis', 'standard');
 
-    // TODO: Implement your workflow logic here
+    // TODO: Implement your workflow logic
     //
     // Available Zuhandenheit patterns:
     //
@@ -451,13 +541,26 @@ ${integrationArray}
 /**
  * NEXT STEPS:
  *
- * 1. Fill in the inputs{} section with required configuration
- * 2. Update the trigger with correct service/event
- * 3. Implement the execute() function
- * 4. Test with: workway workflow test
- * 5. Deploy with: workway workflow publish
+ * 1. Define inputs{} - user-facing configuration
+ * 2. Configure trigger - webhook, cron, or manual
+ * 3. Implement execute() - your workflow logic
+ * 4. Test locally: workway workflow test
+ * 5. Deploy: workway workflow publish
  *
- * For more examples, see: /examples/
+ * LEARNING RESOURCES:
+ *
+ * - UNDERSTANDING.md - All 49 WORKWAY workflows mapped by outcome
+ * - Integration patterns: packages/workflows/src/<workflow-name>/
+ * - SDK reference: packages/sdk/README.md
+ * - Examples by complexity:
+ *   - Light (simple): calendar-availability-sync, standup-bot
+ *   - Heavy (standard): meeting-intelligence, sprint-progress-tracker
+ *   - Custom (complex): databases-mirrored, meeting-intelligence-private
+ *
+ * OUTCOME TEST:
+ * Can you describe this workflow's value without mentioning technology?
+ * Wrong: "It syncs Zoom with Notion via REST API"
+ * Right: "After meetings, notes appear in my workspace"
  */
 `;
 }
