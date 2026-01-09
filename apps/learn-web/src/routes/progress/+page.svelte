@@ -138,7 +138,7 @@
 				{@const completedInPath = pathProgress?.lessonsCompleted || 0}
 				{@const pathPercent = Math.round((completedInPath / path.lessons.length) * 100)}
 
-				<div class="card">
+				<a href="/paths/{path.id}" class="card block hover:border-[var(--color-border-strong)] transition-colors">
 					<div class="flex items-center justify-between mb-md">
 						<div class="flex items-center gap-sm">
 							<BookOpen size={20} class="text-[var(--color-fg-primary)]" />
@@ -161,16 +161,15 @@
 					<div class="flex items-center gap-xs mt-md flex-wrap">
 						{#each path.lessons as lesson, index}
 							{@const isComplete = completedLessonIds.has(lesson.id)}
-							<a
-								href="/paths/{path.id}/{lesson.id}"
+							<span
 								class="w-2 h-2 rounded-full transition-colors {isComplete
 									? 'bg-[var(--color-success)]'
 									: 'bg-[var(--color-bg-elevated)] hover:bg-[var(--color-fg-muted)]'}"
 								title="{index + 1}. {lesson.title}"
-							></a>
+							></span>
 						{/each}
 					</div>
-				</div>
+				</a>
 			{/each}
 		</div>
 
