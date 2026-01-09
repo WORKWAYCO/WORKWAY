@@ -367,6 +367,20 @@ pre,
 	animation: progress-pulse 2s ease-in-out infinite;
 }
 
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.4;
+	}
+}
+
+.animate-pulse {
+	animation: pulse 2s ease-in-out infinite;
+}
+
 /* ==========================================================================
    Lesson Content - Markdown rendering with syntax highlighting
    ========================================================================== */

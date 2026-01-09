@@ -30,15 +30,50 @@
 	let isCompleted = $state(false);
 	let isSubmitting = $state(false);
 
+	// Time tracking - start timer when page loads
+	let startTime = $state(Date.now());
+	let elapsedSeconds = $state(0);
+
+	// Format elapsed time as mm:ss
+	function formatTime(seconds: number): string {
+		const mins = Math.floor(seconds / 60);
+		const secs = seconds % 60;
+		return `${mins}:${secs.toString().padStart(2, '0')}`;
+	}
+
+	// Running clock - updates every second (pure client-side, no server cost)
+	$effect(() => {
+		// Track lessonId to reset timer on navigation
+		const _currentLesson = lessonId;
+		startTime = Date.now();
+		elapsedSeconds = 0;
+
+		const interval = setInterval(() => {
+			elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+		}, 1000);
+
+		// Cleanup on unmount or lesson change
+		return () => clearInterval(interval);
+	});
+
 	// Set initial completion state from server data
 	$effect(() => {
 		isCompleted = data.lessonsProgress?.[lessonId] || false;
 	});
 
+	// Praxis state
+	let praxisEvidence = $state('');
+	let isPraxisSubmitting = $state(false);
+	let isPraxisCompleted = $state(false);
+	let praxisFeedback = $state<{ success: boolean; feedback: string; nextSteps?: string[] } | null>(null);
+
 	async function markComplete() {
 		if (isSubmitting || isCompleted) return;
 
 		isSubmitting = true;
+
+		// Calculate time spent in seconds
+		const timeSpentSeconds = Math.round((Date.now() - startTime) / 1000);
 
 		try {
 			const response = await fetch('/api/progress', {
@@ -47,7 +82,8 @@
 				body: JSON.stringify({
 					pathId,
 					lessonId,
-					status: 'completed'
+					status: 'completed',
+					timeSpentSeconds
 				})
 			});
 
@@ -59,6 +95,40 @@
 			console.error('Failed to mark lesson complete:', error);
 		} finally {
 			isSubmitting = false;
+		}
+	}
+
+	async function submitPraxis() {
+		if (isPraxisSubmitting || !praxisEvidence.trim()) return;
+
+		isPraxisSubmitting = true;
+
+		// Calculate time spent in minutes
+		const timeSpentMinutes = Math.round((Date.now() - startTime) / 60000);
+
+		try {
+			const response = await fetch(`/api/praxis/${lessonId}`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					evidence: praxisEvidence,
+					timeSpentMinutes
+				})
+			});
+
+			if (response.ok) {
+				const result = await response.json();
+				praxisFeedback = result;
+				isPraxisCompleted = true;
+				// Also mark lesson as completed
+				if (!isCompleted) {
+					isCompleted = true;
+				}
+			}
+		} catch (error) {
+			console.error('Failed to submit praxis:', error);
+		} finally {
+			isPraxisSubmitting = false;
 		}
 	}
 
@@ -247,13 +317,17 @@
 
 			<!-- Lesson header -->
 			<header class="mb-xl">
-				<div class="flex items-center gap-sm mb-md">
+				<div class="flex items-center gap-sm mb-md flex-wrap">
 					<span class="text-sm text-[var(--color-fg-subtle)]">
 						Lesson {lessonIndex + 1} of {path.lessons.length}
 					</span>
 					<div class="flex items-center gap-xs text-sm text-[var(--color-fg-subtle)]">
 						<Clock size={16} />
 						{lesson.duration}
+					</div>
+					<div class="flex items-center gap-xs text-sm text-[var(--color-fg-primary)] font-mono" title="Time on this lesson">
+						<span class="w-1 h-1 bg-[var(--color-success)] rounded-full animate-pulse"></span>
+						{formatTime(elapsedSeconds)}
 					</div>
 				</div>
 
@@ -273,6 +347,9 @@
 						<h2 class="text-lg font-medium mb-md flex items-center gap-xs">
 							<span class="text-[var(--color-fg-primary)]">Praxis</span>
 							<span class="text-[var(--color-fg-muted)]">— Hands-on Exercise</span>
+							{#if isPraxisCompleted}
+								<CheckCircle2 size={16} class="text-[var(--color-success)] ml-auto" />
+							{/if}
 						</h2>
 
 						{#if lesson.praxis}
@@ -284,11 +361,66 @@
 								href="https://workway.co/workflow/{lesson.templateWorkflow.id}?source=learn&lesson={lesson.id}"
 								target="_blank"
 								rel="noopener noreferrer"
-								class="button-ghost"
+								class="button-ghost mb-md"
 							>
 								<ExternalLink size={16} />
 								Try: {lesson.templateWorkflow.name}
 							</a>
+						{/if}
+
+						<!-- Praxis Evidence Submission -->
+						{#if !isPraxisCompleted}
+							<div class="mt-md pt-md border-t border-[var(--color-border-default)]">
+								<label for="praxis-evidence" class="block text-sm font-medium mb-sm">
+									Share your work
+								</label>
+								<p class="text-sm text-[var(--color-fg-muted)] mb-sm">
+									Describe what you did, paste a link, or share a screenshot URL
+								</p>
+								<textarea
+									id="praxis-evidence"
+									bind:value={praxisEvidence}
+									placeholder="I completed the exercise by..."
+									rows="3"
+									class="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] px-md py-sm text-[var(--color-fg-primary)] placeholder:text-[var(--color-fg-subtle)] focus:outline-none focus:border-[var(--color-border-emphasis)] resize-y"
+								></textarea>
+								<button
+									onclick={submitPraxis}
+									disabled={isPraxisSubmitting || !praxisEvidence.trim()}
+									class="button-ghost mt-sm"
+								>
+									{#if isPraxisSubmitting}
+										Submitting...
+									{:else}
+										Complete Praxis
+									{/if}
+								</button>
+							</div>
+						{:else if praxisFeedback}
+							<!-- Feedback after submission -->
+							<div class="mt-md pt-md border-t border-[var(--color-border-default)]">
+								<div class="flex items-start gap-sm">
+									<CheckCircle2 size={20} class="text-[var(--color-success)] flex-shrink-0 mt-0.5" />
+									<div>
+										<p class="font-medium text-[var(--color-fg-primary)]">
+											{praxisFeedback.success ? 'Great work!' : 'Submitted'}
+										</p>
+										<p class="text-sm text-[var(--color-fg-muted)] mt-xs">
+											{praxisFeedback.feedback}
+										</p>
+										{#if praxisFeedback.nextSteps && praxisFeedback.nextSteps.length > 0}
+											<div class="mt-sm">
+												<p class="text-sm font-medium text-[var(--color-fg-primary)]">Next steps:</p>
+												<ul class="text-sm text-[var(--color-fg-muted)] mt-xs list-disc list-inside">
+													{#each praxisFeedback.nextSteps as step}
+														<li>{step}</li>
+													{/each}
+												</ul>
+											</div>
+										{/if}
+									</div>
+								</div>
+							</div>
 						{/if}
 					</div>
 				</section>
