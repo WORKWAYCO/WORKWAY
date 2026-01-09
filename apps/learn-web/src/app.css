@@ -40,7 +40,9 @@
 	--page-padding-y: var(--space-xl); /* ~68px - Golden Ratio */
 	--section-gap: var(--space-2xl); /* ~110px between major sections */
 	--header-height: 4rem; /* 64px */
-	--sticky-top: var(--header-height);
+	--sticky-top: calc(var(--header-height) + 1.5rem);
+	--max-width-wide: 1280px; /* Wider max for two-column layouts */
+	--sidebar-width: 280px;
 
 	/* ==========================================================================
 	   Legacy brand aliases - For compatibility with existing components
@@ -372,6 +374,9 @@ pre,
 .lesson-content {
 	line-height: 1.7;
 	color: var(--color-fg-secondary);
+	max-width: 100%;
+	overflow-wrap: break-word;
+	word-wrap: break-word;
 }
 
 /* Hide H1 since we render it in the header */
@@ -597,11 +602,19 @@ pre,
 /* Shiki code block overrides for better integration */
 .lesson-content .shiki-code-block {
 	margin: var(--space-md) 0 !important;
+	overflow-x: auto;
+	max-width: 100%;
 }
 
 .lesson-content .shiki-code-block code {
 	display: block;
 	white-space: pre;
+}
+
+/* Pre blocks need horizontal scroll */
+.lesson-content pre {
+	overflow-x: auto;
+	max-width: 100%;
 }
 
 /* Ensure inline code doesn't look like a block */
@@ -624,16 +637,26 @@ pre,
 .lesson-layout {
 	display: grid;
 	grid-template-columns: 1fr;
-	gap: var(--space-xl);
-	max-width: var(--max-width-wide);
+	gap: var(--space-xl, 2rem);
+	max-width: var(--max-width-wide, 1280px);
 	margin: 0 auto;
-	padding: var(--page-padding-y) var(--page-padding-x);
+	padding: var(--page-padding-y, 2rem) var(--page-padding-x, 1.5rem);
+	width: 100%;
+	box-sizing: border-box;
 }
 
 @media (min-width: 1024px) {
 	.lesson-layout {
-		grid-template-columns: 1fr 320px;
+		grid-template-columns: minmax(0, 1fr) var(--sidebar-width, 280px);
+		gap: var(--space-2xl, 3rem);
 	}
+}
+
+/* Main content column - prevent overflow while preserving sticky sidebar */
+.lesson-layout > div:first-child {
+	min-width: 0;
+	overflow-x: auto;
+	overflow-wrap: break-word;
 }
 
 /* ==========================================================================
@@ -642,14 +665,20 @@ pre,
 
 .sidebar-sticky {
 	position: sticky;
-	top: var(--sticky-top);
+	top: var(--sticky-top, 5.5rem);
 	align-self: start;
-	max-height: calc(100vh - var(--sticky-top) - var(--space-xl));
+	max-height: calc(100vh - var(--sticky-top, 5.5rem) - 2rem);
 	overflow-y: auto;
-	padding: var(--space-md);
-	background: var(--color-bg-elevated);
-	border: 1px solid var(--color-border-default);
-	border-radius: var(--radius-none);
+	padding: var(--space-md, 1rem);
+	background: var(--color-bg-elevated, #0a0a0a);
+	border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.1));
+	border-radius: 0;
+}
+
+@media (max-width: 1023px) {
+	.sidebar-sticky {
+		display: none;
+	}
 }
 
 /* ==========================================================================
@@ -658,34 +687,39 @@ pre,
 
 .curriculum-item {
 	display: flex;
-	align-items: center;
-	gap: var(--space-sm);
-	padding: var(--space-sm) var(--space-md);
-	color: var(--color-fg-muted);
+	align-items: flex-start;
+	gap: var(--space-sm, 0.5rem);
+	padding: var(--space-sm, 0.75rem) var(--space-md, 1rem);
+	color: var(--color-fg-muted, #a3a3a3);
 	text-decoration: none;
-	transition: background-color var(--duration-hover) var(--ease-standard),
-		color var(--duration-hover) var(--ease-standard);
+	transition: background-color 0.15s ease, color 0.15s ease;
 	border-left: 2px solid transparent;
+	font-size: 0.875rem;
+	line-height: 1.4;
 }
 
 .curriculum-item:hover {
-	background-color: var(--color-bg-surface);
-	color: var(--color-fg-primary);
+	background-color: var(--color-bg-surface, rgba(255, 255, 255, 0.05));
+	color: var(--color-fg-primary, #ffffff);
 }
 
 .curriculum-item.current {
-	border-left-color: var(--color-fg-primary);
-	background-color: var(--color-bg-surface);
-	color: var(--color-fg-primary);
+	border-left-color: var(--color-fg-primary, #ffffff);
+	background-color: var(--color-bg-surface, rgba(255, 255, 255, 0.05));
+	color: var(--color-fg-primary, #ffffff);
+	font-weight: 500;
 }
 
 .curriculum-item.completed {
+	opacity: 0.6;
+}
+
+.curriculum-item.completed span {
 	text-decoration: line-through;
-	opacity: 0.7;
 }
 
 .curriculum-item.completed:hover {
-	opacity: 1;
+	opacity: 0.9;
 }
 
 /* ==========================================================================

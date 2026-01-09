@@ -7,8 +7,7 @@
 
 	const navItems = [
 		{ href: '/', label: 'Home' },
-		{ href: '/paths', label: 'Paths' },
-		{ href: '/progress', label: 'Progress' }
+		{ href: '/paths', label: 'Paths' }
 	];
 </script>
 
