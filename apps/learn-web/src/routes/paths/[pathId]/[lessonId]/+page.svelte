@@ -19,6 +19,9 @@
 	// Use excerpt from loaded content, fallback to description
 	const metaDescription = $derived(data.content.excerpt || lesson?.description || '');
 
+	// Auth state - tracking features only available when logged in
+	const isAuthenticated = $derived(data.isAuthenticated || false);
+
 	$effect(() => {
 		if (!path || !lesson) {
 			error(404, 'Lesson not found');
@@ -30,7 +33,7 @@
 	let isCompleted = $state(false);
 	let isSubmitting = $state(false);
 
-	// Time tracking - start timer when page loads
+	// Time tracking - start timer when page loads (only for authenticated users)
 	let startTime = $state(Date.now());
 	let elapsedSeconds = $state(0);
 	let timerInterval: ReturnType<typeof setInterval> | null = null;
@@ -50,11 +53,12 @@
 		isCompleted = data.lessonsProgress?.[lessonId] || false;
 	});
 
-	// Running clock - only runs if lesson not already completed
+	// Running clock - only runs for authenticated users on incomplete lessons
 	$effect(() => {
 		// Track lessonId to reset on navigation
 		const _currentLesson = lessonId;
 		const alreadyDone = data.lessonsProgress?.[lessonId] || false;
+		const loggedIn = data.isAuthenticated || false;
 
 		// Clear any existing interval
 		if (timerInterval) {
@@ -62,8 +66,8 @@
 			timerInterval = null;
 		}
 
-		// Don't start timer for already-completed lessons
-		if (alreadyDone) {
+		// Don't start timer for logged-out users or already-completed lessons
+		if (!loggedIn || alreadyDone) {
 			elapsedSeconds = 0;
 			return;
 		}
@@ -357,16 +361,18 @@
 						<Clock size={16} />
 						{lesson.duration}
 					</div>
-					{#if isCompleted}
-						<div class="flex items-center gap-xs text-sm text-[var(--color-success)]" title="Lesson completed">
-							<CheckCircle2 size={16} />
-							<span>Complete</span>
-						</div>
-					{:else}
-						<div class="flex items-center gap-xs text-sm text-[var(--color-fg-primary)] font-mono" title="Time on this lesson">
-							<span class="w-1 h-1 bg-[var(--color-success)] rounded-full animate-pulse"></span>
-							{formatTime(elapsedSeconds)}
-						</div>
+					{#if isAuthenticated}
+						{#if isCompleted}
+							<div class="flex items-center gap-xs text-sm text-[var(--color-success)]" title="Lesson completed">
+								<CheckCircle2 size={16} />
+								<span>Complete</span>
+							</div>
+						{:else}
+							<div class="flex items-center gap-xs text-sm text-[var(--color-fg-primary)] font-mono" title="Time on this lesson">
+								<span class="w-1 h-1 bg-[var(--color-success)] rounded-full animate-pulse"></span>
+								{formatTime(elapsedSeconds)}
+							</div>
+						{/if}
 					{/if}
 				</div>
 
@@ -408,57 +414,68 @@
 						{/if}
 
 						<!-- Praxis Evidence Submission -->
-						{#if !isPraxisCompleted}
-							<div class="mt-md pt-md border-t border-[var(--color-border-default)]">
-								<label for="praxis-evidence" class="block text-sm font-medium mb-sm">
-									Share your work
-								</label>
-								<p class="text-sm text-[var(--color-fg-muted)] mb-sm">
-									Describe what you did, paste a link, or share a screenshot URL
-								</p>
-								<textarea
-									id="praxis-evidence"
-									bind:value={praxisEvidence}
-									placeholder="I completed the exercise by..."
-									rows="3"
-									class="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] px-md py-sm text-[var(--color-fg-primary)] placeholder:text-[var(--color-fg-subtle)] focus:outline-none focus:border-[var(--color-border-emphasis)] resize-y"
-								></textarea>
-								<button
-									onclick={submitPraxis}
-									disabled={isPraxisSubmitting || !praxisEvidence.trim()}
-									class="button-ghost mt-sm"
-								>
-									{#if isPraxisSubmitting}
-										Submitting...
-									{:else}
-										Complete Praxis
-									{/if}
-								</button>
-							</div>
-						{:else if praxisFeedback}
-							<!-- Feedback after submission -->
-							<div class="mt-md pt-md border-t border-[var(--color-border-default)]">
-								<div class="flex items-start gap-sm">
-									<CheckCircle2 size={20} class="text-[var(--color-success)] flex-shrink-0 mt-0.5" />
-									<div>
-										<p class="font-medium text-[var(--color-fg-primary)]">
-											{praxisFeedback.success ? 'Great work!' : 'Submitted'}
-										</p>
-										<p class="text-sm text-[var(--color-fg-muted)] mt-xs">
-											{praxisFeedback.feedback}
-										</p>
-										{#if praxisFeedback.nextSteps && praxisFeedback.nextSteps.length > 0}
-											<div class="mt-sm">
-												<p class="text-sm font-medium text-[var(--color-fg-primary)]">Next steps:</p>
-												<ul class="text-sm text-[var(--color-fg-muted)] mt-xs list-disc list-inside">
-													{#each praxisFeedback.nextSteps as step}
-														<li>{step}</li>
-													{/each}
-												</ul>
-											</div>
+						{#if isAuthenticated}
+							{#if !isPraxisCompleted}
+								<div class="mt-md pt-md border-t border-[var(--color-border-default)]">
+									<label for="praxis-evidence" class="block text-sm font-medium mb-sm">
+										Share your work
+									</label>
+									<p class="text-sm text-[var(--color-fg-muted)] mb-sm">
+										Describe what you did, paste a link, or share a screenshot URL
+									</p>
+									<textarea
+										id="praxis-evidence"
+										bind:value={praxisEvidence}
+										placeholder="I completed the exercise by..."
+										rows="3"
+										class="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] px-md py-sm text-[var(--color-fg-primary)] placeholder:text-[var(--color-fg-subtle)] focus:outline-none focus:border-[var(--color-border-emphasis)] resize-y"
+									></textarea>
+									<button
+										onclick={submitPraxis}
+										disabled={isPraxisSubmitting || !praxisEvidence.trim()}
+										class="button-ghost mt-sm"
+									>
+										{#if isPraxisSubmitting}
+											Submitting...
+										{:else}
+											Complete Praxis
 										{/if}
+									</button>
+								</div>
+							{:else if praxisFeedback}
+								<!-- Feedback after submission -->
+								<div class="mt-md pt-md border-t border-[var(--color-border-default)]">
+									<div class="flex items-start gap-sm">
+										<CheckCircle2 size={20} class="text-[var(--color-success)] flex-shrink-0 mt-0.5" />
+										<div>
+											<p class="font-medium text-[var(--color-fg-primary)]">
+												{praxisFeedback.success ? 'Great work!' : 'Submitted'}
+											</p>
+											<p class="text-sm text-[var(--color-fg-muted)] mt-xs">
+												{praxisFeedback.feedback}
+											</p>
+											{#if praxisFeedback.nextSteps && praxisFeedback.nextSteps.length > 0}
+												<div class="mt-sm">
+													<p class="text-sm font-medium text-[var(--color-fg-primary)]">Next steps:</p>
+													<ul class="text-sm text-[var(--color-fg-muted)] mt-xs list-disc list-inside">
+														{#each praxisFeedback.nextSteps as step}
+															<li>{step}</li>
+														{/each}
+													</ul>
+												</div>
+											{/if}
+										</div>
 									</div>
 								</div>
+							{/if}
+						{:else}
+							<div class="mt-md pt-md border-t border-[var(--color-border-default)]">
+								<p class="text-sm text-[var(--color-fg-muted)] mb-sm">
+									Track your progress and submit praxis exercises
+								</p>
+								<a href="/auth/signin" class="button-ghost">
+									Sign in to submit
+								</a>
 							</div>
 						{/if}
 					</div>
@@ -467,22 +484,29 @@
 
 			<!-- Completion -->
 			<section class="mb-xl">
-				<button
-					onclick={markComplete}
-					disabled={isCompleted || isSubmitting}
-					class="button-ghost"
-					class:active={isCompleted}
-					aria-pressed={isCompleted}
-				>
-					<CheckCircle2 size={16} />
-					{#if isSubmitting}
-						Saving...
-					{:else if isCompleted}
-						Completed!
-					{:else}
-						Mark as Complete
-					{/if}
-				</button>
+				{#if isAuthenticated}
+					<button
+						onclick={markComplete}
+						disabled={isCompleted || isSubmitting}
+						class="button-ghost"
+						class:active={isCompleted}
+						aria-pressed={isCompleted}
+					>
+						<CheckCircle2 size={16} />
+						{#if isSubmitting}
+							Saving...
+						{:else if isCompleted}
+							Completed!
+						{:else}
+							Mark as Complete
+						{/if}
+					</button>
+				{:else}
+					<a href="/auth/signin" class="button-ghost">
+						<CheckCircle2 size={16} />
+						Sign in to track progress
+					</a>
+				{/if}
 			</section>
 
 			<!-- Navigation at bottom on mobile -->
@@ -531,18 +555,24 @@
 		<aside class="sidebar-sticky">
 			<div class="mb-md">
 				<h2 class="text-sm font-semibold mb-xs">{path.title}</h2>
-				<div class="progress-bar">
-					<div class="progress-bar-fill" style="width: {progressPercent}%"></div>
-				</div>
-				<div class="text-xs text-[var(--color-fg-muted)]">
-					{completedCount} of {totalCount} lessons
-				</div>
+				{#if isAuthenticated}
+					<div class="progress-bar">
+						<div class="progress-bar-fill" style="width: {progressPercent}%"></div>
+					</div>
+					<div class="text-xs text-[var(--color-fg-muted)]">
+						{completedCount} of {totalCount} lessons
+					</div>
+				{:else}
+					<div class="text-xs text-[var(--color-fg-muted)]">
+						{totalCount} lessons
+					</div>
+				{/if}
 			</div>
 
 			<nav aria-label="Course curriculum">
 				{#each path.lessons as curriculumLesson, idx}
 					{@const isCurrent = curriculumLesson.id === lessonId}
-					{@const isComplete = data.lessonsProgress?.[curriculumLesson.id] || false}
+					{@const isComplete = isAuthenticated && (data.lessonsProgress?.[curriculumLesson.id] || false)}
 					<a
 						href="/paths/{path.id}/{curriculumLesson.id}"
 						class="curriculum-item"
@@ -567,7 +597,7 @@
 		<div class="lg:hidden progress-dots">
 			{#each path.lessons as curriculumLesson}
 				{@const isCurrent = curriculumLesson.id === lessonId}
-				{@const isComplete = data.lessonsProgress?.[curriculumLesson.id] || false}
+				{@const isComplete = isAuthenticated && (data.lessonsProgress?.[curriculumLesson.id] || false)}
 				<div
 					class="progress-dot"
 					class:current={isCurrent}
