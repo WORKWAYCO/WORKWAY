@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { getPath, getLesson, getNextLesson, getPreviousLesson } from '$lib/content/paths';
 	import { page } from '$app/stores';
-	import { ArrowLeft, ArrowRight, Clock, CheckCircle2, ExternalLink } from 'lucide-svelte';
+	import { ArrowLeft, ArrowRight, Clock, CheckCircle2, ExternalLink, Check } from 'lucide-svelte';
 	import { error } from '@sveltejs/kit';
 	import type { PageData } from './$types';
 
@@ -26,8 +26,14 @@
 	});
 
 	// Completion state - tracks whether this lesson has been marked complete
+	// Initialize from server data if available
 	let isCompleted = $state(false);
 	let isSubmitting = $state(false);
+
+	// Set initial completion state from server data
+	$effect(() => {
+		isCompleted = data.lessonsProgress?.[lessonId] || false;
+	});
 
 	async function markComplete() {
 		if (isSubmitting || isCompleted) return;
@@ -55,6 +61,15 @@
 			isSubmitting = false;
 		}
 	}
+
+	// Calculate progress for sidebar
+	const completedCount = $derived(
+		path?.lessons.filter((l) => data.lessonsProgress?.[l.id]).length || 0
+	);
+	const totalCount = $derived(path?.lessons.length || 0);
+	const progressPercent = $derived(
+		totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0
+	);
 </script>
 
 <svelte:head>
@@ -181,126 +196,214 @@
 </svelte:head>
 
 {#if path && lesson}
-	<div class="page-container-narrow">
-		<!-- Breadcrumb -->
-		<div class="flex items-center gap-xs text-sm text-[var(--color-fg-muted)] mb-lg">
-			<a href="/paths" class="hover:text-[var(--color-fg-primary)] transition-colors">Paths</a>
-			<span>/</span>
-			<a href="/paths/{path.id}" class="hover:text-[var(--color-fg-primary)] transition-colors">
-				{path.title}
-			</a>
-			<span>/</span>
-			<span class="text-[var(--color-fg-primary)]">{lesson.title}</span>
+	<div class="lesson-layout">
+		<!-- Main Content Column -->
+		<div>
+			<!-- Breadcrumb -->
+			<div class="flex items-center gap-xs text-sm text-[var(--color-fg-muted)] mb-lg">
+				<a href="/paths" class="hover:text-[var(--color-fg-primary)] transition-colors">Paths</a>
+				<span>/</span>
+				<a href="/paths/{path.id}" class="hover:text-[var(--color-fg-primary)] transition-colors">
+					{path.title}
+				</a>
+				<span>/</span>
+				<span class="text-[var(--color-fg-primary)]">{lesson.title}</span>
+			</div>
+
+			<!-- Navigation at top on desktop -->
+			<nav class="hidden lg:flex items-center justify-between mb-lg pb-md border-b border-[var(--color-border-default)]" aria-label="Lesson navigation">
+				{#if previousLesson}
+					<a
+						href="/paths/{path.id}/{previousLesson.id}"
+						rel="prev"
+						class="flex items-center gap-xs text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
+					>
+						<ArrowLeft size={16} />
+						<span>Previous</span>
+					</a>
+				{:else}
+					<div></div>
+				{/if}
+
+				{#if nextLesson}
+					<a
+						href="/paths/{path.id}/{nextLesson.id}"
+						rel="next"
+						class="flex items-center gap-xs text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
+					>
+						<span>Next</span>
+						<ArrowRight size={16} />
+					</a>
+				{:else}
+					<a
+						href="/paths/{path.id}"
+						class="flex items-center gap-xs text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
+					>
+						<span>Back to Path</span>
+						<ArrowRight size={16} />
+					</a>
+				{/if}
+			</nav>
+
+			<!-- Lesson header -->
+			<header class="mb-xl">
+				<div class="flex items-center gap-sm mb-md">
+					<span class="text-sm text-[var(--color-fg-subtle)]">
+						Lesson {lessonIndex + 1} of {path.lessons.length}
+					</span>
+					<div class="flex items-center gap-xs text-sm text-[var(--color-fg-subtle)]">
+						<Clock size={16} />
+						{lesson.duration}
+					</div>
+				</div>
+
+				<h1>{lesson.title}</h1>
+				<p class="text-[var(--color-fg-muted)] text-lg mt-md">{lesson.description}</p>
+			</header>
+
+			<!-- Lesson content -->
+			<article class="lesson-content mb-xl">
+				{@html data.content.html}
+			</article>
+
+			<!-- Praxis section -->
+			{#if lesson.praxis || lesson.templateWorkflow}
+				<section class="mb-xl">
+					<div class="card border-[var(--color-border-emphasis)]">
+						<h2 class="text-lg font-medium mb-md flex items-center gap-xs">
+							<span class="text-[var(--color-fg-primary)]">Praxis</span>
+							<span class="text-[var(--color-fg-muted)]">— Hands-on Exercise</span>
+						</h2>
+
+						{#if lesson.praxis}
+							<p class="text-[var(--color-fg-muted)] mb-md">{lesson.praxis}</p>
+						{/if}
+
+						{#if lesson.templateWorkflow}
+							<a
+								href="https://workway.co/workflow/{lesson.templateWorkflow.id}?source=learn&lesson={lesson.id}"
+								target="_blank"
+								rel="noopener noreferrer"
+								class="button-ghost"
+							>
+								<ExternalLink size={16} />
+								Try: {lesson.templateWorkflow.name}
+							</a>
+						{/if}
+					</div>
+				</section>
+			{/if}
+
+			<!-- Completion -->
+			<section class="mb-xl">
+				<button
+					onclick={markComplete}
+					disabled={isCompleted || isSubmitting}
+					class="button-ghost"
+					class:active={isCompleted}
+					aria-pressed={isCompleted}
+				>
+					<CheckCircle2 size={16} />
+					{#if isSubmitting}
+						Saving...
+					{:else if isCompleted}
+						Completed!
+					{:else}
+						Mark as Complete
+					{/if}
+				</button>
+			</section>
+
+			<!-- Navigation at bottom on mobile -->
+			<nav class="lg:hidden flex items-center justify-between pt-lg border-t border-[var(--color-border-default)]" aria-label="Lesson navigation">
+				{#if previousLesson}
+					<a
+						href="/paths/{path.id}/{previousLesson.id}"
+						rel="prev"
+						class="flex items-center gap-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
+					>
+						<ArrowLeft size={16} />
+						<div>
+							<div class="text-xs uppercase tracking-wider">Previous</div>
+							<div class="font-medium">{previousLesson.title}</div>
+						</div>
+					</a>
+				{:else}
+					<div></div>
+				{/if}
+
+				{#if nextLesson}
+					<a
+						href="/paths/{path.id}/{nextLesson.id}"
+						rel="next"
+						class="flex items-center gap-xs text-right text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
+					>
+						<div>
+							<div class="text-xs uppercase tracking-wider">Next</div>
+							<div class="font-medium">{nextLesson.title}</div>
+						</div>
+						<ArrowRight size={16} />
+					</a>
+				{:else}
+					<a
+						href="/paths/{path.id}"
+						class="flex items-center gap-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
+					>
+						Back to Path Overview
+						<ArrowRight size={16} />
+					</a>
+				{/if}
+			</nav>
 		</div>
 
-		<!-- Lesson header -->
-		<header class="mb-xl">
-			<div class="flex items-center gap-sm mb-md">
-				<span class="text-sm text-[var(--color-fg-subtle)]">
-					Lesson {lessonIndex + 1} of {path.lessons.length}
-				</span>
-				<div class="flex items-center gap-xs text-sm text-[var(--color-fg-subtle)]">
-					<Clock size={16} />
-					{lesson.duration}
+		<!-- Sidebar Curriculum (Desktop only) -->
+		<aside class="sidebar-sticky">
+			<div class="mb-md">
+				<h2 class="text-sm font-semibold mb-xs">{path.title}</h2>
+				<div class="progress-bar">
+					<div class="progress-bar-fill" style="width: {progressPercent}%"></div>
+				</div>
+				<div class="text-xs text-[var(--color-fg-muted)]">
+					{completedCount} of {totalCount} lessons
 				</div>
 			</div>
 
-			<h1>{lesson.title}</h1>
-			<p class="text-[var(--color-fg-muted)] text-lg mt-md">{lesson.description}</p>
-		</header>
+			<nav aria-label="Course curriculum">
+				{#each path.lessons as curriculumLesson, idx}
+					{@const isCurrent = curriculumLesson.id === lessonId}
+					{@const isComplete = data.lessonsProgress?.[curriculumLesson.id] || false}
+					<a
+						href="/paths/{path.id}/{curriculumLesson.id}"
+						class="curriculum-item"
+						class:current={isCurrent}
+						class:completed={isComplete}
+						aria-current={isCurrent ? 'page' : undefined}
+					>
+						<div class="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+							{#if isComplete}
+								<Check size={16} class="text-[var(--color-success)]" />
+							{:else}
+								<span class="text-xs text-[var(--color-fg-muted)]">{idx + 1}</span>
+							{/if}
+						</div>
+						<span class="text-sm">{curriculumLesson.title}</span>
+					</a>
+				{/each}
+			</nav>
+		</aside>
 
-		<!-- Lesson content -->
-		<article class="lesson-content mb-xl">
-			{@html data.content.html}
-		</article>
-
-		<!-- Praxis section -->
-		{#if lesson.praxis || lesson.templateWorkflow}
-			<section class="mb-xl">
-				<div class="card border-[var(--color-border-emphasis)]">
-					<h2 class="text-lg font-medium mb-md flex items-center gap-xs">
-						<span class="text-[var(--color-fg-primary)]">Praxis</span>
-						<span class="text-[var(--color-fg-muted)]">— Hands-on Exercise</span>
-					</h2>
-
-					{#if lesson.praxis}
-						<p class="text-[var(--color-fg-muted)] mb-md">{lesson.praxis}</p>
-					{/if}
-
-					{#if lesson.templateWorkflow}
-						<a
-							href="https://workway.co/workflow/{lesson.templateWorkflow.id}?source=learn&lesson={lesson.id}"
-							target="_blank"
-							rel="noopener noreferrer"
-							class="button-ghost"
-						>
-							<ExternalLink size={16} />
-							Try: {lesson.templateWorkflow.name}
-						</a>
-					{/if}
-				</div>
-			</section>
-		{/if}
-
-		<!-- Completion -->
-		<section class="mb-xl">
-			<button
-				onclick={markComplete}
-				disabled={isCompleted || isSubmitting}
-				class="button-ghost"
-				class:active={isCompleted}
-				aria-pressed={isCompleted}
-			>
-				<CheckCircle2 size={16} />
-				{#if isSubmitting}
-					Saving...
-				{:else if isCompleted}
-					Completed!
-				{:else}
-					Mark as Complete
-				{/if}
-			</button>
-		</section>
-
-		<!-- Navigation -->
-		<nav class="flex items-center justify-between pt-lg border-t border-[var(--color-border-default)]" aria-label="Lesson navigation">
-			{#if previousLesson}
-				<a
-					href="/paths/{path.id}/{previousLesson.id}"
-					rel="prev"
-					class="flex items-center gap-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
-				>
-					<ArrowLeft size={16} />
-					<div>
-						<div class="text-xs uppercase tracking-wider">Previous</div>
-						<div class="font-medium">{previousLesson.title}</div>
-					</div>
-				</a>
-			{:else}
-				<div></div>
-			{/if}
-
-			{#if nextLesson}
-				<a
-					href="/paths/{path.id}/{nextLesson.id}"
-					rel="next"
-					class="flex items-center gap-xs text-right text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
-				>
-					<div>
-						<div class="text-xs uppercase tracking-wider">Next</div>
-						<div class="font-medium">{nextLesson.title}</div>
-					</div>
-					<ArrowRight size={16} />
-				</a>
-			{:else}
-				<a
-					href="/paths/{path.id}"
-					class="flex items-center gap-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] transition-colors"
-				>
-					Back to Path Overview
-					<ArrowRight size={16} />
-				</a>
-			{/if}
-		</nav>
+		<!-- Progress Dots (Mobile only) -->
+		<div class="lg:hidden progress-dots">
+			{#each path.lessons as curriculumLesson}
+				{@const isCurrent = curriculumLesson.id === lessonId}
+				{@const isComplete = data.lessonsProgress?.[curriculumLesson.id] || false}
+				<div
+					class="progress-dot"
+					class:current={isCurrent}
+					class:completed={isComplete}
+					aria-label="{curriculumLesson.title} - {isComplete ? 'completed' : isCurrent ? 'current' : 'not started'}"
+				></div>
+			{/each}
+		</div>
 	</div>
 {/if}

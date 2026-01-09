@@ -1,5 +1,8 @@
 <script lang="ts">
-	import { ArrowRight, Terminal, Workflow, Brain, Zap } from 'lucide-svelte';
+	import { ArrowRight, Terminal, Workflow, Brain, Zap, Flame, Clock } from 'lucide-svelte';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
 
 	const features = [
 		{
@@ -23,6 +26,18 @@
 			description: 'Master compound workflows, private patterns, and agency architectures.'
 		}
 	];
+
+	function formatDate(dateStr: string): string {
+		const date = new Date(dateStr);
+		const now = new Date();
+		const diffMs = now.getTime() - date.getTime();
+		const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+		if (diffDays === 0) return 'today';
+		if (diffDays === 1) return 'yesterday';
+		if (diffDays < 7) return `${diffDays} days ago`;
+		return date.toLocaleDateString();
+	}
 </script>
 
 <svelte:head>
@@ -138,41 +153,148 @@
 </svelte:head>
 
 <div class="page-container">
-	<!-- Hero -->
-	<section class="text-center mb-section">
-		<h1 class="mx-auto text-center">Learn WORKWAY</h1>
-		<p class="text-xl md:text-2xl text-[var(--color-fg-muted)] max-w-2xl mx-auto mb-lg">
-			Build powerful workflow automations using Claude Code. From first commit to production-ready
-			compound workflows.
-		</p>
-		<a href="/paths" class="button-primary">
-			Start Learning
-			<ArrowRight size={20} />
-		</a>
-	</section>
-
-	<!-- Features -->
-	<section class="grid md:grid-cols-2 gap-md mb-section">
-		{#each features as feature}
-			<div class="card">
-				<div
-					class="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] flex items-center justify-center mb-md"
-				>
-					<feature.icon size={20} class="text-[var(--color-fg-primary)]" />
+	{#if data.user && data.progress}
+		<!-- Authenticated User Dashboard -->
+		<section class="mb-xl">
+			<!-- Welcome Header with Streak -->
+			<div class="flex items-center justify-between mb-lg">
+				<div>
+					<h1 class="text-3xl font-semibold mb-xs">Welcome back, {data.user.displayName || data.user.email.split('@')[0]}</h1>
+					<p class="text-[var(--color-fg-muted)]">Continue your learning journey</p>
 				</div>
-				<h3 class="text-lg font-medium mb-xs">{feature.title}</h3>
-				<p class="text-[var(--color-fg-muted)]">{feature.description}</p>
+				{#if data.progress.streak && data.progress.streak.currentStreak > 0}
+					<div class="flex items-center gap-xs text-[var(--color-fg-primary)]">
+						<Flame size={24} class="text-[var(--color-warning)]" />
+						<span class="text-2xl font-semibold">{data.progress.streak.currentStreak}</span>
+						<span class="text-sm text-[var(--color-fg-muted)]">day streak</span>
+					</div>
+				{/if}
 			</div>
-		{/each}
-	</section>
 
-	<!-- Philosophy -->
-	<section class="text-center max-w-3xl mx-auto">
-		<blockquote class="text-2xl md:text-3xl font-light italic text-[var(--color-fg-muted)] mb-md">
-			"The tool should recede; the outcome should remain."
-		</blockquote>
-		<p class="text-[var(--color-fg-subtle)]">
-			Zuhandenheit — Learn to build workflows that disappear into the work.
-		</p>
-	</section>
+			<!-- Continue Learning Hero -->
+			{#if data.progress.nextLesson}
+				<a
+					href="/paths/{data.progress.nextLesson.pathId}/{data.progress.nextLesson.lessonId}"
+					class="card block mb-lg border-[var(--color-border-emphasis)] hover:border-[var(--color-fg-primary)]"
+				>
+					<div class="flex items-center justify-between">
+						<div>
+							<div class="text-xs uppercase tracking-wider text-[var(--color-fg-muted)] mb-xs">
+								Continue Learning
+							</div>
+							<h2 class="text-xl font-semibold mb-xs">{data.progress.nextLesson.lessonTitle}</h2>
+							<p class="text-[var(--color-fg-muted)]">{data.progress.nextLesson.pathTitle}</p>
+						</div>
+						<ArrowRight size={24} class="text-[var(--color-fg-muted)]" />
+					</div>
+				</a>
+			{/if}
+
+			<!-- Path Progress Cards -->
+			<div class="mb-lg">
+				<h2 class="text-lg font-semibold mb-md">Your Paths</h2>
+				<div class="grid md:grid-cols-2 gap-md">
+					{#each data.progress.pathsWithProgress as path}
+						<a href="/paths/{path.id}" class="card block">
+							<div class="flex items-center gap-md mb-md">
+								<div class="text-2xl">
+									{#if path.icon === 'terminal'}
+										<Terminal size={24} />
+									{:else if path.icon === 'workflow'}
+										<Workflow size={24} />
+									{:else if path.icon === 'code'}
+										<Brain size={24} />
+									{:else if path.icon === 'brain'}
+										<Zap size={24} />
+									{/if}
+								</div>
+								<div class="flex-1">
+									<h3 class="font-medium mb-xs">{path.title}</h3>
+									<div class="text-xs text-[var(--color-fg-muted)]">
+										{path.completedLessons} of {path.totalLessons} lessons
+									</div>
+								</div>
+							</div>
+							<div class="progress-bar">
+								<div class="progress-bar-fill" style="width: {path.progressPercent}%"></div>
+							</div>
+							<div class="text-xs text-right text-[var(--color-fg-muted)] mt-xs">
+								{path.progressPercent}% complete
+							</div>
+						</a>
+					{/each}
+				</div>
+			</div>
+
+			<!-- Recent Activity -->
+			{#if data.progress.recentActivity && data.progress.recentActivity.length > 0}
+				<div>
+					<h2 class="text-lg font-semibold mb-md">Recent Activity</h2>
+					<div class="card">
+						{#each data.progress.recentActivity.slice(0, 5) as activity, i}
+							<div
+								class="flex items-center justify-between py-sm"
+								class:border-t={i > 0}
+								class:border-[var(--color-border-default)]={i > 0}
+							>
+								<div class="flex items-center gap-sm">
+									<div class="w-6 h-6 flex items-center justify-center text-[var(--color-success)]">
+										✓
+									</div>
+									<a
+										href="/paths/{activity.pathId}/{activity.lessonId}"
+										class="text-[var(--color-fg-primary)] hover:underline"
+									>
+										{activity.lessonTitle}
+									</a>
+								</div>
+								<div class="text-xs text-[var(--color-fg-muted)]">
+									{formatDate(activity.completedAt)}
+								</div>
+							</div>
+						{/each}
+					</div>
+				</div>
+			{/if}
+		</section>
+	{:else}
+		<!-- Marketing Page for Logged-out Users -->
+		<!-- Hero -->
+		<section class="text-center mb-section">
+			<h1 class="mx-auto text-center">Learn WORKWAY</h1>
+			<p class="text-xl md:text-2xl text-[var(--color-fg-muted)] max-w-2xl mx-auto mb-lg">
+				Build powerful workflow automations using Claude Code. From first commit to production-ready
+				compound workflows.
+			</p>
+			<a href="/paths" class="button-primary">
+				Start Learning
+				<ArrowRight size={20} />
+			</a>
+		</section>
+
+		<!-- Features -->
+		<section class="grid md:grid-cols-2 gap-md mb-section">
+			{#each features as feature}
+				<div class="card">
+					<div
+						class="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] flex items-center justify-center mb-md"
+					>
+						<feature.icon size={20} class="text-[var(--color-fg-primary)]" />
+					</div>
+					<h3 class="text-lg font-medium mb-xs">{feature.title}</h3>
+					<p class="text-[var(--color-fg-muted)]">{feature.description}</p>
+				</div>
+			{/each}
+		</section>
+
+		<!-- Philosophy -->
+		<section class="text-center max-w-3xl mx-auto">
+			<blockquote class="text-2xl md:text-3xl font-light italic text-[var(--color-fg-muted)] mb-md">
+				"The tool should recede; the outcome should remain."
+			</blockquote>
+			<p class="text-[var(--color-fg-subtle)]">
+				Zuhandenheit — Learn to build workflows that disappear into the work.
+			</p>
+		</section>
+	{/if}
 </div>

@@ -39,6 +39,8 @@
 	--page-padding-x: var(--space-md); /* ~26px */
 	--page-padding-y: var(--space-xl); /* ~68px - Golden Ratio */
 	--section-gap: var(--space-2xl); /* ~110px between major sections */
+	--header-height: 4rem; /* 64px */
+	--sticky-top: var(--header-height);
 
 	/* ==========================================================================
 	   Legacy brand aliases - For compatibility with existing components
@@ -614,3 +616,129 @@ pre,
    Accessibility - Reduced motion handled by CDN tokens.css
    (CDN provides @media (prefers-reduced-motion: reduce) - no duplicate needed)
    ========================================================================== */
+
+/* ==========================================================================
+   Lesson Layout - Two-column desktop, single-column mobile
+   ========================================================================== */
+
+.lesson-layout {
+	display: grid;
+	grid-template-columns: 1fr;
+	gap: var(--space-xl);
+	max-width: var(--max-width-wide);
+	margin: 0 auto;
+	padding: var(--page-padding-y) var(--page-padding-x);
+}
+
+@media (min-width: 1024px) {
+	.lesson-layout {
+		grid-template-columns: 1fr 320px;
+	}
+}
+
+/* ==========================================================================
+   Sticky Sidebar - Curriculum navigation
+   ========================================================================== */
+
+.sidebar-sticky {
+	position: sticky;
+	top: var(--sticky-top);
+	align-self: start;
+	max-height: calc(100vh - var(--sticky-top) - var(--space-xl));
+	overflow-y: auto;
+	padding: var(--space-md);
+	background: var(--color-bg-elevated);
+	border: 1px solid var(--color-border-default);
+	border-radius: var(--radius-none);
+}
+
+/* ==========================================================================
+   Curriculum Item - Lesson list with state indicators
+   ========================================================================== */
+
+.curriculum-item {
+	display: flex;
+	align-items: center;
+	gap: var(--space-sm);
+	padding: var(--space-sm) var(--space-md);
+	color: var(--color-fg-muted);
+	text-decoration: none;
+	transition: background-color var(--duration-hover) var(--ease-standard),
+		color var(--duration-hover) var(--ease-standard);
+	border-left: 2px solid transparent;
+}
+
+.curriculum-item:hover {
+	background-color: var(--color-bg-surface);
+	color: var(--color-fg-primary);
+}
+
+.curriculum-item.current {
+	border-left-color: var(--color-fg-primary);
+	background-color: var(--color-bg-surface);
+	color: var(--color-fg-primary);
+}
+
+.curriculum-item.completed {
+	text-decoration: line-through;
+	opacity: 0.7;
+}
+
+.curriculum-item.completed:hover {
+	opacity: 1;
+}
+
+/* ==========================================================================
+   Progress Bar - Linear progress indicator
+   ========================================================================== */
+
+.progress-bar {
+	width: 100%;
+	height: 4px;
+	background: var(--color-bg-surface);
+	border-radius: var(--radius-none);
+	overflow: hidden;
+	margin-bottom: var(--space-md);
+}
+
+.progress-bar-fill {
+	height: 100%;
+	background: var(--color-success);
+	transition: width var(--duration-standard) var(--ease-standard);
+}
+
+/* ==========================================================================
+   Progress Dots - Mobile curriculum navigation
+   ========================================================================== */
+
+.progress-dots {
+	display: flex;
+	gap: var(--space-xs);
+	justify-content: center;
+	padding: var(--space-md) 0;
+}
+
+.progress-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--color-border-default);
+	transition: background-color var(--duration-hover) var(--ease-standard);
+}
+
+.progress-dot.completed {
+	background: var(--color-success);
+}
+
+.progress-dot.current {
+	background: var(--color-fg-primary);
+	width: 12px;
+	height: 12px;
+}
+
+/* Hide sidebar on mobile, show progress dots instead */
+@media (max-width: 1023px) {
+	.sidebar-sticky {
+		display: none;
+	}
+}

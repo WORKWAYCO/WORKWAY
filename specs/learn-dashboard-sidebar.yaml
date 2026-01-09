@@ -1,0 +1,78 @@
+title: Learn WORKWAY Dashboard & Sidebar Curriculum
+property: cloudflare
+complexity: standard
+
+overview: |
+  Add engagement mechanics to learn.workway.co while respecting Zuhandenheit philosophy.
+  Transform home page for authenticated users (dashboard experience) and add sticky
+  sidebar curriculum to lesson pages.
+
+features:
+  - title: Home page dashboard for authenticated users
+    priority: 1
+    files:
+      - Cloudflare/apps/learn-web/src/routes/+page.svelte
+      - Cloudflare/apps/learn-web/src/routes/+page.server.ts
+    acceptance:
+      - Logged-out users see existing marketing content (unchanged)
+      - Logged-in users see "Welcome back" with streak counter
+      - "Continue Learning" hero shows next incomplete lesson
+      - Path progress cards show completion percentage
+      - Recent activity list (last 5 completed lessons)
+      - Uses existing design tokens, no new colors
+      - Square corners maintained (canonical)
+
+  - title: CSS additions for layout and sidebar
+    priority: 1
+    files:
+      - Cloudflare/apps/learn-web/src/app.css
+    acceptance:
+      - Add --header-height and --sticky-top variables
+      - Add .lesson-layout two-column grid
+      - Add .sidebar-sticky positioning
+      - Add .curriculum-item with current/completed states
+      - Add .progress-bar and .progress-dots
+      - All additions use existing design tokens
+      - No rounded corners (canonical)
+
+  - title: Lesson page with sidebar curriculum
+    priority: 2
+    depends_on:
+      - CSS additions for layout and sidebar
+    files:
+      - Cloudflare/apps/learn-web/src/routes/paths/[pathId]/[lessonId]/+page.svelte
+      - Cloudflare/apps/learn-web/src/routes/paths/[pathId]/[lessonId]/+page.server.ts
+    acceptance:
+      - Two-column layout on desktop (content + 320px sidebar)
+      - Single column on mobile with progress dots at bottom
+      - Sticky sidebar shows all lessons in current path
+      - Current lesson highlighted with left border
+      - Completed lessons show checkmark and strikethrough
+      - Progress bar in sidebar header
+      - Previous/Next navigation moved to top
+      - Server loads completion state for all lessons in path
+
+  - title: Server-side progress data loading
+    priority: 1
+    files:
+      - Cloudflare/apps/learn-web/src/routes/+page.server.ts
+      - Cloudflare/apps/learn-web/src/routes/paths/[pathId]/[lessonId]/+page.server.ts
+    acceptance:
+      - Home page loads user progress (streak, completed lessons, recent activity)
+      - Lesson page loads completion state for all lessons in path
+      - Graceful fallback when user not authenticated
+      - Uses existing /api/progress endpoint pattern
+
+requirements:
+  - Must use existing design tokens from CDN (no hardcoded colors)
+  - Square corners only (--radius-none) per WORKWAY canon
+  - No gradients, glass effects, or decorative elements
+  - Lucide icons only (already in use)
+  - Mobile-first responsive design
+  - Preserve all existing SEO/structured data
+
+success:
+  - pnpm check passes (no TypeScript errors)
+  - Home page shows dashboard for authenticated users
+  - Lesson page shows sidebar curriculum on desktop
+  - All existing functionality preserved

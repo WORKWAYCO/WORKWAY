@@ -7,16 +7,18 @@
 
 import { error } from '@sveltejs/kit';
 import type { PageLoad } from './$types';
-import { getPath, getLesson, getNextLesson, getPreviousLesson } from '$lib/content/paths';
+import { getPath, getLesson } from '$lib/content/paths';
 import { loadLessonContent, type LessonContent } from '$lib/content/lessons';
 
 export interface PageData {
 	pathId: string;
 	lessonId: string;
 	content: LessonContent;
+	lessonsProgress: Record<string, boolean>;
+	isAuthenticated: boolean;
 }
 
-export const load: PageLoad = async ({ params }) => {
+export const load: PageLoad = async ({ params, data }) => {
 	const { pathId, lessonId } = params;
 
 	if (!pathId || !lessonId) {
@@ -36,9 +38,12 @@ export const load: PageLoad = async ({ params }) => {
 	// Load content with excerpt
 	const content = await loadLessonContent(pathId, lessonId);
 
+	// Merge server data (lessonsProgress, isAuthenticated) with client data
 	return {
 		pathId,
 		lessonId,
-		content
+		content,
+		lessonsProgress: data?.lessonsProgress || {},
+		isAuthenticated: data?.isAuthenticated || false
 	};
 };
