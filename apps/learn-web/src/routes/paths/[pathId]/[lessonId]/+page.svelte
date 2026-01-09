@@ -33,6 +33,7 @@
 	// Time tracking - start timer when page loads
 	let startTime = $state(Date.now());
 	let elapsedSeconds = $state(0);
+	let timerInterval: ReturnType<typeof setInterval> | null = null;
 
 	// Format elapsed time as mm:ss
 	function formatTime(seconds: number): string {
@@ -41,24 +42,55 @@
 		return `${mins}:${secs.toString().padStart(2, '0')}`;
 	}
 
-	// Running clock - updates every second (pure client-side, no server cost)
-	$effect(() => {
-		// Track lessonId to reset timer on navigation
-		const _currentLesson = lessonId;
-		startTime = Date.now();
-		elapsedSeconds = 0;
-
-		const interval = setInterval(() => {
-			elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
-		}, 1000);
-
-		// Cleanup on unmount or lesson change
-		return () => clearInterval(interval);
-	});
+	// Check if lesson was already completed when loaded
+	const wasAlreadyCompleted = $derived(data.lessonsProgress?.[lessonId] || false);
 
 	// Set initial completion state from server data
 	$effect(() => {
 		isCompleted = data.lessonsProgress?.[lessonId] || false;
+	});
+
+	// Running clock - only runs if lesson not already completed
+	$effect(() => {
+		// Track lessonId to reset on navigation
+		const _currentLesson = lessonId;
+		const alreadyDone = data.lessonsProgress?.[lessonId] || false;
+
+		// Clear any existing interval
+		if (timerInterval) {
+			clearInterval(timerInterval);
+			timerInterval = null;
+		}
+
+		// Don't start timer for already-completed lessons
+		if (alreadyDone) {
+			elapsedSeconds = 0;
+			return;
+		}
+
+		// Start fresh timer
+		startTime = Date.now();
+		elapsedSeconds = 0;
+
+		timerInterval = setInterval(() => {
+			elapsedSeconds = Math.floor((Date.now() - startTime) / 1000);
+		}, 1000);
+
+		// Cleanup on unmount or lesson change
+		return () => {
+			if (timerInterval) {
+				clearInterval(timerInterval);
+				timerInterval = null;
+			}
+		};
+	});
+
+	// Stop timer when lesson is completed
+	$effect(() => {
+		if (isCompleted && timerInterval) {
+			clearInterval(timerInterval);
+			timerInterval = null;
+		}
 	});
 
 	// Praxis state
@@ -325,10 +357,17 @@
 						<Clock size={16} />
 						{lesson.duration}
 					</div>
-					<div class="flex items-center gap-xs text-sm text-[var(--color-fg-primary)] font-mono" title="Time on this lesson">
-						<span class="w-1 h-1 bg-[var(--color-success)] rounded-full animate-pulse"></span>
-						{formatTime(elapsedSeconds)}
-					</div>
+					{#if isCompleted}
+						<div class="flex items-center gap-xs text-sm text-[var(--color-success)]" title="Lesson completed">
+							<CheckCircle2 size={16} />
+							<span>Complete</span>
+						</div>
+					{:else}
+						<div class="flex items-center gap-xs text-sm text-[var(--color-fg-primary)] font-mono" title="Time on this lesson">
+							<span class="w-1 h-1 bg-[var(--color-success)] rounded-full animate-pulse"></span>
+							{formatTime(elapsedSeconds)}
+						</div>
+					{/if}
 				</div>
 
 				<h1>{lesson.title}</h1>
