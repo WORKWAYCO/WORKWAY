@@ -3,6 +3,9 @@
 	import { page } from '$app/stores';
 	import { Clock, CheckCircle2, Circle, ArrowLeft, ExternalLink } from 'lucide-svelte';
 	import { error } from '@sveltejs/kit';
+	import type { PageData } from './$types';
+
+	let { data }: { data: PageData } = $props();
 
 	const pathId = $derived($page.params.pathId ?? '');
 	const path = $derived(getPath(pathId));
@@ -15,8 +18,9 @@
 		}
 	});
 
-	// TODO: Replace with actual progress from database
-	const completedLessons: string[] = [];
+	// Get completed lessons from server data
+	const completedLessons = $derived(data.completedLessons || []);
+	const isAuthenticated = $derived(data.isAuthenticated || false);
 </script>
 
 <svelte:head>
