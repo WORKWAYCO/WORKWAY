@@ -8,6 +8,11 @@
 
 WORKWAY is TypeScript-native workflow automation built on Cloudflare Workers. We serve developer teams building complex, version-controlled automations that need to scale efficiently.
 
+**Business Model Priority**: Enterprise-first, marketplace second (like Webflow).
+- **Enterprise/Private (P0)**: Per-user + per-run SaaS
+- **Public Marketplace (P1)**: Developer ecosystem, network effects
+- **Worker Hire (P2)**: Expert marketplace for non-technical buyers
+
 ## What We're Not
 
 - **Not a Zapier competitor**: We're infrastructure for developers who outgrew drag-and-drop
@@ -205,24 +210,34 @@ $ claude "why did the last 3 runs fail?"
 
 ## Business Model Transparency
 
-**Three revenue streams**:
+**Enterprise-first with marketplace growth** (the Webflow model):
 
-1. **Enterprise**: Per-user + per-run pricing for teams
-   - $20/user/month base
+| Tier | Priority | Revenue Model |
+|------|----------|---------------|
+| **Enterprise/Private** | P0 | Per-user + per-run SaaS |
+| **Public Marketplace** | P1 | 30% commission on installs |
+| **Worker Hire** | P2 | 20% platform fee on projects |
+
+**Revenue streams in priority order**:
+
+1. **Enterprise (P0)**: Per-user + per-run pricing for teams
+   - $25/user/month base
    - $0.03 per standard run, $0.15 per advanced run
+   - 40% discount vs marketplace run pricing
+   - Cost transparency: users see exactly what they pay
    - Target: 100-500 user teams
 
-2. **Marketplace**: 30% commission on workflow installations
+2. **Marketplace (P1)**: 30% commission on workflow installations
    - Developers set their own pricing ($5-99/month typical)
    - We handle billing, execution, OAuth
    - Target: 1000+ published workflows
 
-3. **Worker Hire**: Agencies charge hourly/project rates
+3. **Worker Hire (P2)**: Agencies charge hourly/project rates
    - We take 20% platform fee
    - Workers bid on workflow development projects
    - Target: 500+ active freelance developers
 
-**Key insight**: We're not just a SaaS product. We're a **platform economy**. Revenue scales with ecosystem growth, not just direct sales.
+**Key insight**: We're not just a SaaS product. We're a **platform economy**. But we lead with enterprise (easier story, recurring revenue), and let marketplace grow the ecosystem.
 
 ## Honest Limitations (Don't Hide These)
 

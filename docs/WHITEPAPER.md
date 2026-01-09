@@ -1,6 +1,6 @@
 # WORKWAY: Automation Infrastructure for AI-Native Developers
 
-**Whitepaper v1.0** | January 2026
+**Whitepaper v1.1** | January 2026
 
 ---
 
@@ -8,11 +8,18 @@
 
 WORKWAY is TypeScript-native workflow automation infrastructure built on Cloudflare Workers. We enable developer teams to build, version-control, and scale complex automations using the same tools they use for application code: Git, CI/CD, TypeScript, and AI coding assistants.
 
-**Market**: $12B workflow automation market growing at 23% CAGR, dominated by no-code tools (Zapier, Make) serving non-technical users. **28 million developers worldwide write custom automation scripts with no unified platform.**
+**The Key Insight**: We're not competing with Zapier—we're in a **different weight class**. Zapier is for non-technical users who want drag-and-drop simplicity. WORKWAY is for developers who need TypeScript, version control, and AI-assisted development. We're not better than Zapier; we serve a different user.
 
-**Product**: Three-tier business model (Enterprise SaaS + Marketplace + Worker Hire) creating a platform economy where developers monetize workflows and agencies scale client delivery.
+**Market**: $12B workflow automation market growing at 23% CAGR, dominated by no-code tools serving non-technical users. **28 million developers worldwide write custom automation scripts with no unified platform.**
 
-**Traction**: Built by 2 founders + AI agents in 6 months. Dog-fooding the platform to run our own company. 40+ integrations, TypeScript SDK, Claude Code CLI integration, marketplace with worker hiring.
+**Business Model**: Enterprise-first with marketplace as growth engine (like Webflow):
+- **Enterprise/Private (P0)**: Per-user + per-run SaaS pricing for teams building internal automations
+- **Public Marketplace (P1)**: Two-sided marketplace where developers sell pre-built workflows
+- **Worker Hire (P2)**: Connect businesses with experts to build custom workflows
+
+**Traction**: Built by 2 founders + AI agents in 6 months. Dog-fooding the platform to run our own company. 40+ integrations, TypeScript SDK, Claude Code CLI integration, marketplace with expert hiring.
+
+**Vision**: A giant business with no employees. We're building WORKWAY to prove that AI-native companies can operate at scale with minimal headcount—and selling that capability to every developer team.
 
 **Ask**: Seeking strategic partners and early enterprise customers to validate product-market fit before scaling.
 
@@ -23,7 +30,7 @@ WORKWAY is TypeScript-native workflow automation infrastructure built on Cloudfl
 1. [Problem: Workflow Automation's Developer Gap](#problem-workflow-automations-developer-gap)
 2. [Solution: Infrastructure, Not a Platform](#solution-infrastructure-not-a-platform)
 3. [Architecture: TypeScript + Cloudflare Edge](#architecture-typescript--cloudflare-edge)
-4. [Business Model: Three-Tier Revenue](#business-model-three-tier-revenue)
+4. [Business Model: Enterprise-First with Marketplace Growth](#business-model-enterprise-first-with-marketplace-growth)
 5. [Competitive Landscape](#competitive-landscape)
 6. [Technical Differentiation](#technical-differentiation)
 7. [Go-to-Market Strategy](#go-to-market-strategy)
@@ -240,34 +247,76 @@ Developer Machine                  Cloudflare Edge               WORKWAY Platfor
 
 ---
 
-## Business Model: Three-Tier Revenue
+## Business Model: Enterprise-First with Marketplace Growth
 
-WORKWAY generates revenue from three interconnected streams:
+**The Webflow Parallel**: Our business model follows Webflow's proven path:
+- **Private** = Enterprise SaaS (you pay monthly, build your own workflows)
+- **Public** = Marketplace (buy pre-built workflows from developers)
+- **Revenue** comes from runs (like Webflow's site plans, not templates)
 
-### 1. Enterprise: Per-User + Per-Run Pricing
+This isn't three equal revenue streams—it's a deliberate hierarchy:
+
+| Tier | Priority | Model | Why First? |
+|------|----------|-------|------------|
+| **Enterprise/Private** | P0 | Per-user + per-run SaaS | Easier story to tell, recurring revenue, land-and-expand |
+| **Public Marketplace** | P1 | 30% commission | Network effects, developer ecosystem |
+| **Worker Hire** | P2 | 20% platform fee | Value-add for non-technical buyers |
+
+### 1. Enterprise: Per-User + Per-Run Pricing (P0)
+
+**This is the primary business.** The marketplace is the growth engine, but enterprise is where we start.
 
 **Target**: Developer teams at B2B SaaS companies (10-500 employees)
 
 **Pricing**:
-- $20/user/month base subscription
+- $25/user/month base subscription
 - $0.03 per standard run (API calls, data transformation)
-- $0.05 per advanced run (AI inference, complex processing)
+- $0.15 per advanced run (AI inference, complex processing)
+- Enterprise customers get 40% discount on run pricing vs. marketplace rates
 
-**Value proposition**: Cheaper than building custom infrastructure, more powerful than Zapier
+**Value proposition**: Cheaper than building custom infrastructure, more powerful than Zapier, with full cost transparency.
+
+#### Cost Transparency: The Slider
+
+Enterprise customers see exactly what they pay and can optimize timing:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Run Frequency Calculator                                    │
+│                                                              │
+│  How often should this workflow run?                         │
+│                                                              │
+│  ○ Every 1 min   ●─────────────────────────────────────○     │
+│                  │                                           │
+│  Monthly cost:   $432                    vs Zapier: $2,160   │
+│                  You save 80% ✓                              │
+│                                                              │
+│  ○ Every 5 min   ●───────────────────────○                   │
+│  Monthly cost:   $86                                         │
+│                                                              │
+│  ○ Every hour    ●───────○                                   │
+│  Monthly cost:   $22                                         │
+│                                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Why this matters**: Users make informed decisions. "Do you really need this every minute? If hourly is fine, you save $400/month."
 
 **Example customer** (50-person engineering team):
-- 30 developers using platform = $600/month base
+- 30 developers using platform = $750/month base ($25/user)
 - 500k workflow runs/month = $15,000/month usage
-- **Total**: $15,600/month ($187k ARR)
+- **Total**: $15,750/month ($189k ARR)
 
 **Comparison to Zapier** (same team):
-- 30 seats × $69/month = $2,070/month
+- 30 seats × $69/month = $2,070/month base
 - 500k tasks beyond included tier = ~$1,500/month
 - **Total**: $3,570/month ($43k ARR)
 
-**Wait, we're MORE expensive?** Yes—but we enable workflows Zapier can't handle. Customers pay more because we replace custom Lambda functions, not Zapier.
+**Wait, we're MORE expensive?** Yes—and that's the point. We're not competing on price-per-task. We enable workflows Zapier physically cannot handle. Customers pay more because we replace custom Lambda functions, internal dev teams, and months of engineering time—not a $20/month Zapier subscription.
 
-### 2. Marketplace: 30% Commission on Workflow Sales
+### 2. Public Marketplace: 30% Commission on Workflow Sales (P1)
+
+**The growth engine.** Enterprise gets us revenue; marketplace gets us scale and developer ecosystem.
 
 **Target**: Individual developers building and selling pre-built workflows
 
@@ -290,7 +339,9 @@ WORKWAY generates revenue from three interconnected streams:
 - Gross GMV: $1.25M/month
 - WORKWAY commission: $375k/month ($4.5M ARR)
 
-### 3. Worker Hire: 20% Platform Fee on Freelance Projects
+### 3. Worker Hire: Expert Marketplace (P2)
+
+**The bridge for non-technical buyers.** If you can't build it yourself and don't want a pre-built workflow, hire someone who can.
 
 **Target**: Agencies and freelance developers building custom workflows for clients
 
@@ -327,7 +378,15 @@ WORKWAY generates revenue from three interconnected streams:
 
 ## Competitive Landscape
 
-### Direct Competitors
+### Different Weight Class, Not "Better"
+
+**We don't say "better than Zapier."** We're in a different weight class entirely.
+
+When someone asks, "What are your competitors?" the honest answer is:
+
+> "Zapier, n8n, Make—but we're not really competing with them. If you're a marketing team that wants to set up a simple automation without coding, use Zapier. It's great for that. We built WORKWAY for developers who need TypeScript, version control, and AI-assisted development. We're the infrastructure layer for engineering teams who outgrew drag-and-drop."
+
+### The Landscape
 
 | Competitor | Target User | Pricing | Strengths | Weaknesses |
 |------------|-------------|---------|-----------|------------|
@@ -355,12 +414,23 @@ WORKWAY generates revenue from three interconnected streams:
 
 **WORKWAY occupies the "Code-Based + High Complexity" quadrant** that no other competitor fully addresses.
 
-### Why We Win
+### Why We Win (When We're The Right Fit)
 
-1. **TypeScript-native**: Zapier/Make are GUI-first. We're code-first.
-2. **Managed infrastructure**: Temporal/Inngest require self-hosting. We're fully managed.
-3. **Marketplace ecosystem**: None of our competitors have developer marketplaces.
-4. **Claude Code integration**: We're the only platform designed for AI-assisted development.
+1. **TypeScript-native**: Zapier/Make are GUI-first. We're code-first, Git-native, type-safe.
+2. **Claude Code forward**: "We were not around before Claude Code. We built this to plug into Claude Code." No other platform is designed for AI-assisted development.
+3. **Managed infrastructure**: Temporal/Inngest require self-hosting. We're fully managed on Cloudflare edge.
+4. **Marketplace + Enterprise**: None of our competitors have both a developer marketplace AND enterprise SaaS.
+5. **Cost transparency**: You see exactly what you pay, and can optimize run frequency yourself.
+
+### Who Should Use Zapier Instead
+
+**Seriously.** Don't use WORKWAY if:
+- You're a non-technical team → Use Zapier
+- You need a quick 2-3 step automation → Use Zapier
+- You don't have developers on staff → Use Zapier
+- You don't use Git or CI/CD → Use Zapier
+
+**Zapier is excellent for its target user.** We're building for a different user entirely.
 
 ---
 
@@ -557,18 +627,33 @@ $ claude "add error handling to zoom-to-notion workflow"
 3. **Quality bar**: We won't ship workflows we wouldn't use ourselves
 4. **Case study**: Our setup is the demo for enterprise customers
 
-### Execution Model: Two Founders + Agents
+### Execution Model: A Giant Business With No Employees
 
-**Philosophy**: AI agents are team members, not tools.
+**Philosophy**: AI agents are team members, not tools. This isn't a metaphor—it's our operating model.
+
+> "This thing could theoretically be a giant business with no employees." — Danny, Co-Founder
 
 **How we work**:
 - **Claude writes 60-70% of codebase** (TypeScript, React, API routes)
 - **Micah reviews, refactors, architects** (Zuhandenheit design philosophy)
 - **Danny validates business model** (pricing, positioning, market sizing)
+- **Agents run in background** based on conversation transcripts—we talk, they build
+
+**The playbook**:
+1. Founders get on a call, discuss strategy
+2. Conversation gets transcribed
+3. Agents parse transcript, generate implementation plan
+4. Agents build features in parallel
+5. Founders review and merge
+6. Ship same day
+
+**Reference model**: [Every.to](https://every.to) by Dan Shipper—newsletter + products, all agent-powered. We're following the same playbook for developer tools.
 
 **Speed advantage**: Built in 6 months what would typically take 12-18 months with traditional team.
 
 **Cost advantage**: $0 payroll (founders unpaid until revenue), ~$500/month Claude API costs vs $50k+/month for 3-engineer team.
+
+**The meta-thesis**: WORKWAY proves the AI-native company model works. Then we sell that capability to every developer team.
 
 ---
 
@@ -863,6 +948,18 @@ We're building the platform for the 28 million developers worldwide who need Typ
 
 ---
 
-**Document version**: 1.0
-**Last updated**: January 2026
+**Document version**: 1.1
+**Last updated**: January 9, 2026
 **Authors**: Micah Johnson, Danny (Half Dozen / WORKWAY)
+
+### Changelog
+
+**v1.1 (January 9, 2026)** — Enterprise Alignment Update
+- Reframed business model as **enterprise-first** with marketplace as growth engine
+- Added **Webflow parallel** (Private = SaaS, Public = Marketplace)
+- Added **cost transparency calculator** section with frequency slider
+- Strengthened **"different weight class"** positioning (not "better than Zapier")
+- Added **"giant business with no employees"** vision and Every.to reference
+- Updated team section with **AI-native playbook** (talk → transcribe → agents build)
+- Added explicit **"Who should use Zapier instead"** section for honesty
+- Incorporated insights from January 8, 2026 founder strategy session
