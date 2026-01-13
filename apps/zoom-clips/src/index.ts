@@ -622,6 +622,13 @@ export class ZoomSessionManager {
     const path = url.pathname;
 
     try {
+      // Persist userId for later background jobs (e.g. sync job metadata)
+      // Note: X-User-Id is injected by the router at the edge.
+      const userIdHeader = request.headers.get('X-User-Id');
+      if (userIdHeader) {
+        await this.state.storage.put('userId', userIdHeader);
+      }
+
       // Route handlers
       if (path === '/setup' && request.method === 'GET') {
         const userId = request.headers.get('X-User-Id') || 'unknown';
