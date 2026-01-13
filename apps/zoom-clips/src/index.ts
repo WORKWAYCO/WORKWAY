@@ -982,9 +982,10 @@ export class ZoomSessionManager {
 
       // If we captured a download response, parse it
       if (downloadResponse) {
-        console.log(`[Worker] Processing captured response from: ${downloadResponse.url}`);
+        const captured = downloadResponse as { url: string; content: string };
+        console.log(`[Worker] Processing captured response from: ${captured.url}`);
 
-        const vttContent = downloadResponse.content;
+        const vttContent = captured.content;
 
         // Check if response is JSON (error) or VTT
         if (vttContent.startsWith('{')) {
@@ -1688,6 +1689,22 @@ export class ZoomSessionManager {
       //              </div>
       //            </a>
       const clips = await page.evaluate((fromDateStr: string) => {
+        const fromDate = new Date(fromDateStr);
+        const now = new Date();
+
+        const inferYearForMonthDay = (monthDayText: string): Date | null => {
+          // monthDayText: "Nov 9" (no year). Infer year relative to now to avoid
+          // assigning future dates (common around year boundaries).
+          const currentYear = now.getFullYear();
+          let d = new Date(`${monthDayText}, ${currentYear}`);
+          if (isNaN(d.getTime())) return null;
+          // If inferred date is in the future by more than 24h, it's probably last year.
+          if (d.getTime() - now.getTime() > 24 * 60 * 60 * 1000) {
+            d.setFullYear(currentYear - 1);
+          }
+          return d;
+        };
+
         const results: Array<{
           id: string;
           title: string;
@@ -1725,7 +1742,8 @@ export class ZoomSessionManager {
           let createdAt = new Date().toISOString();
           const daysAgoMatch = allText.match(/(\d+)\s*days?\s*ago/i);
           const hoursAgoMatch = allText.match(/(\d+)\s*hours?\s*ago/i);
-          const dateMatch = allText.match(/(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}/i);
+          // Prefer explicit UI date, e.g. <span class="start-time-str">Nov 9, 2025</span>
+          const startTimeText = (el.querySelector('.start-time-str')?.textContent || '').trim();
 
           if (daysAgoMatch) {
             const daysAgo = parseInt(daysAgoMatch[1]);
@@ -1737,12 +1755,37 @@ export class ZoomSessionManager {
             const date = new Date();
             date.setHours(date.getHours() - hoursAgo);
             createdAt = date.toISOString();
-          } else if (dateMatch) {
-            const parsed = new Date(dateMatch[0] + ', ' + new Date().getFullYear());
-            if (!isNaN(parsed.getTime())) {
+          } else if (startTimeText) {
+            // Handles both "Nov 9, 2025" and "Nov 9"
+            const hasYear = /\b\d{4}\b/.test(startTimeText);
+            const parsed = hasYear ? new Date(startTimeText) : inferYearForMonthDay(startTimeText);
+            if (parsed && !isNaN(parsed.getTime())) {
               createdAt = parsed.toISOString();
             }
+          } else {
+            // Fallback: try to parse from allText (sometimes concatenated)
+            // Match "Nov 9, 2025" OR "Nov 9"
+            const dateMatch = allText.match(
+              /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}(?:,\s+\d{4})?\b/i
+            );
+            if (dateMatch) {
+              const text = dateMatch[0];
+              const hasYear = /\b\d{4}\b/.test(text);
+              const parsed = hasYear ? new Date(text) : inferYearForMonthDay(text);
+              if (parsed && !isNaN(parsed.getTime())) {
+                createdAt = parsed.toISOString();
+              }
+            }
           }
+
+          // Optional filter: if we can parse createdAt and it's older than fromDate, skip.
+          // This keeps the /clips?days=N semantic more accurate when Zoom displays older clips.
+          try {
+            const created = new Date(createdAt);
+            if (!isNaN(created.getTime()) && created.getTime() < fromDate.getTime()) {
+              return;
+            }
+          } catch {}
 
           // Extract duration (format: "1 min", "2:30", etc.)
           let duration = 0;
@@ -2457,9 +2500,10 @@ export class ZoomSessionManager {
 
       // If we captured a download response, parse it
       if (downloadResponse) {
-        console.log(`Processing captured response from: ${downloadResponse.url}`);
+        const captured = downloadResponse as { url: string; content: string };
+        console.log(`Processing captured response from: ${captured.url}`);
 
-        const vttContent = downloadResponse.content;
+        const vttContent = captured.content;
 
         // Check if response is JSON (error) or VTT
         if (vttContent.startsWith('{')) {
@@ -2491,7 +2535,7 @@ export class ZoomSessionManager {
                 dateTime: clickResult.dateTime,
                 transcript,
                 format: 'vtt',
-                downloadUrl: downloadResponse.url,
+                downloadUrl: captured.url,
               });
             }
           } catch {
@@ -2513,7 +2557,7 @@ export class ZoomSessionManager {
             dateTime: clickResult.dateTime,
             transcript,
             format: 'vtt',
-            downloadUrl: downloadResponse.url,
+            downloadUrl: captured.url,
           });
         }
 
