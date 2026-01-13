@@ -1755,40 +1755,76 @@ export class ZoomSessionManager {
           // Clean up title - remove duration/stats text if concatenated
           title = title.replace(/\d+\s*plays?/i, '').replace(/duration:?\s*\d+\s*min/i, '').trim();
 
-          // Try to extract date - look for patterns like "4 days ago", "Dec 26", etc.
+          // Try to extract date from multiple sources (in order of reliability)
           let createdAt = new Date().toISOString();
-          const daysAgoMatch = allText.match(/(\d+)\s*days?\s*ago/i);
-          const hoursAgoMatch = allText.match(/(\d+)\s*hours?\s*ago/i);
-          // Prefer explicit UI date, e.g. <span class="start-time-str">Nov 9, 2025</span>
-          const startTimeText = (el.querySelector('.start-time-str')?.textContent || '').trim();
+          let dateFound = false;
 
-          if (daysAgoMatch) {
-            const daysAgo = parseInt(daysAgoMatch[1]);
-            const date = new Date();
-            date.setDate(date.getDate() - daysAgo);
-            createdAt = date.toISOString();
-          } else if (hoursAgoMatch) {
-            const hoursAgo = parseInt(hoursAgoMatch[1]);
-            const date = new Date();
-            date.setHours(date.getHours() - hoursAgo);
-            createdAt = date.toISOString();
-          } else if (startTimeText) {
-            // Handles both "Nov 9, 2025" and "Nov 9"
-            const hasYear = /\b\d{4}\b/.test(startTimeText);
-            const parsed = hasYear ? new Date(startTimeText) : inferYearForMonthDay(startTimeText);
-            if (parsed && !isNaN(parsed.getTime())) {
+          // 1. BEST: Look for accessibility span with "created on {date}" pattern
+          // e.g., "Team Dashboard, created on Dec 1, 2025, Danny Morgan..."
+          const createdOnMatch = allText.match(/created on\s+(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}/i);
+          if (createdOnMatch) {
+            // Extract just the date part: "Dec 1, 2025"
+            const dateStr = createdOnMatch[0].replace(/created on\s+/i, '');
+            const parsed = new Date(dateStr);
+            if (!isNaN(parsed.getTime())) {
               createdAt = parsed.toISOString();
+              dateFound = true;
             }
-          } else {
-            // Fallback: try to parse from allText (sometimes concatenated)
-            // Match "Nov 9, 2025" OR "Nov 9"
+          }
+
+          // 2. Look for .start-time-str element (individual clip pages)
+          if (!dateFound) {
+            const startTimeText = (el.querySelector('.start-time-str')?.textContent || '').trim();
+            if (startTimeText) {
+              const hasYear = /\b\d{4}\b/.test(startTimeText);
+              const parsed = hasYear ? new Date(startTimeText) : inferYearForMonthDay(startTimeText);
+              if (parsed && !isNaN(parsed.getTime())) {
+                createdAt = parsed.toISOString();
+                dateFound = true;
+              }
+            }
+          }
+
+          // 3. Relative dates: "X days ago", "X hours ago"
+          if (!dateFound) {
+            const daysAgoMatch = allText.match(/(\d+)\s*days?\s*ago/i);
+            const hoursAgoMatch = allText.match(/(\d+)\s*hours?\s*ago/i);
+            if (daysAgoMatch) {
+              const daysAgo = parseInt(daysAgoMatch[1]);
+              const date = new Date();
+              date.setDate(date.getDate() - daysAgo);
+              createdAt = date.toISOString();
+              dateFound = true;
+            } else if (hoursAgoMatch) {
+              const hoursAgo = parseInt(hoursAgoMatch[1]);
+              const date = new Date();
+              date.setHours(date.getHours() - hoursAgo);
+              createdAt = date.toISOString();
+              dateFound = true;
+            }
+          }
+
+          // 4. Fallback: any "Month Day, Year" pattern in text
+          if (!dateFound) {
             const dateMatch = allText.match(
-              /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}(?:,\s+\d{4})?\b/i
+              /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2},?\s+\d{4}\b/i
             );
             if (dateMatch) {
-              const text = dateMatch[0];
-              const hasYear = /\b\d{4}\b/.test(text);
-              const parsed = hasYear ? new Date(text) : inferYearForMonthDay(text);
+              const parsed = new Date(dateMatch[0]);
+              if (!isNaN(parsed.getTime())) {
+                createdAt = parsed.toISOString();
+                dateFound = true;
+              }
+            }
+          }
+
+          // 5. Last resort: "Month Day" without year (infer year)
+          if (!dateFound) {
+            const dateMatch = allText.match(
+              /\b(Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)\s+\d{1,2}\b/i
+            );
+            if (dateMatch) {
+              const parsed = inferYearForMonthDay(dateMatch[0]);
               if (parsed && !isNaN(parsed.getTime())) {
                 createdAt = parsed.toISOString();
               }
