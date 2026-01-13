@@ -131,10 +131,13 @@ async function syncWorkflow() {
     if (result.success) {
       const clipCount = result.data?.clips?.length || 0;
       const meetingCount = result.data?.meetings?.length || 0;
-      const notionWritten = result.data?.notion?.written || 0;
+      const notion = result.data?.notion;
+      const notionWritten = notion?.written || 0;
 
       // Show enhanced message if Notion write succeeded
-      if (notionWritten > 0) {
+      if (notion?.status === 'queued' && notion?.jobId) {
+        message.innerHTML = `<span style="color: #10b981;">✓ Fetched ${clipCount} clips, ${meetingCount} meetings → Notion sync queued</span><br/><span style="color: #9ca3af; font-size: 12px;">Job: ${notion.jobId}. Pages will appear shortly.</span>`;
+      } else if (notionWritten > 0) {
         message.innerHTML = `<span style="color: #10b981;">✓ Synced ${clipCount} clips, ${meetingCount} meetings → ${notionWritten} written to Notion</span>`;
       } else {
         message.innerHTML = `<span style="color: #10b981;">✓ Synced ${clipCount} clips, ${meetingCount} meetings</span>`;

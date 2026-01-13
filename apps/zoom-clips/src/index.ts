@@ -675,6 +675,16 @@ export class ZoomSessionManager {
         return this.runSync(days, writeToNotion);
       }
 
+      // Polling endpoint for async Notion sync jobs
+      // GET /sync-status?jobId=...
+      if (path === '/sync-status' && request.method === 'GET') {
+        const jobId = url.searchParams.get('jobId') || '';
+        if (!jobId) {
+          return Response.json({ success: false, error: 'Missing jobId' }, { status: 400 });
+        }
+        return this.getSyncStatus(jobId);
+      }
+
       if (path === '/disconnect' && request.method === 'POST') {
         return this.disconnect();
       }
@@ -2076,22 +2086,108 @@ export class ZoomSessionManager {
 
       const duration = Date.now() - startTime;
 
-      // Log execution for dashboard stats
+      // Log execution for dashboard stats (fetch phase)
       const executions = await this.state.storage.get<Array<{
         started_at: string;
         completed_at?: string;
         success: boolean;
         clips_count?: number;
         meetings_count?: number;
+        notion_job_id?: string;
+        notion_status?: 'queued' | 'running' | 'completed' | 'failed';
+        notion_written?: number;
+        notion_failed?: number;
       }>>('executions') || [];
 
-      executions.unshift({
+      const executionRecord: {
+        started_at: string;
+        completed_at?: string;
+        success: boolean;
+        clips_count?: number;
+        meetings_count?: number;
+        notion_job_id?: string;
+        notion_status?: 'queued' | 'running' | 'completed' | 'failed';
+        notion_written?: number;
+        notion_failed?: number;
+      } = {
         started_at: new Date(startTime).toISOString(),
         completed_at: new Date().toISOString(),
         success: true,
         clips_count: clipsData.clips?.length || 0,
         meetings_count: meetingsData.meetings?.length || 0,
-      });
+      };
+
+      // NEW: Trigger Notion workflow asynchronously if requested
+      // This avoids browser extension timeouts and makes sync resilient.
+      let notionResult: null | { status: 'queued'; jobId: string } = null;
+      if (writeToNotion) {
+        const userId = await this.state.storage.get<string>('userId') || 'unknown';
+        const jobId = crypto.randomUUID();
+        notionResult = { status: 'queued', jobId };
+
+        executionRecord.notion_job_id = jobId;
+        executionRecord.notion_status = 'queued';
+
+        await this.state.storage.put(`sync_job:${jobId}`, {
+          jobId,
+          userId,
+          status: 'queued',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          clipsCount: (clipsData.clips || []).length,
+          meetingsCount: (meetingsData.meetings || []).length,
+          written: 0,
+          failed: 0,
+          error: null as string | null,
+        });
+
+        // Mark as running and execute in background
+        this.state.waitUntil((async () => {
+          await this.state.storage.put(`sync_job:${jobId}`, {
+            jobId,
+            userId,
+            status: 'running',
+            createdAt: Date.now(),
+            updatedAt: Date.now(),
+            clipsCount: (clipsData.clips || []).length,
+            meetingsCount: (meetingsData.meetings || []).length,
+            written: 0,
+            failed: 0,
+            error: null as string | null,
+          });
+
+          try {
+            const res = await this.triggerNotionWorkflow(userId, clipsData.clips || [], meetingsData.meetings || []);
+            await this.state.storage.put(`sync_job:${jobId}`, {
+              jobId,
+              userId,
+              status: res.failed > 0 && res.written === 0 ? 'failed' : 'completed',
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              clipsCount: (clipsData.clips || []).length,
+              meetingsCount: (meetingsData.meetings || []).length,
+              written: res.written,
+              failed: res.failed,
+              error: null as string | null,
+            });
+          } catch (e: any) {
+            await this.state.storage.put(`sync_job:${jobId}`, {
+              jobId,
+              userId,
+              status: 'failed',
+              createdAt: Date.now(),
+              updatedAt: Date.now(),
+              clipsCount: (clipsData.clips || []).length,
+              meetingsCount: (meetingsData.meetings || []).length,
+              written: 0,
+              failed: (clipsData.clips || []).length + (meetingsData.meetings || []).length,
+              error: e?.message || 'Notion sync failed',
+            });
+          }
+        })());
+      }
+
+      executions.unshift(executionRecord);
 
       // Keep only last 100 executions
       if (executions.length > 100) {
@@ -2102,23 +2198,10 @@ export class ZoomSessionManager {
 
       console.log(`[Sync] Complete: ${clipsData.clips?.length || 0} clips, ${meetingsData.meetings?.length || 0} meetings in ${duration}ms`);
 
-      // NEW: Trigger Notion workflow if requested
-      let notionResult = null;
-      if (writeToNotion) {
-        console.log('[Sync] Triggering Notion workflow...');
-        const userId = await this.state.storage.get<string>('userId') || 'unknown';
-        notionResult = await this.triggerNotionWorkflow(
-          userId,
-          clipsData.clips || [],
-          meetingsData.meetings || []
-        );
-        console.log(`[Sync] Notion result: ${notionResult.written} written, ${notionResult.failed} failed`);
-      }
-
       return Response.json({
         success: true,
         message: writeToNotion
-          ? `Synced ${clipsData.clips?.length || 0} clips and ${meetingsData.meetings?.length || 0} meetings to Notion`
+          ? `Queued Notion sync for ${clipsData.clips?.length || 0} clips and ${meetingsData.meetings?.length || 0} meetings`
           : `Synced ${clipsData.clips?.length || 0} clips and ${meetingsData.meetings?.length || 0} meetings`,
         data: {
           clips: clipsData.clips || [],
@@ -2148,6 +2231,14 @@ export class ZoomSessionManager {
         error: error.message || 'Sync failed',
       }, { status: 500 });
     }
+  }
+
+  private async getSyncStatus(jobId: string): Promise<Response> {
+    const job = await this.state.storage.get<any>(`sync_job:${jobId}`);
+    if (!job) {
+      return Response.json({ success: false, error: 'Job not found' }, { status: 404 });
+    }
+    return Response.json({ success: true, job });
   }
 
   /**
