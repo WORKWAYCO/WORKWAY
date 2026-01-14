@@ -248,14 +248,14 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_content', 'update_content', 'insert_content'] },
 	],
 
-	config: {
+	inputs: {
 		// ================================================================
 		// YOUR DATABASE (Internal team configures this)
 		// ================================================================
 		// This is the only input the workflow owner needs to configure.
 		// Everything else is handled automatically via the invite flow.
 
-		internal_database: {
+		internalDatabase: {
 			type: 'text',
 			label: 'Your Ticket Database',
 			required: true,
@@ -269,21 +269,21 @@ export default defineWorkflow({
 		// the invite flow. The workflow owner never sees or edits these.
 		// Note: UI layer should hide fields prefixed with underscore.
 
-		_client_notion_token: {
+		_clientNotionToken: {
 			type: 'string',
 			label: 'Client Notion Token (auto-populated)',
 			required: false,
 			description: 'Auto-populated when client connects via invite link.',
 		},
 
-		_client_database: {
+		_clientDatabase: {
 			type: 'string',
 			label: 'Client Database ID (auto-populated)',
 			required: false,
 			description: 'Auto-populated when client selects database in invite flow.',
 		},
 
-		_client_email: {
+		_clientEmail: {
 			type: 'string',
 			label: 'Client Email (auto-populated)',
 			required: false,
