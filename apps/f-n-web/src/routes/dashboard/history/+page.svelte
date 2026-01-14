@@ -46,8 +46,10 @@
 						</span>
 					</div>
 					{#if job.error_message}
-						<div class="mt-2 p-2 rounded bg-[var(--brand-error)]/5 border border-[var(--brand-error)]/20">
-							<div class="text-xs text-[var(--brand-error)]">{job.error_message}</div>
+						<div class="mt-2 p-2 rounded bg-[var(--brand-error)]/5 border border-[var(--brand-error)]/20 overflow-hidden">
+							<div class="text-xs text-[var(--brand-error)] break-words line-clamp-3" title={job.error_message}>
+								{job.error_message}
+							</div>
 						</div>
 					{/if}
 				</div>

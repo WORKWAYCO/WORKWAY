@@ -3,7 +3,8 @@ import type { RequestHandler } from './$types';
 
 export interface PropertyMapping {
 	duration?: string;      // Notion property name for number field
-	participants?: string;  // Notion property name for multi_select
+	participants?: string;  // Notion property name for multi_select OR rich_text
+	participantsType?: 'multi_select' | 'rich_text';  // Type of participants field
 	keywords?: string;      // Notion property name for multi_select
 	date?: string;          // Notion property name for date
 	url?: string;           // Notion property name for URL field (Fireflies URL)

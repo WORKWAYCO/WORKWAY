@@ -10,6 +10,7 @@
 	interface PropertyMapping {
 		duration?: string;
 		participants?: string;
+		participantsType?: 'multi_select' | 'rich_text';
 		keywords?: string;
 		date?: string;
 		url?: string;
@@ -32,6 +33,7 @@
 	// Form state - synced with savedMapping prop
 	let duration = $state('');
 	let participants = $state('');
+	let participantsType = $state<'multi_select' | 'rich_text'>('multi_select');
 	let keywords = $state('');
 	let date = $state('');
 	let url = $state('');
@@ -41,16 +43,39 @@
 		expanded = !savedMapping;
 		duration = savedMapping?.duration || '';
 		participants = savedMapping?.participants || '';
+		participantsType = savedMapping?.participantsType || 'multi_select';
 		keywords = savedMapping?.keywords || '';
 		date = savedMapping?.date || '';
 		url = savedMapping?.url || '';
 	});
+	
+	// Update participantsType when a property is selected
+	function handleParticipantsChange(event: Event) {
+		const select = event.target as HTMLSelectElement;
+		const selectedValue = select.value;
+		participants = selectedValue;
+		
+		// Determine type from the selected property
+		if (selectedValue) {
+			const prop = properties.find(p => p.name === selectedValue);
+			if (prop) {
+				participantsType = prop.type === 'rich_text' ? 'rich_text' : 'multi_select';
+			}
+		}
+	}
 
 	// Filter properties by type
 	const numberProperties = $derived(properties.filter((p) => p.type === 'number'));
 	const multiSelectProperties = $derived(properties.filter((p) => p.type === 'multi_select'));
+	const richTextProperties = $derived(properties.filter((p) => p.type === 'rich_text'));
 	const dateProperties = $derived(properties.filter((p) => p.type === 'date'));
 	const urlProperties = $derived(properties.filter((p) => p.type === 'url'));
+	
+	// Participants can use multi_select OR rich_text
+	const participantProperties = $derived([
+		...multiSelectProperties.map(p => ({ ...p, displayType: 'Tags' })),
+		...richTextProperties.map(p => ({ ...p, displayType: 'Text' }))
+	]);
 
 	// Count mapped fields
 	const mappedCount = $derived(
@@ -63,7 +88,10 @@
 
 		const mapping: PropertyMapping = {};
 		if (duration) mapping.duration = duration;
-		if (participants) mapping.participants = participants;
+		if (participants) {
+			mapping.participants = participants;
+			mapping.participantsType = participantsType;
+		}
 		if (keywords) mapping.keywords = keywords;
 		if (date) mapping.date = date;
 		if (url) mapping.url = url;
@@ -150,20 +178,23 @@
 				<!-- Participants -->
 				<div>
 					<label for="map-participants" class="block text-sm font-medium mb-1">Participants</label>
-					<p class="text-xs text-[var(--brand-text-muted)] mb-2">Attendee names</p>
-					{#if multiSelectProperties.length === 0}
+					<p class="text-xs text-[var(--brand-text-muted)] mb-2">
+						Attendee names — use Text for simpler syncing, or Multi-select for filtering
+					</p>
+					{#if participantProperties.length === 0}
 						<p class="text-xs text-[var(--brand-text-muted)] italic">
-							Add a Multi-select property to your database
+							Add a Multi-select or Text property to your database
 						</p>
 					{:else}
 						<select
 							id="map-participants"
-							bind:value={participants}
+							value={participants}
+							onchange={handleParticipantsChange}
 							class="w-full px-3 py-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] bg-[var(--brand-surface)] text-sm"
 						>
 							<option value="">Don't map</option>
-							{#each multiSelectProperties as prop (prop.id)}
-								<option value={prop.name}>{prop.name}</option>
+							{#each participantProperties as prop (prop.id)}
+								<option value={prop.name}>{prop.name} ({prop.displayType})</option>
 							{/each}
 						</select>
 					{/if}

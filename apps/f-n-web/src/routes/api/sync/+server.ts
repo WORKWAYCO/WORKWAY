@@ -242,13 +242,20 @@ async function processSync(params: {
 				if (propertyMapping.participants && transcript.participants?.length) {
 					const participantNames = transcript.participants
 						.flatMap((p) => p.includes(',') ? p.split(',').map(s => s.trim()) : [p])
-						.filter((p) => p.length > 0)
-						.slice(0, 100); // Notion multi-select limit
+						.filter((p) => p.length > 0);
 					
 					if (participantNames.length > 0) {
-						properties[propertyMapping.participants] = {
-							multi_select: participantNames.map((p) => ({ name: p }))
-						};
+						// Use rich_text if configured, otherwise multi_select (default)
+						if (propertyMapping.participantsType === 'rich_text') {
+							properties[propertyMapping.participants] = {
+								rich_text: [{ text: { content: participantNames.join(', ') } }]
+							};
+						} else {
+							// multi_select - limit to 100 options
+							properties[propertyMapping.participants] = {
+								multi_select: participantNames.slice(0, 100).map((p) => ({ name: p }))
+							};
+						}
 					}
 				}
 
