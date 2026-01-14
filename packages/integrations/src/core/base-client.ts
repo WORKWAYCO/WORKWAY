@@ -62,90 +62,19 @@ export abstract class BaseAPIClient extends AuthenticatedHTTPClient {
 	}
 
 	// =========================================================================
-	// LOW-LEVEL REQUEST METHOD
+	// BACKWARDS-COMPATIBLE JSON HELPERS
 	// =========================================================================
-	// This override is removed - use the SDK's native (method, path, options) signature
-	// All integration-specific overrides should use the same signature
-
-	// =========================================================================
-	// SIMPLIFIED WRAPPERS
-	// =========================================================================
-	// These methods provide the old API signature while delegating to the
-	// SDK's AuthenticatedHTTPClient. Integrations can override these to add
-	// service-specific headers (e.g., Notion-Version, Stripe-Version).
-
-	/**
-	 * GET request with optional additional headers
-	 */
-	protected override get(
-		path: string,
-		additionalHeaders: Record<string, string> = {}
-	): Promise<Response> {
-		return super.get(path, { headers: additionalHeaders });
-	}
-
-	/**
-	 * POST request with JSON body and optional additional headers
-	 */
-	protected override post(
-		path: string,
-		body?: unknown,
-		additionalHeaders: Record<string, string> = {}
-	): Promise<Response> {
-		return super.post(path, { body, headers: additionalHeaders });
-	}
-
-	/**
-	 * PATCH request with JSON body and optional additional headers
-	 */
-	protected override patch(
-		path: string,
-		body?: unknown,
-		additionalHeaders: Record<string, string> = {}
-	): Promise<Response> {
-		return super.patch(path, { body, headers: additionalHeaders });
-	}
-
-	/**
-	 * PUT request with JSON body and optional additional headers
-	 */
-	protected override put(
-		path: string,
-		body?: unknown,
-		additionalHeaders: Record<string, string> = {}
-	): Promise<Response> {
-		return super.put(path, { body, headers: additionalHeaders });
-	}
-
-	/**
-	 * DELETE request with optional additional headers
-	 */
-	protected override delete(
-		path: string,
-		additionalHeaders: Record<string, string> = {}
-	): Promise<Response> {
-		return super.delete(path, { headers: additionalHeaders });
-	}
-
-	// =========================================================================
-	// JSON HELPERS (delegated to SDK)
-	// =========================================================================
-	// These preserve the old API signature while using the SDK's implementations.
-
-	/**
-	 * GET request with automatic JSON parsing
-	 */
-	protected override async getJson<T>(
-		path: string,
-		additionalHeaders: Record<string, string> = {}
-	): Promise<T> {
-		return super.getJson<T>(path, { headers: additionalHeaders });
-	}
+	// These methods preserve the old API signature (path, body, headers)
+	// while wrapping the SDK's new signature (path, {body, headers}).
+	// This provides a more convenient signature for integrations.
 
 	/**
 	 * POST request with automatic JSON parsing
+	 * @param path - API endpoint
+	 * @param body - Request body (will be JSON-stringified)
+	 * @param additionalHeaders - Extra headers to include
 	 */
-	protected override async postJson<T>(
+	async postJson<T>(
 		path: string,
 		body?: unknown,
 		additionalHeaders: Record<string, string> = {}
@@ -156,7 +85,7 @@ export abstract class BaseAPIClient extends AuthenticatedHTTPClient {
 	/**
 	 * PATCH request with automatic JSON parsing
 	 */
-	protected override async patchJson<T>(
+	async patchJson<T>(
 		path: string,
 		body?: unknown,
 		additionalHeaders: Record<string, string> = {}
@@ -167,7 +96,7 @@ export abstract class BaseAPIClient extends AuthenticatedHTTPClient {
 	/**
 	 * PUT request with automatic JSON parsing
 	 */
-	protected override async putJson<T>(
+	async putJson<T>(
 		path: string,
 		body?: unknown,
 		additionalHeaders: Record<string, string> = {}
@@ -176,9 +105,19 @@ export abstract class BaseAPIClient extends AuthenticatedHTTPClient {
 	}
 
 	/**
+	 * GET request with automatic JSON parsing
+	 */
+	async getJson<T>(
+		path: string,
+		additionalHeaders: Record<string, string> = {}
+	): Promise<T> {
+		return super.getJson<T>(path, { headers: additionalHeaders });
+	}
+
+	/**
 	 * DELETE request with automatic JSON parsing
 	 */
-	protected override async deleteJson<T = void>(
+	async deleteJson<T = void>(
 		path: string,
 		additionalHeaders: Record<string, string> = {}
 	): Promise<T> {
