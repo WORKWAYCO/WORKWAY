@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ChevronDown, ChevronUp, Settings2 } from 'lucide-svelte';
+	import { ChevronDown, ChevronUp, Settings2, Zap } from 'lucide-svelte';
 
 	interface DatabaseProperty {
 		id: string;
@@ -20,10 +20,11 @@
 		databaseId: string;
 		properties: DatabaseProperty[];
 		savedMapping: PropertyMapping | null;
-		onSave: (mapping: PropertyMapping) => void;
+		autoSyncEnabled?: boolean;
+		onSave: (mapping: PropertyMapping, autoSync: boolean) => void;
 	}
 
-	let { databaseId, properties, savedMapping, onSave }: Props = $props();
+	let { databaseId, properties, savedMapping, autoSyncEnabled = false, onSave }: Props = $props();
 
 	// Local state
 	let expanded = $state(false);
@@ -37,6 +38,7 @@
 	let keywords = $state('');
 	let date = $state('');
 	let url = $state('');
+	let autoSync = $state(false);
 
 	// Sync form state when savedMapping changes
 	$effect(() => {
@@ -47,6 +49,7 @@
 		keywords = savedMapping?.keywords || '';
 		date = savedMapping?.date || '';
 		url = savedMapping?.url || '';
+		autoSync = autoSyncEnabled;
 	});
 	
 	// Update participantsType when a property is selected
@@ -100,7 +103,7 @@
 			const response = await fetch('/api/property-mappings', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ databaseId, mapping })
+				body: JSON.stringify({ databaseId, mapping, autoSyncEnabled: autoSync })
 			});
 
 			if (!response.ok) {
@@ -108,7 +111,7 @@
 				throw new Error(data.error || 'Failed to save mapping');
 			}
 
-			onSave(mapping);
+			onSave(mapping, autoSync);
 			expanded = false;
 		} catch (e) {
 			error = e instanceof Error ? e.message : 'Unknown error';
@@ -264,6 +267,24 @@
 							{/each}
 						</select>
 					{/if}
+				</div>
+
+				<!-- Auto-sync -->
+				<div class="pt-4 border-t border-[var(--brand-border)]">
+					<label class="flex items-center gap-3 cursor-pointer">
+						<input
+							type="checkbox"
+							bind:checked={autoSync}
+							class="w-4 h-4 rounded border-[var(--brand-border)]"
+						/>
+						<div class="flex items-center gap-2">
+							<Zap size={16} class={autoSync ? 'text-[var(--brand-accent)]' : 'text-[var(--brand-text-muted)]'} />
+							<span class="text-sm font-medium">Auto-sync new transcripts</span>
+						</div>
+					</label>
+					<p class="text-xs text-[var(--brand-text-muted)] mt-2 ml-7">
+						New Fireflies transcripts will automatically sync to Notion (checked hourly)
+					</p>
 				</div>
 			</div>
 

@@ -110,6 +110,7 @@
 
 	// Property mapping state
 	let savedMapping = $state<PropertyMapping | null>(null);
+	let autoSyncEnabled = $state(false);
 	let loadingMapping = $state(false);
 
 	// Get properties for selected database
@@ -170,17 +171,20 @@
 		loadingMapping = true;
 		try {
 			const res = await fetch(`/api/property-mappings?databaseId=${databaseId}`);
-			const json = await res.json() as { mapping?: PropertyMapping | null };
+			const json = await res.json() as { mapping?: PropertyMapping | null; autoSyncEnabled?: boolean };
 			savedMapping = json.mapping || null;
+			autoSyncEnabled = json.autoSyncEnabled || false;
 		} catch (e) {
 			console.error('Failed to load property mapping:', e);
 			savedMapping = null;
+			autoSyncEnabled = false;
 		}
 		loadingMapping = false;
 	}
 
-	function handleMappingSave(mapping: PropertyMapping) {
+	function handleMappingSave(mapping: PropertyMapping, autoSync: boolean) {
 		savedMapping = mapping;
+		autoSyncEnabled = autoSync;
 	}
 
 	async function loadTranscripts() {
@@ -481,6 +485,7 @@
 						databaseId={selectedDatabase}
 						properties={selectedDatabaseProperties}
 						savedMapping={savedMapping}
+						autoSyncEnabled={autoSyncEnabled}
 						onSave={handleMappingSave}
 					/>
 				</div>

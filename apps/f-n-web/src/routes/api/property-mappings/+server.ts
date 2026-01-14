@@ -29,17 +29,21 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
 	const { DB } = platform.env;
 
 	try {
-		const mapping = await DB.prepare(
-			'SELECT mappings FROM property_mappings WHERE user_id = ? AND database_id = ?'
+		const row = await DB.prepare(
+			'SELECT mappings, auto_sync_enabled, last_auto_sync_at FROM property_mappings WHERE user_id = ? AND database_id = ?'
 		)
 			.bind(locals.user.id, databaseId)
-			.first<{ mappings: string }>();
+			.first<{ mappings: string; auto_sync_enabled: number; last_auto_sync_at: string | null }>();
 
-		if (!mapping) {
-			return json({ mapping: null });
+		if (!row) {
+			return json({ mapping: null, autoSyncEnabled: false });
 		}
 
-		return json({ mapping: JSON.parse(mapping.mappings) as PropertyMapping });
+		return json({ 
+			mapping: JSON.parse(row.mappings) as PropertyMapping,
+			autoSyncEnabled: row.auto_sync_enabled === 1,
+			lastAutoSyncAt: row.last_auto_sync_at
+		});
 	} catch (error) {
 		console.error('Error fetching property mapping:', error);
 		return json({ error: 'Failed to fetch property mapping' }, { status: 500 });
@@ -57,7 +61,11 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 	}
 
 	const body = await request.json().catch(() => ({}));
-	const { databaseId, mapping } = body as { databaseId?: string; mapping?: PropertyMapping };
+	const { databaseId, mapping, autoSyncEnabled } = body as { 
+		databaseId?: string; 
+		mapping?: PropertyMapping;
+		autoSyncEnabled?: boolean;
+	};
 
 	if (!databaseId) {
 		return json({ error: 'Database ID is required' }, { status: 400 });
@@ -78,20 +86,21 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 			.first();
 
 		const mappingsJson = JSON.stringify(mapping);
+		const autoSync = autoSyncEnabled ? 1 : 0;
 
 		if (existing) {
 			// Update existing
 			await DB.prepare(
-				'UPDATE property_mappings SET mappings = ?, updated_at = datetime("now") WHERE user_id = ? AND database_id = ?'
+				'UPDATE property_mappings SET mappings = ?, auto_sync_enabled = ?, updated_at = datetime("now") WHERE user_id = ? AND database_id = ?'
 			)
-				.bind(mappingsJson, locals.user.id, databaseId)
+				.bind(mappingsJson, autoSync, locals.user.id, databaseId)
 				.run();
 		} else {
 			// Create new
 			await DB.prepare(
-				'INSERT INTO property_mappings (id, user_id, database_id, mappings) VALUES (?, ?, ?, ?)'
+				'INSERT INTO property_mappings (id, user_id, database_id, mappings, auto_sync_enabled) VALUES (?, ?, ?, ?, ?)'
 			)
-				.bind(crypto.randomUUID(), locals.user.id, databaseId, mappingsJson)
+				.bind(crypto.randomUUID(), locals.user.id, databaseId, mappingsJson, autoSync)
 				.run();
 		}
 

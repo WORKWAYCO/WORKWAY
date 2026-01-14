@@ -337,19 +337,29 @@ export function formatTranscriptBlocks(transcript: {
 
 	// Action items
 	if (transcript.summary?.action_items?.length) {
-		blocks.push({
-			object: 'block',
-			type: 'heading_2',
-			heading_2: {
-				rich_text: [{ type: 'text', text: { content: 'Action Items' } }]
-			}
-		});
 		// Handle both array and string formats from Fireflies
-		const items = Array.isArray(transcript.summary.action_items)
-			? transcript.summary.action_items
-			: [transcript.summary.action_items];
-		for (const item of items) {
-			if (typeof item === 'string' && item.trim()) {
+		// Fireflies often returns one big string with newlines
+		const rawItems = Array.isArray(transcript.summary.action_items)
+			? transcript.summary.action_items.join('\n')
+			: transcript.summary.action_items;
+		
+		// Split by newlines and filter non-empty lines
+		const items = rawItems
+			.split('\n')
+			.map((i: string) => i.trim())
+			.filter((i: string) => i.length > 0)
+			.slice(0, 30); // Limit to prevent huge lists
+		
+		if (items.length > 0) {
+			blocks.push({
+				object: 'block',
+				type: 'heading_2',
+				heading_2: {
+					rich_text: [{ type: 'text', text: { content: 'Action Items' } }]
+				}
+			});
+			
+			for (const item of items) {
 				blocks.push({
 					object: 'block',
 					type: 'to_do',
