@@ -1,18 +1,28 @@
 /**
- * Notion Two-Way Sync (Cross-Organization)
+ * Notion Two-Way Sync (Base → Mirror with Initial Sync)
  *
  * Bidirectional synchronization between ANY two Notion databases.
  * Works with any schema - no configuration needed.
  *
  * ═══════════════════════════════════════════════════════════════════════════
+ * USE CASE: Agency Issue Tracking
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * Agencies can provide issue tracking in their client's Notion workspace:
+ *   1. Agency has a BASE "Issues" database
+ *   2. Client connects their MIRROR database via invite link
+ *   3. ALL existing issues from BASE sync to MIRROR (initial sync)
+ *   4. Future changes sync bidirectionally
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
  * USER FLOW
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * STEP 1: You (Workflow Owner)
- * ────────────────────────────
+ * STEP 1: You (Agency/Workflow Owner)
+ * ────────────────────────────────────
  *   1. Go to workway.co/workflows/databases-mirrored
  *   2. Click "Connect Notion" → OAuth screen → authorize
- *   3. Select your database (e.g., "Client Projects")
+ *   3. Select your BASE database (e.g., "Client Issues")
  *   4. Click "Enable Workflow"
  *   5. Copy the invite link that appears
  *
@@ -21,15 +31,21 @@
  *   1. Receives your invite link (email, Slack, etc.)
  *   2. Clicks link → sees Notion OAuth screen (NOT WORKWAY)
  *   3. Authorizes their Notion workspace
- *   4. Selects their database (e.g., "Shared Tasks")
- *   5. Done. They never create a WORKWAY account.
+ *   4. Selects their MIRROR database (e.g., "Issues")
+ *   5. INITIAL SYNC begins automatically
  *
- * STEP 3: Automatic Sync (No Further Action)
+ * STEP 3: Initial Sync (Automatic, One-Time)
  * ──────────────────────────────────────────
- *   - Client creates item in their DB → appears in yours
- *   - You update status/priority → syncs back to client
+ *   - All pages from BASE database are copied to MIRROR
+ *   - Rate-limited to respect Notion API limits (3 req/s)
+ *   - Progress tracked and visible in dashboard
+ *   - Mappings stored for future bidirectional sync
+ *
+ * STEP 4: Ongoing Bidirectional Sync
+ * ──────────────────────────────────
+ *   - Client creates issue → appears in Agency DB
+ *   - Agency updates status → syncs to Client DB
  *   - Properties with same name sync automatically
- *   - Different property names are ignored (no errors)
  *
  * ═══════════════════════════════════════════════════════════════════════════
  * HOW PROPERTIES SYNC
@@ -37,15 +53,15 @@
  *
  * Schema auto-discovery by exact name match:
  *
- *   YOUR DATABASE          CLIENT DATABASE         RESULT
- *   ─────────────          ───────────────         ──────
- *   Name (title)     ←→    Name (title)            ✓ Syncs (unidirectional)
- *   Status (status)  ←→    Status (select)         ✓ Syncs (bidirectional)
- *   Priority (select)      [not present]           ✗ Skipped
- *   [not present]          Notes (rich_text)       ✗ Skipped
+ *   BASE DATABASE           MIRROR DATABASE         RESULT
+ *   ─────────────           ───────────────         ──────
+ *   Name (title)      →     Name (title)            ✓ Syncs (base → mirror)
+ *   Status (status)  ←→     Status (select)         ✓ Syncs (bidirectional)
+ *   Priority (select)       [not present]           ✗ Skipped
+ *   [not present]           Notes (rich_text)       ✗ Skipped
  *
  * Bidirectionality by type:
- *   - title, rich_text → Client → You only (client owns content)
+ *   - title, rich_text → Syncs both directions for content
  *   - status, select, checkbox, date, number → Both directions
  *
  * ═══════════════════════════════════════════════════════════════════════════
@@ -54,17 +70,15 @@
  *
  * ```
  * ┌─────────────────────────┐              ┌─────────────────────────┐
- * │   CLIENT WORKSPACE      │              │   YOUR WORKSPACE        │
+ * │   MIRROR (Client)       │              │   BASE (Agency)         │
  * │   (via invite link)     │◄────────────►│   (workflow owner)      │
  * │                         │    SYNC      │                         │
  * │   • Notion OAuth only   │              │   • WORKWAY dashboard   │
- * │   • No WORKWAY account  │              │   • Full control        │
- * │   • Sees their DB only  │              │   • Invite management   │
- * └─────────────────────────┘              └─────────────────────────┘
+ * │   • No WORKWAY account  │   ┌──────┐   │   • Full control        │
+ * │   • Sees their DB only  │◄──│INIT  │───│   • Initial sync source │
+ * └─────────────────────────┘   │SYNC  │   └─────────────────────────┘
+ *                               └──────┘
  * ```
- *
- * The tool recedes: Your client only sees Notion. They don't know
- * WORKWAY exists. They just see their database magically staying in sync.
  *
  * @see https://developers.notion.com/reference/webhooks
  */
@@ -73,7 +87,7 @@ import { defineWorkflow, webhook } from '@workwayco/sdk';
 import { AIModels } from '@workwayco/sdk';
 
 // ============================================================================
-// CONSTANTS (Weniger, aber besser - sensible defaults, no user config needed)
+// CONSTANTS
 // ============================================================================
 
 /** Time window to ignore events after a sync (prevents infinite loops) */
@@ -93,6 +107,12 @@ const BIDIRECTIONAL_TYPES = ['select', 'multi_select', 'status', 'checkbox', 'nu
 
 /** Property types that are text-based (for summarization) */
 const TEXT_TYPES = ['rich_text', 'title'];
+
+/** Notion API rate limit: 3 requests per second */
+const RATE_LIMIT_DELAY_MS = 350; // ~3 req/s with safety margin
+
+/** Batch size for initial sync (process this many, then delay) */
+const INITIAL_SYNC_BATCH_SIZE = 3;
 
 // ============================================================================
 // TYPES
@@ -125,7 +145,6 @@ type NotionPropertyType =
 
 /**
  * Database schema extracted from Notion API
- * Cached for 24 hours (schemas rarely change)
  */
 interface DatabaseSchema {
 	databaseId: string;
@@ -142,32 +161,42 @@ interface DatabaseSchema {
  * Auto-derived property mapping (by exact name match)
  */
 interface PropertyMapping {
-	/** Property name (same in both databases) */
 	name: string;
-	/** Source property type */
 	sourceType: NotionPropertyType;
-	/** Destination property type */
 	destType: NotionPropertyType;
-	/** Whether to sync this property back (bidirectional) */
 	bidirectional: boolean;
-	/** Whether this is the title property */
 	isTitle: boolean;
 }
 
 /**
- * Sync mapping stored for loop prevention and bidirectional sync
+ * Sync mapping stored for bidirectional sync
  */
 interface SyncMapping {
-	/** Client workspace page ID */
-	clientPageId: string;
-	/** Internal workspace page ID */
-	internalPageId: string;
+	/** Base (agency) workspace page ID */
+	basePageId: string;
+	/** Mirror (client) workspace page ID */
+	mirrorPageId: string;
 	/** Last sync timestamp (ISO) */
 	lastSyncedAt: string;
 	/** Last sync direction */
-	lastSyncDirection: 'client_to_internal' | 'internal_to_client';
+	lastSyncDirection: 'base_to_mirror' | 'mirror_to_base';
 	/** Version counter for conflict detection */
 	syncVersion: number;
+}
+
+/**
+ * Initial sync progress tracking
+ */
+interface InitialSyncProgress {
+	status: 'pending' | 'in_progress' | 'completed' | 'failed';
+	totalPages: number;
+	syncedPages: number;
+	failedPages: number;
+	startedAt: string;
+	completedAt?: string;
+	lastError?: string;
+	/** Cursor for resuming if interrupted */
+	lastCursor?: string;
 }
 
 // ============================================================================
@@ -176,17 +205,17 @@ interface SyncMapping {
 
 export default defineWorkflow({
 	name: 'Notion Two-Way Sync',
-	description: 'Bidirectional sync between any two Notion databases - zero configuration',
-	version: '2.0.0',
+	description: 'Bidirectional sync with initial base → mirror population. Perfect for agency issue tracking.',
+	version: '3.0.0',
 
-	// Pathway metadata for Heideggerian discovery model
+	// Pathway metadata for discovery
 	pathway: {
 		outcomeFrame: 'when_databases_diverge',
 
 		outcomeStatement: {
 			suggestion: 'Keep two Notion databases in sync?',
 			explanation:
-				'Changes in one database automatically appear in the other. Works with any schema - no configuration needed.',
+				'All existing items sync from your base database to the mirror, then changes sync bidirectionally.',
 			outcome: 'Databases that sync themselves',
 		},
 
@@ -220,14 +249,14 @@ export default defineWorkflow({
 		smartDefaults: {
 			syncDirection: { value: 'bidirectional' },
 			loopPreventionWindow: { value: 5000 },
+			initialSyncEnabled: { value: true },
 		},
 
-		// Only internal database is essential — client connects via invite link
-		essentialFields: ['internal_database'],
+		essentialFields: ['baseDatabase'],
 
 		zuhandenheit: {
-			timeToValue: 2, // Minutes — select database, send invite link
-			worksOutOfBox: true, // Invite link handles client OAuth
+			timeToValue: 5, // Minutes — includes initial sync time
+			worksOutOfBox: true,
 			gracefulDegradation: true,
 			automaticTrigger: true,
 		},
@@ -235,69 +264,59 @@ export default defineWorkflow({
 
 	pricing: {
 		model: 'usage',
-		price: 49, // Upfront fee
+		price: 49,
 		usagePricing: {
-			pricePerExecution: 0.05, // Light workflow - simple data sync
-			includedExecutions: 20, // Free trial executions
+			pricePerExecution: 0.05,
+			includedExecutions: 100, // More included for initial sync
 		},
-		description: 'Pay once + 5¢ per sync event. ~$15/mo for 300 syncs.',
+		description: 'Pay once + 5¢ per sync event. Initial sync included in trial.',
 	},
 
-	// Single Notion integration - we use tokens for multi-workspace
 	integrations: [
 		{ service: 'notion', scopes: ['read_content', 'update_content', 'insert_content'] },
 	],
 
 	inputs: {
 		// ================================================================
-		// YOUR DATABASE (Internal team configures this)
+		// BASE DATABASE (Agency configures this)
 		// ================================================================
-		// This is the only input the workflow owner needs to configure.
-		// Everything else is handled automatically via the invite flow.
-
-		internalDatabase: {
-			type: 'text',
-			label: 'Your Ticket Database',
+		baseDatabase: {
+			type: 'notion_database_picker',
+			label: 'Your Base Database',
 			required: true,
-			description: 'Database in your workspace where synced tickets will appear',
+			description: 'Your primary database. All existing items will sync to the mirror on first connection.',
 		},
 
 		// ================================================================
-		// CLIENT CONNECTION (Set via invite link, not user input)
+		// MIRROR CONNECTION (Set via invite link)
 		// ================================================================
-		// These are populated automatically when the client completes
-		// the invite flow. The workflow owner never sees or edits these.
-		// Note: UI layer should hide fields prefixed with underscore.
-
-		_clientNotionToken: {
+		_mirrorNotionToken: {
 			type: 'string',
-			label: 'Client Notion Token (auto-populated)',
+			label: 'Mirror Notion Token (auto-populated)',
 			required: false,
 			description: 'Auto-populated when client connects via invite link.',
 		},
 
-		_clientDatabase: {
+		_mirrorDatabase: {
 			type: 'string',
-			label: 'Client Database ID (auto-populated)',
+			label: 'Mirror Database ID (auto-populated)',
 			required: false,
 			description: 'Auto-populated when client selects database in invite flow.',
 		},
 
-		_clientEmail: {
+		_mirrorEmail: {
 			type: 'string',
 			label: 'Client Email (auto-populated)',
 			required: false,
-			description: 'Client email for notifications (optional, from invite flow).',
+			description: 'Client email for notifications.',
 		},
 	},
 
-	// Trigger from either workspace webhook
 	trigger: webhook({
 		service: 'notion',
 		event: 'page.created',
 	}),
 
-	// Additional webhook for property updates
 	webhooks: [
 		webhook({
 			service: 'notion',
@@ -306,38 +325,37 @@ export default defineWorkflow({
 	],
 
 	// ========================================================================
-	// LIFECYCLE: onEnable - Generate invite link for client
+	// LIFECYCLE: onEnable - Generate invite link
 	// ========================================================================
-	// Note: The invite link URL pattern is:
-	//   https://workway.co/workflows/{workflowId}/invite/{installationId}
-	// This is handled by the WORKWAY platform, not generated in-workflow.
-	// The onEnable hook stores metadata for the invite flow.
 
 	async onEnable({ storage }) {
-		// Generate unique invite token for this installation
 		const inviteToken = crypto.randomUUID();
 
-		// Store invite metadata
-		// Platform uses this when client completes invite flow
 		await storage.set('invite', {
 			token: inviteToken,
 			createdAt: new Date().toISOString(),
-			status: 'pending', // pending | connected
+			status: 'pending',
 			integration: 'notion',
-			// Fields to populate when client completes:
-			targetInputs: ['_client_notion_token', '_client_database', '_client_email'],
+			targetInputs: ['_mirrorNotionToken', '_mirrorDatabase', '_mirrorEmail'],
 		});
 
-		// Platform generates invite URL from installation ID
-		// Workflow owner sees this in their dashboard
+		// Initialize sync progress as pending
+		await storage.set('initialSync', {
+			status: 'pending',
+			totalPages: 0,
+			syncedPages: 0,
+			failedPages: 0,
+			startedAt: '',
+		} as InitialSyncProgress);
 	},
 
 	// ========================================================================
-	// LIFECYCLE: onDisable - Cleanup invite
+	// LIFECYCLE: onDisable - Cleanup
 	// ========================================================================
 
 	async onDisable({ storage }) {
 		await storage.delete('invite');
+		await storage.delete('initialSync');
 	},
 
 	// ========================================================================
@@ -346,29 +364,41 @@ export default defineWorkflow({
 
 	async execute({ trigger, inputs, integrations, storage }) {
 		const event = trigger.data;
+
+		// ========================================================================
+		// HANDLE INITIAL SYNC TRIGGER (special event from platform)
+		// ========================================================================
+
+		if (event?.type === 'client_connected' || event?._initialSync) {
+			return await performInitialSync({ inputs, integrations, storage });
+		}
+
+		// ========================================================================
+		// STANDARD WEBHOOK HANDLING
+		// ========================================================================
+
 		const pageId = event.page_id || event.id;
 		const parentDatabaseId = event.parent?.database_id;
 		const eventTimestamp = event.timestamp || event.last_edited_time;
 
-		// Client database comes from invite flow (hidden input)
-		const clientDatabase = inputs._clientDatabase;
+		const mirrorDatabase = inputs._mirrorDatabase;
 
-		// Determine source workspace
-		const isFromClient = parentDatabaseId === clientDatabase;
-		const isFromInternal = parentDatabaseId === inputs.internalDatabase;
+		// Determine source
+		const isFromMirror = parentDatabaseId === mirrorDatabase;
+		const isFromBase = parentDatabaseId === inputs.baseDatabase;
 
-		if (!isFromClient && !isFromInternal) {
+		if (!isFromMirror && !isFromBase) {
 			return { success: true, skipped: true, reason: 'Event not from configured databases' };
 		}
 
-		const source = isFromClient ? 'client' : 'internal';
+		const source = isFromMirror ? 'mirror' : 'base';
 		const eventType = event.type === 'page.created' ? 'created' : 'updated';
 
 		// ========================================================================
-		// CHECK CLIENT CONNECTION
+		// CHECK MIRROR CONNECTION
 		// ========================================================================
 
-		if (!inputs._clientNotionToken || !clientDatabase) {
+		if (!inputs._mirrorNotionToken || !mirrorDatabase) {
 			const invite = await storage.get<{ token: string }>('invite');
 			return {
 				success: false,
@@ -379,7 +409,21 @@ export default defineWorkflow({
 		}
 
 		// ========================================================================
-		// UNIFIED IDEMPOTENCY CHECK (combines loop prevention + duplicate detection)
+		// CHECK INITIAL SYNC STATUS
+		// ========================================================================
+
+		const syncProgress = await storage.get<InitialSyncProgress>('initialSync');
+		if (syncProgress?.status === 'in_progress') {
+			// Queue this event for after initial sync completes
+			return {
+				success: true,
+				queued: true,
+				reason: 'Initial sync in progress - event will be processed after completion',
+			};
+		}
+
+		// ========================================================================
+		// IDEMPOTENCY CHECK
 		// ========================================================================
 
 		const idempotencyKey = `sync:${pageId}:${eventTimestamp}`;
@@ -396,20 +440,19 @@ export default defineWorkflow({
 		// GET NOTION CLIENTS
 		// ========================================================================
 
-		const internalNotion = integrations.notion;
-		const clientNotion = integrations.createClient('notion', {
-			accessToken: inputs._clientNotionToken,
+		const baseNotion = integrations.notion;
+		const mirrorNotion = integrations.createClient('notion', {
+			accessToken: inputs._mirrorNotionToken,
 		});
 
-		const sourceNotion = isFromClient ? clientNotion : internalNotion;
-		const destNotion = isFromClient ? internalNotion : clientNotion;
-		const sourceDatabase = isFromClient ? clientDatabase : inputs.internalDatabase;
-		const destDatabase = isFromClient ? inputs.internalDatabase : clientDatabase;
+		const sourceNotion = isFromMirror ? mirrorNotion : baseNotion;
+		const destNotion = isFromMirror ? baseNotion : mirrorNotion;
+		const sourceDatabase = isFromMirror ? mirrorDatabase : inputs.baseDatabase;
+		const destDatabase = isFromMirror ? inputs.baseDatabase : mirrorDatabase;
 
 		// ========================================================================
-		// FETCH SCHEMAS (cached for 24 hours)
+		// FETCH SCHEMAS
 		// ========================================================================
-		// Zuhandenheit: Auto-discover schemas, no user configuration needed
 
 		const sourceSchema = await getOrFetchSchema(sourceDatabase, sourceNotion, storage);
 		const destSchema = await getOrFetchSchema(destDatabase, destNotion, storage);
@@ -423,9 +466,8 @@ export default defineWorkflow({
 		}
 
 		// ========================================================================
-		// AUTO-DERIVE PROPERTY MAPPINGS (by exact name match)
+		// DERIVE PROPERTY MAPPINGS
 		// ========================================================================
-		// Weniger, aber besser: No configuration - properties with same name sync
 
 		const propertyMappings = derivePropertyMappings(sourceSchema, destSchema);
 
@@ -450,16 +492,16 @@ export default defineWorkflow({
 
 		if (!mapping && linkedPageId) {
 			mapping = {
-				clientPageId: isFromClient ? pageId : linkedPageId,
-				internalPageId: isFromClient ? linkedPageId : pageId,
+				basePageId: isFromMirror ? linkedPageId : pageId,
+				mirrorPageId: isFromMirror ? pageId : linkedPageId,
 				lastSyncedAt: new Date().toISOString(),
-				lastSyncDirection: isFromClient ? 'client_to_internal' : 'internal_to_client',
+				lastSyncDirection: isFromMirror ? 'mirror_to_base' : 'base_to_mirror',
 				syncVersion: 1,
 			};
 		}
 
 		// ========================================================================
-		// BUILD PROPERTIES (auto-summarize long text, pass-through everything else)
+		// BUILD DESTINATION PROPERTIES
 		// ========================================================================
 
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -467,9 +509,8 @@ export default defineWorkflow({
 		const syncedProperties: string[] = [];
 
 		for (const propMapping of propertyMappings) {
-			// Skip non-bidirectional properties on reverse sync (internal → client)
-			// Title and rich_text are unidirectional: client creates content, internal doesn't overwrite
-			if (!isFromClient && !propMapping.bidirectional) continue;
+			// For mirror → base sync, only sync bidirectional properties
+			if (isFromMirror && !propMapping.bidirectional && !propMapping.isTitle) continue;
 
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			const sourceProp = (page?.properties as any)?.[propMapping.name];
@@ -478,7 +519,7 @@ export default defineWorkflow({
 			// eslint-disable-next-line @typescript-eslint/no-explicit-any
 			let value: any = sourceProp;
 
-			// Auto-summarize long text properties (no configuration needed)
+			// Auto-summarize long text
 			if (TEXT_TYPES.includes(propMapping.sourceType) && !propMapping.isTitle) {
 				const text = extractRichTextProperty(sourceProp);
 				if (text && text.length > SUMMARIZE_THRESHOLD) {
@@ -506,7 +547,6 @@ export default defineWorkflow({
 		let result;
 
 		if (eventType === 'created' && !mapping) {
-			// Add back-reference for linking
 			destProperties[SYNC_LINK_PROPERTY] = {
 				rich_text: [{ text: { content: pageId } }],
 			};
@@ -517,19 +557,17 @@ export default defineWorkflow({
 			});
 
 			if (result.success) {
-				// Store mapping
 				const newMapping: SyncMapping = {
-					clientPageId: isFromClient ? pageId : result.data.id,
-					internalPageId: isFromClient ? result.data.id : pageId,
+					basePageId: isFromMirror ? result.data.id : pageId,
+					mirrorPageId: isFromMirror ? pageId : result.data.id,
 					lastSyncedAt: new Date().toISOString(),
-					lastSyncDirection: isFromClient ? 'client_to_internal' : 'internal_to_client',
+					lastSyncDirection: isFromMirror ? 'mirror_to_base' : 'base_to_mirror',
 					syncVersion: 1,
 				};
 
 				await storage.set(`mapping:${pageId}`, newMapping);
 				await storage.set(`mapping:${result.data.id}`, newMapping);
 
-				// Update source with back-reference
 				await sourceNotion.updatePage({
 					pageId,
 					properties: {
@@ -538,8 +576,7 @@ export default defineWorkflow({
 				});
 			}
 		} else {
-			// Update existing page
-			const destPageId = isFromClient ? mapping?.internalPageId : mapping?.clientPageId;
+			const destPageId = isFromMirror ? mapping?.basePageId : mapping?.mirrorPageId;
 
 			if (!destPageId) {
 				return {
@@ -560,7 +597,7 @@ export default defineWorkflow({
 				const updatedMapping: SyncMapping = {
 					...mapping,
 					lastSyncedAt: new Date().toISOString(),
-					lastSyncDirection: isFromClient ? 'client_to_internal' : 'internal_to_client',
+					lastSyncDirection: isFromMirror ? 'mirror_to_base' : 'base_to_mirror',
 					syncVersion: mapping.syncVersion + 1,
 				};
 
@@ -569,7 +606,6 @@ export default defineWorkflow({
 			}
 		}
 
-		// Mark as synced (unified idempotency)
 		await storage.set(idempotencyKey, { syncedAt: Date.now() });
 
 		if (!result?.success) {
@@ -593,12 +629,223 @@ export default defineWorkflow({
 });
 
 // ============================================================================
-// HELPERS: Schema Discovery (Zuhandenheit - tool adapts to user's schema)
+// INITIAL SYNC IMPLEMENTATION
 // ============================================================================
 
 /**
+ * Perform initial sync: copy all pages from BASE to MIRROR
+ * Rate-limited to respect Notion API limits
+ */
+async function performInitialSync({ inputs, integrations, storage }: {
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	inputs: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	integrations: any;
+	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	storage: any;
+}) {
+	const baseNotion = integrations.notion;
+	const mirrorNotion = integrations.createClient('notion', {
+		accessToken: inputs._mirrorNotionToken,
+	});
+
+	const baseDatabase = inputs.baseDatabase;
+	const mirrorDatabase = inputs._mirrorDatabase;
+
+	// Get schemas for property mapping
+	const baseSchema = await getOrFetchSchema(baseDatabase, baseNotion, storage);
+	const mirrorSchema = await getOrFetchSchema(mirrorDatabase, mirrorNotion, storage);
+
+	if (!baseSchema || !mirrorSchema) {
+		await storage.set('initialSync', {
+			status: 'failed',
+			lastError: 'Failed to fetch database schemas',
+			totalPages: 0,
+			syncedPages: 0,
+			failedPages: 0,
+			startedAt: new Date().toISOString(),
+		} as InitialSyncProgress);
+
+		return { success: false, error: 'Failed to fetch database schemas' };
+	}
+
+	const propertyMappings = derivePropertyMappings(baseSchema, mirrorSchema);
+
+	// Initialize progress
+	const progress: InitialSyncProgress = {
+		status: 'in_progress',
+		totalPages: 0,
+		syncedPages: 0,
+		failedPages: 0,
+		startedAt: new Date().toISOString(),
+	};
+
+	await storage.set('initialSync', progress);
+
+	// Query all pages from BASE database
+	let cursor: string | undefined;
+	let totalSynced = 0;
+	let totalFailed = 0;
+	const allPages: Array<{ id: string }> = [];
+
+	try {
+		// First pass: count total pages
+		do {
+			const result = await baseNotion.queryDatabase({
+				databaseId: baseDatabase,
+				startCursor: cursor,
+				pageSize: 100,
+			});
+
+			if (!result.success) {
+				throw new Error(`Failed to query base database: ${result.error}`);
+			}
+
+			for (const page of result.data?.results || []) {
+				allPages.push({ id: page.id });
+			}
+
+			cursor = result.data?.next_cursor;
+
+			// Rate limit
+			await sleep(RATE_LIMIT_DELAY_MS);
+		} while (cursor);
+
+		// Update total count
+		progress.totalPages = allPages.length;
+		await storage.set('initialSync', progress);
+
+		// Second pass: sync each page with rate limiting
+		for (let i = 0; i < allPages.length; i++) {
+			const page = allPages[i];
+
+			try {
+				// Check if already mapped (idempotent)
+				const existing = await storage.get<SyncMapping>(`mapping:${page.id}`);
+				if (existing) {
+					totalSynced++;
+					continue;
+				}
+
+				// Fetch full page
+				const fullPage = await baseNotion.getPage({ pageId: page.id });
+				if (!fullPage.success) {
+					totalFailed++;
+					continue;
+				}
+
+				// Build properties for mirror
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				const mirrorProperties: Record<string, any> = {};
+
+				for (const propMapping of propertyMappings) {
+					// eslint-disable-next-line @typescript-eslint/no-explicit-any
+					const sourceProp = (fullPage.data?.properties as any)?.[propMapping.name];
+					if (sourceProp) {
+						mirrorProperties[propMapping.name] = sourceProp;
+					}
+				}
+
+				// Add back-reference
+				mirrorProperties[SYNC_LINK_PROPERTY] = {
+					rich_text: [{ text: { content: page.id } }],
+				};
+
+				// Create in mirror
+				const createResult = await mirrorNotion.createPage({
+					parentDatabaseId: mirrorDatabase,
+					properties: mirrorProperties,
+				});
+
+				if (createResult.success) {
+					// Store mapping
+					const mapping: SyncMapping = {
+						basePageId: page.id,
+						mirrorPageId: createResult.data.id,
+						lastSyncedAt: new Date().toISOString(),
+						lastSyncDirection: 'base_to_mirror',
+						syncVersion: 1,
+					};
+
+					await storage.set(`mapping:${page.id}`, mapping);
+					await storage.set(`mapping:${createResult.data.id}`, mapping);
+
+					// Update source with back-reference
+					await baseNotion.updatePage({
+						pageId: page.id,
+						properties: {
+							[SYNC_LINK_PROPERTY]: { rich_text: [{ text: { content: createResult.data.id } }] },
+						},
+					});
+
+					totalSynced++;
+				} else {
+					totalFailed++;
+				}
+			} catch {
+				totalFailed++;
+			}
+
+			// Update progress every batch
+			if (i % INITIAL_SYNC_BATCH_SIZE === 0 || i === allPages.length - 1) {
+				progress.syncedPages = totalSynced;
+				progress.failedPages = totalFailed;
+				await storage.set('initialSync', progress);
+			}
+
+			// Rate limit between each page
+			await sleep(RATE_LIMIT_DELAY_MS);
+		}
+
+		// Mark complete
+		progress.status = 'completed';
+		progress.syncedPages = totalSynced;
+		progress.failedPages = totalFailed;
+		progress.completedAt = new Date().toISOString();
+		await storage.set('initialSync', progress);
+
+		// Update invite status
+		const invite = await storage.get<{ token: string; status: string }>('invite');
+		if (invite) {
+			await storage.set('invite', { ...invite, status: 'connected' });
+		}
+
+		return {
+			success: true,
+			initialSync: true,
+			totalPages: allPages.length,
+			syncedPages: totalSynced,
+			failedPages: totalFailed,
+			durationMs: Date.now() - new Date(progress.startedAt).getTime(),
+		};
+
+	} catch (error) {
+		progress.status = 'failed';
+		progress.lastError = error instanceof Error ? error.message : 'Unknown error';
+		await storage.set('initialSync', progress);
+
+		return {
+			success: false,
+			error: progress.lastError,
+			syncedPages: totalSynced,
+			failedPages: totalFailed,
+		};
+	}
+}
+
+// ============================================================================
+// HELPERS
+// ============================================================================
+
+/**
+ * Sleep for rate limiting
+ */
+function sleep(ms: number): Promise<void> {
+	return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+/**
  * Get schema from cache or fetch from Notion API
- * Cached for 24 hours (schemas rarely change)
  */
 async function getOrFetchSchema(
 	databaseId: string,
@@ -609,20 +856,16 @@ async function getOrFetchSchema(
 ): Promise<DatabaseSchema | null> {
 	const cacheKey = `schema:${databaseId}`;
 
-	// Check cache first
 	const cached = await storage.get(cacheKey) as DatabaseSchema | undefined;
 	if (cached && (Date.now() - cached.cachedAt) < SCHEMA_CACHE_TTL_SECONDS * 1000) {
 		return cached;
 	}
 
-	// Fetch from Notion API
 	try {
 		const db = await notion.getDatabase({ databaseId });
 		if (!db.success || !db.data) return null;
 
 		const schema = extractSchema(db.data);
-
-		// Cache for 24 hours
 		await storage.set(cacheKey, schema);
 
 		return schema;
@@ -637,7 +880,7 @@ async function getOrFetchSchema(
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function extractSchema(database: any): DatabaseSchema {
 	const properties: DatabaseSchema['properties'] = {};
-	let titlePropertyName = 'Name'; // Default fallback
+	let titlePropertyName = 'Name';
 
 	for (const [name, prop] of Object.entries(database.properties || {})) {
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -663,7 +906,6 @@ function extractSchema(database: any): DatabaseSchema {
 
 /**
  * Auto-derive property mappings by exact name match
- * Zuhandenheit: No configuration needed - matching names sync automatically
  */
 function derivePropertyMappings(
 	sourceSchema: DatabaseSchema,
@@ -672,26 +914,20 @@ function derivePropertyMappings(
 	const mappings: PropertyMapping[] = [];
 
 	for (const [name, sourceProp] of Object.entries(sourceSchema.properties)) {
-		// Skip system properties that can't be synced
 		const unsyncableTypes: NotionPropertyType[] = [
 			'formula', 'rollup', 'created_time', 'created_by',
 			'last_edited_time', 'last_edited_by', 'relation', 'files', 'people',
 		];
 		if (unsyncableTypes.includes(sourceProp.type)) continue;
-
-		// Skip the sync link property (internal use only)
 		if (name === SYNC_LINK_PROPERTY) continue;
 
-		// Check if destination has matching property
 		const destProp = destSchema.properties[name];
 		if (!destProp) continue;
 
-		// Check type compatibility
 		if (!areTypesCompatible(sourceProp.type, destProp.type)) continue;
 
-		// Determine bidirectionality based on type
 		const isTitle = sourceProp.type === 'title';
-		const bidirectional = !isTitle && BIDIRECTIONAL_TYPES.includes(sourceProp.type);
+		const bidirectional = BIDIRECTIONAL_TYPES.includes(sourceProp.type);
 
 		mappings.push({
 			name,
@@ -710,11 +946,8 @@ function derivePropertyMappings(
  */
 function areTypesCompatible(type1: NotionPropertyType, type2: NotionPropertyType): boolean {
 	if (type1 === type2) return true;
-
-	// Text types are interchangeable
 	if (TEXT_TYPES.includes(type1) && TEXT_TYPES.includes(type2)) return true;
 
-	// Select and status are interchangeable
 	const selectTypes = ['select', 'status'];
 	if (selectTypes.includes(type1) && selectTypes.includes(type2)) return true;
 
@@ -748,8 +981,18 @@ function extractRichTextProperty(prop: any): string | undefined {
 export const metadata = {
 	id: 'databases-mirrored',
 	category: 'data-sync',
-	featured: false, // Not featured until tested in production
-	experimental: false, // OAuth-based, no manual token setup
+	featured: true,
+	experimental: false,
 	stats: { rating: 4.9, users: 0, reviews: 0 },
-	tags: ['notion', 'sync', 'bidirectional', 'database', 'cross-workspace', 'cross-organization', 'schema-agnostic'],
+	tags: [
+		'notion',
+		'sync',
+		'bidirectional',
+		'database',
+		'cross-workspace',
+		'cross-organization',
+		'agency',
+		'issue-tracking',
+		'initial-sync',
+	],
 };

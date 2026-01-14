@@ -1,19 +1,21 @@
 /**
- * Notion Two-Way Sync Workflow Tests
+ * Notion Two-Way Sync Workflow Tests (v3.0 - Base/Mirror with Initial Sync)
  *
  * Tests the bidirectional synchronization workflow between Notion workspaces.
  * Uses OAuth-based credential resolution via WORKWAY's public Notion app.
  *
  * Validates:
  * - Schema-based auto-discovery (no hardcoded property mappings)
- * - Page creation syncs client → internal
+ * - Page creation syncs mirror → base
  * - Property updates sync bidirectionally (for select/status/checkbox types)
+ * - Initial sync from base → mirror
  * - Unified idempotency (loop prevention + duplicate detection)
  * - Auto-summarization for long text properties
- * - Invitation-based client connection
+ * - Invitation-based mirror connection
  *
- * Zuhandenheit: Properties with same name in both databases sync automatically.
- * The tool recedes: Tests verify outcomes, not implementation details.
+ * Terminology:
+ * - BASE: Agency's database (source of truth for initial sync)
+ * - MIRROR: Client's database (populated via invite flow)
  */
 
 import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
@@ -92,6 +94,13 @@ function createMockNotionClient(overrides: Partial<MockNotionMethods> = {}, sche
 				properties: (schemaOverride || MOCK_DATABASE_SCHEMA).properties,
 			},
 		}),
+		queryDatabase: vi.fn().mockResolvedValue({
+			success: true,
+			data: {
+				results: [],
+				next_cursor: null,
+			},
+		}),
 		createPage: vi.fn().mockResolvedValue({
 			success: true,
 			data: { id: 'dest-page-456' },
@@ -107,6 +116,7 @@ function createMockNotionClient(overrides: Partial<MockNotionMethods> = {}, sche
 interface MockNotionMethods {
 	getPage: Mock;
 	getDatabase: Mock;
+	queryDatabase: Mock;
 	createPage: Mock;
 	updatePage: Mock;
 }
@@ -130,35 +140,35 @@ function createMockAI() {
 
 function createMockIntegrations(overrides: {
 	notion?: ReturnType<typeof createMockNotionClient>;
-	clientNotion?: ReturnType<typeof createMockNotionClient>;
+	mirrorNotion?: ReturnType<typeof createMockNotionClient>;
 } = {}) {
-	const clientNotion = overrides.clientNotion ?? createMockNotionClient();
+	const mirrorNotion = overrides.mirrorNotion ?? createMockNotionClient();
 
 	return {
 		notion: overrides.notion ?? createMockNotionClient(),
-		createClient: vi.fn().mockReturnValue(clientNotion),
+		createClient: vi.fn().mockReturnValue(mirrorNotion),
 		ai: createMockAI(),
 	};
 }
 
 // ============================================================================
-// TEST INPUTS (Invitation-based pattern)
+// TEST INPUTS (Base/Mirror pattern)
 // ============================================================================
 
 const DEFAULT_INPUTS = {
-	// Internal team's configuration
-	internalDatabase: 'internal-db-uuid',
+	// Agency's BASE database
+	baseDatabase: 'base-db-uuid',
 
-	// Hidden inputs populated via invite flow (simulated as already connected)
-	_clientNotionToken: 'secret_client_token_from_invite',
-	_clientDatabase: 'client-db-uuid',
-	_clientEmail: 'client@example.com',
+	// Hidden inputs populated via invite flow (mirror connected)
+	_mirrorNotionToken: 'secret_mirror_token_from_invite',
+	_mirrorDatabase: 'mirror-db-uuid',
+	_mirrorEmail: 'client@example.com',
 };
 
-// Inputs for testing "client not connected" scenarios
-const INPUTS_CLIENT_NOT_CONNECTED = {
-	internalDatabase: 'internal-db-uuid',
-	// No _client* fields — client hasn't completed invite flow
+// Inputs for testing "mirror not connected" scenarios
+const INPUTS_MIRROR_NOT_CONNECTED = {
+	baseDatabase: 'base-db-uuid',
+	// No _mirror* fields — client hasn't completed invite flow
 };
 
 // ============================================================================
@@ -208,20 +218,16 @@ const TEXT_TYPES = ['rich_text', 'title'];
 /**
  * Simplified workflow executor for testing.
  * In production, this is handled by the WORKWAY SDK runtime.
- *
- * Zuhandenheit:
- * - Schema auto-discovery: properties with same name sync automatically
- * - No configuration needed - tool adapts to user's database structure
  */
 async function executeWorkflow(params: {
 	trigger: { data: unknown };
-	inputs: typeof DEFAULT_INPUTS | typeof INPUTS_CLIENT_NOT_CONNECTED;
+	inputs: typeof DEFAULT_INPUTS | typeof INPUTS_MIRROR_NOT_CONNECTED;
 	storage: ReturnType<typeof createMockStorage>;
-	clientNotion: ReturnType<typeof createMockNotionClient>;
-	internalNotion: ReturnType<typeof createMockNotionClient>;
+	mirrorNotion: ReturnType<typeof createMockNotionClient>;
+	baseNotion: ReturnType<typeof createMockNotionClient>;
 	ai: ReturnType<typeof createMockAI>;
 }) {
-	const { trigger, inputs, storage, clientNotion, internalNotion, ai } = params;
+	const { trigger, inputs, storage, mirrorNotion, baseNotion, ai } = params;
 	const event = trigger.data as {
 		type: string;
 		page_id?: string;
@@ -235,12 +241,12 @@ async function executeWorkflow(params: {
 	const parentDatabaseId = event.parent?.database_id;
 	const eventTimestamp = event.timestamp || event.last_edited_time;
 
-	// Client database from invite flow (hidden input)
-	const clientDatabase = (inputs as typeof DEFAULT_INPUTS)._clientDatabase;
-	const clientToken = (inputs as typeof DEFAULT_INPUTS)._clientNotionToken;
+	// Mirror database from invite flow (hidden input)
+	const mirrorDatabase = (inputs as typeof DEFAULT_INPUTS)._mirrorDatabase;
+	const mirrorToken = (inputs as typeof DEFAULT_INPUTS)._mirrorNotionToken;
 
-	// Check if client has connected via invite flow
-	if (!clientToken || !clientDatabase) {
+	// Check if mirror has connected via invite flow
+	if (!mirrorToken || !mirrorDatabase) {
 		const invite = await storage.get<{ token: string }>('invite');
 		return {
 			success: false,
@@ -251,10 +257,10 @@ async function executeWorkflow(params: {
 	}
 
 	// Determine source workspace
-	const isFromClient = parentDatabaseId === clientDatabase;
-	const isFromInternal = parentDatabaseId === inputs.internalDatabase;
+	const isFromMirror = parentDatabaseId === mirrorDatabase;
+	const isFromBase = parentDatabaseId === inputs.baseDatabase;
 
-	if (!isFromClient && !isFromInternal) {
+	if (!isFromMirror && !isFromBase) {
 		return {
 			success: true,
 			skipped: true,
@@ -262,7 +268,7 @@ async function executeWorkflow(params: {
 		};
 	}
 
-	const source = isFromClient ? 'client' : 'internal';
+	const source = isFromMirror ? 'mirror' : 'base';
 	const eventType = event.type === 'page.created' ? 'created' : 'updated';
 
 	// Unified idempotency check (combines loop prevention + duplicate detection)
@@ -281,10 +287,10 @@ async function executeWorkflow(params: {
 	}
 
 	// Get clients
-	const sourceNotion = isFromClient ? clientNotion : internalNotion;
-	const destNotion = isFromClient ? internalNotion : clientNotion;
-	const sourceDatabase = isFromClient ? clientDatabase : inputs.internalDatabase;
-	const destDatabase = isFromClient ? inputs.internalDatabase : clientDatabase;
+	const sourceNotion = isFromMirror ? mirrorNotion : baseNotion;
+	const destNotion = isFromMirror ? baseNotion : mirrorNotion;
+	const sourceDatabase = isFromMirror ? mirrorDatabase : inputs.baseDatabase;
+	const destDatabase = isFromMirror ? inputs.baseDatabase : mirrorDatabase;
 
 	// Fetch schemas (auto-discover properties)
 	const sourceSchemaRes = await sourceNotion.getDatabase({ databaseId: sourceDatabase });
@@ -313,8 +319,8 @@ async function executeWorkflow(params: {
 
 	// Check for existing mapping
 	let mapping = await storage.get<{
-		clientPageId: string;
-		internalPageId: string;
+		basePageId: string;
+		mirrorPageId: string;
 		lastSyncedAt: string;
 		lastSyncDirection: string;
 		syncVersion: number;
@@ -325,8 +331,8 @@ async function executeWorkflow(params: {
 	const syncedProperties: string[] = [];
 
 	for (const propMapping of propertyMappings) {
-		// Skip non-bidirectional properties on reverse sync (internal → client)
-		if (!isFromClient && !propMapping.bidirectional) continue;
+		// For mirror → base sync, only sync bidirectional properties and title
+		if (isFromMirror && !propMapping.bidirectional && !propMapping.isTitle) continue;
 
 		const sourceProp = page?.properties?.[propMapping.name];
 		if (!sourceProp) continue;
@@ -368,12 +374,12 @@ async function executeWorkflow(params: {
 
 		if (result.success) {
 			const newMapping = {
-				clientPageId: isFromClient ? pageId : result.data.id,
-				internalPageId: isFromClient ? result.data.id : pageId,
+				basePageId: isFromMirror ? result.data.id : pageId,
+				mirrorPageId: isFromMirror ? pageId : result.data.id,
 				lastSyncedAt: new Date().toISOString(),
-				lastSyncDirection: isFromClient
-					? 'client_to_internal'
-					: 'internal_to_client',
+				lastSyncDirection: isFromMirror
+					? 'mirror_to_base'
+					: 'base_to_mirror',
 				syncVersion: 1,
 			};
 
@@ -391,9 +397,9 @@ async function executeWorkflow(params: {
 			});
 		}
 	} else {
-		const destPageId = isFromClient
-			? mapping?.internalPageId
-			: mapping?.clientPageId;
+		const destPageId = isFromMirror
+			? mapping?.basePageId
+			: mapping?.mirrorPageId;
 
 		if (!destPageId) {
 			return {
@@ -414,9 +420,9 @@ async function executeWorkflow(params: {
 			const updatedMapping = {
 				...mapping,
 				lastSyncedAt: new Date().toISOString(),
-				lastSyncDirection: isFromClient
-					? 'client_to_internal'
-					: 'internal_to_client',
+				lastSyncDirection: isFromMirror
+					? 'mirror_to_base'
+					: 'base_to_mirror',
 				syncVersion: mapping.syncVersion + 1,
 			};
 
@@ -449,7 +455,6 @@ async function executeWorkflow(params: {
 
 /**
  * Auto-derive property mappings by exact name match
- * This mirrors the workflow's derivePropertyMappings function
  */
 function derivePropertyMappings(
 	sourceProps: Record<string, { type: string; name: string }>,
@@ -485,7 +490,7 @@ function derivePropertyMappings(
 		if (!areTypesCompatible(sourceProp.type, destProp.type)) continue;
 
 		const isTitle = sourceProp.type === 'title';
-		const bidirectional = !isTitle && BIDIRECTIONAL_TYPES.includes(sourceProp.type);
+		const bidirectional = BIDIRECTIONAL_TYPES.includes(sourceProp.type);
 
 		mappings.push({
 			name,
@@ -526,80 +531,79 @@ function extractRichText(prop: unknown): string | undefined {
 }
 
 // ============================================================================
-// TESTS: PAGE CREATION (Client → Internal)
+// TESTS: PAGE CREATION (Mirror → Base)
 // ============================================================================
 
 describe('Notion Two-Way Sync: Page Creation', () => {
 	let storage: ReturnType<typeof createMockStorage>;
-	let clientNotion: ReturnType<typeof createMockNotionClient>;
-	let internalNotion: ReturnType<typeof createMockNotionClient>;
+	let mirrorNotion: ReturnType<typeof createMockNotionClient>;
+	let baseNotion: ReturnType<typeof createMockNotionClient>;
 	let ai: ReturnType<typeof createMockAI>;
 
 	beforeEach(() => {
 		storage = createMockStorage();
-		clientNotion = createMockNotionClient();
-		internalNotion = createMockNotionClient();
+		mirrorNotion = createMockNotionClient();
+		baseNotion = createMockNotionClient();
 		ai = createMockAI();
 	});
 
-	it('should create page in internal workspace when client creates ticket', async () => {
+	it('should create page in base workspace when mirror creates issue', async () => {
 		const trigger = {
-			data: createPageCreatedEvent('client-page-123', DEFAULT_INPUTS._clientDatabase),
+			data: createPageCreatedEvent('mirror-page-123', DEFAULT_INPUTS._mirrorDatabase),
 		};
 
 		const result = await executeWorkflow({
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
 		expect(result.success).toBe(true);
 		expect(result.action).toBe('created');
-		expect(result.source).toBe('client');
-		expect(internalNotion.createPage).toHaveBeenCalled();
+		expect(result.source).toBe('mirror');
+		expect(baseNotion.createPage).toHaveBeenCalled();
 	});
 
 	it('should store mapping after creation', async () => {
 		const trigger = {
-			data: createPageCreatedEvent('client-page-123', DEFAULT_INPUTS._clientDatabase),
+			data: createPageCreatedEvent('mirror-page-123', DEFAULT_INPUTS._mirrorDatabase),
 		};
 
 		await executeWorkflow({
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
-		const mapping = await storage.get('mapping:client-page-123');
+		const mapping = await storage.get('mapping:mirror-page-123');
 		expect(mapping).toBeDefined();
-		expect((mapping as { clientPageId: string }).clientPageId).toBe('client-page-123');
-		expect((mapping as { internalPageId: string }).internalPageId).toBe('dest-page-456');
+		expect((mapping as { mirrorPageId: string }).mirrorPageId).toBe('mirror-page-123');
+		expect((mapping as { basePageId: string }).basePageId).toBe('dest-page-456');
 	});
 
 	it('should add back-reference to source page', async () => {
 		const trigger = {
-			data: createPageCreatedEvent('client-page-123', DEFAULT_INPUTS._clientDatabase),
+			data: createPageCreatedEvent('mirror-page-123', DEFAULT_INPUTS._mirrorDatabase),
 		};
 
 		await executeWorkflow({
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
-		// Sync link property used for back-reference
-		expect(clientNotion.updatePage).toHaveBeenCalledWith(
+		expect(mirrorNotion.updatePage).toHaveBeenCalledWith(
 			expect.objectContaining({
-				pageId: 'client-page-123',
+				pageId: 'mirror-page-123',
 				properties: expect.objectContaining({
 					'Synced Page ID': expect.any(Object),
 				}),
@@ -608,10 +612,10 @@ describe('Notion Two-Way Sync: Page Creation', () => {
 	});
 
 	it('should pass through status values unchanged', async () => {
-		clientNotion.getPage.mockResolvedValue({
+		mirrorNotion.getPage.mockResolvedValue({
 			success: true,
 			data: {
-				id: 'client-page-123',
+				id: 'mirror-page-123',
 				properties: {
 					Title: { title: [{ text: { content: 'Bug Report' } }] },
 					Status: { status: { name: 'New' } },
@@ -620,23 +624,22 @@ describe('Notion Two-Way Sync: Page Creation', () => {
 		});
 
 		const trigger = {
-			data: createPageCreatedEvent('client-page-123', DEFAULT_INPUTS._clientDatabase),
+			data: createPageCreatedEvent('mirror-page-123', DEFAULT_INPUTS._mirrorDatabase),
 		};
 
 		await executeWorkflow({
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
-		// Status passes through unchanged (no mapping)
-		expect(internalNotion.createPage).toHaveBeenCalledWith(
+		expect(baseNotion.createPage).toHaveBeenCalledWith(
 			expect.objectContaining({
 				properties: expect.objectContaining({
-					Status: { status: { name: 'New' } }, // Unchanged
+					Status: { status: { name: 'New' } },
 				}),
 			})
 		);
@@ -644,38 +647,38 @@ describe('Notion Two-Way Sync: Page Creation', () => {
 });
 
 // ============================================================================
-// TESTS: BIDIRECTIONAL SYNC (Internal → Client)
+// TESTS: BIDIRECTIONAL SYNC (Base → Mirror)
 // ============================================================================
 
 describe('Notion Two-Way Sync: Bidirectional Updates', () => {
 	let storage: ReturnType<typeof createMockStorage>;
-	let clientNotion: ReturnType<typeof createMockNotionClient>;
-	let internalNotion: ReturnType<typeof createMockNotionClient>;
+	let mirrorNotion: ReturnType<typeof createMockNotionClient>;
+	let baseNotion: ReturnType<typeof createMockNotionClient>;
 	let ai: ReturnType<typeof createMockAI>;
 
 	beforeEach(() => {
 		storage = createMockStorage();
-		clientNotion = createMockNotionClient();
-		internalNotion = createMockNotionClient();
+		mirrorNotion = createMockNotionClient();
+		baseNotion = createMockNotionClient();
 		ai = createMockAI();
 
 		// Pre-populate mapping (simulating existing sync)
-		storage._store.set('mapping:internal-page-456', {
-			clientPageId: 'client-page-123',
-			internalPageId: 'internal-page-456',
-			lastSyncedAt: new Date(Date.now() - 60000).toISOString(), // 1 minute ago
-			lastSyncDirection: 'client_to_internal',
+		storage._store.set('mapping:base-page-456', {
+			mirrorPageId: 'mirror-page-123',
+			basePageId: 'base-page-456',
+			lastSyncedAt: new Date(Date.now() - 60000).toISOString(),
+			lastSyncDirection: 'mirror_to_base',
 			syncVersion: 1,
 		});
 	});
 
-	it('should sync status changes back to client unchanged', async () => {
-		internalNotion.getPage.mockResolvedValue({
+	it('should sync status changes back to mirror unchanged', async () => {
+		baseNotion.getPage.mockResolvedValue({
 			success: true,
 			data: {
-				id: 'internal-page-456',
+				id: 'base-page-456',
 				properties: {
-					Status: { status: { name: 'Done' } }, // Changed in internal
+					Status: { status: { name: 'Done' } },
 					Priority: { select: { name: 'Low' } },
 				},
 			},
@@ -683,8 +686,8 @@ describe('Notion Two-Way Sync: Bidirectional Updates', () => {
 
 		const trigger = {
 			data: createPageUpdatedEvent(
-				'internal-page-456',
-				DEFAULT_INPUTS.internalDatabase
+				'base-page-456',
+				DEFAULT_INPUTS.baseDatabase
 			),
 		};
 
@@ -692,34 +695,30 @@ describe('Notion Two-Way Sync: Bidirectional Updates', () => {
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
 		expect(result.success).toBe(true);
-		expect(result.source).toBe('internal');
-		// Status passes through unchanged (no reverse mapping)
-		expect(clientNotion.updatePage).toHaveBeenCalledWith(
+		expect(result.source).toBe('base');
+		expect(mirrorNotion.updatePage).toHaveBeenCalledWith(
 			expect.objectContaining({
-				pageId: 'client-page-123',
+				pageId: 'mirror-page-123',
 				properties: expect.objectContaining({
-					Status: { status: { name: 'Done' } }, // Unchanged
+					Status: { status: { name: 'Done' } },
 				}),
 			})
 		);
 	});
 
-	it('should NOT sync non-bidirectional properties back to client', async () => {
-		internalNotion.getPage.mockResolvedValue({
+	it('should sync title from base to mirror', async () => {
+		baseNotion.getPage.mockResolvedValue({
 			success: true,
 			data: {
-				id: 'internal-page-456',
+				id: 'base-page-456',
 				properties: {
-					Title: { title: [{ text: { content: 'Modified Title' } }] },
-					Description: {
-						rich_text: [{ text: { content: 'Modified Description' } }],
-					},
+					Name: { title: [{ text: { content: 'Updated Title' } }] },
 					Status: { status: { name: 'Active' } },
 				},
 			},
@@ -727,8 +726,8 @@ describe('Notion Two-Way Sync: Bidirectional Updates', () => {
 
 		const trigger = {
 			data: createPageUpdatedEvent(
-				'internal-page-456',
-				DEFAULT_INPUTS.internalDatabase
+				'base-page-456',
+				DEFAULT_INPUTS.baseDatabase
 			),
 		};
 
@@ -736,15 +735,14 @@ describe('Notion Two-Way Sync: Bidirectional Updates', () => {
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
-		// Title and Description are NOT bidirectional
-		const updateCall = clientNotion.updatePage.mock.calls[0][0];
-		expect(updateCall.properties.Title).toBeUndefined();
-		expect(updateCall.properties.Description).toBeUndefined();
+		// Title SHOULD sync from base → mirror (base is source of truth)
+		const updateCall = mirrorNotion.updatePage.mock.calls[0][0];
+		expect(updateCall.properties.Name).toBeDefined();
 	});
 });
 
@@ -754,35 +752,34 @@ describe('Notion Two-Way Sync: Bidirectional Updates', () => {
 
 describe('Notion Two-Way Sync: Unified Idempotency (Loop Prevention)', () => {
 	let storage: ReturnType<typeof createMockStorage>;
-	let clientNotion: ReturnType<typeof createMockNotionClient>;
-	let internalNotion: ReturnType<typeof createMockNotionClient>;
+	let mirrorNotion: ReturnType<typeof createMockNotionClient>;
+	let baseNotion: ReturnType<typeof createMockNotionClient>;
 	let ai: ReturnType<typeof createMockAI>;
 
 	beforeEach(() => {
 		storage = createMockStorage();
-		clientNotion = createMockNotionClient();
-		internalNotion = createMockNotionClient();
+		mirrorNotion = createMockNotionClient();
+		baseNotion = createMockNotionClient();
 		ai = createMockAI();
 	});
 
 	it('should skip events within 5-second window', async () => {
 		const timestamp = '2024-01-15T10:30:00.000Z';
 
-		// Simulate recent sync using unified idempotency key
-		storage._store.set(`sync:client-page-123:${timestamp}`, {
-			syncedAt: Date.now(), // Just now
+		storage._store.set(`sync:mirror-page-123:${timestamp}`, {
+			syncedAt: Date.now(),
 		});
 
 		const trigger = {
-			data: createPageUpdatedEvent('client-page-123', DEFAULT_INPUTS._clientDatabase, timestamp),
+			data: createPageUpdatedEvent('mirror-page-123', DEFAULT_INPUTS._mirrorDatabase, timestamp),
 		};
 
 		const result = await executeWorkflow({
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
@@ -794,28 +791,27 @@ describe('Notion Two-Way Sync: Unified Idempotency (Loop Prevention)', () => {
 	it('should process events after 5-second window expires', async () => {
 		const timestamp = '2024-01-15T10:30:00.000Z';
 
-		// Simulate old sync (6 seconds ago) using unified idempotency key
-		storage._store.set(`sync:client-page-123:${timestamp}`, {
+		storage._store.set(`sync:mirror-page-123:${timestamp}`, {
 			syncedAt: Date.now() - 6000,
 		});
-		storage._store.set('mapping:client-page-123', {
-			clientPageId: 'client-page-123',
-			internalPageId: 'internal-page-456',
+		storage._store.set('mapping:mirror-page-123', {
+			mirrorPageId: 'mirror-page-123',
+			basePageId: 'base-page-456',
 			lastSyncedAt: new Date(Date.now() - 6000).toISOString(),
-			lastSyncDirection: 'client_to_internal',
+			lastSyncDirection: 'mirror_to_base',
 			syncVersion: 1,
 		});
 
 		const trigger = {
-			data: createPageUpdatedEvent('client-page-123', DEFAULT_INPUTS._clientDatabase, timestamp),
+			data: createPageUpdatedEvent('mirror-page-123', DEFAULT_INPUTS._mirrorDatabase, timestamp),
 		};
 
 		const result = await executeWorkflow({
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
@@ -825,30 +821,30 @@ describe('Notion Two-Way Sync: Unified Idempotency (Loop Prevention)', () => {
 });
 
 // ============================================================================
-// TESTS: IDEMPOTENCY (Part of unified mechanism)
+// TESTS: IDEMPOTENCY
 // ============================================================================
 
 describe('Notion Two-Way Sync: Idempotency', () => {
 	let storage: ReturnType<typeof createMockStorage>;
-	let clientNotion: ReturnType<typeof createMockNotionClient>;
-	let internalNotion: ReturnType<typeof createMockNotionClient>;
+	let mirrorNotion: ReturnType<typeof createMockNotionClient>;
+	let baseNotion: ReturnType<typeof createMockNotionClient>;
 	let ai: ReturnType<typeof createMockAI>;
 
 	beforeEach(() => {
 		storage = createMockStorage();
-		clientNotion = createMockNotionClient();
-		internalNotion = createMockNotionClient();
+		mirrorNotion = createMockNotionClient();
+		baseNotion = createMockNotionClient();
 		ai = createMockAI();
 	});
 
-	it('should skip duplicate events with same timestamp (unified mechanism)', async () => {
+	it('should skip duplicate events with same timestamp', async () => {
 		const timestamp = '2024-01-15T10:30:00.000Z';
 
 		// First execution
 		const trigger1 = {
 			data: createPageCreatedEvent(
-				'client-page-123',
-				DEFAULT_INPUTS._clientDatabase,
+				'mirror-page-123',
+				DEFAULT_INPUTS._mirrorDatabase,
 				timestamp
 			),
 		};
@@ -857,40 +853,37 @@ describe('Notion Two-Way Sync: Idempotency', () => {
 			trigger: trigger1,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
 		// Reset mock call counts
-		clientNotion.getPage.mockClear();
-		internalNotion.createPage.mockClear();
+		mirrorNotion.getPage.mockClear();
+		baseNotion.createPage.mockClear();
 
 		// Second execution with same timestamp
 		const trigger2 = {
 			data: createPageCreatedEvent(
-				'client-page-123',
-				DEFAULT_INPUTS._clientDatabase,
+				'mirror-page-123',
+				DEFAULT_INPUTS._mirrorDatabase,
 				timestamp
 			),
 		};
-
-		// The unified key (sync:pageId:timestamp) already exists from first execution
-		// This tests that same page+timestamp combo is rejected
 
 		const result = await executeWorkflow({
 			trigger: trigger2,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
 		expect(result.success).toBe(true);
 		expect(result.skipped).toBe(true);
 		expect(result.reason).toContain('loop prevention');
-		expect(internalNotion.createPage).not.toHaveBeenCalled();
+		expect(baseNotion.createPage).not.toHaveBeenCalled();
 	});
 });
 
@@ -900,14 +893,14 @@ describe('Notion Two-Way Sync: Idempotency', () => {
 
 describe('Notion Two-Way Sync: Database Validation', () => {
 	let storage: ReturnType<typeof createMockStorage>;
-	let clientNotion: ReturnType<typeof createMockNotionClient>;
-	let internalNotion: ReturnType<typeof createMockNotionClient>;
+	let mirrorNotion: ReturnType<typeof createMockNotionClient>;
+	let baseNotion: ReturnType<typeof createMockNotionClient>;
 	let ai: ReturnType<typeof createMockAI>;
 
 	beforeEach(() => {
 		storage = createMockStorage();
-		clientNotion = createMockNotionClient();
-		internalNotion = createMockNotionClient();
+		mirrorNotion = createMockNotionClient();
+		baseNotion = createMockNotionClient();
 		ai = createMockAI();
 	});
 
@@ -920,8 +913,8 @@ describe('Notion Two-Way Sync: Database Validation', () => {
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
@@ -932,19 +925,19 @@ describe('Notion Two-Way Sync: Database Validation', () => {
 });
 
 // ============================================================================
-// TESTS: CLIENT NOT CONNECTED (Invitation Flow)
+// TESTS: MIRROR NOT CONNECTED (Invitation Flow)
 // ============================================================================
 
-describe('Notion Two-Way Sync: Client Not Connected', () => {
+describe('Notion Two-Way Sync: Mirror Not Connected', () => {
 	let storage: ReturnType<typeof createMockStorage>;
-	let clientNotion: ReturnType<typeof createMockNotionClient>;
-	let internalNotion: ReturnType<typeof createMockNotionClient>;
+	let mirrorNotion: ReturnType<typeof createMockNotionClient>;
+	let baseNotion: ReturnType<typeof createMockNotionClient>;
 	let ai: ReturnType<typeof createMockAI>;
 
 	beforeEach(() => {
 		storage = createMockStorage();
-		clientNotion = createMockNotionClient();
-		internalNotion = createMockNotionClient();
+		mirrorNotion = createMockNotionClient();
+		baseNotion = createMockNotionClient();
 		ai = createMockAI();
 
 		// Store pending invite
@@ -955,17 +948,17 @@ describe('Notion Two-Way Sync: Client Not Connected', () => {
 		});
 	});
 
-	it('should return error with invite URL when client not connected', async () => {
+	it('should return error with invite URL when mirror not connected', async () => {
 		const trigger = {
-			data: createPageCreatedEvent('some-page', 'internal-db-uuid'),
+			data: createPageCreatedEvent('some-page', 'base-db-uuid'),
 		};
 
 		const result = await executeWorkflow({
 			trigger,
-			inputs: INPUTS_CLIENT_NOT_CONNECTED,
+			inputs: INPUTS_MIRROR_NOT_CONNECTED,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
@@ -975,24 +968,24 @@ describe('Notion Two-Way Sync: Client Not Connected', () => {
 		expect(result.hint).toContain('invite link');
 	});
 
-	it('should not call any Notion APIs when client not connected', async () => {
+	it('should not call any Notion APIs when mirror not connected', async () => {
 		const trigger = {
-			data: createPageCreatedEvent('some-page', 'internal-db-uuid'),
+			data: createPageCreatedEvent('some-page', 'base-db-uuid'),
 		};
 
 		await executeWorkflow({
 			trigger,
-			inputs: INPUTS_CLIENT_NOT_CONNECTED,
+			inputs: INPUTS_MIRROR_NOT_CONNECTED,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
-		expect(clientNotion.getPage).not.toHaveBeenCalled();
-		expect(clientNotion.createPage).not.toHaveBeenCalled();
-		expect(internalNotion.getPage).not.toHaveBeenCalled();
-		expect(internalNotion.createPage).not.toHaveBeenCalled();
+		expect(mirrorNotion.getPage).not.toHaveBeenCalled();
+		expect(mirrorNotion.createPage).not.toHaveBeenCalled();
+		expect(baseNotion.getPage).not.toHaveBeenCalled();
+		expect(baseNotion.createPage).not.toHaveBeenCalled();
 	});
 });
 
@@ -1002,29 +995,28 @@ describe('Notion Two-Way Sync: Client Not Connected', () => {
 
 describe('Notion Two-Way Sync: Error Handling', () => {
 	let storage: ReturnType<typeof createMockStorage>;
-	let clientNotion: ReturnType<typeof createMockNotionClient>;
-	let internalNotion: ReturnType<typeof createMockNotionClient>;
+	let mirrorNotion: ReturnType<typeof createMockNotionClient>;
+	let baseNotion: ReturnType<typeof createMockNotionClient>;
 	let ai: ReturnType<typeof createMockAI>;
 
 	beforeEach(() => {
 		storage = createMockStorage();
-		clientNotion = createMockNotionClient();
-		internalNotion = createMockNotionClient();
+		mirrorNotion = createMockNotionClient();
+		baseNotion = createMockNotionClient();
 		ai = createMockAI();
 	});
 
 	it('should handle missing mapping on update event', async () => {
-		// No mapping exists for this page
 		const trigger = {
-			data: createPageUpdatedEvent('orphan-page-123', DEFAULT_INPUTS._clientDatabase),
+			data: createPageUpdatedEvent('orphan-page-123', DEFAULT_INPUTS._mirrorDatabase),
 		};
 
 		const result = await executeWorkflow({
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
@@ -1034,21 +1026,21 @@ describe('Notion Two-Way Sync: Error Handling', () => {
 	});
 
 	it('should handle source page fetch failure', async () => {
-		clientNotion.getPage.mockResolvedValue({
+		mirrorNotion.getPage.mockResolvedValue({
 			success: false,
 			error: 'Page not found',
 		});
 
 		const trigger = {
-			data: createPageCreatedEvent('missing-page', DEFAULT_INPUTS._clientDatabase),
+			data: createPageCreatedEvent('missing-page', DEFAULT_INPUTS._mirrorDatabase),
 		};
 
 		const result = await executeWorkflow({
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
@@ -1057,21 +1049,21 @@ describe('Notion Two-Way Sync: Error Handling', () => {
 	});
 
 	it('should handle destination creation failure', async () => {
-		internalNotion.createPage.mockResolvedValue({
+		baseNotion.createPage.mockResolvedValue({
 			success: false,
 			error: 'Database not found',
 		});
 
 		const trigger = {
-			data: createPageCreatedEvent('client-page-123', DEFAULT_INPUTS._clientDatabase),
+			data: createPageCreatedEvent('mirror-page-123', DEFAULT_INPUTS._mirrorDatabase),
 		};
 
 		const result = await executeWorkflow({
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
@@ -1081,58 +1073,68 @@ describe('Notion Two-Way Sync: Error Handling', () => {
 });
 
 // ============================================================================
-// TESTS: AUTO-SUMMARIZATION (No config needed - Weniger, aber besser)
+// TESTS: AUTO-SUMMARIZATION
 // ============================================================================
 
 describe('Notion Two-Way Sync: Auto-Summarization', () => {
 	let storage: ReturnType<typeof createMockStorage>;
-	let clientNotion: ReturnType<typeof createMockNotionClient>;
-	let internalNotion: ReturnType<typeof createMockNotionClient>;
+	let mirrorNotion: ReturnType<typeof createMockNotionClient>;
+	let baseNotion: ReturnType<typeof createMockNotionClient>;
 	let ai: ReturnType<typeof createMockAI>;
 
 	beforeEach(() => {
 		storage = createMockStorage();
-		clientNotion = createMockNotionClient();
-		internalNotion = createMockNotionClient();
+		mirrorNotion = createMockNotionClient();
+		baseNotion = createMockNotionClient();
 		ai = createMockAI();
 	});
 
-	it('should auto-summarize long descriptions (> 500 chars)', async () => {
-		const longDescription = 'A'.repeat(600); // > 500 chars
+	it('should auto-summarize long descriptions (> 500 chars) when syncing base → mirror', async () => {
+		const longDescription = 'A'.repeat(600);
 
-		clientNotion.getPage.mockResolvedValue({
+		// Pre-populate mapping (simulating existing sync)
+		storage._store.set('mapping:base-page-456', {
+			mirrorPageId: 'mirror-page-123',
+			basePageId: 'base-page-456',
+			lastSyncedAt: new Date(Date.now() - 60000).toISOString(),
+			lastSyncDirection: 'mirror_to_base',
+			syncVersion: 1,
+		});
+
+		baseNotion.getPage.mockResolvedValue({
 			success: true,
 			data: {
-				id: 'client-page-123',
+				id: 'base-page-456',
 				properties: {
-					Title: { title: [{ text: { content: 'Bug Report' } }] },
+					Name: { title: [{ text: { content: 'Bug Report' } }] },
 					Description: { rich_text: [{ text: { content: longDescription } }] },
+					Status: { status: { name: 'Open' } },
 				},
 			},
 		});
 
 		const trigger = {
-			data: createPageCreatedEvent('client-page-123', DEFAULT_INPUTS._clientDatabase),
+			data: createPageUpdatedEvent('base-page-456', DEFAULT_INPUTS.baseDatabase),
 		};
 
 		await executeWorkflow({
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
-		// Auto-summarization happens without any config
+		// AI summarization should be called for long text when syncing base → mirror
 		expect(ai.generateText).toHaveBeenCalled();
 	});
 
 	it('should NOT summarize short descriptions (< 500 chars)', async () => {
-		clientNotion.getPage.mockResolvedValue({
+		mirrorNotion.getPage.mockResolvedValue({
 			success: true,
 			data: {
-				id: 'client-page-123',
+				id: 'mirror-page-123',
 				properties: {
 					Title: { title: [{ text: { content: 'Bug Report' } }] },
 					Description: { rich_text: [{ text: { content: 'Short description' } }] },
@@ -1141,49 +1143,47 @@ describe('Notion Two-Way Sync: Auto-Summarization', () => {
 		});
 
 		const trigger = {
-			data: createPageCreatedEvent('client-page-123', DEFAULT_INPUTS._clientDatabase),
+			data: createPageCreatedEvent('mirror-page-123', DEFAULT_INPUTS._mirrorDatabase),
 		};
 
 		await executeWorkflow({
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
-		// No summarization for short text
 		expect(ai.generateText).not.toHaveBeenCalled();
 	});
 });
 
 // ============================================================================
-// TESTS: STATUS PASS-THROUGH (Weniger, aber besser - No mapping config)
+// TESTS: STATUS PASS-THROUGH
 // ============================================================================
 
 describe('Notion Two-Way Sync: Status Pass-Through', () => {
 	let storage: ReturnType<typeof createMockStorage>;
-	let clientNotion: ReturnType<typeof createMockNotionClient>;
-	let internalNotion: ReturnType<typeof createMockNotionClient>;
+	let mirrorNotion: ReturnType<typeof createMockNotionClient>;
+	let baseNotion: ReturnType<typeof createMockNotionClient>;
 	let ai: ReturnType<typeof createMockAI>;
 
 	beforeEach(() => {
 		storage = createMockStorage();
-		clientNotion = createMockNotionClient();
-		internalNotion = createMockNotionClient();
+		mirrorNotion = createMockNotionClient();
+		baseNotion = createMockNotionClient();
 		ai = createMockAI();
 	});
 
-	// Test various status values pass through unchanged (no mapping needed)
 	const statusValues = ['New', 'In Progress', 'Waiting', 'Resolved', 'Closed', 'CustomStatus'];
 
 	statusValues.forEach((status) => {
-		it(`should pass through status "${status}" unchanged (client → internal)`, async () => {
-			clientNotion.getPage.mockResolvedValue({
+		it(`should pass through status "${status}" unchanged (mirror → base)`, async () => {
+			mirrorNotion.getPage.mockResolvedValue({
 				success: true,
 				data: {
-					id: 'client-page-123',
+					id: 'mirror-page-123',
 					properties: {
 						Title: { title: [{ text: { content: 'Test' } }] },
 						Status: { status: { name: status } },
@@ -1192,20 +1192,19 @@ describe('Notion Two-Way Sync: Status Pass-Through', () => {
 			});
 
 			const trigger = {
-				data: createPageCreatedEvent('client-page-123', DEFAULT_INPUTS._clientDatabase),
+				data: createPageCreatedEvent('mirror-page-123', DEFAULT_INPUTS._mirrorDatabase),
 			};
 
 			await executeWorkflow({
 				trigger,
 				inputs: DEFAULT_INPUTS,
 				storage,
-				clientNotion,
-				internalNotion,
+				mirrorNotion,
+				baseNotion,
 				ai,
 			});
 
-			// Status passes through unchanged
-			expect(internalNotion.createPage).toHaveBeenCalledWith(
+			expect(baseNotion.createPage).toHaveBeenCalledWith(
 				expect.objectContaining({
 					properties: expect.objectContaining({
 						Status: { status: { name: status } },
@@ -1215,20 +1214,19 @@ describe('Notion Two-Way Sync: Status Pass-Through', () => {
 		});
 	});
 
-	it('should pass through status unchanged (internal → client)', async () => {
-		// Pre-populate mapping
-		storage._store.set('mapping:internal-page-456', {
-			clientPageId: 'client-page-123',
-			internalPageId: 'internal-page-456',
+	it('should pass through status unchanged (base → mirror)', async () => {
+		storage._store.set('mapping:base-page-456', {
+			mirrorPageId: 'mirror-page-123',
+			basePageId: 'base-page-456',
 			lastSyncedAt: new Date(Date.now() - 60000).toISOString(),
-			lastSyncDirection: 'client_to_internal',
+			lastSyncDirection: 'mirror_to_base',
 			syncVersion: 1,
 		});
 
-		internalNotion.getPage.mockResolvedValue({
+		baseNotion.getPage.mockResolvedValue({
 			success: true,
 			data: {
-				id: 'internal-page-456',
+				id: 'base-page-456',
 				properties: {
 					Status: { status: { name: 'Done' } },
 				},
@@ -1237,8 +1235,8 @@ describe('Notion Two-Way Sync: Status Pass-Through', () => {
 
 		const trigger = {
 			data: createPageUpdatedEvent(
-				'internal-page-456',
-				DEFAULT_INPUTS.internalDatabase
+				'base-page-456',
+				DEFAULT_INPUTS.baseDatabase
 			),
 		};
 
@@ -1246,13 +1244,12 @@ describe('Notion Two-Way Sync: Status Pass-Through', () => {
 			trigger,
 			inputs: DEFAULT_INPUTS,
 			storage,
-			clientNotion,
-			internalNotion,
+			mirrorNotion,
+			baseNotion,
 			ai,
 		});
 
-		// Status passes through unchanged - no reverse mapping
-		expect(clientNotion.updatePage).toHaveBeenCalledWith(
+		expect(mirrorNotion.updatePage).toHaveBeenCalledWith(
 			expect.objectContaining({
 				properties: expect.objectContaining({
 					Status: { status: { name: 'Done' } },
