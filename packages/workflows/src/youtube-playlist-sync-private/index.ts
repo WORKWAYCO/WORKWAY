@@ -535,6 +535,11 @@ export const metadata = {
 	visibility: 'private' as const,
 	accessGrants: [{ type: 'email_domain' as const, value: 'halfdozen.co' }],
 
+	// BYOO configuration - links to Half Dozen developer profile
+	// This enables credential resolution from developer_oauth_apps table
+	developerId: 'dev_halfdozen',
+	byooProvider: 'youtube',
+
 	// Honest flags (matches private-emails-documented pattern)
 	experimental: true,
 	requiresCustomInfrastructure: true,
