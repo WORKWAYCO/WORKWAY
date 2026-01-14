@@ -1053,9 +1053,9 @@ export const metadata = {
 	category: 'data_sync',
 	featured: false,
 
-	// Private workflow
+	// Private workflow - Half Dozen team only
 	visibility: 'private' as const,
-	accessGrants: [], // Configure per-organization
+	accessGrants: [{ type: 'email_domain' as const, value: 'halfdozen.co' }],
 
 	// BYOO configuration
 	developerId: 'internal',
