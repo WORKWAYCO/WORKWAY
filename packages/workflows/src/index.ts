@@ -117,6 +117,7 @@ export { default as constructionProjectDigest } from './construction-project-dig
 
 // YouTube & Content
 export { default as youtubePlaylistSync } from './youtube-playlist-sync/index.js';
+export { default as youtubePlaylistSyncPrivate } from './youtube-playlist-sync-private/index.js';
 
 // ============================================================================
 // INTEGRATION PAIR REGISTRY
@@ -464,6 +465,14 @@ export const integrationPairs = {
 		outcome: 'YouTube videos that document themselves',
 		outcomeFrame: 'content_research',
 	},
+	// YouTube (BYOO - Private for Half Dozen)
+	'youtube-byoo:notion': {
+		workflowId: 'youtube-playlist-sync-private',
+		outcome: 'YouTube playlists synced to team Notion (BYOO)',
+		outcomeFrame: 'content_research',
+		experimental: true,
+		requiresBYOO: true,
+	},
 
 	// Construction
 	'procore:slack': {
@@ -739,6 +748,7 @@ export const workflows = {
 	'construction-project-digest': { id: 'construction-project-digest', outcomeFrame: 'weekly_automatically' },
 	// YouTube & Content
 	'youtube-playlist-sync': { id: 'youtube-playlist-sync', outcomeFrame: 'content_research' },
+	'youtube-playlist-sync-private': { id: 'youtube-playlist-sync-private', outcomeFrame: 'content_research', experimental: true },
 } as const;
 
 export type WorkflowId = keyof typeof workflows;
