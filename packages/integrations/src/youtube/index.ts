@@ -667,7 +667,7 @@ export class YouTube extends BaseAPIClient {
 			try {
 				captionTracks = JSON.parse(captionTrackMatch[1]);
 			} catch {
-				return ActionResult.error('Failed to parse caption tracks', ErrorCode.PARSE_ERROR, {
+				return ActionResult.error('Failed to parse caption tracks', ErrorCode.INVALID_INPUT, {
 					integration: 'youtube',
 					action: 'get-transcript',
 				});

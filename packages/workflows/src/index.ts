@@ -115,6 +115,9 @@ export { default as constructionRFITracker } from './construction-rfi-tracker/in
 export { default as constructionDailyLog } from './construction-daily-log/index.js';
 export { default as constructionProjectDigest } from './construction-project-digest/index.js';
 
+// YouTube & Content
+export { default as youtubePlaylistSync } from './youtube-playlist-sync/index.js';
+
 // ============================================================================
 // INTEGRATION PAIR REGISTRY
 // ============================================================================
@@ -455,6 +458,13 @@ export const integrationPairs = {
 		outcomeFrame: 'after_appointments',
 	},
 
+	// YouTube & Content Research
+	'youtube:notion': {
+		workflowId: 'youtube-playlist-sync',
+		outcome: 'YouTube videos that document themselves',
+		outcomeFrame: 'content_research',
+	},
+
 	// Construction
 	'procore:slack': {
 		workflowId: 'construction-rfi-tracker',
@@ -661,6 +671,12 @@ export const outcomeFrames = {
 		label: 'At end of day...',
 		description: 'Daily logs and site reports',
 	},
+
+	// Content & Research
+	content_research: {
+		label: 'When researching content...',
+		description: 'Capture and document video content automatically',
+	},
 } as const;
 
 export type OutcomeFrameId = keyof typeof outcomeFrames;
@@ -721,6 +737,8 @@ export const workflows = {
 	'construction-rfi-tracker': { id: 'construction-rfi-tracker', outcomeFrame: 'when_rfis_need_answers' },
 	'construction-daily-log': { id: 'construction-daily-log', outcomeFrame: 'end_of_day' },
 	'construction-project-digest': { id: 'construction-project-digest', outcomeFrame: 'weekly_automatically' },
+	// YouTube & Content
+	'youtube-playlist-sync': { id: 'youtube-playlist-sync', outcomeFrame: 'content_research' },
 } as const;
 
 export type WorkflowId = keyof typeof workflows;
