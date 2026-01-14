@@ -119,6 +119,9 @@ export { default as constructionProjectDigest } from './construction-project-dig
 export { default as youtubePlaylistSync } from './youtube-playlist-sync/index.js';
 export { default as youtubePlaylistSyncPrivate } from './youtube-playlist-sync-private/index.js';
 
+// Data Sync (Private - BYOO)
+export { default as sheetsNotionBidirectional } from './sheets-notion-bidirectional/index.js';
+
 // ============================================================================
 // INTEGRATION PAIR REGISTRY
 // ============================================================================
@@ -193,6 +196,15 @@ export const integrationPairs = {
 		outcome: 'Important emails that become searchable knowledge',
 		outcomeFrame: 'when_emails_arrive',
 		experimental: true,
+		requiresBYOO: true,
+	},
+
+	// Data Sync (BYOO - Private)
+	'google-sheets:notion': {
+		workflowId: 'sheets-notion-bidirectional',
+		outcome: 'Spreadsheet and database that mirror each other',
+		outcomeFrame: 'when_data_diverges',
+		experimental: false,
 		requiresBYOO: true,
 	},
 
