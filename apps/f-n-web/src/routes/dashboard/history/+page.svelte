@@ -46,11 +46,14 @@
 						</span>
 					</div>
 					{#if job.error_message}
-						<div class="mt-2 p-2 rounded bg-[var(--brand-error)]/5 border border-[var(--brand-error)]/20 overflow-hidden">
-							<div class="text-xs text-[var(--brand-error)] break-words line-clamp-3" title={job.error_message}>
+						<details class="mt-1 group">
+							<summary class="text-xs text-[var(--brand-text-muted)] cursor-pointer hover:text-[var(--brand-error)] transition-colors">
+								View error details
+							</summary>
+							<p class="mt-1 text-xs text-[var(--brand-text-muted)] break-words pl-2 border-l border-[var(--brand-border)]">
 								{job.error_message}
-							</div>
-						</div>
+							</p>
+						</details>
 					{/if}
 				</div>
 			{/each}
