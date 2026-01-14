@@ -23,6 +23,7 @@ import {
  * Default paths to Beads issue files
  */
 export const BEADS_REPO_PATHS = {
+	workway: '/Users/micahjohnson/Documents/Github/WORKWAY/.beads/issues.jsonl',
 	cloudflare: '/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/.beads/issues.jsonl',
 	'workway-platform': '/Users/micahjohnson/Documents/Github/WORKWAY/workway-platform/.beads/issues.jsonl',
 };

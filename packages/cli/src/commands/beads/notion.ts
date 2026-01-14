@@ -63,12 +63,14 @@ export async function beadsNotionSyncCommand(options: NotionSyncOptions = {}): P
 		Logger.blank();
 
 		// Show breakdown by repo
-		const cloudflareIssues = issues.filter(i => i.id.startsWith('ww-'));
-		const platformIssues = issues.filter(i => i.id.startsWith('wwp-'));
+		const workwayIssues = issues.filter(i => i.id.startsWith('WORKWAY-'));
+		const cloudflareIssues = issues.filter(i => i.id.startsWith('Cloudflare-'));
+		const platformIssues = issues.filter(i => i.id.startsWith('ww-'));
 
 		Logger.section('Issue Breakdown');
-		Logger.listItem(`Cloudflare (ww-*): ${cloudflareIssues.length}`);
-		Logger.listItem(`Platform (wwp-*): ${platformIssues.length}`);
+		Logger.listItem(`WORKWAY (WORKWAY-*): ${workwayIssues.length}`);
+		Logger.listItem(`Cloudflare (Cloudflare-*): ${cloudflareIssues.length}`);
+		Logger.listItem(`Platform (ww-*): ${platformIssues.length}`);
 		Logger.blank();
 
 		if (issues.length === 0) {
