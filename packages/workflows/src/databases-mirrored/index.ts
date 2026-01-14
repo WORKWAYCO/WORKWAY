@@ -616,8 +616,10 @@ async function performInitialSync({ inputs, integrations, storage }: {
 	inputs: any;
 	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	integrations: any;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	storage: any;
+	storage: {
+		get<T = unknown>(key: string): Promise<T | null>;
+		set(key: string, value: unknown): Promise<void>;
+	};
 }) {
 	const baseNotion = integrations.notion;
 	const mirrorNotion = integrations.createClient('notion', {
