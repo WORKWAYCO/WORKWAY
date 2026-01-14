@@ -531,6 +531,13 @@ export default defineWorkflow({
 			default: 'Log to Notion',
 			description: 'Only sync threads with this label',
 		},
+
+		force_resync: {
+			type: 'boolean',
+			label: 'Force Resync',
+			default: false,
+			description: 'When enabled, re-syncs ALL messages in existing threads (use to backfill missed follow-ups). Disable after backfill is complete.',
+		},
 	},
 
 	// Run every 5 minutes (same as Arc for Gmail)
@@ -585,6 +592,7 @@ export default defineWorkflow({
 
 		const labelName = inputs.gmailLabel || orgConfig.gmailLabel;
 		const internalDomains = orgConfig.internalDomains;
+		const forceResync = inputs.forceResync === true;
 
 		// 1. Get label ID for the sync label
 		const labelsResponse = await integrations.gmail.request('/gmail/v1/users/me/labels', {
@@ -798,21 +806,38 @@ export default defineWorkflow({
 						processedMessageIds = processedMessagesProperty.rich_text[0].text.content.split(',').filter(Boolean);
 					} else {
 						// Property doesn't exist or is empty - this is a legacy page from before tracking
-						// Assume all current messages are already synced to avoid duplicates
 						isLegacyPage = true;
-						console.log(`[Thread ${thread.id}] Legacy page without tracking - will initialize tracking and sync only future messages`);
+						if (forceResync) {
+							console.log(`[Thread ${thread.id}] Legacy page + force resync enabled - will sync ALL messages`);
+						} else {
+							console.log(`[Thread ${thread.id}] Legacy page without tracking - will initialize tracking and sync only future messages`);
+						}
 					}
 				} catch {
 					// Property might not exist yet for older pages
 					isLegacyPage = true;
-					console.log(`[Thread ${thread.id}] Legacy page without tracking - will initialize tracking and sync only future messages`);
+					if (forceResync) {
+						console.log(`[Thread ${thread.id}] Legacy page + force resync enabled - will sync ALL messages`);
+					} else {
+						console.log(`[Thread ${thread.id}] Legacy page without tracking - will initialize tracking and sync only future messages`);
+					}
 				}
 
 				// Filter to only NEW messages that haven't been processed
-				// For legacy pages (no tracking), skip content append but initialize tracking for future syncs
-				const newEmails = isLegacyPage
-					? [] // Don't append to legacy pages - just initialize tracking
-					: emails.filter((email) => !processedMessageIds.includes(email.messageId));
+				// For legacy pages: skip content append UNLESS forceResync is enabled
+				// forceResync allows backfilling missed follow-ups for legacy pages
+				let newEmails: ParsedEmail[];
+				if (forceResync) {
+					// Force resync: sync ALL messages not yet processed (for legacy pages, this means all messages)
+					newEmails = isLegacyPage
+						? emails // Sync all messages for legacy pages when force resync is on
+						: emails.filter((email) => !processedMessageIds.includes(email.messageId));
+				} else {
+					// Normal mode: only sync new messages, skip legacy pages
+					newEmails = isLegacyPage
+						? [] // Don't append to legacy pages - just initialize tracking
+						: emails.filter((email) => !processedMessageIds.includes(email.messageId));
+				}
 
 				if (newEmails.length > 0) {
 					console.log(`[Thread ${thread.id}] Found ${newEmails.length} new message(s) to sync`);
@@ -822,11 +847,14 @@ export default defineWorkflow({
 
 					// Add a visual separator for new messages
 					newContentBlocks.push({ divider: {} });
+					const syncLabel = forceResync && isLegacyPage
+						? `🔄 Backfilled ${newEmails.length} message${newEmails.length > 1 ? 's' : ''} (force resync)`
+						: `📬 ${newEmails.length} new message${newEmails.length > 1 ? 's' : ''} synced`;
 					newContentBlocks.push({
 						callout: {
-							rich_text: [{ text: { content: `📬 ${newEmails.length} new message${newEmails.length > 1 ? 's' : ''} synced` } }],
-							icon: { emoji: '📬' },
-							color: 'green_background',
+							rich_text: [{ text: { content: syncLabel } }],
+							icon: { emoji: forceResync && isLegacyPage ? '🔄' : '📬' },
+							color: forceResync && isLegacyPage ? 'yellow_background' : 'green_background',
 						},
 					});
 
