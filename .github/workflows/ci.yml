@@ -11,7 +11,7 @@ on:
       - '.github/workflows/ci.yml'
 
 env:
-  NODE_VERSION: '18'
+  NODE_VERSION: '20'
   PNPM_VERSION: '9.14.2'
 
 jobs:
