@@ -158,17 +158,17 @@ async function trackExecution(
 export default defineWorkflow({
 	name: 'Google Sheets ↔ Notion Sync (Private)',
 	description:
-		'Bidirectional sync between Google Sheets and Notion with Sheets as source of truth',
+		'Your team works in Sheets. Your data lives in Notion. Both stay in sync.',
 	version: '1.0.0',
 
 	pathway: {
 		outcomeFrame: 'when_data_diverges',
 
 		outcomeStatement: {
-			suggestion: 'Want Google Sheets and Notion to stay in sync?',
+			suggestion: 'Want to keep working in Sheets while your data lives in Notion?',
 			explanation:
-				'Changes in either system automatically propagate to the other. Sheets wins conflicts.',
-			outcome: 'Spreadsheet and database that mirror each other',
+				'Edit in either place. Changes show up in both. No more copying and pasting between tools.',
+			outcome: 'Work in Sheets, organize in Notion—automatically',
 		},
 
 		primaryPair: {

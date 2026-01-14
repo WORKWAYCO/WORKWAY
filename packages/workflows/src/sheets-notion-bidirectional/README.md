@@ -1,75 +1,60 @@
-# Google Sheets ↔ Notion Bidirectional Sync
+# Google Sheets ↔ Notion Sync
 
-**Private Workflow** - Requires BYOO (Bring Your Own OAuth)
+**Private Workflow** for the @halfdozen.co team
 
-Bidirectional synchronization between Google Sheets and a Notion database with Google Sheets as the source of truth when conflicts occur.
+Your team works in Sheets. Your data lives in Notion. Both stay in sync.
 
-## Use Case
+## Who this is for
 
-Teams who:
-- Prefer Google Sheets' familiar spreadsheet interface for data entry
-- Need Notion's structured database capabilities (relations, views, formulas)
-- Want changes in either system to automatically appear in the other
+Some teams just prefer spreadsheets—and that's okay. Maybe your team:
+- Knows Sheets inside and out
+- Finds Notion's interface unfamiliar
+- Just wants to get work done without learning new tools
 
-## Architecture
+This workflow lets everyone keep working where they're comfortable while your data stays organized in Notion.
 
-```
-Google Sheets                              Notion Database
-     │                                           │
-     │ ←── Polling (every 5-15 min) ───────────→│
-     │ ←── Notion webhooks (instant) ───────────│
-     │                                           │
-     ▼                                           ▼
-┌─────────────────────────────────────────────────────┐
-│              Sync State Store (KV)                  │
-│  ─────────────────────────────────────────────────  │
-│  row_id │ sheets_hash │ notion_hash │ last_sync    │
-└─────────────────────────────────────────────────────┘
-                        │
-                        ▼
-              ┌─────────────────┐
-              │ Conflict Check  │
-              │ Sheets-wins     │
-              └─────────────────┘
-```
+## How it works
 
-## Sync Directions
+Edit in Sheets. See it in Notion. Edit in Notion. See it in Sheets.
 
-### Sheets → Notion (Polling)
-- Runs on cron schedule (configurable: 5, 15, 30, or 60 minutes)
-- Hash-based change detection (only syncs modified rows)
-- Creates new Notion pages for new rows
-- Updates existing pages for changed rows
+No copying. No pasting. No "which version is current?" conversations.
 
-### Notion → Sheets (Webhook)
-- Triggered instantly when Notion pages are updated
-- Loop prevention (ignores changes within 5 seconds of sync)
-- Updates corresponding Sheets row
-- **Conflict Resolution**: If Sheets changed since last sync, Sheets wins
+### Sheets → Notion
 
-## Configuration
+We check your spreadsheet every few minutes (you choose how often: 5, 15, 30, or 60 minutes). When something changes, it shows up in Notion automatically.
 
-### Required Settings
+### Notion → Sheets
 
-| Setting | Description | Example |
-|---------|-------------|---------|
-| `spreadsheet_id` | Google Sheets ID from URL | `1abc123def456...` |
-| `notion_database_id` | Notion database ID | `abc123-def456...` |
-| `key_column` | Column with unique IDs | `A` or `ID` |
-| `field_mappings` | JSON mapping columns to properties | See below |
-| `google_connection_id` | Your BYOO connection ID | `conn_abc123` |
+When someone updates a page in Notion, we write it back to your spreadsheet right away. No waiting.
 
-### Optional Settings
+### When both change at once
 
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `sheet_name` | `Sheet1` | Tab name to sync |
-| `sync_interval` | `15` | Minutes between syncs |
-| `enable_notion_to_sheets` | `true` | Allow write-back to Sheets |
+Sometimes two people edit the same record in different places. When that happens, the Sheets version wins. Simple rule, no confusion.
 
-### Field Mappings
+We also keep a record of what happened, so you can see if anything got overwritten.
 
-JSON array mapping Sheets columns to Notion properties:
+## What you'll need
+
+### The basics
+
+| What | Where to find it |
+|------|------------------|
+| **Spreadsheet ID** | The long string in your Google Sheets URL (between `/d/` and `/edit`) |
+| **Database ID** | The ID in your Notion database URL |
+| **Key column** | A column in Sheets with unique IDs for each row (usually column A) |
+| **Field mappings** | A list telling us which columns go where (see below) |
+
+### Optional tweaks
+
+| Setting | What it does | Default |
+|---------|--------------|---------|
+| **Sheet tab name** | Which tab to sync | `Sheet1` |
+| **Sync frequency** | How often to check Sheets | Every 15 minutes |
+| **Write back to Sheets** | Let Notion changes update Sheets | Yes |
+
+### Mapping your columns
+
+Tell us which Sheets columns match which Notion properties:
 
 ```json
 [
@@ -82,105 +67,92 @@ JSON array mapping Sheets columns to Notion properties:
 ]
 ```
 
-### Supported Field Types
+### What types work
 
-| Type | Sheets Format | Notion Property |
-|------|---------------|-----------------|
-| `title` | Any text | Title (required, one per DB) |
-| `text` / `rich_text` | Any text | Text / Rich Text |
-| `select` / `status` | Dropdown value | Select / Status |
-| `date` | Date format | Date |
-| `number` | Numeric | Number |
-| `checkbox` | `TRUE`/`FALSE` or `1`/`0` | Checkbox |
+| Your Sheets data | Use this type | Creates this in Notion |
+|------------------|---------------|------------------------|
+| Names, titles | `title` | The main title field |
+| Regular text | `text` | Text property |
+| Status or categories | `status` or `select` | Dropdown property |
+| Dates | `date` | Date property |
+| Numbers | `number` | Number property |
+| TRUE/FALSE | `checkbox` | Checkbox property |
 
-## Setup Instructions
+## Getting started
 
-### 1. Create Google Cloud OAuth App
+### Step 1: Set up your Google credentials
+
+Your organization needs its own Google Cloud app. Here's how:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project (or use existing)
-3. Enable Google Sheets API
-4. Create OAuth 2.0 credentials
-5. Add authorized redirect URI: `https://api.workway.co/oauth/google/callback`
-6. Note your Client ID and Client Secret
+2. Create a project (or pick an existing one)
+3. Turn on the Google Sheets API
+4. Create OAuth credentials (pick "Web application")
+5. Add this redirect URL: `https://api.workway.co/oauth/google/callback`
+6. Save your Client ID and Client Secret somewhere safe
 
-### 2. Configure BYOO in WORKWAY
+### Step 2: Connect to WORKWAY
 
-1. Go to WORKWAY Developer Settings
-2. Add Google Sheets connection with your credentials
-3. Note the connection ID
+1. Open WORKWAY's Developer Settings
+2. Add your Google credentials
+3. Copy the connection ID it gives you
 
-### 3. Prepare Your Sheets
+### Step 3: Set up your spreadsheet
 
-1. Add a unique ID column (column A recommended)
-2. Add header row with column names
-3. Note the spreadsheet ID from URL
+1. Make sure row 1 has column headers
+2. Add a column for unique IDs (column A works great)
+3. Copy the spreadsheet ID from the URL
 
-### 4. Prepare Your Notion Database
+### Step 4: Set up your Notion database
 
-1. Create database with matching properties
-2. Property names should match your field mappings
-3. Note the database ID from URL
+**Important**: Create your Notion database first, with all the properties you want to sync.
 
-### 5. Configure the Workflow
+The workflow can't create new properties—it can only fill in ones that already exist.
 
-```typescript
-{
-  spreadsheet_id: "1abc123...",
-  sheet_name: "Sheet1",
-  notion_database_id: "abc123...",
-  key_column: "A",
-  field_mappings: JSON.stringify([
-    {"sheetsColumn": "A", "notionProperty": "ID", "type": "text"},
-    {"sheetsColumn": "B", "notionProperty": "Name", "type": "title"},
-    // ... more mappings
-  ]),
-  sync_interval: "15",
-  enable_notion_to_sheets: true,
-  google_connection_id: "conn_abc123"
-}
-```
+So if your Sheets has columns for Name, Status, and Due Date, your Notion database needs properties called Name, Status, and Due Date before you turn on the sync.
 
-## Conflict Resolution
+### Step 5: Turn it on
 
-When both Sheets and Notion change the same record between syncs:
+Configure the workflow with:
+- Your spreadsheet ID
+- Your Notion database ID  
+- Which column has your unique IDs
+- Your field mappings
+- Your Google connection ID
 
-1. **Detection**: Compare current Sheets hash with stored hash
-2. **Resolution**: Sheets value is authoritative (Sheets-wins)
-3. **Action**: Notion page updated with Sheets data
-4. **Logging**: Conflict logged with before/after values
+That's it. Changes start syncing automatically.
 
-## Limitations
+## Good to know
 
-- **Google Sheets API Rate Limits**: 300 requests per minute per user
-- **Notion API Rate Limits**: 3 requests per second
-- **Polling Latency**: Sheets→Notion has 5-15 min delay (not real-time)
-- **Maximum Rows**: 500 rows per sync cycle (configurable)
-- **Cell-Level Timestamps**: Sheets only provides file-level timestamps, so all rows are checked each sync
+### Speed
+- **Sheets → Notion**: Every 5-15 minutes (you pick)
+- **Notion → Sheets**: Instant
 
-## Troubleshooting
+### Limits
+- Syncs up to 500 rows at a time
+- Google allows 300 API requests per minute
+- Notion allows 3 requests per second
 
-### Sync not running?
-- Check cron schedule is active
-- Verify OAuth tokens are valid
-- Check workflow logs for errors
+These limits are generous for most teams. You'd need thousands of changes per hour to hit them.
 
-### Rows not syncing?
-- Verify key column has unique values
-- Check field mappings match actual column/property names
-- Ensure data types match (e.g., dates in ISO format)
+## If something's not working
 
-### Conflicts occurring frequently?
-- Increase sync interval to reduce race conditions
-- Consider making Notion read-only (`enable_notion_to_sheets: false`)
-- Review which team should edit which system
+**Nothing's syncing?**
+- Double-check your spreadsheet and database IDs
+- Make sure your Google credentials are still valid
+- Look at the workflow logs for error messages
 
-## Access Control
+**Some rows aren't showing up?**
+- Every row needs a unique ID in your key column
+- Property names in your mapping must match exactly (capitalization matters!)
+- Dates should look like `2026-01-14` (year-month-day)
 
-This is a private workflow. Access is controlled via:
+**Seeing lots of conflicts?**
+- Try syncing less often (every 30 or 60 minutes instead of 5)
+- Or turn off Notion → Sheets if your team only edits in Sheets
 
-- **Email Domain Grants**: `{ type: 'email_domain', value: 'yourcompany.com' }`
-- **Individual User Grants**: `{ type: 'user', value: 'usr_abc123' }`
-- **Access Codes**: `{ type: 'access_code', value: 'SHEETS2026' }`
+## Who can use this
 
-Contact your WORKWAY administrator to request access.
+This workflow is private to the @halfdozen.co team. 
+
+Anyone with a halfdozen.co email can install and use it.
