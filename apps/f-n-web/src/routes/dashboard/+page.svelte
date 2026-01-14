@@ -96,6 +96,9 @@
 	let loadingTranscripts = $state(false);
 	let loadingDatabases = $state(false);
 	
+	// Persist database selection in localStorage
+	const SELECTED_DB_KEY = 'fn-selected-database';
+	
 	// Pagination state
 	let hasMoreTranscripts = $state(true);
 	let loadingMoreTranscripts = $state(false);
@@ -132,6 +135,25 @@
 	$effect(() => {
 		if (data.connections.notion && !databases.length) {
 			loadDatabases();
+		}
+	});
+	
+	// Restore saved database selection after databases load
+	$effect(() => {
+		if (databases.length > 0 && !selectedDatabase) {
+			const saved = typeof localStorage !== 'undefined' 
+				? localStorage.getItem(SELECTED_DB_KEY) 
+				: null;
+			if (saved && databases.some(db => db.id === saved)) {
+				selectedDatabase = saved;
+			}
+		}
+	});
+	
+	// Save database selection when changed
+	$effect(() => {
+		if (selectedDatabase && typeof localStorage !== 'undefined') {
+			localStorage.setItem(SELECTED_DB_KEY, selectedDatabase);
 		}
 	});
 
