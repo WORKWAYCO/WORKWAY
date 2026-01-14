@@ -220,19 +220,21 @@ export class GitHub extends BaseAPIClient {
 	}
 
 	/**
-	 * Override request to add GitHub-specific headers
+	 * Override to add GitHub-specific headers
+	 * Note: Must match parent's signature (method, path, options)
 	 */
 	protected override async request(
+		method: string,
 		path: string,
-		options: RequestInit = {},
-		additionalHeaders: Record<string, string> = {},
-		isRetry = false
+		options: { body?: unknown; headers?: Record<string, string> } = {}
 	): Promise<Response> {
-		return super.request(path, options, {
+		const githubHeaders = {
+			...options.headers,
 			Accept: 'application/vnd.github+json',
 			'X-GitHub-Api-Version': '2022-11-28',
-			...additionalHeaders,
-		}, isRetry);
+		};
+
+		return super.request(method, path, { ...options, headers: githubHeaders });
 	}
 
 	// ============================================================================

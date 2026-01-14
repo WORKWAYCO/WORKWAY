@@ -64,50 +64,8 @@ export abstract class BaseAPIClient extends AuthenticatedHTTPClient {
 	// =========================================================================
 	// LOW-LEVEL REQUEST METHOD
 	// =========================================================================
-	// For advanced integrations that need direct access to request() with custom options
-
-	/**
-	 * Make a low-level HTTP request (old signature for backwards compatibility)
-	 *
-	 * This method provides the old request() signature that integrations expect.
-	 * It converts RequestInit-style options to the new signature.
-	 *
-	 * @param path - API endpoint path
-	 * @param options - RequestInit options (method, headers, body, etc.)
-	 * @param additionalHeaders - Extra headers (e.g., API version headers)
-	 * @deprecated Use get(), post(), patch(), etc. methods instead
-	 */
-	// @ts-expect-error - Intentionally overriding with different signature for backwards compatibility
-	protected async request(
-		path: string,
-		options: RequestInit = {},
-		additionalHeaders: Record<string, string> = {}
-	): Promise<Response> {
-		const method = options.method || 'GET';
-
-		// Extract body - it might be stringified JSON or already an object
-		let body: unknown = undefined;
-		if (options.body) {
-			if (typeof options.body === 'string') {
-				try {
-					body = JSON.parse(options.body);
-				} catch {
-					// If it's not JSON, pass it through
-					body = options.body;
-				}
-			} else {
-				body = options.body;
-			}
-		}
-
-		return super.request(method, path, {
-			body,
-			headers: {
-				...Object.fromEntries(new Headers(options.headers || {})),
-				...additionalHeaders,
-			},
-		});
-	}
+	// This override is removed - use the SDK's native (method, path, options) signature
+	// All integration-specific overrides should use the same signature
 
 	// =========================================================================
 	// SIMPLIFIED WRAPPERS

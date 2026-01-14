@@ -197,50 +197,21 @@ export class Discord extends BaseAPIClient {
 	}
 
 	/**
-	 * Override request to use Bot authorization
+	 * Override to add Bot authorization header
+	 * Note: Must match parent's signature (method, path, options)
 	 */
 	protected override async request(
+		method: string,
 		path: string,
-		options: RequestInit = {},
-		additionalHeaders: Record<string, string> = {},
-		isRetry = false
+		options: { body?: unknown; headers?: Record<string, string> } = {}
 	): Promise<Response> {
-		const url = `${this['apiUrl']}${path}`;
-		const headers = new Headers(options.headers);
+		// Add Bot authorization to headers
+		const authHeaders = {
+			...options.headers,
+			Authorization: `Bot ${this['accessToken']}`,
+		};
 
-		// Bot authorization
-		headers.set('Authorization', `Bot ${this['accessToken']}`);
-		headers.set('Content-Type', 'application/json');
-
-		for (const [key, value] of Object.entries(additionalHeaders)) {
-			headers.set(key, value);
-		}
-
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), this['timeout']);
-
-		try {
-			const response = await fetch(url, {
-				...options,
-				headers,
-				signal: controller.signal,
-			});
-
-			return response;
-		} catch (error) {
-			if (error instanceof Error && error.name === 'AbortError') {
-				throw new IntegrationError(ErrorCode.TIMEOUT, `Request timed out after ${this['timeout']}ms`, {
-					integration: 'discord',
-					retryable: true,
-				});
-			}
-			throw new IntegrationError(ErrorCode.NETWORK_ERROR, `Network request failed: ${error}`, {
-				integration: 'discord',
-				retryable: true,
-			});
-		} finally {
-			clearTimeout(timeoutId);
-		}
+		return super.request(method, path, { ...options, headers: authHeaders });
 	}
 
 	// ============================================================================

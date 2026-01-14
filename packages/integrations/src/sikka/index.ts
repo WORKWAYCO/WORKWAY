@@ -487,14 +487,14 @@ export class Sikka extends BaseAPIClient {
 	}
 
 	/**
-	 * Override request to use Sikka's request-key authentication
+	 * Override to use Sikka's request-key authentication
 	 * Requires a valid request_key to be set (call obtainRequestKey first)
+	 * Note: Must match parent's signature (method, path, options)
 	 */
 	protected override async request(
+		method: string,
 		path: string,
-		options: RequestInit = {},
-		additionalHeaders: Record<string, string> = {},
-		isRetry = false
+		options: { body?: unknown; headers?: Record<string, string> } = {}
 	): Promise<Response> {
 		if (!this.requestKey) {
 			throw new IntegrationError(
@@ -504,47 +504,17 @@ export class Sikka extends BaseAPIClient {
 			);
 		}
 
-		const url = `${this['apiUrl']}${path}`;
-		const headers = new Headers(options.headers);
-
 		// Sikka uses request-key header for data access
-		headers.set('request-key', this.requestKey);
-		headers.set('Content-Type', 'application/json');
-		headers.set('Accept', 'application/json');
-		// Enable gzip compression as recommended by Sikka docs
-		headers.set('Accept-Encoding', 'gzip,compress');
+		const sikkaHeaders = {
+			...options.headers,
+			'request-key': this.requestKey,
+			Accept: 'application/json',
+			'Accept-Encoding': 'gzip,compress',
+		};
 
-		for (const [key, value] of Object.entries(additionalHeaders)) {
-			headers.set(key, value);
-		}
-
-		const controller = new AbortController();
-		const timeoutId = setTimeout(() => controller.abort(), this['timeout']);
-
-		try {
-			const response = await fetch(url, {
-				...options,
-				headers,
-				signal: controller.signal,
-			});
-			return response;
-		} catch (error) {
-			if (error instanceof Error && error.name === 'AbortError') {
-				throw new IntegrationError(
-					ErrorCode.TIMEOUT,
-					`Request timed out after ${this['timeout']}ms`,
-					{ integration: 'sikka', retryable: true }
-				);
-			}
-			throw new IntegrationError(
-				ErrorCode.NETWORK_ERROR,
-				`Network request failed: ${error}`,
-				{ integration: 'sikka', retryable: true }
-			);
-		} finally {
-			clearTimeout(timeoutId);
-		}
+		return super.request(method, path, { ...options, headers: sikkaHeaders });
 	}
+
 
 	// ==========================================================================
 	// PRACTICES

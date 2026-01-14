@@ -59,6 +59,7 @@ jobs:
   test:
     name: Test (${{ matrix.package }})
     runs-on: ubuntu-latest
+    needs: [build]  # Tests need packages built first
     strategy:
       fail-fast: false
       matrix:
@@ -81,6 +82,12 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: packages/
 
       - name: Run tests for ${{ matrix.package }}
         run: pnpm --filter @workwayco/${{ matrix.package }} test
