@@ -301,5 +301,29 @@ export type {
 	AddManpowerLogOptions,
 } from './procore/index.js';
 
+export {
+	YouTube,
+	extractVideoId,
+	extractPlaylistId,
+	parseDuration,
+	formatDuration,
+} from './youtube/index.js';
+export type {
+	YouTubeConfig,
+	YouTubeVideo,
+	YouTubeThumbnail,
+	YouTubePlaylistItem,
+	YouTubePlaylist,
+	YouTubeTranscript,
+	YouTubeTranscriptSegment,
+	YouTubePagedResponse,
+	GetPlaylistItemsOptions,
+	GetVideoOptions,
+	GetVideosOptions,
+	GetPlaylistOptions,
+	GetTranscriptOptions as YouTubeGetTranscriptOptions,
+	SearchVideosOptions,
+} from './youtube/index.js';
+
 // Future integrations
 // export { WorkersAI } from './workers-ai/index.js';

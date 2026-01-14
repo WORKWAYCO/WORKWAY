@@ -1,84 +1,58 @@
 /**
- * Notion Two-Way Sync (Base → Mirror with Initial Sync)
+ * Share a Notion Database with Anyone
  *
- * Bidirectional synchronization between ANY two Notion databases.
- * Works with any schema - no configuration needed.
- *
- * ═══════════════════════════════════════════════════════════════════════════
- * USE CASE: Agency Issue Tracking
- * ═══════════════════════════════════════════════════════════════════════════
- *
- * Agencies can provide issue tracking in their client's Notion workspace:
- *   1. Agency has a BASE "Issues" database
- *   2. Client connects their MIRROR database via invite link
- *   3. ALL existing issues from BASE sync to MIRROR (initial sync)
- *   4. Future changes sync bidirectionally
+ * Keep two Notion databases in sync — yours and your client's.
+ * No manual copying. No missed updates. Changes flow both ways.
  *
  * ═══════════════════════════════════════════════════════════════════════════
- * USER FLOW
+ * WHAT THIS DOES
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * STEP 1: You (Agency/Workflow Owner)
- * ────────────────────────────────────
- *   1. Go to workway.co/workflows/databases-mirrored
- *   2. Click "Connect Notion" → OAuth screen → authorize
- *   3. Select your BASE database (e.g., "Client Issues")
- *   4. Click "Enable Workflow"
- *   5. Copy the invite link that appears
+ * You have a database. Your client has a database.
+ * This workflow keeps them in sync:
  *
- * STEP 2: Your Client (External Party)
- * ─────────────────────────────────────
- *   1. Receives your invite link (email, Slack, etc.)
- *   2. Clicks link → sees Notion OAuth screen (NOT WORKWAY)
- *   3. Authorizes their Notion workspace
- *   4. Selects their MIRROR database (e.g., "Issues")
- *   5. INITIAL SYNC begins automatically
+ *   • When you add an item → it appears in their database
+ *   • When they update status → it updates in yours
+ *   • All your existing items copy over on first connection
  *
- * STEP 3: Initial Sync (Automatic, One-Time)
- * ──────────────────────────────────────────
- *   - All pages from BASE database are copied to MIRROR
- *   - Rate-limited to respect Notion API limits (3 req/s)
- *   - Progress tracked and visible in dashboard
- *   - Mappings stored for future bidirectional sync
- *
- * STEP 4: Ongoing Bidirectional Sync
- * ──────────────────────────────────
- *   - Client creates issue → appears in Agency DB
- *   - Agency updates status → syncs to Client DB
- *   - Properties with same name sync automatically
+ * Perfect for agencies sharing project trackers, issue lists, or task
+ * boards with clients — without giving them access to your whole workspace.
  *
  * ═══════════════════════════════════════════════════════════════════════════
- * HOW PROPERTIES SYNC
+ * HOW IT WORKS
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * Schema auto-discovery by exact name match:
+ * 1. You pick your database and enable the workflow
+ * 2. You send your client an invite link
+ * 3. They click it, connect their Notion, and pick their database
+ * 4. Everything syncs — existing items and future changes
  *
- *   BASE DATABASE           MIRROR DATABASE         RESULT
- *   ─────────────           ───────────────         ──────
- *   Name (title)      →     Name (title)            ✓ Syncs (base → mirror)
- *   Status (status)  ←→     Status (select)         ✓ Syncs (bidirectional)
- *   Priority (select)       [not present]           ✗ Skipped
- *   [not present]           Notes (rich_text)       ✗ Skipped
- *
- * Bidirectionality by type:
- *   - title, rich_text → Syncs both directions for content
- *   - status, select, checkbox, date, number → Both directions
+ * Your client only sees Notion. They don't need a WORKWAY account.
+ * They don't know this workflow exists. It just works.
  *
  * ═══════════════════════════════════════════════════════════════════════════
- * ARCHITECTURE
+ * WHAT SYNCS
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * ```
- * ┌─────────────────────────┐              ┌─────────────────────────┐
- * │   MIRROR (Client)       │              │   BASE (Agency)         │
- * │   (via invite link)     │◄────────────►│   (workflow owner)      │
- * │                         │    SYNC      │                         │
- * │   • Notion OAuth only   │              │   • WORKWAY dashboard   │
- * │   • No WORKWAY account  │   ┌──────┐   │   • Full control        │
- * │   • Sees their DB only  │◄──│INIT  │───│   • Initial sync source │
- * └─────────────────────────┘   │SYNC  │   └─────────────────────────┘
- *                               └──────┘
- * ```
+ * Properties with the same name sync automatically:
+ *
+ *   YOUR DATABASE           THEIR DATABASE          RESULT
+ *   ─────────────           ──────────────          ──────
+ *   Name                    Name                    ✓ Syncs
+ *   Status                  Status                  ✓ Syncs both ways
+ *   Priority                [doesn't exist]         ✗ Skipped (no match)
+ *   [doesn't exist]         Notes                   ✗ Skipped (no match)
+ *
+ * No configuration needed. If the property names match, they sync.
+ *
+ * ═══════════════════════════════════════════════════════════════════════════
+ * GOOD FOR
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ *   • Agencies sharing issue trackers with clients
+ *   • Teams collaborating across different Notion workspaces
+ *   • Freelancers keeping clients in the loop on project status
+ *   • Anyone tired of manually copying between databases
  *
  * @see https://developers.notion.com/reference/webhooks
  */
@@ -172,9 +146,9 @@ interface PropertyMapping {
  * Sync mapping stored for bidirectional sync
  */
 interface SyncMapping {
-	/** Base (agency) workspace page ID */
+	/** Your page ID */
 	basePageId: string;
-	/** Mirror (client) workspace page ID */
+	/** Their page ID */
 	mirrorPageId: string;
 	/** Last sync timestamp (ISO) */
 	lastSyncedAt: string;
@@ -204,8 +178,9 @@ interface InitialSyncProgress {
 // ============================================================================
 
 export default defineWorkflow({
-	name: 'Notion Two-Way Sync',
-	description: 'Bidirectional sync with initial base → mirror population. Perfect for agency issue tracking.',
+	name: 'Share a Notion Database',
+	description:
+		'Keep two Notion databases in sync across workspaces. Your items appear in their database. Their updates appear in yours.',
 	version: '3.0.0',
 
 	// Pathway metadata for discovery
@@ -213,17 +188,17 @@ export default defineWorkflow({
 		outcomeFrame: 'when_databases_diverge',
 
 		outcomeStatement: {
-			suggestion: 'Keep two Notion databases in sync?',
+			suggestion: 'Want to share a database with someone outside your workspace?',
 			explanation:
-				'All existing items sync from your base database to the mirror, then changes sync bidirectionally.',
-			outcome: 'Databases that sync themselves',
+				'Send them an invite link. Your existing items copy over, then future changes sync both ways.',
+			outcome: 'A database that stays in sync with theirs',
 		},
 
 		primaryPair: {
 			from: 'notion',
 			to: 'notion',
 			workflowId: 'databases-mirrored',
-			outcome: 'Databases that stay in sync',
+			outcome: 'Databases that update each other',
 		},
 
 		discoveryMoments: [
@@ -267,9 +242,9 @@ export default defineWorkflow({
 		price: 49,
 		usagePricing: {
 			pricePerExecution: 0.05,
-			includedExecutions: 100, // More included for initial sync
+			includedExecutions: 100,
 		},
-		description: 'Pay once + 5¢ per sync event. Initial sync included in trial.',
+		description: '$49 one-time, then 5¢ per sync. First 100 syncs included.',
 	},
 
 	integrations: [
@@ -278,37 +253,37 @@ export default defineWorkflow({
 
 	inputs: {
 		// ================================================================
-		// BASE DATABASE (Agency configures this)
+		// YOUR DATABASE
 		// ================================================================
 		baseDatabase: {
 			type: 'notion_database_picker',
-			label: 'Your Base Database',
+			label: 'Your Database',
 			required: true,
-			description: 'Your primary database. All existing items will sync to the mirror on first connection.',
+			description: 'Pick the database you want to share. All existing items will copy to theirs when they connect.',
 		},
 
 		// ================================================================
-		// MIRROR CONNECTION (Set via invite link)
+		// THEIR CONNECTION (filled in when they accept your invite)
 		// ================================================================
 		_mirrorNotionToken: {
 			type: 'string',
-			label: 'Mirror Notion Token (auto-populated)',
+			label: 'Their Notion Connection',
 			required: false,
-			description: 'Auto-populated when client connects via invite link.',
+			description: 'Filled in automatically when they accept your invite link.',
 		},
 
 		_mirrorDatabase: {
 			type: 'string',
-			label: 'Mirror Database ID (auto-populated)',
+			label: 'Their Database',
 			required: false,
-			description: 'Auto-populated when client selects database in invite flow.',
+			description: 'Filled in automatically when they pick their database.',
 		},
 
 		_mirrorEmail: {
 			type: 'string',
-			label: 'Client Email (auto-populated)',
+			label: 'Their Email',
 			required: false,
-			description: 'Client email for notifications.',
+			description: 'Their email for sync notifications (optional).',
 		},
 	},
 
@@ -402,9 +377,9 @@ export default defineWorkflow({
 			const invite = await storage.get<{ token: string }>('invite');
 			return {
 				success: false,
-				error: 'Client has not connected their Notion workspace yet',
+				error: 'Waiting for them to connect',
 				inviteUrl: invite ? `https://workway.co/join/${invite.token}` : undefined,
-				hint: 'Send the invite link to your client to complete setup',
+				hint: 'Send them the invite link above. Once they connect, syncing starts automatically.',
 			};
 		}
 
