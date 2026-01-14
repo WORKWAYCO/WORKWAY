@@ -54,6 +54,7 @@ claude
 ```
 
 Try these prompts:
+
 ```
 > What is this project?
 > What patterns are used in this codebase?
@@ -75,6 +76,7 @@ Create `.mcp.json` in your project directory:
 ```
 
 Restart Claude Code and verify:
+
 ```
 > What learning tools are available via MCP?
 ```
@@ -112,6 +114,7 @@ claude --version
 ```
 
 You should see output like:
+
 ```
 claude-code 1.x.x
 ```
@@ -166,14 +169,14 @@ Claude Code reads files, understands structure, and can modify code when you ask
 
 ## How Claude Code Works
 
-| Capability | What It Does |
-|------------|--------------|
-| **Read files** | Understands your entire codebase |
-| **Write files** | Creates and edits code |
-| **Run commands** | Executes terminal commands |
-| **Search** | Finds patterns, definitions, usages |
-| **Explain** | Breaks down complex code |
-| **Build** | Implements features end-to-end |
+| Capability       | What It Does                        |
+| ---------------- | ----------------------------------- |
+| **Read files**   | Understands your entire codebase    |
+| **Write files**  | Creates and edits code              |
+| **Run commands** | Executes terminal commands          |
+| **Search**       | Finds patterns, definitions, usages |
+| **Explain**      | Breaks down complex code            |
+| **Build**        | Implements features end-to-end      |
 
 ### The CLAUDE.md File
 
@@ -183,13 +186,16 @@ Projects can include a `CLAUDE.md` file with context:
 # Project Name
 
 ## Overview
+
 What this project does.
 
 ## Key Files
+
 - `src/workflows/` - Workflow definitions
 - `src/integrations/` - API integrations
 
 ## Patterns
+
 - Use defineWorkflow() for all workflows
 - Follow BaseAPIClient pattern for integrations
 ```
@@ -216,6 +222,7 @@ Create or edit `.mcp.json` in your project or home directory:
 ```
 
 Location options:
+
 - **Project-level**: `.mcp.json` in project root (recommended for teams)
 - **User-level**: `~/.claude/.mcp.json` (available across all projects)
 
@@ -233,46 +240,51 @@ Claude Code should show `workway-learn` as available.
 
 Once connected, Claude Code gains access to these learning tools:
 
-| Tool | Description |
-|------|-------------|
-| `learn_status` | Get learning progress overview including paths, lessons, and recommendations |
-| `learn_lesson` | Fetch lesson content from WORKWAY Learn with offline caching |
-| `learn_complete` | Mark a lesson as complete with optional reflection |
-| `learn_praxis` | Execute workflow building exercises with pattern validation |
-| `learn_coach` | Get real-time WORKWAY pattern guidance and explanations |
-| `learn_analyze` | Analyze workflow code against WORKWAY patterns and Zuhandenheit principles |
-| `learn_recommend` | Get personalized lesson recommendations based on your progress and skill gaps |
-| `learn_digest` | Generate a weekly or monthly learning summary with achievements and goals |
-| `learn_ethos` | Manage personal workflow principles (Zuhandenheit, outcome focus, simplicity, resilience, honesty) |
-| `learn_authenticate` | Authenticate with WORKWAY Learn to sync progress across devices |
+| Tool                 | Description                                                                                        |
+| -------------------- | -------------------------------------------------------------------------------------------------- |
+| `learn_status`       | Get learning progress overview including paths, lessons, and recommendations                       |
+| `learn_lesson`       | Fetch lesson content from WORKWAY Learn with offline caching                                       |
+| `learn_complete`     | Mark a lesson as complete with optional reflection                                                 |
+| `learn_praxis`       | Execute workflow building exercises with pattern validation                                        |
+| `learn_coach`        | Get real-time WORKWAY pattern guidance and explanations                                            |
+| `learn_analyze`      | Analyze workflow code against WORKWAY patterns and Zuhandenheit principles                         |
+| `learn_recommend`    | Get personalized lesson recommendations based on your progress and skill gaps                      |
+| `learn_digest`       | Generate a weekly or monthly learning summary with achievements and goals                          |
+| `learn_ethos`        | Manage personal workflow principles (Zuhandenheit, outcome focus, simplicity, resilience, honesty) |
+| `learn_authenticate` | Authenticate with WORKWAY Learn to sync progress across devices                                    |
 
 ### Tool Usage Examples
 
 **Check your progress:**
+
 ```
 > Show me my learning progress
 > What lessons have I completed?
 ```
 
 **Fetch lesson content:**
+
 ```
 > Get the lesson on defineWorkflow()
 > Show me the triggers lesson
 ```
 
 **Complete a lesson with reflection:**
+
 ```
 > Mark the claude-code-setup lesson as complete
 > I finished the first-workflow lesson. My reflection: Understanding how integrations work was key.
 ```
 
 **Validate your workflow code:**
+
 ```
 > Analyze my workflow in packages/workflows/src/my-workflow/index.ts
 > Check if this code follows WORKWAY patterns: [paste code]
 ```
 
 **Get coaching on patterns:**
+
 ```
 > How do I use integrations in a workflow?
 > Explain the Zuhandenheit principle
@@ -280,6 +292,7 @@ Once connected, Claude Code gains access to these learning tools:
 ```
 
 **Manage your ethos (workflow principles):**
+
 ```
 > Show me my workflow principles
 > Suggest improvements for my ethos
@@ -287,6 +300,7 @@ Once connected, Claude Code gains access to these learning tools:
 ```
 
 **Get recommendations:**
+
 ```
 > What should I learn next?
 > Recommend lessons for improving my integration skills
@@ -300,21 +314,23 @@ Skills are reusable prompts that Claude Code executes with project context. WORK
 
 When working in the WORKWAY codebase, these skills are available:
 
-| Skill | Description | When to Use |
-|-------|-------------|-------------|
-| `/heidegger-design` | Apply Zuhandenheit, Geworfenheit, and Dieter Rams' principles | Architecture decisions, UI/UX choices, naming conventions |
-| `/workway-integrations` | Build integrations using BaseAPIClient pattern | Creating new service integrations (Zoom, Notion, Slack, etc.) |
+| Skill                   | Description                                                   | When to Use                                                   |
+| ----------------------- | ------------------------------------------------------------- | ------------------------------------------------------------- |
+| `/heidegger-design`     | Apply Zuhandenheit, Geworfenheit, and Dieter Rams' principles | Architecture decisions, UI/UX choices, naming conventions     |
+| `/workway-integrations` | Build integrations using BaseAPIClient pattern                | Creating new service integrations (Zoom, Notion, Slack, etc.) |
 
 ### /heidegger-design Skill
 
 This skill applies Heideggerian design philosophy to your code and design decisions:
 
 **Core Concepts:**
+
 - **Zuhandenheit (Ready-to-hand)**: The tool disappears during use—users think about their goal, not the mechanism
 - **Vorhandenheit (Present-at-hand)**: When a tool breaks, it becomes visible—minimize this through graceful error handling
 - **Geworfenheit (Thrownness)**: Users arrive mid-task with existing context—meet them where they are
 
 **Practical Checklist:**
+
 1. Will the user notice this, or will it fade into their workflow?
 2. If this breaks, does the user smoothly return to flow?
 3. Does this respect the user's existing context?
@@ -322,6 +338,7 @@ This skill applies Heideggerian design philosophy to your code and design decisi
 5. Is this making a real promise or a marketing promise?
 
 **Example Usage:**
+
 ```
 > /heidegger-design
 
@@ -337,6 +354,7 @@ your current work, asking questions like:
 This skill guides you through building integrations using the canonical patterns:
 
 **Directory Structure:**
+
 ```
 packages/integrations/src/{service}/
 ├── index.ts           # Main export
@@ -346,6 +364,7 @@ packages/integrations/src/{service}/
 ```
 
 **What the Skill Provides:**
+
 - Proper directory structure setup
 - BaseAPIClient extension pattern
 - Type definitions template
@@ -354,6 +373,7 @@ packages/integrations/src/{service}/
 - Test scaffolding
 
 **Example Usage:**
+
 ```
 > /workway-integrations
 
@@ -399,12 +419,12 @@ Skills are version-controlled with your project, ensuring team-wide consistency.
 
 ### In-Session Commands
 
-| Command | Action |
-|---------|--------|
-| `/help` | Show all commands |
-| `/clear` | Clear conversation |
+| Command    | Action                 |
+| ---------- | ---------------------- |
+| `/help`    | Show all commands      |
+| `/clear`   | Clear conversation     |
 | `/compact` | Summarize and continue |
-| `/cost` | Show token usage |
+| `/cost`    | Show token usage       |
 
 ### CLI Options
 
@@ -458,6 +478,7 @@ claude auth
 ### "Rate limited"
 
 With Claude Pro, you may hit usage limits. Options:
+
 - Wait for reset (usually daily)
 - Upgrade to Claude Max for unlimited
 - Use API key with separate billing
@@ -481,6 +502,7 @@ Document what you find. Notice how Claude Code reads files, understands structur
 Configure the WORKWAY Learn MCP server:
 
 1. Create `.mcp.json` in your project directory:
+
 ```json
 {
   "mcpServers": {
@@ -494,7 +516,7 @@ Configure the WORKWAY Learn MCP server:
 
 2. Restart Claude Code
 3. Verify the connection:
-> "What learning tools are available via MCP?"
+   > "What learning tools are available via MCP?"
 
 Claude Code should list the `learn_*` tools.
 
@@ -522,12 +544,12 @@ When prompted, mention an API you'd like to integrate (e.g., "Stripe", "Airtable
 
 With Claude Code installed, you can use it to complete every remaining lesson in this path:
 
-| Lesson | Ask Claude Code |
-|--------|-----------------|
-| WezTerm Setup | "Help me install WezTerm and configure it with a pure black theme" |
-| Neomutt Setup | "Set up Neomutt for Gmail with an app password" |
-| WORKWAY CLI | "Install and configure the WORKWAY CLI" |
-| Essential Commands | "Add WORKWAY development aliases to my shell" |
+| Lesson             | Ask Claude Code                                                    |
+| ------------------ | ------------------------------------------------------------------ |
+| WezTerm Setup      | "Help me install WezTerm and configure it with a pure black theme" |
+| Neomutt Setup      | "Set up Neomutt for Gmail with an app password"                    |
+| WORKWAY CLI        | "Install and configure the WORKWAY CLI"                            |
+| Essential Commands | "Add WORKWAY development aliases to my shell"                      |
 
 You don't have to copy/paste configs manually. You can—but Claude Code can also generate, explain, and apply them for you.
 

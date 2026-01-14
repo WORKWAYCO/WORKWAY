@@ -136,11 +136,11 @@ curl localhost:8787/execute -d '{"object": {"id": "123", "topic": "Test"}}'
 
 All integration methods return `ActionResult` objects:
 
-| Property | Type | Description |
-|----------|------|-------------|
-| `success` | `boolean` | Whether the call succeeded |
-| `data` | `T \| undefined` | The response data if successful |
-| `error` | `string \| undefined` | Error message if failed |
+| Property  | Type                  | Description                     |
+| --------- | --------------------- | ------------------------------- |
+| `success` | `boolean`             | Whether the call succeeded      |
+| `data`    | `T \| undefined`      | The response data if successful |
+| `error`   | `string \| undefined` | Error message if failed         |
 
 All integrations share common patterns:
 
@@ -174,19 +174,19 @@ The Slack integration (`packages/integrations/src/slack/`) provides methods for 
 // Simple message
 const result = await slack.sendMessage({
   channel: inputs.slackChannel,
-  text: 'Meeting notes are ready!',
+  text: "Meeting notes are ready!",
 });
 
 if (result.success) {
-  console.log('Sent message:', result.data.ts);
+  console.log("Sent message:", result.data.ts);
 }
 
 // With threading support
 await slack.sendMessage({
   channel: inputs.slackChannel,
-  text: 'Follow-up comment',
-  thread_ts: parentMessageTs,  // Reply in thread
-  reply_broadcast: true,       // Also post to channel
+  text: "Follow-up comment",
+  thread_ts: parentMessageTs, // Reply in thread
+  reply_broadcast: true, // Also post to channel
 });
 ```
 
@@ -197,7 +197,7 @@ await slack.sendMessage({
 const channelsResult = await slack.listChannels({
   limit: 100,
   excludeArchived: true,
-  types: 'public_channel,private_channel',
+  types: "public_channel,private_channel",
 });
 
 if (channelsResult.success) {
@@ -209,20 +209,20 @@ if (channelsResult.success) {
 // Get messages from a channel with human-friendly since
 const messagesResult = await slack.getMessages({
   channel: channelId,
-  since: '24h',     // Last 24 hours
-  humanOnly: true,  // Filter out bots and system messages
+  since: "24h", // Last 24 hours
+  humanOnly: true, // Filter out bots and system messages
 });
 
 // Get messages since a specific date
 const weekMessages = await slack.getMessages({
   channel: channelId,
-  since: '7d',  // Last 7 days
+  since: "7d", // Last 7 days
 });
 
 // Search messages across channels
-const searchResult = await slack.searchMessages('project update', {
+const searchResult = await slack.searchMessages("project update", {
   count: 20,
-  sort: 'timestamp',
+  sort: "timestamp",
 });
 ```
 
@@ -240,7 +240,7 @@ if (userResult.success) {
 // Direct message a user (use user ID as channel)
 await slack.sendMessage({
   channel: userResult.data.id,
-  text: 'Your report is ready',
+  text: "Your report is ready",
 });
 ```
 
@@ -261,14 +261,14 @@ if (meetingsResult.success) {
 }
 
 // Get specific meeting
-const meetingResult = await zoom.getMeeting({ meetingId: '123456789' });
+const meetingResult = await zoom.getMeeting({ meetingId: "123456789" });
 // Returns: { id, topic, start_time, duration, host_id, join_url }
 
 // Get meeting recordings
-const recordingsResult = await zoom.getRecordings({ meetingId: '123456789' });
+const recordingsResult = await zoom.getRecordings({ meetingId: "123456789" });
 if (recordingsResult.success && recordingsResult.data) {
   const recording = recordingsResult.data;
-  console.log('Share URL:', recording.share_url);
+  console.log("Share URL:", recording.share_url);
   for (const file of recording.recording_files) {
     console.log(file.file_type, file.download_url);
   }
@@ -279,24 +279,24 @@ if (recordingsResult.success && recordingsResult.data) {
 
 ```typescript
 // Get transcript (OAuth API - may lack speaker names)
-const transcriptResult = await zoom.getTranscript({ meetingId: '123456789' });
+const transcriptResult = await zoom.getTranscript({ meetingId: "123456789" });
 
 if (transcriptResult.success && transcriptResult.data) {
   const transcript = transcriptResult.data;
-  console.log('Source:', transcript.source);  // 'oauth_api' or 'browser_scraper'
-  console.log('Has speakers:', transcript.has_speaker_attribution);
-  console.log('Text:', transcript.transcript_text);
+  console.log("Source:", transcript.source); // 'oauth_api' or 'browser_scraper'
+  console.log("Has speakers:", transcript.has_speaker_attribution);
+  console.log("Text:", transcript.transcript_text);
 
   if (transcript.speakers) {
-    console.log('Speakers:', transcript.speakers.join(', '));
+    console.log("Speakers:", transcript.speakers.join(", "));
   }
 }
 
 // Get transcript with browser fallback for speaker attribution
 const transcriptWithSpeakers = await zoom.getTranscript({
-  meetingId: '123456789',
+  meetingId: "123456789",
   fallbackToBrowser: true,
-  shareUrl: recording.share_url,  // Required for browser fallback
+  shareUrl: recording.share_url, // Required for browser fallback
 });
 ```
 
@@ -329,9 +329,9 @@ const result = await zoom.getMeetingsWithTranscripts({
 
 if (result.success) {
   for (const { meeting, transcript } of result.data) {
-    console.log('Meeting:', meeting.topic);
+    console.log("Meeting:", meeting.topic);
     if (transcript) {
-      console.log('Transcript length:', transcript.transcript_text.length);
+      console.log("Transcript length:", transcript.transcript_text.length);
     }
   }
 }
@@ -363,7 +363,7 @@ The Stripe integration (`packages/integrations/src/stripe/`) provides methods fo
 
 ```typescript
 // Get customer by ID
-const customerResult = await stripe.getCustomer('cus_xxx');
+const customerResult = await stripe.getCustomer("cus_xxx");
 
 if (customerResult.success) {
   console.log(customerResult.data.email, customerResult.data.name);
@@ -372,15 +372,15 @@ if (customerResult.success) {
 // List customers (with optional filters)
 const customersResult = await stripe.listCustomers({
   limit: 10,
-  email: 'user@example.com',
+  email: "user@example.com",
 });
 
 // Create customer
 const newCustomerResult = await stripe.createCustomer({
-  email: 'new@example.com',
-  name: 'New User',
-  description: 'Created via workflow',
-  metadata: { source: 'workway' },
+  email: "new@example.com",
+  name: "New User",
+  description: "Created via workflow",
+  metadata: { source: "workway" },
 });
 ```
 
@@ -389,27 +389,27 @@ const newCustomerResult = await stripe.createCustomer({
 ```typescript
 // Create a payment intent ($20.00 = 2000 cents)
 const paymentResult = await stripe.createPaymentIntent({
-  amount: 2000,         // Always in cents!
-  currency: 'usd',
-  customer: 'cus_xxx',
-  description: 'Order #123',
-  metadata: { order_id: '123' },
+  amount: 2000, // Always in cents!
+  currency: "usd",
+  customer: "cus_xxx",
+  description: "Order #123",
+  metadata: { order_id: "123" },
   automatic_payment_methods: { enabled: true },
 });
 
 if (paymentResult.success) {
-  console.log('Payment ID:', paymentResult.data.id);
-  console.log('Status:', paymentResult.data.status);
-  console.log('Client Secret:', paymentResult.data.client_secret);
+  console.log("Payment ID:", paymentResult.data.id);
+  console.log("Status:", paymentResult.data.status);
+  console.log("Client Secret:", paymentResult.data.client_secret);
 }
 
 // Get specific payment
-const payment = await stripe.getPaymentIntent('pi_xxx');
+const payment = await stripe.getPaymentIntent("pi_xxx");
 
 // List payment intents
 const paymentsResult = await stripe.listPaymentIntents({
   limit: 10,
-  customer: 'cus_xxx',
+  customer: "cus_xxx",
 });
 ```
 
@@ -418,28 +418,28 @@ const paymentsResult = await stripe.listPaymentIntents({
 ```typescript
 // Create subscription
 const subResult = await stripe.createSubscription({
-  customer: 'cus_xxx',
-  priceId: 'price_xxx',
+  customer: "cus_xxx",
+  priceId: "price_xxx",
   quantity: 1,
   trial_period_days: 14,
-  metadata: { plan: 'pro' },
+  metadata: { plan: "pro" },
 });
 
 // Get subscription
-const subscription = await stripe.getSubscription('sub_xxx');
+const subscription = await stripe.getSubscription("sub_xxx");
 if (subscription.success) {
-  console.log('Status:', subscription.data.status);
-  console.log('Current period end:', subscription.data.current_period_end);
+  console.log("Status:", subscription.data.status);
+  console.log("Current period end:", subscription.data.current_period_end);
 }
 
 // List subscriptions by customer
 const subsResult = await stripe.listSubscriptions({
-  customer: 'cus_xxx',
-  status: 'active',
+  customer: "cus_xxx",
+  status: "active",
 });
 
 // Cancel subscription (at period end or immediately)
-await stripe.cancelSubscription('sub_xxx', { cancel_at_period_end: true });
+await stripe.cancelSubscription("sub_xxx", { cancel_at_period_end: true });
 ```
 
 ### Charges (Legacy)
@@ -448,11 +448,11 @@ await stripe.cancelSubscription('sub_xxx', { cancel_at_period_end: true });
 // List charges
 const chargesResult = await stripe.listCharges({
   limit: 10,
-  customer: 'cus_xxx',
+  customer: "cus_xxx",
 });
 
 // Get specific charge
-const charge = await stripe.getCharge('ch_xxx');
+const charge = await stripe.getCharge("ch_xxx");
 ```
 
 ### Webhook Verification
@@ -460,15 +460,15 @@ const charge = await stripe.getCharge('ch_xxx');
 ```typescript
 // Parse and verify webhook signature
 const eventResult = await stripe.parseWebhookEvent(
-  rawBody,           // Raw request body string
-  signatureHeader,   // Stripe-Signature header
-  webhookSecret      // Your endpoint secret
+  rawBody, // Raw request body string
+  signatureHeader, // Stripe-Signature header
+  webhookSecret, // Your endpoint secret
 );
 
 if (eventResult.success) {
   const event = eventResult.data;
-  console.log('Event type:', event.type);  // e.g., 'payment_intent.succeeded'
-  console.log('Event data:', event.data.object);
+  console.log("Event type:", event.type); // e.g., 'payment_intent.succeeded'
+  console.log("Event data:", event.data.object);
 }
 ```
 
@@ -504,12 +504,10 @@ The Notion integration (`packages/integrations/src/notion/`) provides methods fo
 const result = await notion.queryDatabase({
   databaseId: databaseId,
   filter: {
-    property: 'Status',
-    status: { equals: 'In Progress' },
+    property: "Status",
+    status: { equals: "In Progress" },
   },
-  sorts: [
-    { property: 'Created', direction: 'descending' },
-  ],
+  sorts: [{ property: "Created", direction: "descending" }],
 });
 
 if (result.success) {
@@ -521,13 +519,13 @@ if (result.success) {
 // Get database schema
 const dbResult = await notion.getDatabase(databaseId);
 if (dbResult.success) {
-  console.log('Properties:', Object.keys(dbResult.data.properties));
+  console.log("Properties:", Object.keys(dbResult.data.properties));
 }
 
 // Search across pages and databases
 const searchResult = await notion.search({
-  query: 'Project',
-  filter: { property: 'object', value: 'page' },
+  query: "Project",
+  filter: { property: "object", value: "page" },
 });
 ```
 
@@ -538,42 +536,42 @@ const searchResult = await notion.search({
 const pageResult = await notion.createPage({
   parentDatabaseId: databaseId,
   properties: {
-    Name: { title: [{ text: { content: 'New Item' } }] },
-    Status: { status: { name: 'New' } },
+    Name: { title: [{ text: { content: "New Item" } }] },
+    Status: { status: { name: "New" } },
     Priority: { number: 1 },
-    Tags: { multi_select: [{ name: 'urgent' }] },
-    DueDate: { date: { start: '2024-01-20' } },
+    Tags: { multi_select: [{ name: "urgent" }] },
+    DueDate: { date: { start: "2024-01-20" } },
   },
 });
 
 if (pageResult.success) {
-  console.log('Created page:', pageResult.data.url);
+  console.log("Created page:", pageResult.data.url);
 }
 
 // Create page with content blocks
 await notion.createPage({
   parentDatabaseId: databaseId,
   properties: {
-    Name: { title: [{ text: { content: 'Meeting Notes' } }] },
+    Name: { title: [{ text: { content: "Meeting Notes" } }] },
   },
   children: [
     {
-      type: 'heading_1',
-      heading_1: { rich_text: [{ text: { content: 'Overview' } }] },
+      type: "heading_1",
+      heading_1: { rich_text: [{ text: { content: "Overview" } }] },
     },
     {
-      type: 'paragraph',
-      paragraph: { rich_text: [{ text: { content: 'Details here...' } }] },
+      type: "paragraph",
+      paragraph: { rich_text: [{ text: { content: "Details here..." } }] },
     },
     {
-      type: 'bulleted_list_item',
-      bulleted_list_item: { rich_text: [{ text: { content: 'First point' } }] },
+      type: "bulleted_list_item",
+      bulleted_list_item: { rich_text: [{ text: { content: "First point" } }] },
     },
     {
-      type: 'code',
+      type: "code",
       code: {
-        rich_text: [{ text: { content: 'const x = 1;' } }],
-        language: 'typescript',
+        rich_text: [{ text: { content: "const x = 1;" } }],
+        language: "typescript",
       },
     },
   ],
@@ -587,18 +585,18 @@ await notion.createPage({
 // Developer thinks "create meeting notes" not "construct 100 block objects"
 const docResult = await notion.createDocument({
   database: databaseId,
-  template: 'meeting',  // 'summary', 'report', 'notes', 'article', 'meeting', 'feedback'
+  template: "meeting", // 'summary', 'report', 'notes', 'article', 'meeting', 'feedback'
   data: {
-    title: 'Weekly Standup - 2024-01-15',
-    summary: 'Team discussed Q1 priorities and blockers.',
-    date: '2024-01-15',
-    mood: 'positive',
+    title: "Weekly Standup - 2024-01-15",
+    summary: "Team discussed Q1 priorities and blockers.",
+    date: "2024-01-15",
+    mood: "positive",
     sections: {
-      decisions: ['Approved new feature spec', 'Delayed launch by 1 week'],
-      actionItems: ['Review PR #123', 'Schedule design review'],
-      keyTopics: ['Performance improvements', 'User feedback'],
+      decisions: ["Approved new feature spec", "Delayed launch by 1 week"],
+      actionItems: ["Review PR #123", "Schedule design review"],
+      keyTopics: ["Performance improvements", "User feedback"],
     },
-    content: fullTranscriptText,  // Optional: raw content in toggle
+    content: fullTranscriptText, // Optional: raw content in toggle
   },
 });
 ```
@@ -610,7 +608,7 @@ const docResult = await notion.createDocument({
 const updateResult = await notion.updatePage({
   pageId: pageId,
   properties: {
-    Status: { status: { name: 'Complete' } },
+    Status: { status: { name: "Complete" } },
   },
 });
 
@@ -636,7 +634,7 @@ if (blocksResult.success) {
 ```typescript
 // Search emails
 const emails = await gmail.getMessages({
-  query: 'from:important@client.com is:unread',
+  query: "from:important@client.com is:unread",
   maxResults: 10,
 });
 
@@ -650,27 +648,25 @@ const message = await gmail.getMessage(messageId);
 ```typescript
 // Simple email
 await gmail.sendEmail({
-  to: 'recipient@example.com',
-  subject: 'Meeting Follow-up',
-  body: 'Thanks for meeting today...',
+  to: "recipient@example.com",
+  subject: "Meeting Follow-up",
+  body: "Thanks for meeting today...",
 });
 
 // HTML email
 await gmail.sendEmail({
-  to: 'recipient@example.com',
-  subject: 'Your Report',
-  html: '<h1>Report</h1><p>Details...</p>',
+  to: "recipient@example.com",
+  subject: "Your Report",
+  html: "<h1>Report</h1><p>Details...</p>",
 });
 
 // With CC and attachments
 await gmail.sendEmail({
-  to: 'recipient@example.com',
-  cc: ['manager@example.com'],
-  subject: 'Report Attached',
-  body: 'Please find attached...',
-  attachments: [
-    { filename: 'report.pdf', content: pdfBuffer },
-  ],
+  to: "recipient@example.com",
+  cc: ["manager@example.com"],
+  subject: "Report Attached",
+  body: "Please find attached...",
+  attachments: [{ filename: "report.pdf", content: pdfBuffer }],
 });
 ```
 
@@ -810,16 +806,16 @@ Notion's API has specific property formats:
 // Wrong - incorrect property structure
 await notion.pages.create({
   properties: {
-    Name: 'Meeting Notes',  // Wrong: needs title array
-    Date: '2024-01-15',     // Wrong: needs date object
+    Name: "Meeting Notes", // Wrong: needs title array
+    Date: "2024-01-15", // Wrong: needs date object
   },
 });
 
 // Right - correct Notion property format
 await notion.pages.create({
   properties: {
-    Name: { title: [{ text: { content: 'Meeting Notes' } }] },
-    Date: { date: { start: '2024-01-15' } },
+    Name: { title: [{ text: { content: "Meeting Notes" } }] },
+    Date: { date: { start: "2024-01-15" } },
   },
 });
 ```
@@ -832,19 +828,19 @@ Always provide fallback text for notifications:
 // sendMessage requires channel and text
 const result = await slack.sendMessage({
   channel: channelId,
-  text: 'Hello world',
+  text: "Hello world",
 });
 
 // With threading
 await slack.sendMessage({
   channel: channelId,
-  text: 'Reply to thread',
-  thread_ts: originalMessageTs,  // Thread parent timestamp
+  text: "Reply to thread",
+  thread_ts: originalMessageTs, // Thread parent timestamp
 });
 
 // Common mistake: forgetting to check success
 if (!result.success) {
-  console.error('Slack send failed:', result.error);
+  console.error("Slack send failed:", result.error);
 }
 ```
 
@@ -855,12 +851,12 @@ Stripe uses cents, not dollars:
 ```typescript
 // Wrong - $10 becomes $1000
 const payment = await stripe.createPaymentIntent({
-  amount: 10,  // This is 10 cents, not $10
+  amount: 10, // This is 10 cents, not $10
 });
 
 // Right - convert to cents
 const payment = await stripe.createPaymentIntent({
-  amount: 10 * 100,  // $10.00 = 1000 cents
+  amount: 10 * 100, // $10.00 = 1000 cents
 });
 ```
 
@@ -870,11 +866,11 @@ Gmail search uses specific operators:
 
 ```typescript
 // Wrong - natural language query
-await gmail.getMessages({ query: 'emails from john last week' });
+await gmail.getMessages({ query: "emails from john last week" });
 
 // Right - Gmail search operators
 await gmail.getMessages({
-  query: 'from:john@example.com after:2024/01/08 is:unread',
+  query: "from:john@example.com after:2024/01/08 is:unread",
 });
 ```
 

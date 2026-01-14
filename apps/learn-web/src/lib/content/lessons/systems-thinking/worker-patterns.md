@@ -46,12 +46,12 @@ Check your code for Node.js imports that won't work:
 
 ```typescript
 // These will FAIL in Workers
-import fs from 'fs';                    // No filesystem
-import path from 'path';                // No path module
-import child_process from 'child_process';  // No subprocesses
-import os from 'os';                    // No OS access
-import crypto from 'crypto';            // Use crypto.subtle instead
-import http from 'http';                // Use fetch() instead
+import fs from "fs"; // No filesystem
+import path from "path"; // No path module
+import child_process from "child_process"; // No subprocesses
+import os from "os"; // No OS access
+import crypto from "crypto"; // Use crypto.subtle instead
+import http from "http"; // Use fetch() instead
 ```
 
 ### Step 2: Replace HTTP Libraries with fetch()
@@ -60,13 +60,13 @@ Workers have native `fetch()` support—no libraries needed:
 
 ```typescript
 // DON'T: axios or node-fetch
-import axios from 'axios';
+import axios from "axios";
 const res = await axios.get(url);
 
 // DO: Native fetch (always available)
 const res = await fetch(url, {
-  method: 'GET',
-  headers: { 'Authorization': `Bearer ${token}` },
+  method: "GET",
+  headers: { Authorization: `Bearer ${token}` },
 });
 const data = await res.json();
 ```
@@ -77,22 +77,22 @@ Replace Node.js crypto with the Web Crypto API:
 
 ```typescript
 // DON'T: Node.js crypto
-import crypto from 'crypto';
-const hash = crypto.createHash('sha256').update(data).digest('hex');
+import crypto from "crypto";
+const hash = crypto.createHash("sha256").update(data).digest("hex");
 
 // DO: Web Crypto API
 const encoder = new TextEncoder();
 const dataBytes = encoder.encode(data);
-const hashBuffer = await crypto.subtle.digest('SHA-256', dataBytes);
+const hashBuffer = await crypto.subtle.digest("SHA-256", dataBytes);
 const hashArray = Array.from(new Uint8Array(hashBuffer));
-const hashHex = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 ```
 
 ### Step 4: Generate UUIDs with Web Crypto
 
 ```typescript
 // DON'T: uuid package (may not work)
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 const id = uuidv4();
 
 // DO: Web Crypto API (always available)
@@ -103,7 +103,7 @@ const id = crypto.randomUUID();
 
 ```typescript
 // DON'T: Node.js Buffer
-import { Buffer } from 'buffer';
+import { Buffer } from "buffer";
 const buf = Buffer.from(data);
 
 // DO: ArrayBuffer / Uint8Array
@@ -120,7 +120,7 @@ const apiKey = process.env.API_KEY;
 // DO: Use config parameter
 export default defineWorkflow({
   async execute({ config }) {
-    const apiKey = config.apiKey;  // Passed via workflow configuration
+    const apiKey = config.apiKey; // Passed via workflow configuration
   },
 });
 ```
@@ -131,34 +131,34 @@ export default defineWorkflow({
 
 These APIs work in every workflow:
 
-| API | Status | Notes |
-|-----|--------|-------|
-| `fetch()` | Full support | HTTP requests to any URL |
-| `URL` / `URLSearchParams` | Full support | URL parsing and manipulation |
-| `Headers` / `Request` / `Response` | Full support | Fetch-related objects |
-| `TextEncoder` / `TextDecoder` | Full support | Text encoding |
-| `crypto.subtle` | Full support | Web Crypto API |
-| `atob()` / `btoa()` | Full support | Base64 encoding |
-| `console.log/warn/error` | Full support | Logging |
-| `JSON` | Full support | Parsing and serialization |
-| `Date` | Full support | Time and date |
-| `Math` | Full support | Mathematical operations |
-| `RegExp` | Full support | Regular expressions |
-| `Map` / `Set` | Full support | Collections |
-| `Promise` / `async/await` | Full support | Async programming |
-| `ArrayBuffer` / `TypedArrays` | Full support | Binary data |
-| `ReadableStream` / `WritableStream` | Full support | Streaming |
+| API                                 | Status       | Notes                        |
+| ----------------------------------- | ------------ | ---------------------------- |
+| `fetch()`                           | Full support | HTTP requests to any URL     |
+| `URL` / `URLSearchParams`           | Full support | URL parsing and manipulation |
+| `Headers` / `Request` / `Response`  | Full support | Fetch-related objects        |
+| `TextEncoder` / `TextDecoder`       | Full support | Text encoding                |
+| `crypto.subtle`                     | Full support | Web Crypto API               |
+| `atob()` / `btoa()`                 | Full support | Base64 encoding              |
+| `console.log/warn/error`            | Full support | Logging                      |
+| `JSON`                              | Full support | Parsing and serialization    |
+| `Date`                              | Full support | Time and date                |
+| `Math`                              | Full support | Mathematical operations      |
+| `RegExp`                            | Full support | Regular expressions          |
+| `Map` / `Set`                       | Full support | Collections                  |
+| `Promise` / `async/await`           | Full support | Async programming            |
+| `ArrayBuffer` / `TypedArrays`       | Full support | Binary data                  |
+| `ReadableStream` / `WritableStream` | Full support | Streaming                    |
 
 ## Cloudflare-Specific APIs
 
 WORKWAY exposes these through the SDK:
 
-| API | Access | Description |
-|-----|--------|-------------|
-| Workers AI | `integrations.ai.generateText()` | LLM text generation |
-| Workers AI | `integrations.ai.embeddings()` | Vector embeddings |
-| KV Storage | `context.storage.get/put()` | Key-value persistence |
-| Environment | `config.*` | Workflow configuration |
+| API         | Access                           | Description            |
+| ----------- | -------------------------------- | ---------------------- |
+| Workers AI  | `integrations.ai.generateText()` | LLM text generation    |
+| Workers AI  | `integrations.ai.embeddings()`   | Vector embeddings      |
+| KV Storage  | `context.storage.get/put()`      | Key-value persistence  |
+| Environment | `config.*`                       | Workflow configuration |
 
 ## Package Compatibility
 
@@ -177,17 +177,17 @@ Packages that are "isomorphic" or specifically support Workers:
 
 ### Packages That Don't Work
 
-| Package | Problem | Alternative |
-|---------|---------|-------------|
-| `axios` | Uses Node.js http | Use `fetch()` |
-| `request` | Uses Node.js http | Use `fetch()` |
-| `node-fetch` | Unnecessary | Native `fetch()` available |
-| `express` | HTTP server model | Not applicable |
-| `moment` | Works but heavy | Use native `Date` or `date-fns` |
-| `uuid` | Uses Node.js crypto | Use `crypto.randomUUID()` |
-| `bcrypt` | Native bindings | Use `bcryptjs` (pure JS) |
-| `sharp` | Native bindings | Use Cloudflare Images |
-| `puppeteer` | Needs Chrome | Use external service |
+| Package      | Problem             | Alternative                     |
+| ------------ | ------------------- | ------------------------------- |
+| `axios`      | Uses Node.js http   | Use `fetch()`                   |
+| `request`    | Uses Node.js http   | Use `fetch()`                   |
+| `node-fetch` | Unnecessary         | Native `fetch()` available      |
+| `express`    | HTTP server model   | Not applicable                  |
+| `moment`     | Works but heavy     | Use native `Date` or `date-fns` |
+| `uuid`       | Uses Node.js crypto | Use `crypto.randomUUID()`       |
+| `bcrypt`     | Native bindings     | Use `bcryptjs` (pure JS)        |
+| `sharp`      | Native bindings     | Use Cloudflare Images           |
+| `puppeteer`  | Needs Chrome        | Use external service            |
 
 ### Checking Compatibility
 
@@ -198,15 +198,16 @@ Packages that are "isomorphic" or specifically support Workers:
 
 ## Execution Limits
 
-| Limit | Value | Notes |
-|-------|-------|-------|
-| CPU time | 30s (Paid) | Per invocation |
-| Wall clock time | 30s | Real time limit |
-| Memory | 128 MB | Per isolate |
-| Subrequests | 50 | External `fetch()` calls per invocation |
-| Script size | 10 MB | After compression |
+| Limit           | Value      | Notes                                   |
+| --------------- | ---------- | --------------------------------------- |
+| CPU time        | 30s (Paid) | Per invocation                          |
+| Wall clock time | 30s        | Real time limit                         |
+| Memory          | 128 MB     | Per isolate                             |
+| Subrequests     | 50         | External `fetch()` calls per invocation |
+| Script size     | 10 MB      | After compression                       |
 
 **Implications for workflows:**
+
 - Break long operations into multiple workflow executions
 - Use triggers (cron, webhook) for polling instead of `while` loops
 - Batch API calls within the 50-subrequest limit
@@ -266,14 +267,14 @@ async execute({ trigger }) {
 
 ```typescript
 // Encode string to base64
-const encoded = btoa('Hello, World!');
+const encoded = btoa("Hello, World!");
 
 // Decode base64 to string
 const decoded = atob(encoded);
 
 // For binary data, use ArrayBuffer
 const encoder = new TextEncoder();
-const bytes = encoder.encode('Hello');
+const bytes = encoder.encode("Hello");
 const base64 = btoa(String.fromCharCode(...bytes));
 ```
 
@@ -389,15 +390,15 @@ async execute({ integrations }) {
 
 ## Quick Reference
 
-| Need | Don't Use | Use Instead |
-|------|-----------|-------------|
-| HTTP requests | `axios`, `node-fetch` | `fetch()` |
-| UUID generation | `uuid` package | `crypto.randomUUID()` |
-| Hashing | `crypto.createHash()` | `crypto.subtle.digest()` |
-| Base64 | `Buffer.from().toString('base64')` | `btoa()` / `atob()` |
-| Binary data | `Buffer` | `ArrayBuffer` / `Uint8Array` |
-| Environment vars | `process.env` | `config` parameter |
-| Date formatting | `moment` | `Date` / `date-fns` |
+| Need             | Don't Use                          | Use Instead                  |
+| ---------------- | ---------------------------------- | ---------------------------- |
+| HTTP requests    | `axios`, `node-fetch`              | `fetch()`                    |
+| UUID generation  | `uuid` package                     | `crypto.randomUUID()`        |
+| Hashing          | `crypto.createHash()`              | `crypto.subtle.digest()`     |
+| Base64           | `Buffer.from().toString('base64')` | `btoa()` / `atob()`          |
+| Binary data      | `Buffer`                           | `ArrayBuffer` / `Uint8Array` |
+| Environment vars | `process.env`                      | `config` parameter           |
+| Date formatting  | `moment`                           | `Date` / `date-fns`          |
 
 ## Praxis
 
@@ -413,9 +414,9 @@ Apply Workers patterns to a real workflow:
 async function hashContent(content: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(content);
-  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
-  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 ```
 

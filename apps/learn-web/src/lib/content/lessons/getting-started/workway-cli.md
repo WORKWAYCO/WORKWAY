@@ -128,6 +128,7 @@ workway whoami
 ```
 
 Output:
+
 ```
 Logged in as: your.email@example.com
 Organization: Your Org
@@ -145,6 +146,7 @@ workway init
 ```
 
 This creates:
+
 ```
 my-workflow/
 ├── wrangler.toml       # Cloudflare Workers config
@@ -165,14 +167,14 @@ Select the workflow to link from your WORKWAY account.
 
 ## Essential Commands
 
-| Command | Purpose |
-|---------|---------|
-| `workway init` | Create new workflow project |
-| `workway dev` | Start local development server |
-| `workway deploy` | Deploy to production |
-| `workway logs` | Stream production logs |
-| `workway test` | Run workflow tests |
-| `workway status` | Check workflow health |
+| Command          | Purpose                        |
+| ---------------- | ------------------------------ |
+| `workway init`   | Create new workflow project    |
+| `workway dev`    | Start local development server |
+| `workway deploy` | Deploy to production           |
+| `workway logs`   | Stream production logs         |
+| `workway test`   | Run workflow tests             |
+| `workway status` | Check workflow health          |
 
 ## Local Development
 
@@ -183,6 +185,7 @@ workway dev
 ```
 
 This starts wrangler in development mode with:
+
 - Hot reload on file changes
 - Local D1 database
 - Mocked integrations
@@ -205,6 +208,7 @@ workway deploy
 ```
 
 Output:
+
 ```
 Deploying my-workflow...
 ✓ Build complete (1.2s)

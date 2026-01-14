@@ -26,6 +26,7 @@ wrangler dev
 ```
 
 You'll see:
+
 ```
 ⎔ Starting local server...
 [wrangler] Ready on http://localhost:8787
@@ -137,7 +138,7 @@ WORKWAY uses Vitest for testing with mock patterns from the codebase.
 From `packages/workflows/src/notion-two-way-sync/index.test.ts`:
 
 ```typescript
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 function createMockStorage() {
   const store = new Map<string, unknown>();
@@ -167,20 +168,20 @@ function createMockNotionClient() {
     getPage: vi.fn().mockResolvedValue({
       success: true,
       data: {
-        id: 'page-123',
+        id: "page-123",
         properties: {
-          Name: { title: [{ text: { content: 'Test Item' } }] },
-          Status: { status: { name: 'New' } },
+          Name: { title: [{ text: { content: "Test Item" } }] },
+          Status: { status: { name: "New" } },
         },
       },
     }),
     createPage: vi.fn().mockResolvedValue({
       success: true,
-      data: { id: 'new-page-456' },
+      data: { id: "new-page-456" },
     }),
     updatePage: vi.fn().mockResolvedValue({
       success: true,
-      data: { id: 'page-123' },
+      data: { id: "page-123" },
     }),
   };
 }
@@ -189,7 +190,7 @@ function createMockAI() {
   return {
     generateText: vi.fn().mockResolvedValue({
       success: true,
-      data: { response: 'AI-generated summary of the content.' },
+      data: { response: "AI-generated summary of the content." },
     }),
   };
 }
@@ -198,7 +199,7 @@ function createMockAI() {
 ### Complete Test Setup
 
 ```typescript
-describe('My Workflow', () => {
+describe("My Workflow", () => {
   let storage: ReturnType<typeof createMockStorage>;
   let notion: ReturnType<typeof createMockNotionClient>;
   let ai: ReturnType<typeof createMockAI>;
@@ -209,11 +210,11 @@ describe('My Workflow', () => {
     ai = createMockAI();
   });
 
-  it('should create page from webhook event', async () => {
+  it("should create page from webhook event", async () => {
     const trigger = {
       data: {
-        type: 'meeting.ended',
-        object: { id: 'meeting-123', topic: 'Team Standup' },
+        type: "meeting.ended",
+        object: { id: "meeting-123", topic: "Team Standup" },
       },
     };
 
@@ -234,8 +235,8 @@ describe('My Workflow', () => {
 Prevent duplicate processing:
 
 ```typescript
-it('should skip duplicate events within window', async () => {
-  const timestamp = '2024-01-15T10:30:00.000Z';
+it("should skip duplicate events within window", async () => {
+  const timestamp = "2024-01-15T10:30:00.000Z";
 
   // Simulate recent processing
   storage._store.set(`sync:page-123:${timestamp}`, {
@@ -244,7 +245,7 @@ it('should skip duplicate events within window', async () => {
 
   const trigger = {
     data: {
-      page_id: 'page-123',
+      page_id: "page-123",
       timestamp,
     },
   };
@@ -253,36 +254,36 @@ it('should skip duplicate events within window', async () => {
 
   expect(result.success).toBe(true);
   expect(result.skipped).toBe(true);
-  expect(result.reason).toContain('loop prevention');
+  expect(result.reason).toContain("loop prevention");
 });
 ```
 
 ### Testing Error Scenarios
 
 ```typescript
-it('should handle missing mapping gracefully', async () => {
+it("should handle missing mapping gracefully", async () => {
   // No mapping exists for this page
   const trigger = {
-    data: { page_id: 'orphan-page', type: 'page.updated' },
+    data: { page_id: "orphan-page", type: "page.updated" },
   };
 
   const result = await executeWorkflow({ trigger, storage, integrations });
 
   expect(result.success).toBe(false);
-  expect(result.error).toContain('No mapping found');
+  expect(result.error).toContain("No mapping found");
   expect(result.hint).toBeDefined();
 });
 
-it('should handle API failures', async () => {
+it("should handle API failures", async () => {
   notion.createPage.mockResolvedValue({
     success: false,
-    error: 'Database not found',
+    error: "Database not found",
   });
 
   const result = await executeWorkflow({ trigger, storage, integrations });
 
   expect(result.success).toBe(false);
-  expect(result.error).toContain('Failed to create');
+  expect(result.error).toContain("Failed to create");
 });
 ```
 
@@ -297,6 +298,7 @@ wrangler dev
 ```
 
 This starts:
+
 - Local HTTP server on `localhost:8787`
 - Hot reload on file changes
 - Simulated Cloudflare Workers runtime
@@ -413,18 +415,19 @@ export function formatMeetingTitle(topic: string, date: Date): string {
 }
 
 // src/utils.test.ts
-import { describe, it, expect } from 'vitest';
-import { formatMeetingTitle } from './utils';
+import { describe, it, expect } from "vitest";
+import { formatMeetingTitle } from "./utils";
 
-describe('formatMeetingTitle', () => {
-  it('includes topic and date', () => {
-    const result = formatMeetingTitle('Standup', new Date('2024-01-15'));
-    expect(result).toBe('Standup - 1/15/2024');
+describe("formatMeetingTitle", () => {
+  it("includes topic and date", () => {
+    const result = formatMeetingTitle("Standup", new Date("2024-01-15"));
+    expect(result).toBe("Standup - 1/15/2024");
   });
 });
 ```
 
 Run tests:
+
 ```bash
 pnpm test
 ```
@@ -435,9 +438,9 @@ Test complete workflow execution using the mock patterns shown above:
 
 ```typescript
 // src/index.test.ts
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
-describe('Meeting to Notion Workflow', () => {
+describe("Meeting to Notion Workflow", () => {
   let storage: ReturnType<typeof createMockStorage>;
   let notion: ReturnType<typeof createMockNotionClient>;
   let zoom: ReturnType<typeof createMockZoomClient>;
@@ -450,11 +453,11 @@ describe('Meeting to Notion Workflow', () => {
     ai = createMockAI();
   });
 
-  it('creates Notion page from meeting webhook', async () => {
+  it("creates Notion page from meeting webhook", async () => {
     const trigger = {
       data: {
-        event: 'meeting.ended',
-        object: { id: 'meeting-123', topic: 'Team Standup' },
+        event: "meeting.ended",
+        object: { id: "meeting-123", topic: "Team Standup" },
       },
     };
 
@@ -462,14 +465,14 @@ describe('Meeting to Notion Workflow', () => {
       trigger,
       storage,
       integrations: { notion, zoom, ai },
-      inputs: { notionDatabaseId: 'db-123' },
+      inputs: { notionDatabaseId: "db-123" },
     });
 
     expect(result.success).toBe(true);
     expect(notion.createPage).toHaveBeenCalledWith(
       expect.objectContaining({
-        parentDatabaseId: 'db-123',
-      })
+        parentDatabaseId: "db-123",
+      }),
     );
   });
 });
@@ -480,14 +483,14 @@ describe('Meeting to Notion Workflow', () => {
 Verify specific API call patterns:
 
 ```typescript
-it('passes meeting data to Notion correctly', async () => {
+it("passes meeting data to Notion correctly", async () => {
   zoom.getMeeting.mockResolvedValue({
     success: true,
     data: {
-      id: '123',
-      topic: 'Planning Session',
+      id: "123",
+      topic: "Planning Session",
       duration: 45,
-      start_time: '2024-01-15T10:00:00Z',
+      start_time: "2024-01-15T10:00:00Z",
     },
   });
 
@@ -496,9 +499,9 @@ it('passes meeting data to Notion correctly', async () => {
   expect(notion.createPage).toHaveBeenCalledWith(
     expect.objectContaining({
       properties: expect.objectContaining({
-        Name: { title: [{ text: { content: 'Planning Session' } }] },
+        Name: { title: [{ text: { content: "Planning Session" } }] },
       }),
-    })
+    }),
   );
 });
 ```
@@ -584,12 +587,12 @@ Log integration calls for debugging:
 
 ```typescript
 async function debugFetch(url: string, options: RequestInit) {
-  console.log('[FETCH]', { url, method: options.method });
+  console.log("[FETCH]", { url, method: options.method });
 
   const response = await fetch(url, options);
   const data = await response.json();
 
-  console.log('[RESPONSE]', {
+  console.log("[RESPONSE]", {
     url,
     status: response.status,
     dataPreview: JSON.stringify(data).slice(0, 200),
@@ -615,7 +618,7 @@ function createMockZoomClient() {
     getMeeting: vi.fn().mockResolvedValue({ success: true, data: {} }),
     getMeetingTranscript: vi.fn().mockResolvedValue({
       success: true,
-      data: { text: 'Mock transcript' },
+      data: { text: "Mock transcript" },
     }), // Add missing method
   };
 }
@@ -669,8 +672,8 @@ Mock doesn't match interface:
 zoom.getMeeting.mockResolvedValue({
   success: true,
   data: {
-    id: '123',
-    topic: 'Test',
+    id: "123",
+    topic: "Test",
     start_time: new Date().toISOString(), // Required field
     duration: 30,
     participants: [], // Required field
@@ -685,21 +688,21 @@ zoom.getMeeting.mockResolvedValue({
 ```typescript
 // tests/fixtures/meetings.ts
 export const mockMeeting = {
-  id: '123',
-  topic: 'Weekly Standup',
-  start_time: '2024-01-15T10:00:00Z',
+  id: "123",
+  topic: "Weekly Standup",
+  start_time: "2024-01-15T10:00:00Z",
   duration: 30,
   participants: [
-    { name: 'Alice', email: 'alice@example.com' },
-    { name: 'Bob', email: 'bob@example.com' },
+    { name: "Alice", email: "alice@example.com" },
+    { name: "Bob", email: "bob@example.com" },
   ],
 };
 
 export const mockTranscript = {
-  text: 'Alice: Hello. Bob: Hi.',
+  text: "Alice: Hello. Bob: Hi.",
   speaker_segments: [
-    { speaker: 'Alice', text: 'Hello.' },
-    { speaker: 'Bob', text: 'Hi.' },
+    { speaker: "Alice", text: "Hello." },
+    { speaker: "Bob", text: "Hi." },
   ],
 };
 ```
@@ -711,7 +714,7 @@ export const mockTranscript = {
 export function createMeeting(overrides = {}) {
   return {
     id: crypto.randomUUID(),
-    topic: 'Test Meeting',
+    topic: "Test Meeting",
     start_time: new Date().toISOString(),
     duration: 30,
     participants: [],
@@ -721,7 +724,7 @@ export function createMeeting(overrides = {}) {
 
 // Usage
 const shortMeeting = createMeeting({ duration: 10 });
-const longMeeting = createMeeting({ duration: 120, topic: 'Planning' });
+const longMeeting = createMeeting({ duration: 120, topic: "Planning" });
 ```
 
 ### Event Factory Functions
@@ -731,10 +734,10 @@ const longMeeting = createMeeting({ duration: 120, topic: 'Planning' });
 export function createPageCreatedEvent(
   pageId: string,
   databaseId: string,
-  timestamp?: string
+  timestamp?: string,
 ) {
   return {
-    type: 'page.created',
+    type: "page.created",
     page_id: pageId,
     id: pageId,
     parent: { database_id: databaseId },
@@ -778,14 +781,20 @@ Create a test suite using Vitest and the mock patterns:
 
 ```typescript
 // src/index.test.ts
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from "vitest";
 
 // Mock factories (copy from above)
-function createMockStorage() { /* ... */ }
-function createMockNotionClient() { /* ... */ }
-function createMockAI() { /* ... */ }
+function createMockStorage() {
+  /* ... */
+}
+function createMockNotionClient() {
+  /* ... */
+}
+function createMockAI() {
+  /* ... */
+}
 
-describe('My Workflow', () => {
+describe("My Workflow", () => {
   let storage: ReturnType<typeof createMockStorage>;
   let notion: ReturnType<typeof createMockNotionClient>;
   let ai: ReturnType<typeof createMockAI>;
@@ -796,9 +805,9 @@ describe('My Workflow', () => {
     ai = createMockAI();
   });
 
-  it('creates page from webhook event', async () => {
+  it("creates page from webhook event", async () => {
     const trigger = {
-      data: { type: 'meeting.ended', object: { id: '123' } },
+      data: { type: "meeting.ended", object: { id: "123" } },
     };
 
     const result = await executeWorkflow({
@@ -811,10 +820,10 @@ describe('My Workflow', () => {
     expect(notion.createPage).toHaveBeenCalled();
   });
 
-  it('handles API failures gracefully', async () => {
+  it("handles API failures gracefully", async () => {
     notion.createPage.mockResolvedValue({
       success: false,
-      error: 'Database not found',
+      error: "Database not found",
     });
 
     const result = await executeWorkflow({

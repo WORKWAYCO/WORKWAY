@@ -32,11 +32,11 @@ Claude Code will generate the config, explain each setting, and help you customi
 
 ## Why WezTerm?
 
-| Feature | Benefit |
-|---------|---------|
-| GPU Rendering | Smooth scrolling, no lag |
-| Lua Config | Programmable, version-controlled |
-| Multiplexing | Built-in tabs/panes, no tmux needed |
+| Feature        | Benefit                              |
+| -------------- | ------------------------------------ |
+| GPU Rendering  | Smooth scrolling, no lag             |
+| Lua Config     | Programmable, version-controlled     |
+| Multiplexing   | Built-in tabs/panes, no tmux needed  |
 | Cross-platform | Same config on macOS, Linux, Windows |
 
 ## Quick Start: 5-Minute Setup
@@ -46,11 +46,13 @@ Follow these steps to get WezTerm running with WORKWAY configuration:
 ### Step 1: Install WezTerm
 
 **macOS:**
+
 ```bash
 brew install --cask wezterm
 ```
 
 **Linux:**
+
 ```bash
 curl -fsSL https://apt.fury.io/wez/gpg.key | sudo gpg --yes --dearmor -o /usr/share/keyrings/wezterm-fury.gpg
 echo 'deb [signed-by=/usr/share/keyrings/wezterm-fury.gpg] https://apt.fury.io/wez/ * *' | sudo tee /etc/apt/sources.list.d/wezterm.list
@@ -58,6 +60,7 @@ sudo apt update && sudo apt install wezterm
 ```
 
 **Windows:**
+
 ```powershell
 winget install wez.wezterm
 ```
@@ -85,6 +88,7 @@ wezterm --version
 ```
 
 Launch WezTerm and test:
+
 1. `Cmd+Shift+C` (macOS) or `Ctrl+Shift+Alt+C` (Linux/Windows) - Should open Claude Code
 2. `Cmd+D` - Should split the terminal horizontally
 3. `Cmd+H/J/K/L` - Should navigate between panes
@@ -161,14 +165,14 @@ return config
 
 ## Essential Keybindings
 
-| Action | macOS | Linux/Windows |
-|--------|-------|---------------|
-| New Tab | `Cmd+T` | `Ctrl+Shift+T` |
-| Close Tab | `Cmd+W` | `Ctrl+Shift+W` |
-| Split Horizontal | `Cmd+D` | `Ctrl+Shift+D` |
-| Split Vertical | `Cmd+Shift+D` | `Ctrl+Shift+E` |
-| Navigate Panes | `Cmd+[/]` | `Ctrl+Shift+[/]` |
-| Search | `Cmd+F` | `Ctrl+Shift+F` |
+| Action           | macOS         | Linux/Windows    |
+| ---------------- | ------------- | ---------------- |
+| New Tab          | `Cmd+T`       | `Ctrl+Shift+T`   |
+| Close Tab        | `Cmd+W`       | `Ctrl+Shift+W`   |
+| Split Horizontal | `Cmd+D`       | `Ctrl+Shift+D`   |
+| Split Vertical   | `Cmd+Shift+D` | `Ctrl+Shift+E`   |
+| Navigate Panes   | `Cmd+[/]`     | `Ctrl+Shift+[/]` |
+| Search           | `Cmd+F`       | `Ctrl+Shift+F`   |
 
 ## WORKWAY-Specific Keybindings
 
@@ -262,18 +266,18 @@ config.keys = {
 
 ### Keybinding Quick Reference
 
-| Action | macOS | Purpose |
-|--------|-------|---------|
-| New Claude Code | `Cmd+Shift+C` | Fresh AI session |
-| Resume Claude Code | `Cmd+Shift+R` | Continue previous session |
-| Dev Server | `Cmd+Shift+W` | Start pnpm dev |
-| Run Tests | `Cmd+Shift+T` | Run pnpm test |
-| Tail Logs | `Cmd+Shift+L` | Watch worker logs |
-| Split Right | `Cmd+D` | Add pane for Claude Code |
-| Split Down | `Cmd+Shift+D` | Add pane for output |
-| Navigate Panes | `Cmd+H/J/K/L` | Vim-style movement |
-| Resize Panes | `Cmd+Alt+H/J/K/L` | Adjust pane size |
-| Zoom Pane | `Cmd+Z` | Toggle fullscreen pane |
+| Action             | macOS             | Purpose                   |
+| ------------------ | ----------------- | ------------------------- |
+| New Claude Code    | `Cmd+Shift+C`     | Fresh AI session          |
+| Resume Claude Code | `Cmd+Shift+R`     | Continue previous session |
+| Dev Server         | `Cmd+Shift+W`     | Start pnpm dev            |
+| Run Tests          | `Cmd+Shift+T`     | Run pnpm test             |
+| Tail Logs          | `Cmd+Shift+L`     | Watch worker logs         |
+| Split Right        | `Cmd+D`           | Add pane for Claude Code  |
+| Split Down         | `Cmd+Shift+D`     | Add pane for output       |
+| Navigate Panes     | `Cmd+H/J/K/L`     | Vim-style movement        |
+| Resize Panes       | `Cmd+Alt+H/J/K/L` | Adjust pane size          |
+| Zoom Pane          | `Cmd+Z`           | Toggle fullscreen pane    |
 
 ### Linux/Windows Variant
 
@@ -316,6 +320,7 @@ The most productive setup for WORKWAY development:
 ```
 
 Create this layout with:
+
 1. `Cmd+D` (split right) - Open Claude Code
 2. `Cmd+Shift+D` (split down) - Start dev server or logs
 
@@ -323,13 +328,13 @@ Create this layout with:
 
 Essential session commands to know:
 
-| Command | What It Does |
-|---------|--------------|
-| `claude` | Start fresh session |
+| Command     | What It Does                                  |
+| ----------- | --------------------------------------------- |
+| `claude`    | Start fresh session                           |
 | `claude -c` | Continue previous session (preserves context) |
-| `/compact` | Summarize long conversation, reduce tokens |
-| `/clear` | Start over within same session |
-| `/cost` | Check token usage |
+| `/compact`  | Summarize long conversation, reduce tokens    |
+| `/clear`    | Start over within same session                |
+| `/cost`     | Check token usage                             |
 
 **Tip**: Use `Cmd+Shift+R` (the keybinding we set up) to resume where you left off after closing WezTerm.
 
@@ -394,8 +399,8 @@ config.mouse_bindings = {
 
 Access WezTerm's command palette for less-frequent actions:
 
-| Action | macOS | Linux/Windows |
-|--------|-------|---------------|
+| Action          | macOS         | Linux/Windows  |
+| --------------- | ------------- | -------------- |
 | Command Palette | `Cmd+Shift+P` | `Ctrl+Shift+P` |
 
 Useful for: font size adjustments, color scheme switching, pane management.
@@ -437,6 +442,7 @@ When building WORKWAY workflows, useful prompts:
 A typical WORKWAY development cycle in WezTerm:
 
 1. **Left pane**: Claude Code session
+
    ```
    > Help me implement a workflow that sends Slack notifications
    ```
@@ -449,6 +455,7 @@ A typical WORKWAY development cycle in WezTerm:
    ```
 
 When tests fail or errors occur:
+
 - Copy error text from bottom pane
 - Paste to Claude Code pane
 - Claude Code reads the error and helps fix it
@@ -462,6 +469,7 @@ wezterm --version
 ```
 
 You should see output like:
+
 ```
 wezterm 20240203-110809-5046fc22
 ```
@@ -479,6 +487,7 @@ mkdir -p ~/.config/wezterm
 ```
 
 Copy the minimal config from this lesson into `~/.config/wezterm/wezterm.lua`, including:
+
 - The monochrome color scheme
 - WORKWAY-specific keybindings
 - Mouse bindings for Claude Code
@@ -491,6 +500,7 @@ Launch WezTerm and verify:
 4. **Session resume**: Close Claude Code, then `Cmd+Shift+R` to continue
 
 Practice the development workflow:
+
 1. `Cmd+Shift+C` - Start Claude Code
 2. `Cmd+D` - Split right for editor
 3. `Cmd+Shift+D` - Split down for dev server

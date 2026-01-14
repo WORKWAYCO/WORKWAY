@@ -141,24 +141,24 @@ async execute({ context }) {
 
 All WORKWAY integrations extend `BaseAPIClient`, which provides:
 
-| Feature | Description |
-|---------|-------------|
-| Automatic token injection | Bearer token added to all requests |
-| Timeout handling | Configurable per-request timeouts via AbortController |
-| OAuth refresh | Automatic token refresh on 401 responses |
-| JSON helpers | `getJson()`, `postJson()` with automatic parsing |
-| Error mapping | HTTP errors mapped to `IntegrationError` with proper codes |
+| Feature                   | Description                                                |
+| ------------------------- | ---------------------------------------------------------- |
+| Automatic token injection | Bearer token added to all requests                         |
+| Timeout handling          | Configurable per-request timeouts via AbortController      |
+| OAuth refresh             | Automatic token refresh on 401 responses                   |
+| JSON helpers              | `getJson()`, `postJson()` with automatic parsing           |
+| Error mapping             | HTTP errors mapped to `IntegrationError` with proper codes |
 
 When building custom integrations, extend `BaseAPIClient`:
 
 ```typescript
-import { BaseAPIClient, type BaseClientConfig } from '@workwayco/integrations';
+import { BaseAPIClient, type BaseClientConfig } from "@workwayco/integrations";
 
 export class CustomServiceClient extends BaseAPIClient {
   constructor(config: BaseClientConfig) {
     super({
       ...config,
-      errorContext: { integration: 'custom-service' }
+      errorContext: { integration: "custom-service" },
     });
   }
 
@@ -236,7 +236,9 @@ Instead of many single calls, batch when possible:
 ```typescript
 // SLOW: 100 separate API calls
 for (const item of items) {
-  await integrations.notion.pages.create({ /* item */ });
+  await integrations.notion.pages.create({
+    /* item */
+  });
 }
 
 // FAST: Process in rate-limited chunks
@@ -244,7 +246,7 @@ async function processInChunks<T, R>(
   items: T[],
   processFn: (item: T) => Promise<R>,
   chunkSize: number,
-  delayMs: number
+  delayMs: number,
 ): Promise<R[]> {
   const results: R[] = [];
 
@@ -255,7 +257,7 @@ async function processInChunks<T, R>(
 
     // Delay between chunks to respect rate limits
     if (i + chunkSize < items.length) {
-      await new Promise(r => setTimeout(r, delayMs));
+      await new Promise((r) => setTimeout(r, delayMs));
     }
   }
 
@@ -265,9 +267,12 @@ async function processInChunks<T, R>(
 // Process 3 items at a time, 1s between batches
 const pages = await processInChunks(
   items,
-  item => integrations.notion.pages.create({ /* item */ }),
-  3,    // chunk size
-  1000  // delay ms
+  (item) =>
+    integrations.notion.pages.create({
+      /* item */
+    }),
+  3, // chunk size
+  1000, // delay ms
 );
 ```
 
@@ -278,7 +283,7 @@ Handle transient failures:
 ```typescript
 async function withRetry<T>(
   fn: () => Promise<T>,
-  options: { maxAttempts: number; baseDelayMs: number }
+  options: { maxAttempts: number; baseDelayMs: number },
 ): Promise<T> {
   let lastError: Error;
 
@@ -289,13 +294,13 @@ async function withRetry<T>(
       lastError = error as Error;
 
       // Check if retryable
-      if ((error as {status?: number}).status === 429) {
+      if ((error as { status?: number }).status === 429) {
         const delay = options.baseDelayMs * Math.pow(2, attempt - 1);
-        await new Promise(r => setTimeout(r, delay));
+        await new Promise((r) => setTimeout(r, delay));
         continue;
       }
 
-      throw error;  // Non-retryable, fail immediately
+      throw error; // Non-retryable, fail immediately
     }
   }
 
@@ -303,10 +308,10 @@ async function withRetry<T>(
 }
 
 // Usage
-const page = await withRetry(
-  () => integrations.notion.pages.create(data),
-  { maxAttempts: 3, baseDelayMs: 1000 }
-);
+const page = await withRetry(() => integrations.notion.pages.create(data), {
+  maxAttempts: 3,
+  baseDelayMs: 1000,
+});
 ```
 
 ### Step 5: Use Persistent Cache for Cross-Execution Data
@@ -391,22 +396,22 @@ time curl localhost:8787/execute -d @test-payload.json
 
 WORKWAY runs on Cloudflare Workers. Know the limits:
 
-| Resource | Limit |
-|----------|-------|
-| CPU time | 30 seconds |
-| Memory | 128 MB |
-| Subrequests | 1,000 per request |
-| Outbound connections | 6 concurrent |
-| Request size | 100 MB |
+| Resource             | Limit             |
+| -------------------- | ----------------- |
+| CPU time             | 30 seconds        |
+| Memory               | 128 MB            |
+| Subrequests          | 1,000 per request |
+| Outbound connections | 6 concurrent      |
+| Request size         | 100 MB            |
 
 ### CPU Time vs. Wall Time
 
 ```typescript
 // CPU time: actual computation
-const result = heavyComputation();  // Uses CPU time
+const result = heavyComputation(); // Uses CPU time
 
 // Wall time: waiting for external services
-await fetch('https://api.external.com');  // Doesn't use CPU time
+await fetch("https://api.external.com"); // Doesn't use CPU time
 ```
 
 You have 30 seconds of CPU time, but network requests don't count against this.
@@ -415,13 +420,13 @@ You have 30 seconds of CPU time, but network requests don't count against this.
 
 Every external API has limits:
 
-| Service | Typical Limit |
-|---------|---------------|
-| Zoom | 100 requests/second |
-| Notion | 3 requests/second |
-| Slack | 1 request/second (per method) |
-| Gmail | 250 quota units/second |
-| Stripe | 100 requests/second |
+| Service | Typical Limit                 |
+| ------- | ----------------------------- |
+| Zoom    | 100 requests/second           |
+| Notion  | 3 requests/second             |
+| Slack   | 1 request/second (per method) |
+| Gmail   | 250 quota units/second        |
+| Stripe  | 100 requests/second           |
 
 ### Detecting Rate Limits
 
@@ -445,21 +450,21 @@ async execute({ integrations, context }) {
 ```typescript
 async function withRateLimit<T>(
   fn: () => Promise<T>,
-  options: { maxRetries: number; baseDelay: number }
+  options: { maxRetries: number; baseDelay: number },
 ): Promise<T> {
   for (let attempt = 0; attempt < options.maxRetries; attempt++) {
     try {
       return await fn();
     } catch (error) {
       if (error.status === 429) {
-        const retryAfter = error.headers?.['retry-after'] || options.baseDelay;
+        const retryAfter = error.headers?.["retry-after"] || options.baseDelay;
         await sleep(retryAfter * 1000 * Math.pow(2, attempt));
         continue;
       }
       throw error;
     }
   }
-  throw new Error('Max retries exceeded');
+  throw new Error("Max retries exceeded");
 }
 ```
 
@@ -468,17 +473,25 @@ async function withRateLimit<T>(
 ### Batch API Calls
 
 Instead of:
+
 ```typescript
 // Bad: 100 separate API calls
 for (const item of items) {
-  await notion.createPage({ /* item data */ });
+  await notion.createPage({
+    /* item data */
+  });
 }
 ```
 
 Use batch endpoints:
+
 ```typescript
 // Good: Single batch call (where supported)
-await notion.batchCreatePages(items.map(item => ({ /* item data */ })));
+await notion.batchCreatePages(
+  items.map((item) => ({
+    /* item data */
+  })),
+);
 ```
 
 ### Chunked Processing
@@ -490,7 +503,7 @@ async function processInChunks<T, R>(
   items: T[],
   processFn: (item: T) => Promise<R>,
   chunkSize: number,
-  delayBetweenChunks: number
+  delayBetweenChunks: number,
 ): Promise<R[]> {
   const results: R[] = [];
 
@@ -513,9 +526,12 @@ async function processInChunks<T, R>(
 // Usage
 const pages = await processInChunks(
   items,
-  item => notion.createPage({ /* item data */ }),
-  3,    // 3 items per chunk
-  1000  // 1 second between chunks
+  (item) =>
+    notion.createPage({
+      /* item data */
+    }),
+  3, // 3 items per chunk
+  1000, // 1 second between chunks
 );
 ```
 
@@ -525,13 +541,13 @@ const pages = await processInChunks(
 async function parallelLimit<T, R>(
   items: T[],
   fn: (item: T) => Promise<R>,
-  limit: number
+  limit: number,
 ): Promise<R[]> {
   const results: R[] = [];
   const executing: Promise<void>[] = [];
 
   for (const item of items) {
-    const p = fn(item).then(result => {
+    const p = fn(item).then((result) => {
       results.push(result);
     });
 
@@ -539,7 +555,10 @@ async function parallelLimit<T, R>(
 
     if (executing.length >= limit) {
       await Promise.race(executing);
-      executing.splice(executing.findIndex(e => e === p), 1);
+      executing.splice(
+        executing.findIndex((e) => e === p),
+        1,
+      );
     }
   }
 
@@ -639,7 +658,7 @@ Process pages as they arrive to avoid memory issues:
 ```typescript
 async function processAllPages(
   fetchPage: (token?: string) => Promise<{ items: any[]; nextToken?: string }>,
-  processItem: (item: any) => Promise<void>
+  processItem: (item: any) => Promise<void>,
 ) {
   let nextToken: string | undefined;
   let totalProcessed = 0;
@@ -667,7 +686,7 @@ async function processAllPages(
 async function withTimeout<T>(
   promise: Promise<T>,
   ms: number,
-  errorMessage = 'Operation timed out'
+  errorMessage = "Operation timed out",
 ): Promise<T> {
   const timeout = new Promise<never>((_, reject) => {
     setTimeout(() => reject(new Error(errorMessage)), ms);
@@ -679,8 +698,8 @@ async function withTimeout<T>(
 // Usage
 const meeting = await withTimeout(
   zoom.getMeeting(meetingId),
-  5000,  // 5 second timeout
-  'Zoom API timeout'
+  5000, // 5 second timeout
+  "Zoom API timeout",
 );
 ```
 
@@ -723,7 +742,7 @@ Don't load everything into memory:
 ```typescript
 // Bad: Loading entire transcript
 const fullTranscript = await zoom.getFullTranscript(meetingId);
-const summary = summarize(fullTranscript);  // May exceed memory
+const summary = summarize(fullTranscript); // May exceed memory
 
 // Good: Stream processing
 async function* transcriptChunks(meetingId: string) {
@@ -804,19 +823,19 @@ async function trackedApiCall(fn: () => Promise<any>) {
 }
 
 // At end of execution
-context.log.info('Performance metrics', metrics);
+context.log.info("Performance metrics", metrics);
 ```
 
 ## Best Practices Summary
 
-| Practice | Why |
-|----------|-----|
-| Batch API calls | Reduce request count |
-| Limit concurrency | Respect rate limits |
-| Cache repeated lookups | Avoid redundant calls |
-| Paginate large datasets | Control memory usage |
+| Practice                   | Why                        |
+| -------------------------- | -------------------------- |
+| Batch API calls            | Reduce request count       |
+| Limit concurrency          | Respect rate limits        |
+| Cache repeated lookups     | Avoid redundant calls      |
+| Paginate large datasets    | Control memory usage       |
 | Checkpoint long operations | Handle timeouts gracefully |
-| Log performance metrics | Identify bottlenecks |
+| Log performance metrics    | Identify bottlenecks       |
 
 ## Praxis
 
@@ -854,6 +873,7 @@ async execute({ integrations, context }) {
 ```
 
 Measure before and after:
+
 - Count API calls
 - Measure total execution time
 - Track error rates

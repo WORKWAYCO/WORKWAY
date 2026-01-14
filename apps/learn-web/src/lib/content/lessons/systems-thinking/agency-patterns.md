@@ -37,18 +37,19 @@ Enterprise → Agency → WORKWAY → Infrastructure
 ```
 
 Each layer recedes for the layer above it:
+
 - Infrastructure recedes for WORKWAY — Cloudflare Workers, OAuth, billing become invisible
 - WORKWAY recedes for agencies — Platform becomes "how I build client solutions"
 - Agencies recede for enterprises — Agency becomes "my meetings handle themselves"
 
 ### Why This Creates Defensibility
 
-| Moat Type | Mechanism | Strength |
-|-----------|-----------|----------|
-| **Switching costs** | Agency builds 10 workflows on WORKWAY → migration means rebuilding all | High |
-| **Relationship leverage** | 1 agency = 10-50 enterprise clients on platform | Multiplier |
-| **Domain density** | Vertical agencies (dental, hospitality) = market coverage | Scalable |
-| **Network effects** | More agencies → more workflows → more enterprises → more agencies | Compounding |
+| Moat Type                 | Mechanism                                                              | Strength    |
+| ------------------------- | ---------------------------------------------------------------------- | ----------- |
+| **Switching costs**       | Agency builds 10 workflows on WORKWAY → migration means rebuilding all | High        |
+| **Relationship leverage** | 1 agency = 10-50 enterprise clients on platform                        | Multiplier  |
+| **Domain density**        | Vertical agencies (dental, hospitality) = market coverage              | Scalable    |
+| **Network effects**       | More agencies → more workflows → more enterprises → more agencies      | Compounding |
 
 ### The Flywheel
 
@@ -74,6 +75,7 @@ Ask the client these questions:
 ```
 
 Document the answers in outcome format (not technology):
+
 ```
 Manual process: "After every sales call, I update the CRM, send a summary to the team, and schedule a follow-up"
 Outcome needed: "Sales calls that handle their own aftermath"
@@ -114,12 +116,10 @@ Configure as private:
 
 ```typescript
 export const metadata = {
-  id: 'acme-meeting-intelligence',
-  name: 'Acme Meeting Intelligence',
-  visibility: 'private' as const,
-  accessGrants: [
-    { type: 'email_domain' as const, value: 'acme.com' },
-  ],
+  id: "acme-meeting-intelligence",
+  name: "Acme Meeting Intelligence",
+  visibility: "private" as const,
+  accessGrants: [{ type: "email_domain" as const, value: "acme.com" }],
 };
 ```
 
@@ -128,25 +128,26 @@ export const metadata = {
 Implement the client's requirements:
 
 ```typescript
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { defineWorkflow, webhook } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Acme Meeting Intelligence',
-  description: 'Automatic meeting summaries, CRM updates, and team notifications',
-  version: '1.0.0',
+  name: "Acme Meeting Intelligence",
+  description:
+    "Automatic meeting summaries, CRM updates, and team notifications",
+  version: "1.0.0",
 
   integrations: [
-    { service: 'zoom', scopes: ['meeting:read', 'recording:read'] },
-    { service: 'salesforce', scopes: ['api', 'refresh_token'] },
-    { service: 'slack', scopes: ['chat:write'] },
+    { service: "zoom", scopes: ["meeting:read", "recording:read"] },
+    { service: "salesforce", scopes: ["api", "refresh_token"] },
+    { service: "slack", scopes: ["chat:write"] },
   ],
 
   inputs: {
-    salesforceObjectType: { type: 'text', default: 'Opportunity' },
-    slackChannel: { type: 'picker', pickerType: 'slack:channel' },
+    salesforceObjectType: { type: "text", default: "Opportunity" },
+    slackChannel: { type: "picker", pickerType: "slack:channel" },
   },
 
-  trigger: webhook({ service: 'zoom', event: 'recording.completed' }),
+  trigger: webhook({ service: "zoom", event: "recording.completed" }),
 
   async execute({ trigger, inputs, integrations }) {
     // Implementation here
@@ -164,9 +165,9 @@ export default {
   getMeeting: () => ({
     success: true,
     data: {
-      id: 'mtg-123',
-      topic: 'Acme Corp - Q1 Review',
-      participants: ['sales@acme.com', 'client@prospect.com'],
+      id: "mtg-123",
+      topic: "Acme Corp - Q1 Review",
+      participants: ["sales@acme.com", "client@prospect.com"],
     },
   }),
 };
@@ -193,13 +194,16 @@ Create client-facing documentation:
 ## Acme Meeting Intelligence
 
 ### What it does
+
 After every Zoom meeting with a recording, this workflow:
+
 1. Extracts the transcript
 2. Generates an AI summary
 3. Updates the related Salesforce opportunity
 4. Posts a summary to #sales-updates in Slack
 
 ### Setup required
+
 1. Connect your Zoom account
 2. Connect Salesforce (needs API access)
 3. Select your Slack notification channel
@@ -210,11 +214,13 @@ After every Zoom meeting with a recording, this workflow:
 ## The Agency Opportunity
 
 Traditional agency model:
+
 ```
 Client need → Custom build → One-time revenue → Maintenance burden
 ```
 
 WORKWAY agency model:
+
 ```
 Client need → Private workflow → Recurring revenue → Marketplace opportunity
 ```
@@ -274,18 +280,18 @@ Define the workflow:
 
 ```typescript
 const proposal = {
-  workflow: 'Meeting Intelligence Pipeline',
-  trigger: 'Zoom meeting ends',
+  workflow: "Meeting Intelligence Pipeline",
+  trigger: "Zoom meeting ends",
   steps: [
-    'Extract transcript',
-    'AI summarization',
-    'Save to Notion',
-    'Update Salesforce',
-    'Slack notification',
+    "Extract transcript",
+    "AI summarization",
+    "Save to Notion",
+    "Update Salesforce",
+    "Slack notification",
   ],
-  integrations: ['zoom', 'notion', 'salesforce', 'slack'],
-  timeline: '2 weeks',
-  cost: 'Implementation: $5,000 | Ongoing: per-execution',
+  integrations: ["zoom", "notion", "salesforce", "slack"],
+  timeline: "2 weeks",
+  cost: "Implementation: $5,000 | Ongoing: per-execution",
 };
 ```
 
@@ -296,13 +302,11 @@ Create private workflow for client:
 ```typescript
 export default defineWorkflow({
   metadata: {
-    id: 'acme-meeting-intelligence',
-    visibility: 'private',
-    accessGrants: [
-      { type: 'email_domain', value: 'acmecorp.com' },
-    ],
+    id: "acme-meeting-intelligence",
+    visibility: "private",
+    accessGrants: [{ type: "email_domain", value: "acmecorp.com" }],
     // Tag for your agency's tracking
-    tags: ['agency:yourcompany', 'client:acme'],
+    tags: ["agency:yourcompany", "client:acme"],
   },
   // ... implementation
 });
@@ -315,6 +319,7 @@ workway deploy
 ```
 
 Then:
+
 - Walk client through installation
 - Configure their integrations
 - Test end-to-end
@@ -323,11 +328,13 @@ Then:
 ### Phase 5: Maintain & Expand
 
 Monitor via analytics:
+
 ```
 workway.co/workflows/private/acme-meeting-intelligence/analytics
 ```
 
 Identify expansion opportunities:
+
 - New integrations
 - Additional triggers
 - Related workflows
@@ -358,12 +365,12 @@ agency-templates/
 ### Parameterized Templates
 
 ```typescript
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { defineWorkflow, webhook } from "@workwayco/sdk";
 
 // templates/meeting-to-crm.ts
 export function createMeetingToCRM(options: {
   clientName: string;
-  crmType: 'salesforce' | 'hubspot' | 'pipedrive';
+  crmType: "salesforce" | "hubspot" | "pipedrive";
   includeTranscript: boolean;
   slackNotification: boolean;
 }) {
@@ -371,31 +378,33 @@ export function createMeetingToCRM(options: {
     workflow: defineWorkflow({
       name: `${options.clientName} Meeting to CRM`,
       description: `Sync meetings to ${options.crmType} for ${options.clientName}`,
-      version: '1.0.0',
+      version: "1.0.0",
 
       integrations: [
-        { service: 'zoom', scopes: ['meeting:read'] },
-        { service: options.crmType, scopes: ['read', 'write'] },
-        ...(options.slackNotification ? [{ service: 'slack', scopes: ['send_messages'] }] : []),
+        { service: "zoom", scopes: ["meeting:read"] },
+        { service: options.crmType, scopes: ["read", "write"] },
+        ...(options.slackNotification
+          ? [{ service: "slack", scopes: ["send_messages"] }]
+          : []),
       ],
 
       inputs: {
         crmObject: {
-          type: 'text',
-          label: 'CRM Object ID',
+          type: "text",
+          label: "CRM Object ID",
           required: true,
         },
         ...(options.slackNotification && {
           slackChannel: {
-            type: 'text',
-            label: 'Notification Channel',
+            type: "text",
+            label: "Notification Channel",
           },
         }),
       },
 
       trigger: webhook({
-        service: 'zoom',
-        event: 'recording.completed',
+        service: "zoom",
+        event: "recording.completed",
       }),
 
       async execute({ trigger, inputs, integrations }) {
@@ -418,9 +427,12 @@ export function createMeetingToCRM(options: {
     }),
     metadata: {
       id: `${options.clientName.toLowerCase()}-meeting-crm`,
-      visibility: 'private' as const,
+      visibility: "private" as const,
       accessGrants: [
-        { type: 'email_domain' as const, value: `${options.clientName.toLowerCase()}.com` },
+        {
+          type: "email_domain" as const,
+          value: `${options.clientName.toLowerCase()}.com`,
+        },
       ],
     },
   };
@@ -432,8 +444,8 @@ export function createMeetingToCRM(options: {
 ```typescript
 // For new client
 const { workflow, metadata } = createMeetingToCRM({
-  clientName: 'ACME',
-  crmType: 'salesforce',
+  clientName: "ACME",
+  crmType: "salesforce",
   includeTranscript: true,
   slackNotification: true,
 });
@@ -453,17 +465,17 @@ The `dental-appointment-autopilot` workflow shows how an agency would build for 
 ```typescript
 // From packages/workflows/src/dental-appointment-autopilot/index.ts
 export default defineWorkflow({
-  name: 'Dental Appointment Autopilot',
-  description: 'Reduce no-shows with intelligent appointment reminders',
-  version: '1.0.0',
+  name: "Dental Appointment Autopilot",
+  description: "Reduce no-shows with intelligent appointment reminders",
+  version: "1.0.0",
 
   // The outcome frame - what the client experiences
   pathway: {
-    outcomeFrame: 'when_appointments_scheduled',
+    outcomeFrame: "when_appointments_scheduled",
     outcomeStatement: {
-      suggestion: 'Want patients who actually show up?',
-      explanation: 'Smart reminders 48h, 24h, and 2h before appointments.',
-      outcome: 'Chairs that stay full',
+      suggestion: "Want patients who actually show up?",
+      explanation: "Smart reminders 48h, 24h, and 2h before appointments.",
+      outcome: "Chairs that stay full",
     },
     zuhandenheit: {
       timeToValue: 1,
@@ -475,32 +487,32 @@ export default defineWorkflow({
 
   // Subscription pricing works well for recurring client value
   pricing: {
-    model: 'subscription',
+    model: "subscription",
     pricePerMonth: 49,
     trialDays: 14,
-    description: '$49/month per practice location',
+    description: "$49/month per practice location",
   },
 
   // Sikka for dental PMS + Slack/Twilio for notifications
   integrations: [
-    { service: 'sikka', scopes: ['read_appointments', 'read_patients'] },
-    { service: 'slack', scopes: ['chat:write'], optional: true },
-    { service: 'twilio', scopes: ['messages:write'], optional: true },
+    { service: "sikka", scopes: ["read_appointments", "read_patients"] },
+    { service: "slack", scopes: ["chat:write"], optional: true },
+    { service: "twilio", scopes: ["messages:write"], optional: true },
   ],
 
   inputs: {
     practiceId: {
-      type: 'text',
-      label: 'Sikka Practice ID',
+      type: "text",
+      label: "Sikka Practice ID",
       required: true,
     },
-    reminder48h: { type: 'boolean', default: true },
-    reminder24h: { type: 'boolean', default: true },
-    reminder2h: { type: 'boolean', default: true },
-    enableWaitlistBackfill: { type: 'boolean', default: true },
+    reminder48h: { type: "boolean", default: true },
+    reminder24h: { type: "boolean", default: true },
+    reminder2h: { type: "boolean", default: true },
+    enableWaitlistBackfill: { type: "boolean", default: true },
   },
 
-  trigger: cron({ schedule: '0 6 * * *', timezone: 'America/New_York' }),
+  trigger: cron({ schedule: "0 6 * * *", timezone: "America/New_York" }),
 
   async execute({ inputs, integrations }) {
     // Check tomorrow's appointments, send reminders, backfill from waitlist
@@ -517,57 +529,57 @@ The `real-estate-lead-nurture` workflow demonstrates the real estate vertical:
 ```typescript
 // From packages/workflows/src/real-estate-lead-nurture/index.ts
 export default defineWorkflow({
-  name: 'Real Estate Lead Nurture',
-  description: 'AI-powered lead follow-up that adapts to buyer/seller context',
-  version: '1.0.0',
+  name: "Real Estate Lead Nurture",
+  description: "AI-powered lead follow-up that adapts to buyer/seller context",
+  version: "1.0.0",
 
   pathway: {
-    outcomeFrame: 'when_leads_arrive',
+    outcomeFrame: "when_leads_arrive",
     outcomeStatement: {
-      suggestion: 'Let leads nurture themselves?',
-      explanation: 'AI crafts personalized outreach based on interests.',
-      outcome: 'Leads that nurture themselves',
+      suggestion: "Let leads nurture themselves?",
+      explanation: "AI crafts personalized outreach based on interests.",
+      outcome: "Leads that nurture themselves",
     },
     primaryPair: {
-      from: 'follow-up-boss',
-      to: 'gmail',
-      workflowId: 'real-estate-lead-nurture',
-      outcome: 'New inquiries become scheduled showings',
+      from: "follow-up-boss",
+      to: "gmail",
+      workflowId: "real-estate-lead-nurture",
+      outcome: "New inquiries become scheduled showings",
     },
   },
 
   pricing: {
-    model: 'paid',
+    model: "paid",
     pricePerMonth: 39,
     trialDays: 14,
   },
 
   integrations: [
-    { service: 'follow-up-boss', scopes: ['read_people', 'write_people'] },
-    { service: 'gmail', scopes: ['send_emails'] },
-    { service: 'calendly', scopes: ['read_events'], optional: true },
+    { service: "follow-up-boss", scopes: ["read_people", "write_people"] },
+    { service: "gmail", scopes: ["send_emails"] },
+    { service: "calendly", scopes: ["read_events"], optional: true },
   ],
 
   inputs: {
-    agentName: { type: 'string', required: true },
-    agentEmail: { type: 'email', required: true },
+    agentName: { type: "string", required: true },
+    agentEmail: { type: "email", required: true },
     followUpDays: {
-      type: 'array',
-      items: { type: 'number' },
+      type: "array",
+      items: { type: "number" },
       default: [1, 3, 7, 14],
     },
     tone: {
-      type: 'select',
+      type: "select",
       options: [
-        { value: 'friendly', label: 'Warm & Friendly' },
-        { value: 'professional', label: 'Professional' },
-        { value: 'luxury', label: 'Luxury/Premium' },
+        { value: "friendly", label: "Warm & Friendly" },
+        { value: "professional", label: "Professional" },
+        { value: "luxury", label: "Luxury/Premium" },
       ],
-      default: 'professional',
+      default: "professional",
     },
   },
 
-  trigger: schedule({ cron: '0 9 * * *', timezone: '{{inputs.timezone}}' }),
+  trigger: schedule({ cron: "0 9 * * *", timezone: "{{inputs.timezone}}" }),
 
   async execute({ inputs, integrations, env }) {
     // Use Workers AI to generate personalized follow-ups
@@ -579,13 +591,13 @@ export default defineWorkflow({
 
 ### Vertical Agency Opportunities
 
-| Vertical | Workflow Examples in Codebase | Agency Type |
-|----------|------------------------------|-------------|
-| **Healthcare** | `dental-appointment-autopilot` | Practice management consultants |
-| **Real Estate** | `real-estate-lead-nurture` | Transaction coordinators |
-| **Construction** | `construction-daily-log`, `construction-rfi-tracker` | Operations consultants |
-| **Professional Services** | `meeting-intelligence`, `meeting-followup-engine` | Business process consultants |
-| **SaaS** | `stripe-to-notion`, `support-ticket-router` | RevOps consultants |
+| Vertical                  | Workflow Examples in Codebase                        | Agency Type                     |
+| ------------------------- | ---------------------------------------------------- | ------------------------------- |
+| **Healthcare**            | `dental-appointment-autopilot`                       | Practice management consultants |
+| **Real Estate**           | `real-estate-lead-nurture`                           | Transaction coordinators        |
+| **Construction**          | `construction-daily-log`, `construction-rfi-tracker` | Operations consultants          |
+| **Professional Services** | `meeting-intelligence`, `meeting-followup-engine`    | Business process consultants    |
+| **SaaS**                  | `stripe-to-notion`, `support-ticket-router`          | RevOps consultants              |
 
 Explore the `packages/workflows/src/` directory to see these patterns in action.
 
@@ -609,48 +621,51 @@ Generalization: Meeting Recording → CRM (any meeting tool, any CRM)
 // Private (client-specific)
 export default defineWorkflow({
   metadata: {
-    id: 'acme-zoom-salesforce',
-    visibility: 'private',
-    accessGrants: [{ type: 'email_domain', value: 'acme.com' }],
+    id: "acme-zoom-salesforce",
+    visibility: "private",
+    accessGrants: [{ type: "email_domain", value: "acme.com" }],
   },
   configSchema: {
-    salesforceObject: { /* hardcoded to Salesforce */ },
+    salesforceObject: {
+      /* hardcoded to Salesforce */
+    },
   },
 });
 
 // Public (generalized)
 export default defineWorkflow({
   metadata: {
-    id: 'meeting-to-crm-sync',
-    name: 'Meeting to CRM Sync',
-    description: 'Automatically sync meeting recordings and transcripts to your CRM',
-    visibility: 'public',
-    category: 'sales',
-    integrations: ['zoom', 'google-meet', 'salesforce', 'hubspot', 'pipedrive'],
+    id: "meeting-to-crm-sync",
+    name: "Meeting to CRM Sync",
+    description:
+      "Automatically sync meeting recordings and transcripts to your CRM",
+    visibility: "public",
+    category: "sales",
+    integrations: ["zoom", "google-meet", "salesforce", "hubspot", "pipedrive"],
   },
   configSchema: {
     meetingSource: {
-      type: 'select',
-      label: 'Meeting Source',
+      type: "select",
+      label: "Meeting Source",
       options: [
-        { value: 'zoom', label: 'Zoom' },
-        { value: 'google-meet', label: 'Google Meet' },
+        { value: "zoom", label: "Zoom" },
+        { value: "google-meet", label: "Google Meet" },
       ],
     },
     crmDestination: {
-      type: 'select',
-      label: 'CRM',
+      type: "select",
+      label: "CRM",
       options: [
-        { value: 'salesforce', label: 'Salesforce' },
-        { value: 'hubspot', label: 'HubSpot' },
-        { value: 'pipedrive', label: 'Pipedrive' },
+        { value: "salesforce", label: "Salesforce" },
+        { value: "hubspot", label: "HubSpot" },
+        { value: "pipedrive", label: "Pipedrive" },
       ],
     },
     // Dynamic picker based on CRM selection
     crmObject: {
-      type: 'picker',
-      pickerType: 'dynamic:crm-object',
-      dependsOn: 'crmDestination',
+      type: "picker",
+      pickerType: "dynamic:crm-object",
+      dependsOn: "crmDestination",
     },
   },
 });
@@ -660,12 +675,12 @@ export default defineWorkflow({
 
 ### Implementation Pricing
 
-| Complexity | Integrations | AI Features | Price Range |
-|------------|--------------|-------------|-------------|
-| Simple | 2 | No | $1,000-2,500 |
-| Standard | 3-4 | Basic | $2,500-5,000 |
-| Complex | 5+ | Advanced | $5,000-15,000 |
-| Enterprise | Custom | Custom | $15,000+ |
+| Complexity | Integrations | AI Features | Price Range   |
+| ---------- | ------------ | ----------- | ------------- |
+| Simple     | 2            | No          | $1,000-2,500  |
+| Standard   | 3-4          | Basic       | $2,500-5,000  |
+| Complex    | 5+           | Advanced    | $5,000-15,000 |
+| Enterprise | Custom       | Custom      | $15,000+      |
 
 ### Value-Based Add-ons
 
@@ -677,6 +692,7 @@ export default defineWorkflow({
 ### Recurring Revenue
 
 Per-execution share from WORKWAY:
+
 - You receive 70% of execution fees
 - Applies to all client installations
 - Marketplace workflows earn from all users
@@ -700,6 +716,7 @@ metadata: {
 ### Agency Dashboard Metrics
 
 Monitor across all client workflows:
+
 - Total executions/month
 - Success rates
 - Revenue per client
@@ -737,14 +754,17 @@ Sunset: Client churned or workflow deprecated
 **Period**: January 2024
 
 ### Metrics
+
 - Executions: 1,247
 - Success Rate: 99.2%
 - Avg Duration: 3.2s
 
 ### Issues
+
 - 10 failures due to Zoom API rate limit (resolved)
 
 ### Recommendations
+
 - Add Slack notification for meeting highlights
 - Consider expanding to Google Meet
 ```
@@ -761,23 +781,29 @@ Build a template factory:
 // templates/meeting-to-crm.ts
 export function createMeetingToCRM(options: {
   clientName: string;
-  crmType: 'salesforce' | 'hubspot';
+  crmType: "salesforce" | "hubspot";
 }) {
   return defineWorkflow({
     metadata: {
       id: `${options.clientName.toLowerCase()}-meeting-crm`,
-      visibility: 'private',
+      visibility: "private",
       accessGrants: [
-        { type: 'email_domain', value: `${options.clientName.toLowerCase()}.com` },
+        {
+          type: "email_domain",
+          value: `${options.clientName.toLowerCase()}.com`,
+        },
       ],
-      tags: ['agency:yourcompany', `client:${options.clientName.toLowerCase()}`],
+      tags: [
+        "agency:yourcompany",
+        `client:${options.clientName.toLowerCase()}`,
+      ],
     },
 
     configSchema: {
       crmObject: {
-        type: 'picker',
+        type: "picker",
         pickerType: `${options.crmType}:object`,
-        label: 'CRM Object',
+        label: "CRM Object",
       },
     },
 
@@ -789,6 +815,7 @@ export function createMeetingToCRM(options: {
 ```
 
 Practice the client engagement flow:
+
 1. Discovery: Identify their manual processes
 2. Scope: Define workflow, integrations, timeline
 3. Build: Use templates where possible

@@ -110,23 +110,23 @@ Now you're ready for rapid development.
 
 ### Directory Movement
 
-| Command | Action |
-|---------|--------|
-| `cd -` | Return to previous directory |
-| `cd ~` | Go to home directory |
-| `cd ../..` | Go up two levels |
-| `pushd/popd` | Stack-based navigation |
+| Command      | Action                       |
+| ------------ | ---------------------------- |
+| `cd -`       | Return to previous directory |
+| `cd ~`       | Go to home directory         |
+| `cd ../..`   | Go up two levels             |
+| `pushd/popd` | Stack-based navigation       |
 
 ### File Operations
 
-| Command | Action |
-|---------|--------|
-| `ls -la` | List all files with details |
-| `tree -L 2` | Show directory tree (2 levels) |
-| `cat file` | Display file contents |
-| `less file` | Paginated file viewing |
-| `head -n 20` | First 20 lines |
-| `tail -f` | Follow file changes (logs) |
+| Command      | Action                         |
+| ------------ | ------------------------------ |
+| `ls -la`     | List all files with details    |
+| `tree -L 2`  | Show directory tree (2 levels) |
+| `cat file`   | Display file contents          |
+| `less file`  | Paginated file viewing         |
+| `head -n 20` | First 20 lines                 |
+| `tail -f`    | Follow file changes (logs)     |
 
 ## Git Essentials
 
@@ -313,14 +313,14 @@ curl -s localhost:8787/execute -d '{}' | jq 'select(.error)'
 
 ### Session Commands
 
-| Command | Action |
-|---------|--------|
-| `/help` | Show all commands |
-| `/clear` | Clear conversation |
-| `/compact` | Summarize and continue |
-| `/cost` | Show token usage |
-| `/init` | Initialize project context |
-| `/resume` | Resume previous session |
+| Command    | Action                     |
+| ---------- | -------------------------- |
+| `/help`    | Show all commands          |
+| `/clear`   | Clear conversation         |
+| `/compact` | Summarize and continue     |
+| `/cost`    | Show token usage           |
+| `/init`    | Initialize project context |
+| `/resume`  | Resume previous session    |
 
 ### CLI Options
 
@@ -373,10 +373,10 @@ For workflow development, these prompts are particularly useful:
 
 When working in the WORKWAY codebase, these skills are available:
 
-| Skill | Purpose | Example Use |
-|-------|---------|-------------|
-| `/heidegger-design` | Apply Zuhandenheit principles | Architecture decisions |
-| `/workway-integrations` | Build integrations with BaseAPIClient | New API integrations |
+| Skill                   | Purpose                               | Example Use            |
+| ----------------------- | ------------------------------------- | ---------------------- |
+| `/heidegger-design`     | Apply Zuhandenheit principles         | Architecture decisions |
+| `/workway-integrations` | Build integrations with BaseAPIClient | New API integrations   |
 
 Example usage:
 
@@ -392,13 +392,13 @@ Example usage:
 
 If you've configured the WORKWAY Learn MCP server, these commands are available:
 
-| Command | Description |
-|---------|-------------|
-| `learn_status` | Check your learning progress |
-| `learn_lesson` | Fetch lesson content |
-| `learn_complete` | Mark lesson as complete |
-| `learn_praxis` | Validate workflow code |
-| `learn_coach` | Get pattern guidance |
+| Command          | Description                  |
+| ---------------- | ---------------------------- |
+| `learn_status`   | Check your learning progress |
+| `learn_lesson`   | Fetch lesson content         |
+| `learn_complete` | Mark lesson as complete      |
+| `learn_praxis`   | Validate workflow code       |
+| `learn_coach`    | Get pattern guidance         |
 
 Example prompts to Claude Code:
 
@@ -413,32 +413,32 @@ Example prompts to Claude Code:
 
 ### Line Editing
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+A` | Beginning of line |
-| `Ctrl+E` | End of line |
-| `Ctrl+U` | Delete to beginning |
-| `Ctrl+K` | Delete to end |
+| Shortcut | Action               |
+| -------- | -------------------- |
+| `Ctrl+A` | Beginning of line    |
+| `Ctrl+E` | End of line          |
+| `Ctrl+U` | Delete to beginning  |
+| `Ctrl+K` | Delete to end        |
 | `Ctrl+W` | Delete word backward |
-| `Alt+B` | Move word backward |
-| `Alt+F` | Move word forward |
+| `Alt+B`  | Move word backward   |
+| `Alt+F`  | Move word forward    |
 
 ### History
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+R` | Reverse search history |
-| `!!` | Repeat last command |
-| `!$` | Last argument of previous command |
-| `history` | Show command history |
+| Shortcut  | Action                            |
+| --------- | --------------------------------- |
+| `Ctrl+R`  | Reverse search history            |
+| `!!`      | Repeat last command               |
+| `!$`      | Last argument of previous command |
+| `history` | Show command history              |
 
 ### Process Control
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+C` | Cancel current command |
+| Shortcut | Action                      |
+| -------- | --------------------------- |
+| `Ctrl+C` | Cancel current command      |
 | `Ctrl+Z` | Suspend (then `bg` or `fg`) |
-| `Ctrl+D` | Exit shell / EOF |
+| `Ctrl+D` | Exit shell / EOF            |
 
 ## Useful Aliases
 
@@ -485,6 +485,7 @@ alias wtest="curl -s localhost:8787/execute -d '{}' | jq ."
 ```
 
 Reload:
+
 ```bash
 source ~/.zshrc
 ```
@@ -513,6 +514,7 @@ wdeploy() {
 ```
 
 Usage:
+
 ```bash
 wrun '{"pageId":"abc123"}'    # Test with inputs
 wwl error                      # Watch error logs
@@ -549,50 +551,50 @@ workway logs --tail
 
 ### Development Cycle (Most Common)
 
-| Alias | Command | Purpose |
-|-------|---------|---------|
-| `wd` | `workway dev` | Start dev server |
-| `wt` | `workway test` | Run tests |
+| Alias | Command          | Purpose              |
+| ----- | ---------------- | -------------------- |
+| `wd`  | `workway dev`    | Start dev server     |
+| `wt`  | `workway test`   | Run tests            |
 | `wdp` | `workway deploy` | Deploy to production |
-| `wrt` | `wrangler tail` | Watch live logs |
+| `wrt` | `wrangler tail`  | Watch live logs      |
 
 ### Claude Code
 
-| Alias | Command | Purpose |
-|-------|---------|---------|
-| `cc` | `claude` | New session |
-| `ccc` | `claude -c` | Continue previous |
-| `cco` | `claude --model opus` | Use Opus model |
+| Alias | Command               | Purpose           |
+| ----- | --------------------- | ----------------- |
+| `cc`  | `claude`              | New session       |
+| `ccc` | `claude -c`           | Continue previous |
+| `cco` | `claude --model opus` | Use Opus model    |
 
 ### Git (Quick Commits)
 
-| Alias | Command | Purpose |
-|-------|---------|---------|
-| `gs` | `git status` | Check changes |
-| `ga` | `git add -p` | Stage interactively |
-| `gc` | `git commit` | Commit |
-| `gp` | `git push` | Push to remote |
+| Alias | Command      | Purpose             |
+| ----- | ------------ | ------------------- |
+| `gs`  | `git status` | Check changes       |
+| `ga`  | `git add -p` | Stage interactively |
+| `gc`  | `git commit` | Commit              |
+| `gp`  | `git push`   | Push to remote      |
 
 ### Testing & Debugging
 
-| Function | Usage | Purpose |
-|----------|-------|---------|
-| `wtest` | `wtest` | Quick local test |
-| `wrun` | `wrun '{"key":"value"}'` | Test with inputs |
-| `wwl` | `wwl error` | Filter logs |
-| `wrte` | `wrte` | Watch errors only |
+| Function | Usage                    | Purpose           |
+| -------- | ------------------------ | ----------------- |
+| `wtest`  | `wtest`                  | Quick local test  |
+| `wrun`   | `wrun '{"key":"value"}'` | Test with inputs  |
+| `wwl`    | `wwl error`              | Filter logs       |
+| `wrte`   | `wrte`                   | Watch errors only |
 
 ### Keyboard Shortcuts (Shell)
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl+R` | Search command history |
-| `Ctrl+A` | Beginning of line |
-| `Ctrl+E` | End of line |
-| `Ctrl+K` | Delete to end |
-| `Ctrl+W` | Delete word backward |
-| `!!` | Repeat last command |
-| `!$` | Last argument of previous |
+| Shortcut | Action                    |
+| -------- | ------------------------- |
+| `Ctrl+R` | Search command history    |
+| `Ctrl+A` | Beginning of line         |
+| `Ctrl+E` | End of line               |
+| `Ctrl+K` | Delete to end             |
+| `Ctrl+W` | Delete word backward      |
+| `!!`     | Repeat last command       |
+| `!$`     | Last argument of previous |
 
 ## Praxis
 

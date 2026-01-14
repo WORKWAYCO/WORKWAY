@@ -75,6 +75,7 @@ inputs: {
 ```
 
 **Notice the pattern:**
+
 1. Only 2 required fields (`notionDatabaseId`, `slackChannel`)
 2. Everything else has sensible defaults
 3. Optional features default to `false`
@@ -308,6 +309,7 @@ googleCalendar: {
 ```
 
 **Available picker types**:
+
 - `notion:database` - User's Notion databases
 - `notion:page` - User's Notion pages
 - `slack:channel` - Slack channels user can access
@@ -535,6 +537,7 @@ inputs: {
 ```
 
 **Why it works:**
+
 - Only 1 required field (the database)
 - `includeRefunds` defaults to `true` because most users want this
 - Simple select options instead of complex object arrays
@@ -591,6 +594,7 @@ inputs: {
 ```
 
 **Notice:**
+
 - Select options use `{ value, label }` format for clarity
 - Optional fields like `assigneeEmail` use `required: false`
 - AI features default to `true` (users can disable if needed)
@@ -653,6 +657,7 @@ inputs: {
 ```
 
 **Pattern insights:**
+
 - Boolean groups for related features (reminder48h, reminder24h, reminder2h)
 - `textarea` type for multi-line template content
 - Number with business-meaningful default (70% threshold)
@@ -689,6 +694,7 @@ pathway: {
 ```
 
 **The philosophy:**
+
 - `essentialFields` defines what users MUST configure
 - `smartDefaults` pre-fills everything else
 - `zuhandenheit.worksOutOfBox: true` means the workflow functions immediately
@@ -876,6 +882,7 @@ Design a config schema for one of your outcome statements from the earlier lesso
 > **Praxis**: Ask Claude Code: "Help me design a configSchema for a workflow that [your outcome]"
 
 Follow these principles:
+
 1. Start with the minimum required fields
 2. Add sensible defaults for everything optional
 3. Use pickers where possible instead of text input

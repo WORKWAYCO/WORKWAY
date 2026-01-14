@@ -16,14 +16,14 @@ Single automations move data A → B. Compound workflows orchestrate complete ou
 
 ## WORKWAY vs Traditional Automation
 
-| Aspect | Zapier/Make | WORKWAY Compound |
-|--------|-------------|------------------|
-| Architecture | Step-by-step chains | Parallel + sequential orchestration |
-| Failure handling | Entire chain fails | Partial success with graceful degradation |
-| AI integration | Separate AI zaps | Native Workers AI, same execution |
-| State management | Stateless | Persistent storage across runs |
-| Customization | Visual builder limits | Full TypeScript flexibility |
-| Execution model | Per-step pricing | Single workflow execution |
+| Aspect           | Zapier/Make           | WORKWAY Compound                          |
+| ---------------- | --------------------- | ----------------------------------------- |
+| Architecture     | Step-by-step chains   | Parallel + sequential orchestration       |
+| Failure handling | Entire chain fails    | Partial success with graceful degradation |
+| AI integration   | Separate AI zaps      | Native Workers AI, same execution         |
+| State management | Stateless             | Persistent storage across runs            |
+| Customization    | Visual builder limits | Full TypeScript flexibility               |
+| Execution model  | Per-step pricing      | Single workflow execution                 |
 
 ## Step-by-Step: Design a Compound Workflow
 
@@ -198,6 +198,7 @@ A → B  (one service to another)
 ```
 
 But real work doesn't happen in isolation. A meeting ends and you need:
+
 - Notes saved to Notion
 - Summary posted to Slack
 - Follow-up email drafted
@@ -215,13 +216,13 @@ Trigger → Sequential Processing → Parallel Fanout → Result
             (AI summary)         (Notion + Slack + Email + CRM)
 ```
 
-| Aspect | Point-to-Point | Compound |
-|--------|----------------|----------|
-| Executions | 5 separate | 1 unified |
-| Error handling | Each fails independently | Partial success patterns |
-| AI context | Lost between steps | Shared across all outputs |
-| Debugging | 5 different logs | Single execution trace |
-| Cost | 5× trigger fees | 1× execution fee |
+| Aspect         | Point-to-Point           | Compound                  |
+| -------------- | ------------------------ | ------------------------- |
+| Executions     | 5 separate               | 1 unified                 |
+| Error handling | Each fails independently | Partial success patterns  |
+| AI context     | Lost between steps       | Shared across all outputs |
+| Debugging      | 5 different logs         | Single execution trace    |
+| Cost           | 5× trigger fees          | 1× execution fee          |
 
 ### Why This Matters for Developers
 
@@ -249,11 +250,13 @@ The user describes the outcome, not the mechanism. All five services recede into
 ## The Compound Advantage
 
 Simple workflow:
+
 ```
 Meeting ends → Create Notion page
 ```
 
 Compound workflow:
+
 ```
 Meeting ends →
   ├── Notion page with AI summary
@@ -267,13 +270,13 @@ Five services. One trigger. Complete outcome.
 
 ## Orchestration Patterns
 
-| Pattern | When to Use | Trade-offs |
-|---------|-------------|------------|
-| Sequential | Each step needs previous result | Slower, but data flows naturally |
-| Parallel | Independent outputs | Faster, but requires error isolation |
-| Mixed | Sequential core + parallel fanout | Best of both, more complex |
-| Fan-out | One input → multiple outputs | Scales well, needs aggregation |
-| Saga | All-or-nothing transactions | Safe rollback, more code |
+| Pattern    | When to Use                       | Trade-offs                           |
+| ---------- | --------------------------------- | ------------------------------------ |
+| Sequential | Each step needs previous result   | Slower, but data flows naturally     |
+| Parallel   | Independent outputs               | Faster, but requires error isolation |
+| Mixed      | Sequential core + parallel fanout | Best of both, more complex           |
+| Fan-out    | One input → multiple outputs      | Scales well, needs aggregation       |
+| Saga       | All-or-nothing transactions       | Safe rollback, more code             |
 
 ### Sequential Steps
 
@@ -477,39 +480,39 @@ Multiple workflows in a single file (from `packages/workflows/src/standup-bot/in
 
 ```typescript
 // Real example: packages/workflows/src/standup-bot/index.ts
-import { defineWorkflow, schedule, webhook } from '@workwayco/sdk';
+import { defineWorkflow, schedule, webhook } from "@workwayco/sdk";
 
 // Workflow 1: Post standup prompt in the morning
 export default defineWorkflow({
-  name: 'Standup Reminder Bot',
-  description: 'Collect and share daily standups in Slack',
+  name: "Standup Reminder Bot",
+  description: "Collect and share daily standups in Slack",
 
   integrations: [
-    { service: 'slack', scopes: ['send_messages', 'read_messages'] },
-    { service: 'notion', scopes: ['write_pages', 'read_databases'] },
+    { service: "slack", scopes: ["send_messages", "read_messages"] },
+    { service: "notion", scopes: ["write_pages", "read_databases"] },
   ],
 
   inputs: {
     standupChannel: {
-      type: 'text',
-      label: 'Standup Channel',
+      type: "text",
+      label: "Standup Channel",
       required: true,
     },
     standupTime: {
-      type: 'time',
-      label: 'Standup Prompt Time',
-      default: '09:00',
+      type: "time",
+      label: "Standup Prompt Time",
+      default: "09:00",
     },
     timezone: {
-      type: 'timezone',
-      label: 'Timezone',
-      default: 'America/New_York',
+      type: "timezone",
+      label: "Timezone",
+      default: "America/New_York",
     },
   },
 
   trigger: schedule({
-    cron: '0 {{inputs.standupTime.hour}} * * 1-5',  // Weekdays
-    timezone: '{{inputs.timezone}}',
+    cron: "0 {{inputs.standupTime.hour}} * * 1-5", // Weekdays
+    timezone: "{{inputs.timezone}}",
   }),
 
   async execute({ inputs, integrations }) {
@@ -527,22 +530,26 @@ export default defineWorkflow({
 
 // Workflow 2: Collect responses and post summary
 export const standupSummary = defineWorkflow({
-  name: 'Standup Summary',
-  description: 'Collect standup responses and post summary',
+  name: "Standup Summary",
+  description: "Collect standup responses and post summary",
 
   integrations: [
-    { service: 'slack', scopes: ['read_messages', 'send_messages'] },
+    { service: "slack", scopes: ["read_messages", "send_messages"] },
   ],
 
   inputs: {
-    standupChannel: { type: 'text', label: 'Standup Channel', required: true },
-    summaryTime: { type: 'time', label: 'Summary Time', default: '10:00' },
-    timezone: { type: 'timezone', label: 'Timezone', default: 'America/New_York' },
+    standupChannel: { type: "text", label: "Standup Channel", required: true },
+    summaryTime: { type: "time", label: "Summary Time", default: "10:00" },
+    timezone: {
+      type: "timezone",
+      label: "Timezone",
+      default: "America/New_York",
+    },
   },
 
   trigger: schedule({
-    cron: '0 {{inputs.summaryTime.hour}} * * 1-5',
-    timezone: '{{inputs.timezone}}',
+    cron: "0 {{inputs.summaryTime.hour}} * * 1-5",
+    timezone: "{{inputs.timezone}}",
   }),
 
   async execute({ inputs, integrations }) {
@@ -784,6 +791,7 @@ Study real compound workflows in the WORKWAY codebase:
 > **Praxis**: Ask Claude Code: "Show me the meeting-intelligence workflow in packages/workflows/src/meeting-intelligence/index.ts"
 
 This workflow demonstrates compound patterns:
+
 - Multiple triggers (cron + webhook)
 - Sequential data fetching → AI processing → multi-service output
 - Graceful degradation for optional integrations (HubSpot CRM)

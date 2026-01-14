@@ -25,24 +25,24 @@ Cloudflare Workers use the standard Web Console API for logging. In the V8 isola
 
 ```typescript
 export default defineWorkflow({
-  name: 'meeting-notes',
+  name: "meeting-notes",
 
   async execute({ trigger, integrations }) {
     // Standard console methods work in Workers
-    console.log('Workflow started', { triggerId: trigger.id });
-    console.warn('Potential issue detected');
-    console.error('Critical failure', { error: 'details' });
+    console.log("Workflow started", { triggerId: trigger.id });
+    console.warn("Potential issue detected");
+    console.error("Critical failure", { error: "details" });
 
     // Objects are automatically serialized
     console.log({
       nested: {
         data: trigger.data,
-        timestamp: new Date().toISOString()
-      }
+        timestamp: new Date().toISOString(),
+      },
     });
 
     return { success: true };
-  }
+  },
 });
 ```
 
@@ -65,6 +65,7 @@ wrangler tail --format json
 ```
 
 Example output:
+
 ```
 [2024-01-15 10:00:01] GET https://workway.co/webhooks/zoom
 [2024-01-15 10:00:01] (log) Workflow started { triggerId: "wh_abc123" }
@@ -98,14 +99,14 @@ The Cloudflare Dashboard provides aggregate analytics for your Workers:
 
 Navigate to **Workers & Pages → Your Worker → Analytics**:
 
-| Metric | Description |
-|--------|-------------|
-| **Requests** | Total invocations over time |
-| **Success rate** | Percentage of non-error responses |
-| **Median CPU time** | Typical CPU usage per request |
-| **P99 CPU time** | Worst-case CPU usage |
-| **Duration** | Wall-clock execution time |
-| **Errors** | Breakdown by error type |
+| Metric              | Description                       |
+| ------------------- | --------------------------------- |
+| **Requests**        | Total invocations over time       |
+| **Success rate**    | Percentage of non-error responses |
+| **Median CPU time** | Typical CPU usage per request     |
+| **P99 CPU time**    | Worst-case CPU usage              |
+| **Duration**        | Wall-clock execution time         |
+| **Errors**          | Breakdown by error type           |
 
 ### Useful Dashboard Views
 
@@ -137,6 +138,7 @@ workway executions --status failed --limit 10
 ```
 
 Output:
+
 ```
 ID          TRIGGER     STATUS    DURATION   TIME
 ex_abc123   webhook     failed    0.8s       10:15
@@ -153,6 +155,7 @@ workway execution ex_abc123
 ```
 
 Output:
+
 ```
 Execution: ex_abc123
 Status: failed
@@ -281,12 +284,12 @@ metadata: {
 
 ## The Observability Stack
 
-| Layer | What It Shows |
-|-------|---------------|
+| Layer   | What It Shows                             |
+| ------- | ----------------------------------------- |
 | Metrics | Aggregate health (success rates, latency) |
-| Logs | Individual execution details |
-| Traces | Request flow through steps |
-| Alerts | Proactive problem notification |
+| Logs    | Individual execution details              |
+| Traces  | Request flow through steps                |
+| Alerts  | Proactive problem notification            |
 
 ## WORKWAY Dashboard
 
@@ -314,6 +317,7 @@ workway.co/workflows/{workflow-id}/executions
 ```
 
 Click any execution to see:
+
 - Full request/response
 - Step-by-step execution
 - Logs generated
@@ -338,10 +342,10 @@ Always include relevant context:
 
 ```typescript
 // Bad: No context
-context.log.info('Processing meeting');
+context.log.info("Processing meeting");
 
 // Good: Includes identifiers
-context.log.info('Processing meeting', {
+context.log.info("Processing meeting", {
   meetingId: meeting.id,
   topic: meeting.topic,
   participants: meeting.participants.length,
@@ -390,7 +394,7 @@ Capture full error context:
 try {
   await notion.createPage(pageData);
 } catch (error) {
-  context.log.error('Failed to create Notion page', {
+  context.log.error("Failed to create Notion page", {
     error: error.message,
     errorCode: error.code,
     stack: error.stack,
@@ -433,12 +437,12 @@ workway logs --level error --tail
 
 Configure at `workway.co/workflows/{workflow-id}/alerts`:
 
-| Alert Type | Trigger |
-|------------|---------|
-| Error spike | >10% error rate in 5 minutes |
-| Execution failure | Any execution fails |
-| Latency | Avg duration >10s |
-| No executions | No runs in 24 hours |
+| Alert Type        | Trigger                      |
+| ----------------- | ---------------------------- |
+| Error spike       | >10% error rate in 5 minutes |
+| Execution failure | Any execution fails          |
+| Latency           | Avg duration >10s            |
+| No executions     | No runs in 24 hours          |
 
 ### Custom Alert Conditions
 
@@ -524,10 +528,10 @@ curl localhost:8787/execute -d @payload.json
 
 ```typescript
 // Add retry logic
-const page = await withRetry(
-  () => notion.createPage(pageData),
-  { maxAttempts: 3, delayMs: 2000 }
-);
+const page = await withRetry(() => notion.createPage(pageData), {
+  maxAttempts: 3,
+  delayMs: 2000,
+});
 ```
 
 ```bash
@@ -583,6 +587,7 @@ async execute({ context }) {
 ```
 
 Set via environment:
+
 ```bash
 workway env set DEBUG_MODE true
 ```
@@ -700,10 +705,12 @@ View at `workway.co/workflows/{workflow-id}/metrics`:
 
 ```markdown
 ## Incident: Meeting notes workflow failure
+
 **Duration**: 10:00 - 10:45 (45 min)
 **Impact**: ~30 meetings not processed
 
 ### Timeline
+
 - 10:00 - Notion API rate limit changes deployed by Notion
 - 10:05 - Workflow error rate spikes to 80%
 - 10:10 - Alert fires to Slack
@@ -713,6 +720,7 @@ View at `workway.co/workflows/{workflow-id}/metrics`:
 - 10:45 - Error rate returns to 0%
 
 ### Action Items
+
 - [ ] Add rate limit monitoring for all integrations
 - [ ] Implement automatic backoff on 429 responses
 - [ ] Create runbook for integration rate limits
@@ -765,6 +773,7 @@ async execute({ context }) {
 ```
 
 Configure alerts at `workway.co/workflows/{id}/alerts` for:
+
 - Error rate > 5%
 - Latency > 10 seconds
 - No executions in 24 hours

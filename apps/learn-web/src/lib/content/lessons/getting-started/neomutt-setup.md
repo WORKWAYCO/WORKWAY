@@ -35,12 +35,12 @@ Claude Code will generate the config, walk you through App Password setup, and e
 
 ## Why Terminal Email?
 
-| Traditional Email | Terminal Email |
-|-------------------|----------------|
-| Context switch to browser | Stay in terminal |
-| Mouse-driven | Keyboard-driven |
-| Notifications interrupt | Check when ready |
-| Isolated from dev tools | Pipeable, scriptable |
+| Traditional Email         | Terminal Email       |
+| ------------------------- | -------------------- |
+| Context switch to browser | Stay in terminal     |
+| Mouse-driven              | Keyboard-driven      |
+| Notifications interrupt   | Check when ready     |
+| Isolated from dev tools   | Pipeable, scriptable |
 
 ## Installation
 
@@ -136,18 +136,18 @@ mkdir -p ~/.cache/neomutt
 
 ## Essential Commands
 
-| Key | Action |
-|-----|--------|
-| `j/k` | Move down/up |
-| `Enter` | Open message |
-| `r` | Reply |
-| `g` | Group reply |
-| `m` | Compose new |
-| `d` | Delete |
-| `s` | Save to folder |
-| `q` | Quit |
-| `/` | Search |
-| `$` | Sync mailbox |
+| Key     | Action         |
+| ------- | -------------- |
+| `j/k`   | Move down/up   |
+| `Enter` | Open message   |
+| `r`     | Reply          |
+| `g`     | Group reply    |
+| `m`     | Compose new    |
+| `d`     | Delete         |
+| `s`     | Save to folder |
+| `q`     | Quit           |
+| `/`     | Search         |
+| `$`     | Sync mailbox   |
 
 ## Launch Neomutt
 
@@ -253,12 +253,12 @@ for (const email of emails) {
 
 Every email action you take manually is a candidate for automation. Apply the Outcome Test:
 
-| Manual Action in Neomutt | Outcome Statement (No Tech) |
-|--------------------------|---------------------------|
+| Manual Action in Neomutt      | Outcome Statement (No Tech)        |
+| ----------------------------- | ---------------------------------- |
 | `/~s "meeting" ; s +meetings` | Meeting emails organize themselves |
-| `r` (reply to client) | Clients receive acknowledgment |
-| `\| extract-invoice.sh` | Invoices become Notion entries |
-| `d` (delete newsletters) | Newsletter noise disappears |
+| `r` (reply to client)         | Clients receive acknowledgment     |
+| `\| extract-invoice.sh`       | Invoices become Notion entries     |
+| `d` (delete newsletters)      | Newsletter noise disappears        |
 
 The workflow opportunity: Which of these actions could run without you?
 
@@ -267,6 +267,7 @@ The workflow opportunity: Which of these actions could run without you?
 Email plays two roles in WORKWAY:
 
 **Email as Trigger** (workflow starts from email):
+
 ```typescript
 // Poll for new labeled emails
 trigger: schedule({
@@ -282,6 +283,7 @@ async execute({ integrations }) {
 ```
 
 **Email as Action** (workflow sends email):
+
 ```typescript
 // Workflow sends email after other events
 async execute({ trigger, integrations }) {
@@ -301,14 +303,14 @@ async execute({ trigger, integrations }) {
 
 When exploring email in Neomutt, think about automation patterns:
 
-| Key | Action | Workflow Translation |
-|-----|--------|---------------------|
-| `/` | Search | Gmail API query filter |
-| `t` | Tag | Label assignment |
-| `;` | Apply to tagged | Batch processing loop |
-| `\|` | Pipe | Workflow execute() |
-| `c` | Change folder | Different label triggers |
-| `$` | Sync | Poll-based trigger |
+| Key  | Action          | Workflow Translation     |
+| ---- | --------------- | ------------------------ |
+| `/`  | Search          | Gmail API query filter   |
+| `t`  | Tag             | Label assignment         |
+| `;`  | Apply to tagged | Batch processing loop    |
+| `\|` | Pipe            | Workflow execute()       |
+| `c`  | Change folder   | Different label triggers |
+| `$`  | Sync            | Poll-based trigger       |
 
 ## Praxis
 
@@ -319,12 +321,14 @@ Install Neomutt and configure it for your Gmail account:
 ### Part 1: Setup
 
 Follow these steps:
+
 1. Install Neomutt via your package manager
 2. Enable IMAP in Gmail settings
 3. Generate a Gmail App Password
 4. Create the config file at `~/.config/neomutt/neomuttrc`
 
 Launch Neomutt and practice:
+
 - Navigate with `j/k`
 - Open a message with `Enter`
 - Search with `/`
@@ -335,6 +339,7 @@ Launch Neomutt and practice:
 Once Neomutt is running, identify email patterns for automation:
 
 1. **Search for recurring patterns**:
+
    ```
    /~s "invoice"      # Find all invoices
    /~s "meeting"      # Find meeting-related emails

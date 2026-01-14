@@ -19,7 +19,7 @@ A workflow without a trigger is just code. Triggers define when your workflow sp
 ### Step 1: Import the Trigger Helper
 
 ```typescript
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { defineWorkflow, webhook } from "@workwayco/sdk";
 // or: schedule, manual, poll
 ```
 
@@ -29,11 +29,11 @@ Add a trigger to your workflow definition:
 
 ```typescript
 export default defineWorkflow({
-  name: 'My Workflow',
+  name: "My Workflow",
 
   trigger: webhook({
-    service: 'zoom',
-    event: 'meeting.ended',
+    service: "zoom",
+    event: "meeting.ended",
   }),
 
   async execute({ trigger }) {
@@ -102,30 +102,36 @@ curl http://localhost:8787/execute \
 
 ## Trigger Types
 
-| Type | When It Fires |
-|------|---------------|
-| Webhook | External service sends HTTP request |
+| Type     | When It Fires                        |
+| -------- | ------------------------------------ |
+| Webhook  | External service sends HTTP request  |
 | Schedule | Scheduled time (daily, hourly, etc.) |
-| Manual | User clicks "Run" or API call |
-| Poll | Periodic API checks |
+| Manual   | User clicks "Run" or API call        |
+| Poll     | Periodic API checks                  |
 
 ### Choosing the Right Trigger
 
-| Scenario | Trigger | Why |
-|----------|---------|-----|
-| Payment received | Webhook | Real-time, event-driven |
-| Daily digest email | Schedule | Fixed time, no external event |
-| On-demand report | Manual | User-initiated |
-| Check for new leads | Poll | Service lacks webhooks |
-| Meeting just ended | Webhook | Immediate processing needed |
-| Weekly cleanup | Schedule | Routine maintenance |
+| Scenario            | Trigger  | Why                           |
+| ------------------- | -------- | ----------------------------- |
+| Payment received    | Webhook  | Real-time, event-driven       |
+| Daily digest email  | Schedule | Fixed time, no external event |
+| On-demand report    | Manual   | User-initiated                |
+| Check for new leads | Poll     | Service lacks webhooks        |
+| Meeting just ended  | Webhook  | Immediate processing needed   |
+| Weekly cleanup      | Schedule | Routine maintenance           |
 
 ## Trigger Helpers
 
 WORKWAY provides helper functions for creating triggers:
 
 ```typescript
-import { defineWorkflow, webhook, schedule, manual, poll } from '@workwayco/sdk';
+import {
+  defineWorkflow,
+  webhook,
+  schedule,
+  manual,
+  poll,
+} from "@workwayco/sdk";
 ```
 
 ## Webhook Triggers
@@ -134,21 +140,21 @@ Most common. External services call your workflow:
 
 ```typescript
 // From: packages/workflows/src/stripe-to-notion/index.ts
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { defineWorkflow, webhook } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Stripe to Notion',
+  name: "Stripe to Notion",
 
   // Single event
   trigger: webhook({
-    service: 'stripe',
-    event: 'payment_intent.succeeded',
+    service: "stripe",
+    event: "payment_intent.succeeded",
   }),
 
   // OR multiple events (from real stripe-to-notion workflow)
   trigger: webhook({
-    service: 'stripe',
-    events: ['payment_intent.succeeded', 'charge.refunded'],
+    service: "stripe",
+    events: ["payment_intent.succeeded", "charge.refunded"],
   }),
 
   async execute({ trigger }) {
@@ -165,6 +171,7 @@ export default defineWorkflow({
 Each provider sends different data:
 
 **Zoom meeting.ended**:
+
 ```json
 {
   "event": "meeting.ended",
@@ -180,6 +187,7 @@ Each provider sends different data:
 ```
 
 **Stripe payment_intent.succeeded**:
+
 ```json
 {
   "type": "payment_intent.succeeded",
@@ -209,16 +217,16 @@ Run on a schedule using cron expressions:
 
 ```typescript
 // From: packages/workflows/src/standup-bot/index.ts
-import { defineWorkflow, schedule } from '@workwayco/sdk';
+import { defineWorkflow, schedule } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Standup Reminder Bot',
-  description: 'Collect and share daily standups in Slack',
+  name: "Standup Reminder Bot",
+  description: "Collect and share daily standups in Slack",
 
   // Object pattern with timezone (recommended)
   trigger: schedule({
-    cron: '0 {{inputs.standupTime.hour}} * * 1-5',  // Weekdays
-    timezone: '{{inputs.timezone}}',
+    cron: "0 {{inputs.standupTime.hour}} * * 1-5", // Weekdays
+    timezone: "{{inputs.timezone}}",
   }),
 
   async execute({ inputs, integrations }) {
@@ -234,9 +242,9 @@ export default defineWorkflow({
 
 // Positional pattern (also valid)
 export default defineWorkflow({
-  name: 'Daily Report',
+  name: "Daily Report",
 
-  trigger: schedule('0 9 * * *'),  // 9 AM UTC daily
+  trigger: schedule("0 9 * * *"), // 9 AM UTC daily
 
   async execute({ trigger }) {
     const reportDate = new Date(trigger.timestamp);
@@ -259,14 +267,14 @@ export default defineWorkflow({
 
 **Common patterns**:
 
-| Schedule | Cron Expression |
-|----------|-----------------|
-| Every hour | `0 * * * *` |
-| Daily at 9 AM | `0 9 * * *` |
-| Weekly Monday 8 AM | `0 8 * * 1` |
-| First of month | `0 0 1 * *` |
-| Every 15 minutes | `*/15 * * * *` |
-| Weekdays at noon | `0 12 * * 1-5` |
+| Schedule           | Cron Expression |
+| ------------------ | --------------- |
+| Every hour         | `0 * * * *`     |
+| Daily at 9 AM      | `0 9 * * *`     |
+| Weekly Monday 8 AM | `0 8 * * 1`     |
+| First of month     | `0 0 1 * *`     |
+| Every 15 minutes   | `*/15 * * * *`  |
+| Weekdays at noon   | `0 12 * * 1-5`  |
 
 ### User-Configurable Schedules
 
@@ -298,21 +306,21 @@ trigger: schedule({
 User-initiated runs via API or dashboard:
 
 ```typescript
-import { defineWorkflow, manual } from '@workwayco/sdk';
+import { defineWorkflow, manual } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Generate Report',
+  name: "Generate Report",
 
-  trigger: manual({ description: 'Run monthly report generation' }),
+  trigger: manual({ description: "Run monthly report generation" }),
 
   // Manual triggers can use input parameters
   inputs: {
     reportType: {
-      type: 'select',
-      label: 'Report Type',
+      type: "select",
+      label: "Report Type",
       options: [
-        { value: 'weekly', label: 'Weekly Summary' },
-        { value: 'monthly', label: 'Monthly Summary' },
+        { value: "weekly", label: "Weekly Summary" },
+        { value: "monthly", label: "Monthly Summary" },
       ],
     },
   },
@@ -332,29 +340,29 @@ Periodically check an API for new data when webhooks aren't available:
 
 ```typescript
 // From: packages/workflows/src/feedback-analyzer/index.ts
-import { defineWorkflow, poll } from '@workwayco/sdk';
+import { defineWorkflow, poll } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Customer Feedback Analyzer',
-  description: 'AI analyzes customer feedback and extracts insights',
+  name: "Customer Feedback Analyzer",
+  description: "AI analyzes customer feedback and extracts insights",
 
   inputs: {
     emailQuery: {
-      type: 'string',
-      label: 'Gmail Search Query',
-      default: 'subject:(feedback OR review) is:unread',
+      type: "string",
+      label: "Gmail Search Query",
+      default: "subject:(feedback OR review) is:unread",
     },
     pollInterval: {
-      type: 'select',
-      label: 'Check Frequency',
-      options: ['5min', '15min', '30min', '1hour'],
-      default: '15min',
+      type: "select",
+      label: "Check Frequency",
+      options: ["5min", "15min", "30min", "1hour"],
+      default: "15min",
     },
   },
 
   // User-configurable poll interval via template interpolation
   trigger: poll({
-    interval: '{{inputs.pollInterval}}',
+    interval: "{{inputs.pollInterval}}",
   }),
 
   async execute({ inputs, integrations }) {
@@ -365,7 +373,7 @@ export default defineWorkflow({
     });
 
     if (!emails.success || !emails.data?.length) {
-      return { success: true, processed: 0, message: 'No new feedback' };
+      return { success: true, processed: 0, message: "No new feedback" };
     }
 
     // Process each email...
@@ -380,28 +388,28 @@ A workflow can have a primary trigger and additional webhook triggers:
 
 ```typescript
 // From: packages/workflows/src/meeting-intelligence/index.ts
-import { defineWorkflow, cron, webhook } from '@workwayco/sdk';
+import { defineWorkflow, cron, webhook } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Meeting Intelligence',
-  description: 'Sync Zoom meetings to Notion with transcripts and AI summaries',
+  name: "Meeting Intelligence",
+  description: "Sync Zoom meetings to Notion with transcripts and AI summaries",
 
   // Primary trigger: daily cron
   trigger: cron({
-    schedule: '0 7 * * *',  // 7 AM UTC daily
-    timezone: 'UTC',
+    schedule: "0 7 * * *", // 7 AM UTC daily
+    timezone: "UTC",
   }),
 
   // Additional webhook triggers
   webhooks: [
     webhook({
-      service: 'zoom',
-      event: 'recording.completed',
+      service: "zoom",
+      event: "recording.completed",
     }),
   ],
 
   async execute({ trigger, inputs, integrations }) {
-    const isWebhookTrigger = trigger.type === 'webhook';
+    const isWebhookTrigger = trigger.type === "webhook";
 
     if (isWebhookTrigger) {
       // Real-time: process single meeting from webhook
@@ -697,6 +705,7 @@ trigger: poll({
 ```
 
 Practice writing cron expressions:
+
 - Every hour: `0 * * * *`
 - Weekdays at 9 AM: `0 9 * * 1-5`
 - Every 15 minutes: `*/15 * * * *`

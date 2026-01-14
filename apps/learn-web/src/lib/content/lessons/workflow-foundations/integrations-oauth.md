@@ -116,9 +116,9 @@ Every SaaS API requires authentication. Without abstraction:
 
 ```typescript
 // Without WORKWAY - manual OAuth hell
-const tokens = await refreshOAuthTokens(userId, 'zoom');
-const response = await fetch('https://api.zoom.us/v2/meetings', {
-  headers: { 'Authorization': `Bearer ${tokens.access_token}` }
+const tokens = await refreshOAuthTokens(userId, "zoom");
+const response = await fetch("https://api.zoom.us/v2/meetings", {
+  headers: { Authorization: `Bearer ${tokens.access_token}` },
 });
 if (response.status === 401) {
   // Token expired mid-request? Refresh and retry...
@@ -160,37 +160,37 @@ WORKWAY handles steps 2-6. Your workflow just uses the integration.
 
 WORKWAY provides 20+ production integrations. Here are the most commonly used:
 
-| Integration | Capabilities |
-|-------------|--------------|
-| `zoom` | Meetings, recordings, clips |
-| `notion` | Pages, databases, blocks, tasks |
-| `slack` | Messages, channels, users, threads |
-| `google-sheets` | Read, write, format spreadsheets |
-| `stripe` | Payments, customers, subscriptions |
-| `hubspot` | Contacts, deals, companies |
-| `linear` | Issues, projects, teams |
-| `github` | Repos, issues, PRs, commits |
-| `airtable` | Bases, tables, records |
-| `discord` | Messages, channels, guilds |
-| `calendly` | Events, scheduling |
-| `typeform` | Forms, responses |
-| `todoist` | Tasks, projects |
+| Integration     | Capabilities                       |
+| --------------- | ---------------------------------- |
+| `zoom`          | Meetings, recordings, clips        |
+| `notion`        | Pages, databases, blocks, tasks    |
+| `slack`         | Messages, channels, users, threads |
+| `google-sheets` | Read, write, format spreadsheets   |
+| `stripe`        | Payments, customers, subscriptions |
+| `hubspot`       | Contacts, deals, companies         |
+| `linear`        | Issues, projects, teams            |
+| `github`        | Repos, issues, PRs, commits        |
+| `airtable`      | Bases, tables, records             |
+| `discord`       | Messages, channels, guilds         |
+| `calendly`      | Events, scheduling                 |
+| `typeform`      | Forms, responses                   |
+| `todoist`       | Tasks, projects                    |
 
 **Industry-Specific:**
 
-| Integration | Use Case |
-|-------------|----------|
-| `procore` | Construction management |
-| `sikka` | Dental practice management |
-| `nexhealth` | Healthcare scheduling |
-| `follow-up-boss` | Real estate CRM |
-| `quickbooks` | Accounting |
-| `docusign` | Document signing |
+| Integration      | Use Case                   |
+| ---------------- | -------------------------- |
+| `procore`        | Construction management    |
+| `sikka`          | Dental practice management |
+| `nexhealth`      | Healthcare scheduling      |
+| `follow-up-boss` | Real estate CRM            |
+| `quickbooks`     | Accounting                 |
+| `docusign`       | Document signing           |
 
 **AI Integration:**
 
-| Integration | Capabilities |
-|-------------|--------------|
+| Integration  | Capabilities                                   |
+| ------------ | ---------------------------------------------- |
 | `workers-ai` | Text generation, summarization, classification |
 
 ## Using Integrations
@@ -233,14 +233,17 @@ import {
   IntegrationError,
   ErrorCode,
   createErrorFromResponse,
-} from '@workwayco/sdk';
+} from "@workwayco/sdk";
 
 export interface TokenRefreshHandler {
   refreshToken: string;
   tokenEndpoint: string;
   clientId: string;
   clientSecret: string;
-  onTokenRefreshed: (newAccessToken: string, newRefreshToken?: string) => void | Promise<void>;
+  onTokenRefreshed: (
+    newAccessToken: string,
+    newRefreshToken?: string,
+  ) => void | Promise<void>;
 }
 
 export interface BaseClientConfig {
@@ -273,14 +276,14 @@ export abstract class BaseAPIClient {
     path: string,
     options: RequestInit = {},
     additionalHeaders: Record<string, string> = {},
-    isRetry = false
+    isRetry = false,
   ): Promise<Response> {
     const url = `${this.apiUrl}${path}`;
     const headers = new Headers(options.headers);
 
     // Standard headers
-    headers.set('Authorization', `Bearer ${this.accessToken}`);
-    headers.set('Content-Type', 'application/json');
+    headers.set("Authorization", `Bearer ${this.accessToken}`);
+    headers.set("Content-Type", "application/json");
 
     // Integration-specific headers (e.g., Notion-Version, Stripe-Version)
     for (const [key, value] of Object.entries(additionalHeaders)) {
@@ -307,46 +310,79 @@ export abstract class BaseAPIClient {
 
       return response;
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new IntegrationError(ErrorCode.TIMEOUT,
+      if (error instanceof Error && error.name === "AbortError") {
+        throw new IntegrationError(
+          ErrorCode.TIMEOUT,
           `Request timed out after ${this.timeout}ms`,
-          { retryable: true });
+          { retryable: true },
+        );
       }
-      throw new IntegrationError(ErrorCode.NETWORK_ERROR,
+      throw new IntegrationError(
+        ErrorCode.NETWORK_ERROR,
         `Network request failed: ${error}`,
-        { retryable: true });
+        { retryable: true },
+      );
     } finally {
       clearTimeout(timeoutId);
     }
   }
 
   // Convenience methods for common HTTP verbs
-  protected get(path: string, headers?: Record<string, string>): Promise<Response>;
-  protected post(path: string, body?: unknown, headers?: Record<string, string>): Promise<Response>;
-  protected patch(path: string, body?: unknown, headers?: Record<string, string>): Promise<Response>;
-  protected put(path: string, body?: unknown, headers?: Record<string, string>): Promise<Response>;
-  protected delete(path: string, headers?: Record<string, string>): Promise<Response>;
+  protected get(
+    path: string,
+    headers?: Record<string, string>,
+  ): Promise<Response>;
+  protected post(
+    path: string,
+    body?: unknown,
+    headers?: Record<string, string>,
+  ): Promise<Response>;
+  protected patch(
+    path: string,
+    body?: unknown,
+    headers?: Record<string, string>,
+  ): Promise<Response>;
+  protected put(
+    path: string,
+    body?: unknown,
+    headers?: Record<string, string>,
+  ): Promise<Response>;
+  protected delete(
+    path: string,
+    headers?: Record<string, string>,
+  ): Promise<Response>;
 
   // JSON helpers that combine request + parsing + error handling
-  protected async getJson<T>(path: string, headers?: Record<string, string>): Promise<T>;
-  protected async postJson<T>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T>;
-  protected async patchJson<T>(path: string, body?: unknown, headers?: Record<string, string>): Promise<T>;
+  protected async getJson<T>(
+    path: string,
+    headers?: Record<string, string>,
+  ): Promise<T>;
+  protected async postJson<T>(
+    path: string,
+    body?: unknown,
+    headers?: Record<string, string>,
+  ): Promise<T>;
+  protected async patchJson<T>(
+    path: string,
+    body?: unknown,
+    headers?: Record<string, string>,
+  ): Promise<T>;
 }
 
 /**
  * Build a query string from an object, filtering out undefined/null values
  */
 export function buildQueryString(
-  params: Record<string, string | number | boolean | undefined | null>
+  params: Record<string, string | number | boolean | undefined | null>,
 ): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== null && value !== '') {
+    if (value !== undefined && value !== null && value !== "") {
       search.set(key, String(value));
     }
   }
   const str = search.toString();
-  return str ? `?${str}` : '';
+  return str ? `?${str}` : "";
 }
 ```
 
@@ -359,55 +395,67 @@ import {
   createActionResult,
   IntegrationError,
   ErrorCode,
-} from '@workwayco/sdk';
+} from "@workwayco/sdk";
 import {
   BaseAPIClient,
   validateAccessToken,
   createErrorHandler,
   assertResponseOk,
-} from '../core/index.js';
+} from "../core/index.js";
 
 /** Error handler bound to Slack integration */
-const handleError = createErrorHandler('slack');
+const handleError = createErrorHandler("slack");
 
 export class Slack extends BaseAPIClient {
   constructor(config: SlackConfig) {
-    validateAccessToken(config.accessToken, 'slack');
+    validateAccessToken(config.accessToken, "slack");
     super({
       accessToken: config.accessToken,
-      apiUrl: config.apiUrl || 'https://slack.com/api',
+      apiUrl: config.apiUrl || "https://slack.com/api",
       timeout: config.timeout,
     });
   }
 
-  async listChannels(options: ListChannelsOptions = {}): Promise<ActionResult<SlackChannel[]>> {
+  async listChannels(
+    options: ListChannelsOptions = {},
+  ): Promise<ActionResult<SlackChannel[]>> {
     const { limit = 100, cursor, excludeArchived = true } = options;
 
     try {
       const params = new URLSearchParams({
         limit: Math.min(limit, 1000).toString(),
         exclude_archived: excludeArchived.toString(),
-        types: 'public_channel,private_channel',
+        types: "public_channel,private_channel",
       });
-      if (cursor) params.set('cursor', cursor);
+      if (cursor) params.set("cursor", cursor);
 
       const response = await this.get(`/conversations.list?${params}`);
-      await assertResponseOk(response, { integration: 'slack', action: 'list-channels' });
+      await assertResponseOk(response, {
+        integration: "slack",
+        action: "list-channels",
+      });
 
-      const data = await response.json() as { ok: boolean; error?: string; channels?: SlackChannel[] };
+      const data = (await response.json()) as {
+        ok: boolean;
+        error?: string;
+        channels?: SlackChannel[];
+      };
 
       if (!data.ok) {
-        throw this.createSlackError(data.error || 'Unknown error', 'list-channels');
+        throw this.createSlackError(
+          data.error || "Unknown error",
+          "list-channels",
+        );
       }
 
       return createActionResult({
         data: data.channels || [],
-        integration: 'slack',
-        action: 'list-channels',
-        schema: 'slack.channel-list.v1',
+        integration: "slack",
+        action: "list-channels",
+        schema: "slack.channel-list.v1",
       });
     } catch (error) {
-      return handleError(error, 'list-channels');
+      return handleError(error, "list-channels");
     }
   }
 
@@ -422,7 +470,9 @@ export class Slack extends BaseAPIClient {
     };
     const code = errorMap[error] || ErrorCode.API_ERROR;
     return new IntegrationError(code, `Slack API error: ${error}`, {
-      integration: 'slack', action, providerCode: error,
+      integration: "slack",
+      action,
+      providerCode: error,
       retryable: code === ErrorCode.RATE_LIMITED,
     });
   }
@@ -437,40 +487,51 @@ export class Notion extends BaseAPIClient {
   private notionVersion: string;
 
   constructor(config: NotionConfig) {
-    validateAccessToken(config.accessToken, 'notion');
+    validateAccessToken(config.accessToken, "notion");
     super({
       accessToken: config.accessToken,
-      apiUrl: config.apiUrl || 'https://api.notion.com/v1',
+      apiUrl: config.apiUrl || "https://api.notion.com/v1",
       timeout: config.timeout,
     });
-    this.notionVersion = config.notionVersion || '2022-06-28';
+    this.notionVersion = config.notionVersion || "2022-06-28";
   }
 
   /** Notion requires version header on all requests */
   private get notionHeaders(): Record<string, string> {
-    return { 'Notion-Version': this.notionVersion };
+    return { "Notion-Version": this.notionVersion };
   }
 
   async getPage(options: GetPageOptions): Promise<ActionResult<NotionPage>> {
     if (!options.pageId) {
-      return ActionResult.error('Page ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
-        integration: 'notion', action: 'get-page',
-      });
+      return ActionResult.error(
+        "Page ID is required",
+        ErrorCode.MISSING_REQUIRED_FIELD,
+        {
+          integration: "notion",
+          action: "get-page",
+        },
+      );
     }
 
     try {
-      const response = await this.get(`/pages/${options.pageId}`, this.notionHeaders);
-      await assertResponseOk(response, { integration: 'notion', action: 'get-page' });
-      const page = await response.json() as NotionPage;
+      const response = await this.get(
+        `/pages/${options.pageId}`,
+        this.notionHeaders,
+      );
+      await assertResponseOk(response, {
+        integration: "notion",
+        action: "get-page",
+      });
+      const page = (await response.json()) as NotionPage;
 
       return createActionResult({
         data: page,
-        integration: 'notion',
-        action: 'get-page',
-        schema: 'notion.page.v1',
+        integration: "notion",
+        action: "get-page",
+        schema: "notion.page.v1",
       });
     } catch (error) {
-      return handleError(error, 'get-page');
+      return handleError(error, "get-page");
     }
   }
 }
@@ -588,15 +649,15 @@ async getMeetings(options: GetMeetingsOptions = {}): Promise<ActionResult<ZoomMe
 
 ### Benefits
 
-| Feature | What It Does |
-|---------|--------------|
-| Token Refresh | Automatically refreshes expired tokens via OAuth |
-| Retry on 401 | One retry with fresh token before failing |
-| Timeout | Configurable timeout (default: 30s) |
-| Error Wrapping | Consistent `IntegrationError` format |
-| Version Headers | Per-integration headers (Notion-Version, Stripe-Version) |
-| JSON Helpers | `getJson()`, `postJson()` combine request + parsing |
-| buildQueryString | Filters undefined/null, builds clean query strings |
+| Feature          | What It Does                                             |
+| ---------------- | -------------------------------------------------------- |
+| Token Refresh    | Automatically refreshes expired tokens via OAuth         |
+| Retry on 401     | One retry with fresh token before failing                |
+| Timeout          | Configurable timeout (default: 30s)                      |
+| Error Wrapping   | Consistent `IntegrationError` format                     |
+| Version Headers  | Per-integration headers (Notion-Version, Stripe-Version) |
+| JSON Helpers     | `getJson()`, `postJson()` combine request + parsing      |
+| buildQueryString | Filters undefined/null, builds clean query strings       |
 
 ## Integration Methods
 
@@ -653,29 +714,29 @@ const channels = await slack.listChannels({ limit: 20, excludeArchived: true });
 // Messages with Zuhandenheit time parsing
 // Developer thinks "last 24 hours" not "convert milliseconds to Unix seconds"
 const messages = await slack.getMessages({
-  channel: 'C123456',
-  since: '24h',        // Duration string: "1h", "24h", "7d"
-  humanOnly: true      // Exclude bots and system messages
+  channel: "C123456",
+  since: "24h", // Duration string: "1h", "24h", "7d"
+  humanOnly: true, // Exclude bots and system messages
 });
 
 // Or use specific dates
 const weekMessages = await slack.getMessages({
-  channel: 'C123456',
-  since: new Date('2024-01-01')
+  channel: "C123456",
+  since: new Date("2024-01-01"),
 });
 
 // Send message
 const sent = await slack.sendMessage({
-  channel: 'C123456',
-  text: 'Hello from WORKWAY!',
-  thread_ts: 'optional-thread-ts'  // For threading
+  channel: "C123456",
+  text: "Hello from WORKWAY!",
+  thread_ts: "optional-thread-ts", // For threading
 });
 
 // Users
-const user = await slack.getUser({ user: 'U123456' });
+const user = await slack.getUser({ user: "U123456" });
 
 // Search messages
-const results = await slack.searchMessages('budget meeting');
+const results = await slack.searchMessages("budget meeting");
 ```
 
 **Zuhandenheit in action**: The `humanOnly` parameter lets developers think "get what people said" instead of "filter by bot_id, subtype, and type". The `since: '24h'` syntax lets them think in human time, not Unix timestamps.
@@ -685,18 +746,18 @@ const results = await slack.searchMessages('budget meeting');
 ```typescript
 // Text generation
 const response = await ai.generateText({
-  prompt: 'Summarize this meeting transcript...',
-  maxTokens: 500
+  prompt: "Summarize this meeting transcript...",
+  maxTokens: 500,
 });
 
 // Structured extraction
 const data = await ai.extractStructured({
   text: meetingTranscript,
   schema: {
-    actionItems: 'string[]',
-    decisions: 'string[]',
-    sentiment: 'positive | neutral | negative'
-  }
+    actionItems: "string[]",
+    decisions: "string[]",
+    sentiment: "positive | neutral | negative",
+  },
 });
 ```
 
@@ -724,12 +785,12 @@ This is your escape hatch for any API.
 
 WORKWAY secures OAuth tokens:
 
-| Layer | Protection |
-|-------|------------|
-| Storage | Encrypted at rest |
-| Transit | TLS 1.3 |
-| Access | Per-workflow scope |
-| Refresh | Automatic rotation |
+| Layer      | Protection                  |
+| ---------- | --------------------------- |
+| Storage    | Encrypted at rest           |
+| Transit    | TLS 1.3                     |
+| Access     | Per-workflow scope          |
+| Refresh    | Automatic rotation          |
 | Revocation | User can disconnect anytime |
 
 Users connect once in their WORKWAY dashboard. Workflows receive pre-authenticated clients.
@@ -896,6 +957,7 @@ Then examine a specific integration:
 > "How does the Zoom integration handle token refresh and rate limiting?"
 
 Create a mental map of:
+
 1. Which integrations are available
 2. What methods each integration exposes
 3. How error handling is centralized

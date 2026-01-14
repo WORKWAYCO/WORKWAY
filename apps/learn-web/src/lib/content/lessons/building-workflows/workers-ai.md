@@ -143,12 +143,12 @@ curl localhost:8787/execute \
 
 ## Why Workers AI?
 
-| Traditional AI APIs | Workers AI |
-|--------------------:|:-----------|
-| External API calls | Runs on Cloudflare edge |
-| API key management | Built into WORKWAY |
-| Variable latency | Consistent low latency |
-| Per-token pricing | Included in Workers |
+| Traditional AI APIs | Workers AI              |
+| ------------------: | :---------------------- |
+|  External API calls | Runs on Cloudflare edge |
+|  API key management | Built into WORKWAY      |
+|    Variable latency | Consistent low latency  |
+|   Per-token pricing | Included in Workers     |
 
 ## Basic Usage
 
@@ -197,22 +197,23 @@ const analysis = await integrations.ai.generateText({
 
 let parsed;
 try {
-  parsed = JSON.parse(analysis.data?.response || '{}');
+  parsed = JSON.parse(analysis.data?.response || "{}");
 } catch {
   // Fallback when JSON parsing fails
   parsed = {
-    sentiment: 'neutral',
+    sentiment: "neutral",
     sentimentScore: 0.5,
-    category: 'other',
-    summary: 'Unable to analyze',
+    category: "other",
+    summary: "Unable to analyze",
     keyPoints: [],
-    suggestedAction: 'Manual review required',
-    priority: 'medium',
+    suggestedAction: "Manual review required",
+    priority: "medium",
   };
 }
 ```
 
 **Key patterns:**
+
 - Uses `temperature: 0.3` for consistent structured output
 - Provides explicit JSON schema in system prompt
 - Has fallback values when parsing fails
@@ -239,18 +240,24 @@ const classification = await integrations.ai.generateText({
 
 let parsed;
 try {
-  parsed = JSON.parse(classification.data?.response || '{}');
+  parsed = JSON.parse(classification.data?.response || "{}");
 } catch {
-  parsed = { category: 'general', urgency: 'medium', summary: 'Unable to classify' };
+  parsed = {
+    category: "general",
+    urgency: "medium",
+    summary: "Unable to classify",
+  };
 }
 
 const { category, urgency, summary, suggestedResponse } = parsed;
 
 // Route based on classification
-const targetChannel = inputs.routingChannels[category] || inputs.routingChannels.general;
+const targetChannel =
+  inputs.routingChannels[category] || inputs.routingChannels.general;
 ```
 
 **Key patterns:**
+
 - Limited output categories for reliable routing decisions
 - Generates both classification AND suggested response in one call
 - Falls back to safe defaults ('general', 'medium')
@@ -262,9 +269,9 @@ From `packages/workflows/src/meeting-summarizer/index.ts` — This workflow summ
 ```typescript
 // AI Analysis with configurable summary length
 const lengthInstructions = {
-  brief: 'Keep the summary to 2-3 sentences.',
-  standard: 'Provide a thorough summary in 4-6 sentences.',
-  detailed: 'Provide a comprehensive summary with all key points.',
+  brief: "Keep the summary to 2-3 sentences.",
+  standard: "Provide a thorough summary in 4-6 sentences.",
+  detailed: "Provide a comprehensive summary with all key points.",
 };
 
 const analysis = await integrations.ai.generateText({
@@ -289,6 +296,7 @@ Return as JSON:
 ```
 
 **Key patterns:**
+
 - User-configurable output length via input options
 - Extracts multiple structured data types in one call
 - Action items include optional assignee detection
@@ -302,7 +310,7 @@ Return as JSON:
 ```typescript
 async function summarizeMeeting(transcript: string, ai: any) {
   const result = await ai.generateText({
-    system: 'You are a meeting summarizer.',
+    system: "You are a meeting summarizer.",
     prompt: `Summarize this meeting transcript in 3-5 bullet points.
 Focus on decisions made and action items.
 
@@ -319,9 +327,12 @@ ${transcript}`,
 ### Email Classification
 
 ```typescript
-async function classifyEmail(email: { subject: string; body: string }, ai: any) {
+async function classifyEmail(
+  email: { subject: string; body: string },
+  ai: any,
+) {
   const result = await ai.generateText({
-    system: 'You are an email classifier. Respond with only a single word.',
+    system: "You are an email classifier. Respond with only a single word.",
     prompt: `Classify this email into one category:
 urgent, follow-up, informational, spam, or other.
 
@@ -342,7 +353,7 @@ Category:`,
 ```typescript
 async function extractActionItems(notes: string, ai: any) {
   const result = await ai.generateText({
-    system: 'Extract action items as JSON. Return only valid JSON array.',
+    system: "Extract action items as JSON. Return only valid JSON array.",
     prompt: `Extract action items from these meeting notes.
 Format as: [{"task": "...", "assignee": "...", "deadline": "..."}]
 
@@ -375,40 +386,40 @@ async function analyzeSentiment(text: string, ai: any) {
 
 ### Model Selection Guide
 
-| Task | Recommended Model | Why |
-|------|------------------|-----|
-| Meeting summaries | `LLAMA_3_8B` | Best balance of quality and speed |
-| Action item extraction | `LLAMA_3_8B` + low temp | Deterministic structured output |
-| Code generation | `CODE_LLAMA` | Trained on code, better syntax |
-| Email classification | `LLAMA_3_8B` + temp 0.1 | Single-word responses need consistency |
-| Semantic search | `BGE_BASE` | High-quality embeddings |
-| Quick embeddings | `BGE_SMALL` | Faster, slightly lower quality |
+| Task                   | Recommended Model       | Why                                    |
+| ---------------------- | ----------------------- | -------------------------------------- |
+| Meeting summaries      | `LLAMA_3_8B`            | Best balance of quality and speed      |
+| Action item extraction | `LLAMA_3_8B` + low temp | Deterministic structured output        |
+| Code generation        | `CODE_LLAMA`            | Trained on code, better syntax         |
+| Email classification   | `LLAMA_3_8B` + temp 0.1 | Single-word responses need consistency |
+| Semantic search        | `BGE_BASE`              | High-quality embeddings                |
+| Quick embeddings       | `BGE_SMALL`             | Faster, slightly lower quality         |
 
 WORKWAY provides model constants via `AIModels`:
 
 ```typescript
-import { AIModels } from '@workwayco/sdk';
+import { AIModels } from "@workwayco/sdk";
 
 // Text Generation
-AIModels.LLAMA_3_8B       // '@cf/meta/llama-3-8b-instruct'
-AIModels.LLAMA_2_7B       // '@cf/meta/llama-2-7b-chat-int8'
-AIModels.MISTRAL_7B       // '@cf/mistral/mistral-7b-instruct-v0.1'
+AIModels.LLAMA_3_8B; // '@cf/meta/llama-3-8b-instruct'
+AIModels.LLAMA_2_7B; // '@cf/meta/llama-2-7b-chat-int8'
+AIModels.MISTRAL_7B; // '@cf/mistral/mistral-7b-instruct-v0.1'
 
 // Code Generation
-AIModels.CODE_LLAMA       // '@cf/meta/codellama-7b-instruct-awq'
-AIModels.DEEPSEEK_CODER   // '@cf/deepseek-ai/deepseek-coder-6.7b-instruct-awq'
+AIModels.CODE_LLAMA; // '@cf/meta/codellama-7b-instruct-awq'
+AIModels.DEEPSEEK_CODER; // '@cf/deepseek-ai/deepseek-coder-6.7b-instruct-awq'
 
 // Embeddings
-AIModels.BGE_BASE         // '@cf/baai/bge-base-en-v1.5'
-AIModels.BGE_SMALL        // '@cf/baai/bge-small-en-v1.5'
+AIModels.BGE_BASE; // '@cf/baai/bge-base-en-v1.5'
+AIModels.BGE_SMALL; // '@cf/baai/bge-small-en-v1.5'
 ```
 
 ### Text Generation
 
 ```typescript
 const result = await ai.generateText({
-  prompt: 'Your prompt here',
-  model: AIModels.LLAMA_3_8B,  // Optional
+  prompt: "Your prompt here",
+  model: AIModels.LLAMA_3_8B, // Optional
   temperature: 0.7,
   max_tokens: 1024,
 });
@@ -419,8 +430,8 @@ const result = await ai.generateText({
 ```typescript
 // Generate embeddings for semantic search
 const result = await ai.generateEmbeddings({
-  text: 'Meeting about Q4 planning',
-  model: AIModels.BGE_BASE,  // Optional
+  text: "Meeting about Q4 planning",
+  model: AIModels.BGE_BASE, // Optional
 });
 
 // result.data is the embedding array
@@ -430,7 +441,7 @@ const result = await ai.generateEmbeddings({
 
 ```typescript
 const result = await ai.generateImage({
-  prompt: 'A professional office meeting',
+  prompt: "A professional office meeting",
   width: 1024,
   height: 768,
   steps: 20,
@@ -449,14 +460,14 @@ The SDK provides a high-level method for structured extraction:
 async function extractMeetingData(transcript: string, ai: any) {
   // Use extractStructured for guaranteed JSON output
   const result = await ai.extractStructured(transcript, {
-    topic: 'string',
-    attendees: 'string[]',
-    decisions: 'string[]',
-    action_items: 'string[]',
-    next_meeting: 'string',
+    topic: "string",
+    attendees: "string[]",
+    decisions: "string[]",
+    action_items: "string[]",
+    next_meeting: "string",
   });
 
-  return result.data;  // Typed according to schema
+  return result.data; // Typed according to schema
 }
 ```
 
@@ -467,7 +478,8 @@ For more control, use generateText with JSON prompting:
 ```typescript
 async function extractMeetingData(transcript: string, ai: any) {
   const result = await ai.generateText({
-    system: 'Extract meeting data as JSON. Return ONLY valid JSON, no explanation.',
+    system:
+      "Extract meeting data as JSON. Return ONLY valid JSON, no explanation.",
     prompt: `Extract from this transcript:
 ${transcript}
 
@@ -501,11 +513,11 @@ interface MeetingData {
 }
 
 function validateMeetingData(data: unknown): MeetingData | null {
-  if (!data || typeof data !== 'object') return null;
+  if (!data || typeof data !== "object") return null;
 
   const d = data as Record<string, unknown>;
 
-  if (typeof d.topic !== 'string') return null;
+  if (typeof d.topic !== "string") return null;
   if (!Array.isArray(d.attendees)) return null;
   if (!Array.isArray(d.decisions)) return null;
   if (!Array.isArray(d.action_items)) return null;
@@ -520,7 +532,7 @@ function validateMeetingData(data: unknown): MeetingData | null {
 
 ```typescript
 // Vague - unpredictable results
-const bad = 'Summarize this meeting';
+const bad = "Summarize this meeting";
 
 // Specific - consistent format
 const good = `Summarize this meeting in exactly 3 bullet points.
@@ -563,38 +575,38 @@ Companies:`;
 ## Complete Workflow Example
 
 ```typescript
-import { defineWorkflow, webhook, AIModels } from '@workwayco/sdk';
+import { defineWorkflow, webhook, AIModels } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Intelligent Meeting Notes',
-  description: 'AI-powered meeting summaries to Notion',
+  name: "Intelligent Meeting Notes",
+  description: "AI-powered meeting summaries to Notion",
 
   integrations: [
-    { service: 'zoom', scopes: ['meeting:read', 'recording:read'] },
-    { service: 'notion', scopes: ['read_pages', 'write_pages'] },
+    { service: "zoom", scopes: ["meeting:read", "recording:read"] },
+    { service: "notion", scopes: ["read_pages", "write_pages"] },
   ],
 
   inputs: {
     notionDatabase: {
-      type: 'text',
-      label: 'Notes Database ID',
+      type: "text",
+      label: "Notes Database ID",
       required: true,
     },
     summaryStyle: {
-      type: 'select',
-      label: 'Summary Style',
+      type: "select",
+      label: "Summary Style",
       options: [
-        { value: 'brief', label: 'Brief (3 bullets)' },
-        { value: 'detailed', label: 'Detailed (full summary)' },
-        { value: 'executive', label: 'Executive (key decisions only)' },
+        { value: "brief", label: "Brief (3 bullets)" },
+        { value: "detailed", label: "Detailed (full summary)" },
+        { value: "executive", label: "Executive (key decisions only)" },
       ],
-      default: 'brief',
+      default: "brief",
     },
   },
 
   trigger: webhook({
-    service: 'zoom',
-    event: 'recording.completed',
+    service: "zoom",
+    event: "recording.completed",
   }),
 
   async execute({ trigger, inputs, integrations }) {
@@ -605,7 +617,7 @@ export default defineWorkflow({
     const transcriptResult = await zoom.getTranscript({ meetingId });
 
     if (!transcriptResult.success) {
-      return { success: false, error: 'No transcript available' };
+      return { success: false, error: "No transcript available" };
     }
 
     const transcript = transcriptResult.data.transcript_text;
@@ -620,7 +632,7 @@ export default defineWorkflow({
 
     // AI: Extract action items using structured extraction
     const actionItems = await ai.extractStructured(transcript, {
-      actionItems: 'string[]',
+      actionItems: "string[]",
     });
 
     // Create Notion page
@@ -628,20 +640,22 @@ export default defineWorkflow({
       parent: { database_id: inputs.notionDatabase },
       properties: {
         Title: { title: [{ text: { content: trigger.data.object.topic } }] },
-        Date: { date: { start: new Date().toISOString().split('T')[0] } },
+        Date: { date: { start: new Date().toISOString().split("T")[0] } },
       },
       children: [
         {
-          type: 'heading_2',
-          heading_2: { rich_text: [{ text: { content: 'Summary' } }] },
+          type: "heading_2",
+          heading_2: { rich_text: [{ text: { content: "Summary" } }] },
         },
         {
-          type: 'paragraph',
-          paragraph: { rich_text: [{ text: { content: summary.data?.response || '' } }] },
+          type: "paragraph",
+          paragraph: {
+            rich_text: [{ text: { content: summary.data?.response || "" } }],
+          },
         },
         {
-          type: 'heading_2',
-          heading_2: { rich_text: [{ text: { content: 'Action Items' } }] },
+          type: "heading_2",
+          heading_2: { rich_text: [{ text: { content: "Action Items" } }] },
         },
         ...formatActionItems(actionItems.data?.actionItems || []),
       ],
@@ -653,16 +667,16 @@ export default defineWorkflow({
 
 function getSummarySystem(style: string): string {
   const styles: Record<string, string> = {
-    brief: 'Summarize in exactly 3 bullet points, max 20 words each.',
-    detailed: 'Provide a comprehensive summary covering all topics discussed.',
-    executive: 'List only key decisions and their business impact.',
+    brief: "Summarize in exactly 3 bullet points, max 20 words each.",
+    detailed: "Provide a comprehensive summary covering all topics discussed.",
+    executive: "List only key decisions and their business impact.",
   };
   return styles[style] || styles.brief;
 }
 
 function formatActionItems(items: string[]) {
   return items.map((item) => ({
-    type: 'to_do',
+    type: "to_do",
     to_do: {
       rich_text: [{ text: { content: item } }],
       checked: false,
@@ -680,10 +694,10 @@ const result = await ai.generateText({ prompt });
 
 let summary: string;
 if (result.success) {
-  summary = result.data?.response || 'No response';
+  summary = result.data?.response || "No response";
 } else {
-  console.warn('AI summarization failed:', result.error);
-  summary = 'Summary generation failed. See full transcript below.';
+  console.warn("AI summarization failed:", result.error);
+  summary = "Summary generation failed. See full transcript below.";
 }
 ```
 
@@ -692,9 +706,10 @@ if (result.success) {
 ```typescript
 const MAX_TRANSCRIPT_LENGTH = 10000;
 
-const truncatedTranscript = transcript.length > MAX_TRANSCRIPT_LENGTH
-  ? transcript.slice(0, MAX_TRANSCRIPT_LENGTH) + '...[truncated]'
-  : transcript;
+const truncatedTranscript =
+  transcript.length > MAX_TRANSCRIPT_LENGTH
+    ? transcript.slice(0, MAX_TRANSCRIPT_LENGTH) + "...[truncated]"
+    : transcript;
 ```
 
 ### 3. Cache Expensive Operations
@@ -706,7 +721,7 @@ let summary = await storage.get(cacheKey);
 if (!summary) {
   const result = await ai.generateText({
     prompt: transcript,
-    cache: true,  // Enable SDK-level caching
+    cache: true, // Enable SDK-level caching
   });
   summary = result.data?.response;
   await storage.put(cacheKey, summary);
@@ -746,14 +761,15 @@ Workers AI has token limits - truncate long inputs:
 ```typescript
 // Wrong - sends entire transcript
 const result = await ai.generateText({
-  prompt: `Summarize: ${transcript}`,  // 50,000 characters = error
+  prompt: `Summarize: ${transcript}`, // 50,000 characters = error
 });
 
 // Right - truncate to safe limit
-const MAX_INPUT = 8000;  // Characters, not tokens
-const truncated = transcript.length > MAX_INPUT
-  ? transcript.slice(0, MAX_INPUT) + '...[truncated]'
-  : transcript;
+const MAX_INPUT = 8000; // Characters, not tokens
+const truncated =
+  transcript.length > MAX_INPUT
+    ? transcript.slice(0, MAX_INPUT) + "...[truncated]"
+    : transcript;
 
 const result = await ai.generateText({
   prompt: `Summarize: ${truncated}`,
@@ -766,11 +782,11 @@ LLMs don't guarantee valid JSON output:
 
 ```typescript
 // Wrong - assumes valid JSON
-const result = await ai.generateText({ prompt: 'Return JSON: {items: [...]}' });
-const data = JSON.parse(result.data.response);  // Crashes on invalid JSON
+const result = await ai.generateText({ prompt: "Return JSON: {items: [...]}" });
+const data = JSON.parse(result.data.response); // Crashes on invalid JSON
 
 // Right - extract and validate
-const result = await ai.generateText({ prompt: 'Return JSON: {items: [...]}' });
+const result = await ai.generateText({ prompt: "Return JSON: {items: [...]}" });
 
 let data = null;
 try {
@@ -779,7 +795,7 @@ try {
     data = JSON.parse(jsonMatch[0]);
   }
 } catch {
-  console.warn('Failed to parse AI response as JSON');
+  console.warn("Failed to parse AI response as JSON");
 }
 
 // Use data safely with fallback
@@ -793,18 +809,18 @@ Unclear prompts get inconsistent results:
 ```typescript
 // Wrong - vague, inconsistent output
 const result = await ai.generateText({
-  prompt: 'Summarize this meeting',
+  prompt: "Summarize this meeting",
 });
 
 // Right - specific constraints
 const result = await ai.generateText({
-  system: 'You are a meeting summarizer. Be concise.',
+  system: "You are a meeting summarizer. Be concise.",
   prompt: `Summarize in exactly 3 bullet points, max 20 words each.
 Focus on: 1) decisions made, 2) action items, 3) next steps.
 
 Meeting transcript:
 ${transcript}`,
-  temperature: 0.3,  // Lower = more consistent
+  temperature: 0.3, // Lower = more consistent
 });
 ```
 
@@ -816,19 +832,19 @@ High temperature = creative but inconsistent; low = predictable:
 // Wrong - high temperature for structured extraction
 const result = await ai.generateText({
   prompt: 'Extract: {"name": "...", "email": "..."}',
-  temperature: 0.9,  // Too creative for extraction
+  temperature: 0.9, // Too creative for extraction
 });
 
 // Right - low temperature for structured tasks
 const result = await ai.generateText({
   prompt: 'Extract: {"name": "...", "email": "..."}',
-  temperature: 0.1,  // Deterministic for extraction
+  temperature: 0.1, // Deterministic for extraction
 });
 
 // Use higher temperature for creative tasks
 const creative = await ai.generateText({
-  prompt: 'Write a friendly follow-up email',
-  temperature: 0.7,  // More variety in phrasing
+  prompt: "Write a friendly follow-up email",
+  temperature: 0.7, // More variety in phrasing
 });
 ```
 
@@ -839,15 +855,15 @@ Manual JSON prompting is error-prone:
 ```typescript
 // Wrong - manual JSON extraction
 const result = await ai.generateText({
-  prompt: 'Return JSON with actionItems array',
+  prompt: "Return JSON with actionItems array",
 });
 const items = JSON.parse(result.data.response).actionItems;
 
 // Right - use SDK's structured extraction
 const result = await ai.extractStructured(transcript, {
-  actionItems: 'string[]',
-  decisions: 'string[]',
-  nextMeeting: 'string',
+  actionItems: "string[]",
+  decisions: "string[]",
+  nextMeeting: "string",
 });
 
 // Typed and validated automatically
@@ -862,13 +878,13 @@ Different models have different strengths:
 // Wrong - using general model for code
 const result = await ai.generateText({
   model: AIModels.LLAMA_3_8B,
-  prompt: 'Generate TypeScript function',
+  prompt: "Generate TypeScript function",
 });
 
 // Right - use code-specialized model
 const result = await ai.generateText({
-  model: AIModels.CODE_LLAMA,  // Specialized for code
-  prompt: 'Generate TypeScript function',
+  model: AIModels.CODE_LLAMA, // Specialized for code
+  prompt: "Generate TypeScript function",
 });
 ```
 
@@ -909,6 +925,7 @@ async execute({ integrations }) {
 ```
 
 Experiment with:
+
 - Different temperature settings
 - Using `system` prompts for consistent formatting
 - The `extractStructured` method for guaranteed JSON output

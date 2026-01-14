@@ -23,6 +23,7 @@ No more copying email content. No more context switching. Star an email, it appe
 ## Prerequisites
 
 Before starting:
+
 - [ ] WORKWAY CLI installed (`workway --version`)
 - [ ] Gmail account with WORKWAY connected
 - [ ] Notion workspace with WORKWAY connected
@@ -37,6 +38,7 @@ workway init
 ```
 
 This creates:
+
 ```
 gmail-to-notion/
 ├── src/
@@ -51,32 +53,32 @@ gmail-to-notion/
 Open `src/index.ts` and replace the contents:
 
 ```typescript
-import { defineWorkflow, schedule } from '@workwayco/sdk';
-import type { GmailIntegration, NotionIntegration } from '@workwayco/sdk';
+import { defineWorkflow, schedule } from "@workwayco/sdk";
+import type { GmailIntegration, NotionIntegration } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Gmail to Notion',
-  description: 'Save starred emails to a Notion database',
-  version: '1.0.0',
+  name: "Gmail to Notion",
+  description: "Save starred emails to a Notion database",
+  version: "1.0.0",
 
   integrations: [
-    { service: 'gmail', scopes: ['gmail.readonly'] },
-    { service: 'notion', scopes: ['read_pages', 'write_pages'] },
+    { service: "gmail", scopes: ["gmail.readonly"] },
+    { service: "notion", scopes: ["read_pages", "write_pages"] },
   ],
 
   inputs: {
     notionDatabase: {
-      type: 'text',
-      label: 'Email Notes Database ID',
-      description: 'Where to save your starred emails',
+      type: "text",
+      label: "Email Notes Database ID",
+      description: "Where to save your starred emails",
       required: true,
     },
   },
 
   // Schedule trigger with object pattern (preferred)
   trigger: schedule({
-    cron: '*/15 * * * *',  // Every 15 minutes
-    timezone: 'UTC',
+    cron: "*/15 * * * *", // Every 15 minutes
+    timezone: "UTC",
   }),
 
   async execute({ inputs, integrations, storage }) {
@@ -85,7 +87,8 @@ export default defineWorkflow({
     const notion = integrations.notion as NotionIntegration;
 
     // Get starred emails since last check
-    const lastCheck = await storage.get<string>('lastCheck') || new Date(0).toISOString();
+    const lastCheck =
+      (await storage.get<string>("lastCheck")) || new Date(0).toISOString();
 
     // Use listMessages with query filter
     const emailsResult = await gmail.listMessages({
@@ -94,7 +97,7 @@ export default defineWorkflow({
     });
 
     if (!emailsResult.success) {
-      return { success: false, error: 'Failed to fetch emails' };
+      return { success: false, error: "Failed to fetch emails" };
     }
 
     const emails = emailsResult.data || [];
@@ -110,10 +113,11 @@ export default defineWorkflow({
       // Extract email headers
       const headers = fullEmail.payload?.headers || [];
       const getHeader = (name: string) =>
-        headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+        headers.find((h) => h.name.toLowerCase() === name.toLowerCase())
+          ?.value || "";
 
-      const subject = getHeader('Subject') || '(No Subject)';
-      const from = getHeader('From');
+      const subject = getHeader("Subject") || "(No Subject)";
+      const from = getHeader("From");
       const date = fullEmail.internalDate
         ? new Date(parseInt(fullEmail.internalDate)).toISOString()
         : new Date().toISOString();
@@ -123,19 +127,19 @@ export default defineWorkflow({
         parentDatabaseId: inputs.notionDatabase,
         properties: {
           Name: {
-            title: [{ text: { content: subject } }]
+            title: [{ text: { content: subject } }],
           },
           From: {
-            rich_text: [{ text: { content: from } }]
+            rich_text: [{ text: { content: from } }],
           },
           Date: {
-            date: { start: date }
+            date: { start: date },
           },
         },
         children: [
           {
-            object: 'block',
-            type: 'paragraph',
+            object: "block",
+            type: "paragraph",
             paragraph: {
               rich_text: [{ text: { content: fullEmail.snippet } }],
             },
@@ -144,16 +148,16 @@ export default defineWorkflow({
       });
 
       if (pageResult.success) {
-        console.log('Created Notion page:', subject);
+        console.log("Created Notion page:", subject);
       }
     }
 
     // Update last check time
-    await storage.put('lastCheck', new Date().toISOString());
+    await storage.put("lastCheck", new Date().toISOString());
 
     return {
       success: true,
-      processed: emails.length
+      processed: emails.length,
     };
   },
 });
@@ -162,6 +166,7 @@ export default defineWorkflow({
 ## Step 3: Understand the Code
 
 ### Integrations
+
 ```typescript
 integrations: [
   { service: 'gmail', scopes: ['gmail.readonly'] },
@@ -172,8 +177,9 @@ integrations: [
 Users must connect both Gmail and Notion before installing. The `scopes` array declares what permissions are needed.
 
 ### Type-Safe Integration Access
+
 ```typescript
-import type { GmailIntegration, NotionIntegration } from '@workwayco/sdk';
+import type { GmailIntegration, NotionIntegration } from "@workwayco/sdk";
 
 // In execute:
 const gmail = integrations.gmail as GmailIntegration;
@@ -183,6 +189,7 @@ const notion = integrations.notion as NotionIntegration;
 Casting integrations provides autocomplete and type checking for API calls.
 
 ### Inputs
+
 ```typescript
 inputs: {
   notionDatabase: {
@@ -196,6 +203,7 @@ inputs: {
 User provides the Notion database ID to save emails to.
 
 ### Trigger
+
 ```typescript
 // Object pattern with timezone (preferred)
 trigger: schedule({
@@ -210,6 +218,7 @@ trigger: schedule('*/15 * * * *'),  // Every 15 minutes UTC
 Runs automatically every 15 minutes.
 
 ### Gmail API Pattern
+
 ```typescript
 // List messages with a query filter
 const emailsResult = await gmail.listMessages({
@@ -222,23 +231,29 @@ const fullEmailResult = await gmail.getMessage(email.id);
 
 // Extract headers from the message payload
 const headers = fullEmail.payload?.headers || [];
-const subject = headers.find(h => h.name === 'Subject')?.value;
+const subject = headers.find((h) => h.name === "Subject")?.value;
 ```
 
 The Gmail integration uses `listMessages` to search and `getMessage` for full content.
 
 ### Notion API Pattern
+
 ```typescript
 const pageResult = await notion.createPage({
-  parentDatabaseId: inputs.notionDatabase,  // Not parent: { database_id: ... }
-  properties: { /* ... */ },
-  children: [ /* blocks */ ],
+  parentDatabaseId: inputs.notionDatabase, // Not parent: { database_id: ... }
+  properties: {
+    /* ... */
+  },
+  children: [
+    /* blocks */
+  ],
 });
 ```
 
 Use `parentDatabaseId` (not nested `parent` object) for the WORKWAY SDK.
 
 ### Execute Logic
+
 ```typescript
 async execute({ inputs, integrations, storage }) {
   // 1. Get new starred emails using listMessages
@@ -272,11 +287,11 @@ Check the output for any errors.
 
 Your Notion database needs these properties:
 
-| Property | Type |
-|----------|------|
-| Name | Title |
-| From | Text |
-| Date | Date |
+| Property | Type  |
+| -------- | ----- |
+| Name     | Title |
+| From     | Text  |
+| Date     | Date  |
 
 Create the database if you haven't already.
 
@@ -289,6 +304,7 @@ workway deploy
 ```
 
 Output:
+
 ```
 Deploying gmail-to-notion...
 ✓ Build complete (1.2s)
@@ -395,29 +411,29 @@ properties: {
 Instead of polling, use Gmail push notifications:
 
 ```typescript
-import { defineWorkflow, webhook } from '@workwayco/sdk';
-import type { GmailIntegration, NotionIntegration } from '@workwayco/sdk';
+import { defineWorkflow, webhook } from "@workwayco/sdk";
+import type { GmailIntegration, NotionIntegration } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Gmail to Notion (Real-time)',
+  name: "Gmail to Notion (Real-time)",
 
   integrations: [
-    { service: 'gmail', scopes: ['gmail.readonly'] },
-    { service: 'notion', scopes: ['write_pages'] },
+    { service: "gmail", scopes: ["gmail.readonly"] },
+    { service: "notion", scopes: ["write_pages"] },
   ],
 
   inputs: {
     notionDatabase: {
-      type: 'text',
-      label: 'Notion Database ID',
+      type: "text",
+      label: "Notion Database ID",
       required: true,
     },
   },
 
   // Webhook trigger for real-time processing
   trigger: webhook({
-    service: 'gmail',
-    event: 'message.received',
+    service: "gmail",
+    event: "message.received",
   }),
 
   async execute({ trigger, inputs, integrations }) {
@@ -433,14 +449,15 @@ export default defineWorkflow({
     const email = msgResult.data;
     const headers = email.payload?.headers || [];
     const getHeader = (name: string) =>
-      headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+      headers.find((h) => h.name.toLowerCase() === name.toLowerCase())?.value ||
+      "";
 
     // Check if starred
-    if (email.labelIds?.includes('STARRED')) {
+    if (email.labelIds?.includes("STARRED")) {
       await notion.createPage({
         parentDatabaseId: inputs.notionDatabase,
         properties: {
-          Name: { title: [{ text: { content: getHeader('Subject') } }] },
+          Name: { title: [{ text: { content: getHeader("Subject") } }] },
         },
       });
     }
@@ -496,6 +513,7 @@ Document what you learn. What surprised you? What would you do differently next 
 ## Reflection
 
 You've built a complete workflow that:
+
 - Runs automatically on a schedule
 - Reads from Gmail API
 - Creates pages in Notion

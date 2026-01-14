@@ -19,6 +19,7 @@ A workflow is an outcome that happens automatically. Not a sequence of API calls
 This principle—Zuhandenheit, or "ready-to-hand"—comes from philosopher Martin Heidegger. When you use a hammer well, you don't think about the hammer. You think about the nail. The hammer recedes.
 
 WORKWAY workflows operate the same way. When working correctly, you don't think about the automation. You think about:
+
 - The meeting notes that appeared in Notion
 - The follow-up email that drafted itself
 - The CRM that updated without manual entry
@@ -39,6 +40,7 @@ Here's how Zuhandenheit manifests in an actual WORKWAY workflow. The `meeting-in
 ```
 
 The user never thinks about:
+
 - Zoom OAuth tokens
 - Transcript API endpoints
 - Notion block construction
@@ -52,15 +54,15 @@ When a carpenter builds a cabinet, they don't think "I am gripping a hammer with
 
 When a professional uses a WORKWAY workflow, they don't think "The webhook triggered, the API fetched the transcript, the AI extracted action items, the Notion page was created." They think "My meeting notes are ready."
 
-This is the difference between a tool that works *for* you versus a tool that demands your attention.
+This is the difference between a tool that works _for_ you versus a tool that demands your attention.
 
 ## Two Ways to Describe a Workflow
 
-| Wrong (Mechanism-Focused) | Right (Outcome-Focused) |
-|---------------------------|-------------------------|
-| "It syncs my CRM with my email via REST API" | "It handles my follow-ups after client calls" |
-| "It uses OAuth to fetch Zoom transcripts and POST to Notion" | "My meetings document themselves" |
-| "It triggers on webhook and processes JSON payload" | "New leads get welcomed automatically" |
+| Wrong (Mechanism-Focused)                                    | Right (Outcome-Focused)                       |
+| ------------------------------------------------------------ | --------------------------------------------- |
+| "It syncs my CRM with my email via REST API"                 | "It handles my follow-ups after client calls" |
+| "It uses OAuth to fetch Zoom transcripts and POST to Notion" | "My meetings document themselves"             |
+| "It triggers on webhook and processes JSON payload"          | "New leads get welcomed automatically"        |
 
 ## The Outcome Test
 
@@ -74,17 +76,18 @@ The test reveals whether you're building a tool or an outcome.
 ## Outcomes vs Features
 
 Traditional automation tools compete on features:
+
 - "500+ integrations!"
 - "Unlimited zaps!"
 - "AI-powered!"
 
 But features are mechanisms. Users don't want mechanisms—they want outcomes:
 
-| Feature | Outcome |
-|---------|---------|
+| Feature          | Outcome                           |
+| ---------------- | --------------------------------- |
 | Zoom integration | Meetings that remember themselves |
-| Gmail API access | Email that writes itself |
-| AI summarization | Information that distills itself |
+| Gmail API access | Email that writes itself          |
+| AI summarization | Information that distills itself  |
 
 ## Workflow Thinking
 
@@ -108,6 +111,7 @@ When designing a workflow, start from the end:
 WORKWAY workflows declare their outcomes explicitly using pathway metadata. Here are real examples from production workflows:
 
 **Meeting Intelligence** (Zoom → Notion + Slack + CRM):
+
 ```typescript
 pathway: {
   outcomeStatement: {
@@ -124,6 +128,7 @@ pathway: {
 ```
 
 **Calendar Meeting Prep** (Calendar → Notion + Slack):
+
 ```typescript
 pathway: {
   outcomeStatement: {
@@ -135,6 +140,7 @@ pathway: {
 ```
 
 **Client Onboarding** (Stripe → Notion + Todoist + Slack):
+
 ```typescript
 pathway: {
   outcomeStatement: {
@@ -168,38 +174,41 @@ This isn't four automations. It's one outcome: **meetings that handle their own 
 Heidegger also described "present-at-hand" (Vorhandenheit)—when a tool stops working and suddenly becomes visible. The hammer breaks, and now you're staring at a piece of wood and metal instead of driving nails.
 
 Workflows become visible when they fail:
+
 - The email didn't send
 - The Notion page is empty
 - The CRM field is wrong
 
 ### The Visibility Spectrum
 
-| Zuhandenheit (Invisible) | Vorhandenheit (Visible) |
-|--------------------------|-------------------------|
+| Zuhandenheit (Invisible)            | Vorhandenheit (Visible)                |
+| ----------------------------------- | -------------------------------------- |
 | "My meeting notes are always there" | "I need to check if the Zoom sync ran" |
-| "Follow-ups happen automatically" | "Let me see what the workflow logged" |
-| "I never think about data entry" | "The automation failed again" |
+| "Follow-ups happen automatically"   | "Let me see what the workflow logged"  |
+| "I never think about data entry"    | "The automation failed again"          |
 
 ### Designing to Minimize Vorhandenheit
 
 Good workflow design keeps the tool invisible even when things go wrong:
 
 **1. Clear error handling** - Tell users what happened in human terms:
+
 ```typescript
 // ❌ Exposes mechanism
 return { success: false, error: error.message };
 
 // ✅ Stays invisible
-if (error.code === 'AUTH_EXPIRED') {
+if (error.code === "AUTH_EXPIRED") {
   return {
     success: false,
-    error: 'Your Zoom connection expired. Reconnect at workway.co/settings',
-    actionUrl: 'https://workway.co/settings/integrations',
+    error: "Your Zoom connection expired. Reconnect at workway.co/settings",
+    actionUrl: "https://workway.co/settings/integrations",
   };
 }
 ```
 
 **2. Graceful degradation** - When optional features fail, the core outcome still works:
+
 ```typescript
 // From client-onboarding workflow
 let aiRecommendations: string[] = [];
@@ -210,9 +219,10 @@ if (inputs.enableAIRecommendations && env.AI) {
 ```
 
 **3. Silent success, loud failure** - Don't demand attention when things work:
+
 ```typescript
 // ❌ Obtrusive: Notifies on every run
-await slack.postMessage({ text: '✅ Workflow ran successfully!' });
+await slack.postMessage({ text: "✅ Workflow ran successfully!" });
 
 // ✅ Unobtrusive: Only notifies when action needed
 if (!results.success) {
@@ -327,6 +337,7 @@ Write down three manual tasks you do regularly. For each one:
 3. **Apply the test**: Can you describe the value without mentioning technology?
 
 Example transformation:
+
 - Mechanism: "I use the Zoom API to get transcripts and save them to Notion"
 - Outcome: "My meetings document themselves"
 

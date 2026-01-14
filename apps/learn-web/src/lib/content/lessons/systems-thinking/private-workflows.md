@@ -25,32 +25,34 @@ Here's how the production `private-emails-documented` workflow configures privat
  * Workflow metadata - Private workflow for @halfdozen.co
  */
 export const metadata = {
-  id: 'private-emails-documented',
-  category: 'productivity',
+  id: "private-emails-documented",
+  category: "productivity",
   featured: false,
 
   // Private workflow - requires WORKWAY login
-  visibility: 'private' as const,
-  accessGrants: [{ type: 'email_domain' as const, value: 'halfdozen.co' }],
+  visibility: "private" as const,
+  accessGrants: [{ type: "email_domain" as const, value: "halfdozen.co" }],
 
   // Honest flags (matches meeting-intelligence-private pattern)
   experimental: true,
   requiresCustomInfrastructure: true,
-  canonicalAlternative: 'emails-documented', // Future public version
+  canonicalAlternative: "emails-documented", // Future public version
 
   // Why this exists
-  workaroundReason: 'Gmail OAuth scopes require Google app verification for public apps',
-  infrastructureRequired: ['BYOO Google OAuth app', 'Arc for Gmail worker'],
+  workaroundReason:
+    "Gmail OAuth scopes require Google app verification for public apps",
+  infrastructureRequired: ["BYOO Google OAuth app", "Arc for Gmail worker"],
 
   // Upgrade path (when Google verification completes)
-  upgradeTarget: 'emails-documented',
-  upgradeCondition: 'When WORKWAY Gmail OAuth app is verified',
+  upgradeTarget: "emails-documented",
+  upgradeCondition: "When WORKWAY Gmail OAuth app is verified",
 
   // Analytics URL - unified at workway.co/workflows
-  analyticsUrl: 'https://workway.co/workflows/private/private-emails-documented/analytics',
+  analyticsUrl:
+    "https://workway.co/workflows/private/private-emails-documented/analytics",
 
   // Setup URL - initial BYOO connection setup
-  setupUrl: 'https://arc.halfdozen.co/setup',
+  setupUrl: "https://arc.halfdozen.co/setup",
 
   stats: { rating: 0, users: 0, reviews: 0 },
 };
@@ -81,24 +83,22 @@ pnpm add @workwayco/sdk
 Create `src/index.ts`:
 
 ```typescript
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { defineWorkflow, webhook } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Client Meeting Sync',
-  description: 'Syncs meeting data to internal CRM',
-  version: '1.0.0',
+  name: "Client Meeting Sync",
+  description: "Syncs meeting data to internal CRM",
+  version: "1.0.0",
 
-  integrations: [
-    { service: 'zoom', scopes: ['meeting:read'] },
-  ],
+  integrations: [{ service: "zoom", scopes: ["meeting:read"] }],
 
   inputs: {
-    crmEndpoint: { type: 'text', label: 'CRM API Endpoint', required: true },
+    crmEndpoint: { type: "text", label: "CRM API Endpoint", required: true },
   },
 
   trigger: webhook({
-    service: 'zoom',
-    event: 'meeting.ended',
+    service: "zoom",
+    event: "meeting.ended",
   }),
 
   async execute({ trigger, inputs, integrations }) {
@@ -107,8 +107,8 @@ export default defineWorkflow({
 
     // Sync to internal CRM
     await fetch(inputs.crmEndpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ meeting: meeting.data }),
     });
 
@@ -124,11 +124,9 @@ Export the private workflow configuration:
 ```typescript
 // Add at the bottom of src/index.ts
 export const metadata = {
-  id: 'client-meeting-sync',
-  visibility: 'private' as const,
-  accessGrants: [
-    { type: 'email_domain' as const, value: 'clientcorp.com' },
-  ],
+  id: "client-meeting-sync",
+  visibility: "private" as const,
+  accessGrants: [{ type: "email_domain" as const, value: "clientcorp.com" }],
 };
 ```
 
@@ -169,13 +167,13 @@ They'll authenticate, verify access, connect integrations, and configure.
 
 ## Public vs. Private
 
-| Aspect | Public Workflow | Private Workflow |
-|--------|-----------------|------------------|
-| Visibility | Marketplace listing | Organization only |
-| Access | Anyone can install | Authorized users only |
-| Discovery | Searchable | Hidden from search |
-| Pricing | Per-execution fees | Custom arrangements |
-| Customization | Config options only | Full customization |
+| Aspect        | Public Workflow     | Private Workflow      |
+| ------------- | ------------------- | --------------------- |
+| Visibility    | Marketplace listing | Organization only     |
+| Access        | Anyone can install  | Authorized users only |
+| Discovery     | Searchable          | Hidden from search    |
+| Pricing       | Per-execution fees  | Custom arrangements   |
+| Customization | Config options only | Full customization    |
 
 ## When to Build Private
 
@@ -190,24 +188,22 @@ Private workflows make sense when:
 ## Defining Private Workflows
 
 ```typescript
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { defineWorkflow, webhook } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Client CRM Sync',
-  description: 'Syncs meeting data to internal CRM',
-  version: '1.0.0',
+  name: "Client CRM Sync",
+  description: "Syncs meeting data to internal CRM",
+  version: "1.0.0",
 
-  integrations: [
-    { service: 'zoom', scopes: ['meeting:read'] },
-  ],
+  integrations: [{ service: "zoom", scopes: ["meeting:read"] }],
 
   inputs: {
-    crmEndpoint: { type: 'text', label: 'CRM API Endpoint', required: true },
+    crmEndpoint: { type: "text", label: "CRM API Endpoint", required: true },
   },
 
   trigger: webhook({
-    service: 'zoom',
-    event: 'meeting.ended',
+    service: "zoom",
+    event: "meeting.ended",
   }),
 
   async execute({ trigger, inputs, integrations }) {
@@ -217,12 +213,12 @@ export default defineWorkflow({
 
 // Private workflow metadata is exported separately
 export const metadata = {
-  id: 'client-crm-sync',
-  visibility: 'private' as const,
+  id: "client-crm-sync",
+  visibility: "private" as const,
   accessGrants: [
-    { type: 'email_domain' as const, value: 'acmecorp.com' },
-    { type: 'email' as const, value: 'contractor@external.com' },
-    { type: 'organization' as const, value: 'org_123' },
+    { type: "email_domain" as const, value: "acmecorp.com" },
+    { type: "email" as const, value: "contractor@external.com" },
+    { type: "organization" as const, value: "org_123" },
   ],
 };
 ```
@@ -237,9 +233,7 @@ Allow anyone from a company domain:
 
 ```typescript
 // From private-emails-documented - restricts to @halfdozen.co team
-accessGrants: [
-  { type: 'email_domain' as const, value: 'halfdozen.co' },
-]
+accessGrants: [{ type: "email_domain" as const, value: "halfdozen.co" }];
 ```
 
 Anyone with `@halfdozen.co` email can install and use the workflow.
@@ -250,9 +244,9 @@ Grant access to specific individuals (useful for external collaborators):
 
 ```typescript
 accessGrants: [
-  { type: 'email' as const, value: 'alice@example.com' },
-  { type: 'email' as const, value: 'bob@contractor.io' },
-]
+  { type: "email" as const, value: "alice@example.com" },
+  { type: "email" as const, value: "bob@contractor.io" },
+];
 ```
 
 ### Organization ID
@@ -260,9 +254,7 @@ accessGrants: [
 Link to WORKWAY organization:
 
 ```typescript
-accessGrants: [
-  { type: 'organization' as const, value: 'org_abc123' },
-]
+accessGrants: [{ type: "organization" as const, value: "org_abc123" }];
 ```
 
 All members of the organization can access.
@@ -274,11 +266,11 @@ From the production `private-emails-documented` workflow header comments:
 ```typescript
 // Real-world example: Company + external auditor
 export const metadata = {
-  id: 'acme-meeting-processor',
-  visibility: 'private' as const,
+  id: "acme-meeting-processor",
+  visibility: "private" as const,
   accessGrants: [
-    { type: 'email_domain' as const, value: 'acmecorp.com' },  // Company employees
-    { type: 'email' as const, value: 'auditor@external.com' }, // External auditor
+    { type: "email_domain" as const, value: "acmecorp.com" }, // Company employees
+    { type: "email" as const, value: "auditor@external.com" }, // External auditor
   ],
   // ... other metadata
 };
@@ -286,52 +278,52 @@ export const metadata = {
 
 ### Access Grant Types Reference
 
-| Type | Value | Who Gets Access |
-|------|-------|-----------------|
-| `email_domain` | `'company.com'` | Anyone with @company.com email |
-| `email` | `'user@any.com'` | That specific email only |
-| `organization` | `'org_abc123'` | All WORKWAY org members |
+| Type           | Value            | Who Gets Access                |
+| -------------- | ---------------- | ------------------------------ |
+| `email_domain` | `'company.com'`  | Anyone with @company.com email |
+| `email`        | `'user@any.com'` | That specific email only       |
+| `organization` | `'org_abc123'`   | All WORKWAY org members        |
 
 ## BYOO: Bring Your Own OAuth
 
 For clients who need their own API credentials:
 
 ```typescript
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { defineWorkflow, webhook } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Enterprise Zoom Sync',
-  version: '1.0.0',
+  name: "Enterprise Zoom Sync",
+  version: "1.0.0",
 
   integrations: [
-    { service: 'zoom', scopes: ['meeting:read', 'recording:read'] },
-    { service: 'notion', scopes: ['read_pages', 'write_pages'] },
+    { service: "zoom", scopes: ["meeting:read", "recording:read"] },
+    { service: "notion", scopes: ["read_pages", "write_pages"] },
   ],
 
   inputs: {
     zoomClientId: {
-      type: 'text',
-      label: 'Zoom Client ID',
+      type: "text",
+      label: "Zoom Client ID",
       required: true,
     },
     zoomClientSecret: {
-      type: 'text',
-      label: 'Zoom Client Secret',
+      type: "text",
+      label: "Zoom Client Secret",
       required: true,
     },
     notionApiKey: {
-      type: 'text',
-      label: 'Notion API Key',
+      type: "text",
+      label: "Notion API Key",
       required: true,
     },
     notionDatabase: {
-      type: 'text',
-      label: 'Notion Database ID',
+      type: "text",
+      label: "Notion Database ID",
       required: true,
     },
   },
 
-  trigger: webhook({ service: 'zoom', event: 'recording.completed' }),
+  trigger: webhook({ service: "zoom", event: "recording.completed" }),
 
   async execute({ trigger, inputs, integrations }) {
     // Workflow uses client's credentials via BYOO
@@ -340,11 +332,11 @@ export default defineWorkflow({
 });
 
 export const metadata = {
-  id: 'enterprise-zoom-sync',
-  visibility: 'private' as const,
+  id: "enterprise-zoom-sync",
+  visibility: "private" as const,
   byoo: {
     enabled: true,
-    providers: ['zoom', 'notion'],
+    providers: ["zoom", "notion"],
     instructions: `
       This workflow requires your organization's OAuth credentials.
 
@@ -382,6 +374,7 @@ metadata: {
 ```
 
 Analytics available:
+
 - Execution count
 - Success/failure rates
 - Average execution time
@@ -390,12 +383,12 @@ Analytics available:
 
 ## Private Workflow URLs
 
-| Purpose | URL Pattern |
-|---------|-------------|
-| Install | `workway.co/workflows/private/{workflow-id}` |
+| Purpose   | URL Pattern                                            |
+| --------- | ------------------------------------------------------ |
+| Install   | `workway.co/workflows/private/{workflow-id}`           |
 | Configure | `workway.co/workflows/private/{workflow-id}/configure` |
 | Analytics | `workway.co/workflows/private/{workflow-id}/analytics` |
-| Logs | `workway.co/workflows/private/{workflow-id}/logs` |
+| Logs      | `workway.co/workflows/private/{workflow-id}/logs`      |
 
 Users access via the unified workflows page—no separate dashboard.
 
@@ -415,10 +408,8 @@ Edit `workway.config.ts`:
 
 ```typescript
 export default {
-  visibility: 'private',
-  accessGrants: [
-    { type: 'email_domain', value: 'clientcorp.com' },
-  ],
+  visibility: "private",
+  accessGrants: [{ type: "email_domain", value: "clientcorp.com" }],
 };
 ```
 
@@ -431,6 +422,7 @@ workway deploy
 ### 4. Share with Client
 
 Send them the install link:
+
 ```
 https://workway.co/workflows/private/client-workflow
 ```
@@ -568,24 +560,26 @@ metadata: {
 This example shows the complete private workflow pattern, including all metadata fields used in production workflows:
 
 ```typescript
-import { defineWorkflow, cron } from '@workwayco/sdk';
+import { defineWorkflow, cron } from "@workwayco/sdk";
 
 // Organization-specific constants (hardcoded for internal workflows)
-const INTERNAL_DATABASE_ID = '27a019187ac580b797fec563c98afbbc';
-const INTERNAL_DOMAINS = ['acmecorp.com'];
+const INTERNAL_DATABASE_ID = "27a019187ac580b797fec563c98afbbc";
+const INTERNAL_DOMAINS = ["acmecorp.com"];
 
 export default defineWorkflow({
-  name: 'ACME Meeting Processor',
-  description: 'Internal workflow for @acmecorp.com. Meetings sync to central database.',
-  version: '1.2.0',
+  name: "ACME Meeting Processor",
+  description:
+    "Internal workflow for @acmecorp.com. Meetings sync to central database.",
+  version: "1.2.0",
 
   // Pathway metadata for discovery (optional but recommended)
   pathway: {
-    outcomeFrame: 'after_meetings',
+    outcomeFrame: "after_meetings",
     outcomeStatement: {
-      suggestion: 'Want meetings to document themselves?',
-      explanation: 'After every meeting, a Notion page appears with notes and action items.',
-      outcome: 'Meetings that document themselves',
+      suggestion: "Want meetings to document themselves?",
+      explanation:
+        "After every meeting, a Notion page appears with notes and action items.",
+      outcome: "Meetings that document themselves",
     },
     zuhandenheit: {
       timeToValue: 5, // Minutes - be honest about setup time
@@ -596,37 +590,40 @@ export default defineWorkflow({
   },
 
   pricing: {
-    model: 'usage',
+    model: "usage",
     pricePerExecution: 0.05,
     freeExecutions: 50,
-    description: 'Per meeting processed',
+    description: "Per meeting processed",
   },
 
   integrations: [
-    { service: 'zoom', scopes: ['meeting:read'] },
-    { service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
+    { service: "zoom", scopes: ["meeting:read"] },
+    {
+      service: "notion",
+      scopes: ["read_pages", "write_pages", "read_databases"],
+    },
   ],
 
   inputs: {
     connectionId: {
-      type: 'string',
-      label: 'Connection ID',
+      type: "string",
+      label: "Connection ID",
       required: true,
-      description: 'Your unique identifier (set during setup)',
+      description: "Your unique identifier (set during setup)",
     },
   },
 
   // Cron trigger - runs every 5 minutes
   trigger: cron({
-    schedule: '*/5 * * * *',
-    timezone: 'UTC',
+    schedule: "*/5 * * * *",
+    timezone: "UTC",
   }),
 
   async execute({ inputs, integrations, env }) {
     const startTime = Date.now();
 
     // Get meetings and process them
-    const meetings = await integrations.zoom.listMeetings({ type: 'past' });
+    const meetings = await integrations.zoom.listMeetings({ type: "past" });
 
     for (const meeting of meetings.data || []) {
       // Create Notion page (using hardcoded internal database)
@@ -635,12 +632,12 @@ export default defineWorkflow({
         properties: {
           Name: { title: [{ text: { content: meeting.topic } }] },
           Date: { date: { start: meeting.start_time } },
-          Type: { select: { name: 'Meeting' } },
+          Type: { select: { name: "Meeting" } },
         },
       });
     }
 
-    console.log('Meetings processed', {
+    console.log("Meetings processed", {
       count: meetings.data?.length || 0,
       executionTimeMs: Date.now() - startTime,
     });
@@ -648,7 +645,8 @@ export default defineWorkflow({
     return {
       success: true,
       processed: meetings.data?.length || 0,
-      analyticsUrl: 'https://workway.co/workflows/private/acme-meeting-processor/analytics',
+      analyticsUrl:
+        "https://workway.co/workflows/private/acme-meeting-processor/analytics",
     };
   },
 
@@ -659,33 +657,34 @@ export default defineWorkflow({
 
 // Private workflow metadata - CRITICAL: This is what makes it private
 export const metadata = {
-  id: 'acme-meeting-processor',
-  category: 'productivity',
+  id: "acme-meeting-processor",
+  category: "productivity",
   featured: false,
 
   // REQUIRED for private workflows
-  visibility: 'private' as const,
+  visibility: "private" as const,
   accessGrants: [
-    { type: 'email_domain' as const, value: 'acmecorp.com' },
-    { type: 'email' as const, value: 'auditor@external.com' },
+    { type: "email_domain" as const, value: "acmecorp.com" },
+    { type: "email" as const, value: "auditor@external.com" },
   ],
 
   // Honest flags about requirements
   experimental: true,
   requiresCustomInfrastructure: true,
-  canonicalAlternative: 'meeting-intelligence', // Public version
+  canonicalAlternative: "meeting-intelligence", // Public version
 
   // Why this private version exists
-  workaroundReason: 'Organization requires internal database and custom auth',
-  infrastructureRequired: ['BYOO OAuth app', 'Internal Notion database'],
+  workaroundReason: "Organization requires internal database and custom auth",
+  infrastructureRequired: ["BYOO OAuth app", "Internal Notion database"],
 
   // Upgrade path when no longer needed
-  upgradeTarget: 'meeting-intelligence',
-  upgradeCondition: 'When org approves shared infrastructure',
+  upgradeTarget: "meeting-intelligence",
+  upgradeCondition: "When org approves shared infrastructure",
 
   // URLs for the unified workflows page
-  analyticsUrl: 'https://workway.co/workflows/private/acme-meeting-processor/analytics',
-  setupUrl: 'https://acme-setup.workway.co/setup',
+  analyticsUrl:
+    "https://workway.co/workflows/private/acme-meeting-processor/analytics",
+  setupUrl: "https://acme-setup.workway.co/setup",
 
   stats: { rating: 0, users: 0, reviews: 0 },
 };
@@ -693,17 +692,17 @@ export const metadata = {
 
 ### Key Metadata Fields Explained
 
-| Field | Purpose | Required |
-|-------|---------|----------|
-| `visibility: 'private'` | Hides from marketplace, requires auth | Yes |
-| `accessGrants` | Who can install | Yes |
-| `experimental` | Honest flag about stability | Recommended |
-| `requiresCustomInfrastructure` | Needs non-standard setup | Recommended |
-| `canonicalAlternative` | Points to public version | Recommended |
-| `workaroundReason` | Documents why private exists | Recommended |
-| `upgradeTarget` | Public version to migrate to | Recommended |
-| `analyticsUrl` | Dashboard URL | Optional |
-| `setupUrl` | Custom setup page | Optional |
+| Field                          | Purpose                               | Required    |
+| ------------------------------ | ------------------------------------- | ----------- |
+| `visibility: 'private'`        | Hides from marketplace, requires auth | Yes         |
+| `accessGrants`                 | Who can install                       | Yes         |
+| `experimental`                 | Honest flag about stability           | Recommended |
+| `requiresCustomInfrastructure` | Needs non-standard setup              | Recommended |
+| `canonicalAlternative`         | Points to public version              | Recommended |
+| `workaroundReason`             | Documents why private exists          | Recommended |
+| `upgradeTarget`                | Public version to migrate to          | Recommended |
+| `analyticsUrl`                 | Dashboard URL                         | Optional    |
+| `setupUrl`                     | Custom setup page                     | Optional    |
 
 ## Praxis
 
@@ -716,35 +715,36 @@ Create the complete private workflow metadata with all recommended fields:
 ```typescript
 // Your private workflow metadata
 export const metadata = {
-  id: 'my-private-workflow',
-  category: 'productivity',
+  id: "my-private-workflow",
+  category: "productivity",
   featured: false,
 
   // REQUIRED: Private visibility
-  visibility: 'private' as const,
+  visibility: "private" as const,
 
   // REQUIRED: Who can access
   accessGrants: [
-    { type: 'email_domain' as const, value: 'yourcompany.com' },
-    { type: 'email' as const, value: 'external-contractor@example.com' },
+    { type: "email_domain" as const, value: "yourcompany.com" },
+    { type: "email" as const, value: "external-contractor@example.com" },
   ],
 
   // RECOMMENDED: Honest flags
   experimental: true,
   requiresCustomInfrastructure: true,
-  canonicalAlternative: 'public-workflow-id',
+  canonicalAlternative: "public-workflow-id",
 
   // RECOMMENDED: Document why this exists
-  workaroundReason: 'Describe why private version is needed',
-  infrastructureRequired: ['List', 'of', 'requirements'],
+  workaroundReason: "Describe why private version is needed",
+  infrastructureRequired: ["List", "of", "requirements"],
 
   // RECOMMENDED: Upgrade path
-  upgradeTarget: 'public-workflow-id',
-  upgradeCondition: 'When X condition is met',
+  upgradeTarget: "public-workflow-id",
+  upgradeCondition: "When X condition is met",
 
   // OPTIONAL: URLs
-  analyticsUrl: 'https://workway.co/workflows/private/my-private-workflow/analytics',
-  setupUrl: 'https://your-worker.workway.co/setup',
+  analyticsUrl:
+    "https://workway.co/workflows/private/my-private-workflow/analytics",
+  setupUrl: "https://your-worker.workway.co/setup",
 
   stats: { rating: 0, users: 0, reviews: 0 },
 };

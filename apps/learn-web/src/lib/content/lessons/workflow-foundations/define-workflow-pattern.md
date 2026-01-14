@@ -39,12 +39,12 @@ touch src/index.ts
 Copy this minimal workflow into `src/index.ts`:
 
 ```typescript
-import { defineWorkflow, manual } from '@workwayco/sdk';
+import { defineWorkflow, manual } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'My First Workflow',
-  description: 'Learning the WORKWAY pattern',
-  version: '1.0.0',
+  name: "My First Workflow",
+  description: "Learning the WORKWAY pattern",
+  version: "1.0.0",
 
   integrations: [],
 
@@ -53,7 +53,7 @@ export default defineWorkflow({
   trigger: manual(),
 
   async execute() {
-    console.log('Workflow executed!');
+    console.log("Workflow executed!");
     return { success: true };
   },
 });
@@ -117,56 +117,56 @@ This is the actual `stripe-to-notion` workflow from `packages/workflows/src/stri
 
 ```typescript
 // From: packages/workflows/src/stripe-to-notion/index.ts
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { defineWorkflow, webhook } from "@workwayco/sdk";
 
 export default defineWorkflow({
   // Basic info
-  name: 'Stripe to Notion Invoice Tracker',
-  description: 'Automatically log all Stripe payments to your Notion database',
-  version: '1.0.0',
+  name: "Stripe to Notion Invoice Tracker",
+  description: "Automatically log all Stripe payments to your Notion database",
+  version: "1.0.0",
 
   // Required integrations with OAuth scopes
   integrations: [
-    { service: 'stripe', scopes: ['read_payments', 'webhooks'] },
-    { service: 'notion', scopes: ['write_pages', 'read_databases'] },
+    { service: "stripe", scopes: ["read_payments", "webhooks"] },
+    { service: "notion", scopes: ["write_pages", "read_databases"] },
   ],
 
   // User-configurable inputs
   inputs: {
     notionDatabaseId: {
-      type: 'text',
-      label: 'Notion Database for Payments',
+      type: "text",
+      label: "Notion Database for Payments",
       required: true,
-      description: 'Select the database where payments will be logged',
+      description: "Select the database where payments will be logged",
     },
     includeRefunds: {
-      type: 'boolean',
-      label: 'Track Refunds',
+      type: "boolean",
+      label: "Track Refunds",
       default: true,
-      description: 'Also log refunds to the database',
+      description: "Also log refunds to the database",
     },
     currencyFormat: {
-      type: 'select',
-      label: 'Currency Display',
-      options: ['symbol', 'code', 'both'],
-      default: 'symbol',
+      type: "select",
+      label: "Currency Display",
+      options: ["symbol", "code", "both"],
+      default: "symbol",
     },
   },
 
   // When to run: webhook from Stripe
   trigger: webhook({
-    service: 'stripe',
-    events: ['payment_intent.succeeded', 'charge.refunded'],
+    service: "stripe",
+    events: ["payment_intent.succeeded", "charge.refunded"],
   }),
 
   // What happens when the workflow runs
   async execute({ trigger, inputs, integrations }) {
     const event = trigger.data;
-    const isRefund = event.type === 'charge.refunded';
+    const isRefund = event.type === "charge.refunded";
 
     // Skip refunds if not configured
     if (isRefund && !inputs.includeRefunds) {
-      return { success: true, skipped: true, reason: 'Refunds disabled' };
+      return { success: true, skipped: true, reason: "Refunds disabled" };
     }
 
     // Extract payment details
@@ -179,25 +179,35 @@ export default defineWorkflow({
       parent: { database_id: inputs.notionDatabaseId },
       properties: {
         Name: {
-          title: [{ text: { content: `${isRefund ? 'Refund' : 'Payment'}: $${amount}` } }],
+          title: [
+            {
+              text: {
+                content: `${isRefund ? "Refund" : "Payment"}: $${amount}`,
+              },
+            },
+          ],
         },
         Amount: { number: isRefund ? -amount : amount },
         Currency: { select: { name: currency } },
-        Status: { select: { name: isRefund ? 'Refunded' : 'Completed' } },
-        'Payment ID': { rich_text: [{ text: { content: paymentData.id } }] },
-        Date: { date: { start: new Date(paymentData.created * 1000).toISOString() } },
+        Status: { select: { name: isRefund ? "Refunded" : "Completed" } },
+        "Payment ID": { rich_text: [{ text: { content: paymentData.id } }] },
+        Date: {
+          date: { start: new Date(paymentData.created * 1000).toISOString() },
+        },
       },
     });
 
     if (!notionPage.success) {
-      throw new Error(`Failed to create Notion page: ${notionPage.error?.message}`);
+      throw new Error(
+        `Failed to create Notion page: ${notionPage.error?.message}`,
+      );
     }
 
     return {
       success: true,
       paymentId: paymentData.id,
       notionPageId: notionPage.data.id,
-      type: isRefund ? 'refund' : 'payment',
+      type: isRefund ? "refund" : "payment",
     };
   },
 });
@@ -351,13 +361,15 @@ Always return a result object:
 // Success
 return {
   success: true,
-  data: { /* any data you want to expose */ }
+  data: {
+    /* any data you want to expose */
+  },
 };
 
 // Failure
 return {
   success: false,
-  error: 'Human-readable error message'
+  error: "Human-readable error message",
 };
 ```
 
@@ -369,10 +381,10 @@ Contains information about what started the workflow:
 
 ```typescript
 // Common properties
-trigger.type       // 'webhook' | 'schedule' | 'manual' | 'poll'
-trigger.timestamp  // When triggered
-trigger.data       // Payload data (for webhooks)
-trigger.payload    // Alias for data
+trigger.type; // 'webhook' | 'schedule' | 'manual' | 'poll'
+trigger.timestamp; // When triggered
+trigger.data; // Payload data (for webhooks)
+trigger.payload; // Alias for data
 ```
 
 ### inputs
@@ -380,9 +392,9 @@ trigger.payload    // Alias for data
 User's configuration values from the inputs schema:
 
 ```typescript
-inputs.notionDatabaseId  // string
-inputs.includeTranscript // boolean
-inputs.syncMode          // 'meetings_only' | 'clips_only' | 'both'
+inputs.notionDatabaseId; // string
+inputs.includeTranscript; // boolean
+inputs.syncMode; // 'meetings_only' | 'clips_only' | 'both'
 ```
 
 ### integrations
@@ -452,51 +464,51 @@ This example is from `packages/workflows/src/stripe-to-notion/index.ts`:
 
 ```typescript
 // Real workflow: packages/workflows/src/stripe-to-notion/index.ts
-import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { defineWorkflow, webhook } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Stripe to Notion Invoice Tracker',
-  description: 'Automatically log all Stripe payments to your Notion database',
-  version: '1.0.0',
+  name: "Stripe to Notion Invoice Tracker",
+  description: "Automatically log all Stripe payments to your Notion database",
+  version: "1.0.0",
 
   integrations: [
-    { service: 'stripe', scopes: ['read_payments', 'webhooks'] },
-    { service: 'notion', scopes: ['write_pages', 'read_databases'] },
+    { service: "stripe", scopes: ["read_payments", "webhooks"] },
+    { service: "notion", scopes: ["write_pages", "read_databases"] },
   ],
 
   inputs: {
     notionDatabaseId: {
-      type: 'text',
-      label: 'Notion Database for Payments',
+      type: "text",
+      label: "Notion Database for Payments",
       required: true,
-      description: 'Select the database where payments will be logged',
+      description: "Select the database where payments will be logged",
     },
     includeRefunds: {
-      type: 'boolean',
-      label: 'Track Refunds',
+      type: "boolean",
+      label: "Track Refunds",
       default: true,
-      description: 'Also log refunds to the database',
+      description: "Also log refunds to the database",
     },
     currencyFormat: {
-      type: 'select',
-      label: 'Currency Display',
-      options: ['symbol', 'code', 'both'],
-      default: 'symbol',
+      type: "select",
+      label: "Currency Display",
+      options: ["symbol", "code", "both"],
+      default: "symbol",
     },
   },
 
   trigger: webhook({
-    service: 'stripe',
-    events: ['payment_intent.succeeded', 'charge.refunded'],
+    service: "stripe",
+    events: ["payment_intent.succeeded", "charge.refunded"],
   }),
 
   async execute({ trigger, inputs, integrations }) {
     const event = trigger.data;
-    const isRefund = event.type === 'charge.refunded';
+    const isRefund = event.type === "charge.refunded";
 
     // Skip refunds if not configured
     if (isRefund && !inputs.includeRefunds) {
-      return { success: true, skipped: true, reason: 'Refunds disabled' };
+      return { success: true, skipped: true, reason: "Refunds disabled" };
     }
 
     // Extract payment details
@@ -506,7 +518,10 @@ export default defineWorkflow({
 
     // Format currency display
     const currencySymbols: Record<string, string> = {
-      USD: '$', EUR: '€', GBP: '£', JPY: '¥',
+      USD: "$",
+      EUR: "€",
+      GBP: "£",
+      JPY: "¥",
     };
     const symbol = currencySymbols[currency] || currency;
     const displayAmount = `${symbol}${amount.toFixed(2)}`;
@@ -515,7 +530,7 @@ export default defineWorkflow({
     const existingCheck = await integrations.notion.databases.query({
       database_id: inputs.notionDatabaseId,
       filter: {
-        property: 'Payment ID',
+        property: "Payment ID",
         rich_text: { equals: paymentData.id },
       },
       page_size: 1,
@@ -525,7 +540,7 @@ export default defineWorkflow({
       return {
         success: true,
         skipped: true,
-        reason: 'Payment already logged (idempotency check)',
+        reason: "Payment already logged (idempotency check)",
       };
     }
 
@@ -534,18 +549,28 @@ export default defineWorkflow({
       parent: { database_id: inputs.notionDatabaseId },
       properties: {
         Name: {
-          title: [{ text: { content: `${isRefund ? '🔄 Refund' : '💰 Payment'}: ${displayAmount}` } }],
+          title: [
+            {
+              text: {
+                content: `${isRefund ? "🔄 Refund" : "💰 Payment"}: ${displayAmount}`,
+              },
+            },
+          ],
         },
         Amount: { number: isRefund ? -amount : amount },
         Currency: { select: { name: currency } },
-        Status: { select: { name: isRefund ? 'Refunded' : 'Completed' } },
-        'Payment ID': { rich_text: [{ text: { content: paymentData.id } }] },
-        Date: { date: { start: new Date(paymentData.created * 1000).toISOString() } },
+        Status: { select: { name: isRefund ? "Refunded" : "Completed" } },
+        "Payment ID": { rich_text: [{ text: { content: paymentData.id } }] },
+        Date: {
+          date: { start: new Date(paymentData.created * 1000).toISOString() },
+        },
       },
     });
 
     if (!notionPage.success) {
-      throw new Error(`Failed to create Notion page: ${notionPage.error?.message}`);
+      throw new Error(
+        `Failed to create Notion page: ${notionPage.error?.message}`,
+      );
     }
 
     return {
@@ -553,7 +578,7 @@ export default defineWorkflow({
       paymentId: paymentData.id,
       notionPageId: notionPage.data.id,
       amount: displayAmount,
-      type: isRefund ? 'refund' : 'payment',
+      type: isRefund ? "refund" : "payment",
     };
   },
 });
@@ -565,39 +590,39 @@ This example is from `packages/workflows/src/standup-bot/index.ts`:
 
 ```typescript
 // From: packages/workflows/src/standup-bot/index.ts
-import { defineWorkflow, schedule } from '@workwayco/sdk';
+import { defineWorkflow, schedule } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'Standup Reminder Bot',
-  description: 'Collect and share daily standups in Slack',
-  version: '1.0.0',
+  name: "Standup Reminder Bot",
+  description: "Collect and share daily standups in Slack",
+  version: "1.0.0",
 
   integrations: [
-    { service: 'slack', scopes: ['send_messages', 'read_messages'] },
-    { service: 'notion', scopes: ['write_pages', 'read_databases'] },
+    { service: "slack", scopes: ["send_messages", "read_messages"] },
+    { service: "notion", scopes: ["write_pages", "read_databases"] },
   ],
 
   inputs: {
     standupChannel: {
-      type: 'text',
-      label: 'Standup Channel',
+      type: "text",
+      label: "Standup Channel",
       required: true,
-      description: 'Channel for daily standups',
+      description: "Channel for daily standups",
     },
     standupTime: {
-      type: 'time',
-      label: 'Standup Prompt Time',
-      default: '09:00',
+      type: "time",
+      label: "Standup Prompt Time",
+      default: "09:00",
     },
     timezone: {
-      type: 'timezone',
-      label: 'Timezone',
-      default: 'America/New_York',
+      type: "timezone",
+      label: "Timezone",
+      default: "America/New_York",
     },
     promptQuestions: {
-      type: 'array',
-      label: 'Standup Questions',
-      items: { type: 'string' },
+      type: "array",
+      label: "Standup Questions",
+      items: { type: "string" },
       default: [
         "What did you accomplish yesterday?",
         "What are you working on today?",
@@ -607,22 +632,22 @@ export default defineWorkflow({
   },
 
   trigger: schedule({
-    cron: '0 {{inputs.standupTime.hour}} * * 1-5',  // Weekdays
-    timezone: '{{inputs.timezone}}',
+    cron: "0 {{inputs.standupTime.hour}} * * 1-5", // Weekdays
+    timezone: "{{inputs.timezone}}",
   }),
 
   async execute({ inputs, integrations }) {
     const today = new Date();
-    const dateStr = today.toLocaleDateString('en-US', {
-      weekday: 'long',
-      month: 'short',
-      day: 'numeric',
+    const dateStr = today.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "short",
+      day: "numeric",
     });
 
     // Build standup prompt
     const questionsFormatted = inputs.promptQuestions
       .map((q: string, i: number) => `${i + 1}. ${q}`)
-      .join('\n');
+      .join("\n");
 
     // Post standup prompt
     const promptMessage = await integrations.slack.chat.postMessage({
@@ -630,13 +655,13 @@ export default defineWorkflow({
       text: `Good morning! Time for standup - ${dateStr}`,
       blocks: [
         {
-          type: 'header',
-          text: { type: 'plain_text', text: `Daily Standup - ${dateStr}` },
+          type: "header",
+          text: { type: "plain_text", text: `Daily Standup - ${dateStr}` },
         },
         {
-          type: 'section',
+          type: "section",
           text: {
-            type: 'mrkdwn',
+            type: "mrkdwn",
             text: `Good morning team! Please share your standup update.\n\n*Today's questions:*\n${questionsFormatted}`,
           },
         },
@@ -644,7 +669,7 @@ export default defineWorkflow({
     });
 
     if (!promptMessage.success) {
-      throw new Error('Failed to post standup prompt');
+      throw new Error("Failed to post standup prompt");
     }
 
     return {
@@ -765,6 +790,7 @@ Study the defineWorkflow() pattern in real production workflows:
 > **Praxis**: Ask Claude Code: "Compare these three workflows in packages/workflows/src/: stripe-to-notion, standup-bot, and github-to-linear. What patterns do they have in common?"
 
 These workflows demonstrate:
+
 - **stripe-to-notion**: Webhook trigger, Notion page creation, idempotency checks
 - **standup-bot**: Schedule trigger with user-configurable time, Slack blocks
 - **github-to-linear**: Multi-event webhook, storage for tracking synced issues
@@ -772,12 +798,12 @@ These workflows demonstrate:
 After reviewing the examples, create a minimal workflow skeleton:
 
 ```typescript
-import { defineWorkflow, manual } from '@workwayco/sdk';
+import { defineWorkflow, manual } from "@workwayco/sdk";
 
 export default defineWorkflow({
-  name: 'My First Pattern',
-  description: 'Learning the structure',
-  version: '1.0.0',
+  name: "My First Pattern",
+  description: "Learning the structure",
+  version: "1.0.0",
 
   integrations: [],
 
@@ -786,7 +812,7 @@ export default defineWorkflow({
   trigger: manual(),
 
   async execute({ trigger, inputs, integrations, storage }) {
-    console.log('Workflow executed');
+    console.log("Workflow executed");
     return { success: true };
   },
 });

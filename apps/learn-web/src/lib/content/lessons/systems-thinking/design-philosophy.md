@@ -12,7 +12,7 @@ By the end of this lesson, you will be able to:
 
 ---
 
-Building workflows that work is the foundation. Building workflows that *recede* is the craft. This lesson elevates your thinking from functional automation to intentional design.
+Building workflows that work is the foundation. Building workflows that _recede_ is the craft. This lesson elevates your thinking from functional automation to intentional design.
 
 ## Step-by-Step: Apply Design Philosophy to Your Workflow
 
@@ -23,10 +23,10 @@ List every moment a user must think about your workflow:
 ```typescript
 // Audit your current workflow
 const touchPoints = [
-  'Initial setup: 5 config options',
-  'Slack notification on every run',
-  'Manual database ID entry',
-  'Error messages require log investigation',
+  "Initial setup: 5 config options",
+  "Slack notification on every run",
+  "Manual database ID entry",
+  "Error messages require log investigation",
 ];
 ```
 
@@ -63,7 +63,7 @@ Change from "loud success, quiet failure" to "silent success, loud failure":
 
 ```typescript
 // Before: User interrupted on every run
-await slack.postMessage({ text: '✅ Workflow completed!' });
+await slack.postMessage({ text: "✅ Workflow completed!" });
 
 // After: User only notified when action needed
 if (!results.success) {
@@ -82,11 +82,11 @@ Transform cryptic errors into helpful guidance:
 return { success: false, error: error.message };
 
 // After: Tells user what to do
-if (error.code === 'AUTH_EXPIRED') {
+if (error.code === "AUTH_EXPIRED") {
   return {
     success: false,
-    error: 'Your Zoom connection expired. Reconnect at workway.co/settings',
-    actionUrl: 'https://workway.co/settings/integrations',
+    error: "Your Zoom connection expired. Reconnect at workway.co/settings",
+    actionUrl: "https://workway.co/settings/integrations",
   };
 }
 ```
@@ -99,7 +99,9 @@ Find one abstraction that can be removed:
 // Before: Unnecessary abstraction
 class MeetingProcessor {
   constructor(private integrations: Integrations) {}
-  async process(meeting: Meeting) { /* ... */ }
+  async process(meeting: Meeting) {
+    /* ... */
+  }
 }
 const processor = new MeetingProcessor(integrations);
 await processor.process(meeting);
@@ -135,13 +137,13 @@ WORKWAY isn't just a technical platform—it's a design philosophy applied to au
 
 ### The Visibility Test
 
-A workflow achieves Zuhandenheit when users forget it exists. They only remember the *outcomes*:
+A workflow achieves Zuhandenheit when users forget it exists. They only remember the _outcomes_:
 
-| Vorhandenheit (Visible) | Zuhandenheit (Invisible) |
-|-------------------------|--------------------------|
+| Vorhandenheit (Visible)                | Zuhandenheit (Invisible)            |
+| -------------------------------------- | ----------------------------------- |
 | "I need to check if the Zoom sync ran" | "My meeting notes are always there" |
-| "Let me see what the workflow logged" | "Follow-ups happen automatically" |
-| "The automation failed again" | "I never think about data entry" |
+| "Let me see what the workflow logged"  | "Follow-ups happen automatically"   |
+| "The automation failed again"          | "I never think about data entry"    |
 
 ### Designing for Invisibility
 
@@ -150,14 +152,30 @@ Every design decision should answer: **Does this help the tool recede?**
 ```typescript
 // ❌ Visible: Requires user attention
 export default defineWorkflow({
-  name: 'Sync Meeting Notes',
+  name: "Sync Meeting Notes",
 
   configSchema: {
-    notionDatabase: { type: 'text', label: 'Notion Database ID', required: true },
-    slackChannel: { type: 'text', label: 'Slack Channel ID', required: true },
-    emailRecipients: { type: 'text', label: 'Comma-separated emails', required: true },
-    summaryLength: { type: 'select', options: ['short', 'medium', 'long'], required: true },
-    includeActionItems: { type: 'boolean', label: 'Extract action items?', required: true },
+    notionDatabase: {
+      type: "text",
+      label: "Notion Database ID",
+      required: true,
+    },
+    slackChannel: { type: "text", label: "Slack Channel ID", required: true },
+    emailRecipients: {
+      type: "text",
+      label: "Comma-separated emails",
+      required: true,
+    },
+    summaryLength: {
+      type: "select",
+      options: ["short", "medium", "long"],
+      required: true,
+    },
+    includeActionItems: {
+      type: "boolean",
+      label: "Extract action items?",
+      required: true,
+    },
   },
 
   async execute({ inputs }) {
@@ -167,25 +185,25 @@ export default defineWorkflow({
 
 // ✅ Invisible: Sensible defaults, minimal friction
 export default defineWorkflow({
-  name: 'Meeting Intelligence',
+  name: "Meeting Intelligence",
 
   configSchema: {
     notionDatabase: {
-      type: 'notion_database',
-      label: 'Save notes to',
+      type: "notion_database",
+      label: "Save notes to",
       required: true,
     },
     slackChannel: {
-      type: 'slack_channel',
-      label: 'Notify team in',
-      required: false,  // Optional enhancement
+      type: "slack_channel",
+      label: "Notify team in",
+      required: false, // Optional enhancement
     },
   },
 
   async execute({ inputs, integrations }) {
     // Smart defaults handle the rest
-    const summaryLength = 'medium';  // Tested optimal
-    const includeActionItems = true;  // Always valuable
+    const summaryLength = "medium"; // Tested optimal
+    const includeActionItems = true; // Always valuable
     // Email goes to meeting host automatically
   },
 });
@@ -271,7 +289,7 @@ Self-documenting code removes the need for comments:
 ```typescript
 // ❌ Requires documentation
 const x = await integrations.zoom.getMeeting(id);
-const y = await process(x);  // What does this do?
+const y = await process(x); // What does this do?
 
 // ✅ Self-documenting
 const meetingDetails = await integrations.zoom.getMeeting(meetingId);
@@ -284,7 +302,7 @@ The workflow shouldn't demand attention:
 
 ```typescript
 // ❌ Obtrusive: Sends notification for every run
-await slack.postMessage({ text: '✅ Workflow ran successfully!' });
+await slack.postMessage({ text: "✅ Workflow ran successfully!" });
 
 // ✅ Unobtrusive: Silent success, loud failure
 if (!results.success) {
@@ -314,10 +332,12 @@ Build for stability, not trends:
 
 ```typescript
 // ❌ Trendy: Using latest beta API
-const result = await fetch('https://api.newservice.io/v0-beta/experimental');
+const result = await fetch("https://api.newservice.io/v0-beta/experimental");
 
 // ✅ Durable: Using stable, versioned APIs
-const result = await integrations.notion.pages.create({ /* stable API */ });
+const result = await integrations.notion.pages.create({
+  /* stable API */
+});
 ```
 
 ### 8. Good Design is Thorough
@@ -353,14 +373,14 @@ Efficient code, minimal dependencies:
 ```typescript
 // ❌ Wasteful: Unnecessary API calls
 for (const item of items) {
-  const user = await getUser(item.userId);  // N+1 queries
+  const user = await getUser(item.userId); // N+1 queries
   await process(item, user);
 }
 
 // ✅ Efficient: Batched operations
-const userIds = [...new Set(items.map(i => i.userId))];
-const users = await getUsers(userIds);  // Single query
-const userMap = new Map(users.map(u => [u.id, u]));
+const userIds = [...new Set(items.map((i) => i.userId))];
+const users = await getUsers(userIds); // Single query
+const userMap = new Map(users.map((u) => [u.id, u]));
 
 for (const item of items) {
   await process(item, userMap.get(item.userId));
@@ -375,19 +395,19 @@ Remove until it breaks:
 // ❌ Over-designed
 interface MeetingProcessorOptions {
   enableCaching?: boolean;
-  cacheStrategy?: 'lru' | 'fifo' | 'lfu';
+  cacheStrategy?: "lru" | "fifo" | "lfu";
   cacheTtl?: number;
   enableRetry?: boolean;
   retryCount?: number;
-  retryBackoff?: 'linear' | 'exponential';
+  retryBackoff?: "linear" | "exponential";
   enableLogging?: boolean;
-  logLevel?: 'debug' | 'info' | 'warn' | 'error';
+  logLevel?: "debug" | "info" | "warn" | "error";
   // ... 20 more options
 }
 
 // ✅ Minimal design
 interface MeetingProcessorOptions {
-  timeout?: number;  // Only what's actually needed
+  timeout?: number; // Only what's actually needed
 }
 ```
 
@@ -423,9 +443,9 @@ class AbstractNotificationService {
   abstract send(message: Message): Promise<Result>;
 }
 
-class SlackNotificationService extends AbstractNotificationService { }
-class EmailNotificationService extends AbstractNotificationService { }
-class SMSNotificationService extends AbstractNotificationService { }
+class SlackNotificationService extends AbstractNotificationService {}
+class EmailNotificationService extends AbstractNotificationService {}
+class SMSNotificationService extends AbstractNotificationService {}
 
 // ✅ "We need this"
 async function notifySlack(channel: string, text: string) {
@@ -440,16 +460,19 @@ The simple version takes 5 minutes to replace if requirements change. The abstra
 Before shipping a workflow, run this checklist:
 
 ### Zuhandenheit Check
+
 - [ ] Can users forget this workflow exists?
 - [ ] Does it require ongoing attention?
 - [ ] Are errors meaningful without debugging?
 
 ### Weniger Check
+
 - [ ] Could any configuration option be a sensible default?
 - [ ] Could any function be inlined?
 - [ ] Could any abstraction be removed?
 
 ### Honesty Check
+
 - [ ] Does the description promise only what it delivers?
 - [ ] Are limitations documented?
 - [ ] Are error messages helpful?
