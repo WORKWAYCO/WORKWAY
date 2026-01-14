@@ -238,10 +238,18 @@ async function processSync(params: {
 				}
 
 				// Add participants if mapped
+				// Handle case where Fireflies returns comma-separated participants
 				if (propertyMapping.participants && transcript.participants?.length) {
-					properties[propertyMapping.participants] = {
-						multi_select: transcript.participants.map((p) => ({ name: p }))
-					};
+					const participantNames = transcript.participants
+						.flatMap((p) => p.includes(',') ? p.split(',').map(s => s.trim()) : [p])
+						.filter((p) => p.length > 0)
+						.slice(0, 100); // Notion multi-select limit
+					
+					if (participantNames.length > 0) {
+						properties[propertyMapping.participants] = {
+							multi_select: participantNames.map((p) => ({ name: p }))
+						};
+					}
 				}
 
 				// Add keywords if mapped

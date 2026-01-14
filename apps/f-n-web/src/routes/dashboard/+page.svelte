@@ -95,6 +95,15 @@
 	let databases = $state<DatabaseItem[]>([]);
 	let loadingTranscripts = $state(false);
 	let loadingDatabases = $state(false);
+	
+	// Pagination state
+	let hasMoreTranscripts = $state(true);
+	let loadingMoreTranscripts = $state(false);
+	const TRANSCRIPTS_PER_PAGE = 500;
+	
+	// Error state
+	let transcriptError = $state<string | null>(null);
+	let transcriptErrorHint = $state<string | null>(null);
 
 	// Property mapping state
 	let savedMapping = $state<PropertyMapping | null>(null);
@@ -154,16 +163,45 @@
 
 	async function loadTranscripts() {
 		loadingTranscripts = true;
+		transcriptError = null;
+		transcriptErrorHint = null;
 		try {
-			const res = await fetch('/api/transcripts');
-			const json = await res.json() as { transcripts?: TranscriptItem[] };
+			const res = await fetch(`/api/transcripts?limit=${TRANSCRIPTS_PER_PAGE}&skip=0`);
+			const json = await res.json() as { transcripts?: TranscriptItem[]; error?: string; hint?: string; retryAfter?: string };
+			
+			if (!res.ok || json.error) {
+				transcriptError = json.error || 'Failed to load transcripts';
+				transcriptErrorHint = json.hint || null;
+				transcripts = [];
+				return;
+			}
+			
 			if (json.transcripts) {
 				transcripts = json.transcripts;
+				hasMoreTranscripts = json.transcripts.length >= TRANSCRIPTS_PER_PAGE;
 			}
 		} catch (e) {
 			console.error('Failed to load transcripts:', e);
+			transcriptError = 'Connection error. Please try again.';
 		}
 		loadingTranscripts = false;
+	}
+
+	async function loadMoreTranscripts() {
+		if (loadingMoreTranscripts || !hasMoreTranscripts) return;
+		
+		loadingMoreTranscripts = true;
+		try {
+			const res = await fetch(`/api/transcripts?limit=${TRANSCRIPTS_PER_PAGE}&skip=${transcripts.length}`);
+			const json = await res.json() as { transcripts?: TranscriptItem[] };
+			if (json.transcripts) {
+				transcripts = [...transcripts, ...json.transcripts];
+				hasMoreTranscripts = json.transcripts.length >= TRANSCRIPTS_PER_PAGE;
+			}
+		} catch (e) {
+			console.error('Failed to load more transcripts:', e);
+		}
+		loadingMoreTranscripts = false;
 	}
 
 	async function loadDatabases() {
@@ -451,6 +489,20 @@
 
 				{#if loadingTranscripts}
 					<div class="text-sm text-[var(--brand-text-muted)]">Loading transcripts...</div>
+				{:else if transcriptError}
+					<div class="p-4 border border-[var(--brand-error)]/30 rounded-[var(--brand-radius)] bg-[var(--brand-error)]/5">
+						<div class="text-sm text-[var(--brand-error)] font-medium">{transcriptError}</div>
+						{#if transcriptErrorHint}
+							<div class="text-xs text-[var(--brand-text-muted)] mt-1">{transcriptErrorHint}</div>
+						{/if}
+						<button 
+							type="button"
+							onclick={loadTranscripts}
+							class="mt-3 text-xs text-[var(--brand-accent)] hover:underline"
+						>
+							Try again
+						</button>
+					</div>
 				{:else if transcripts.length === 0}
 					<div class="text-sm text-[var(--brand-text-muted)]">No transcripts found</div>
 				{:else}
@@ -481,6 +533,28 @@
 							</label>
 						{/each}
 					</div>
+					
+					<!-- Load More Button -->
+					{#if hasMoreTranscripts}
+						<button
+							type="button"
+							onclick={loadMoreTranscripts}
+							disabled={loadingMoreTranscripts}
+							class="w-full mt-3 py-2 text-sm text-[var(--brand-text-muted)] hover:text-[var(--brand-text)] border border-[var(--brand-border)] rounded-[var(--brand-radius)] hover:bg-[var(--brand-surface)] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+						>
+							{#if loadingMoreTranscripts}
+								<Loader2 size={14} class="animate-spin" />
+								Loading older transcripts...
+							{:else}
+								<ChevronDown size={14} />
+								Load older transcripts ({transcripts.length} loaded)
+							{/if}
+						</button>
+					{:else if transcripts.length > 0}
+						<div class="mt-3 text-center text-xs text-[var(--brand-text-muted)]">
+							All {transcripts.length} transcripts loaded
+						</div>
+					{/if}
 				{/if}
 			</div>
 
@@ -525,25 +599,32 @@
 			<h2 class="text-lg font-semibold mb-4">Recent syncs</h2>
 			<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] divide-y divide-[var(--brand-border)]">
 				{#each data.recentJobs as job}
-					<div class="p-4 flex items-center justify-between">
-						<div>
-							<div class="font-medium">{job.database_name || 'Unknown database'}</div>
-							<div class="text-sm text-[var(--brand-text-muted)]">
-								{new Date(job.created_at).toLocaleString()} · {job.progress}/{job.total_transcripts} transcripts
+					<div class="p-4">
+						<div class="flex items-center justify-between">
+							<div>
+								<div class="font-medium">{job.database_name || 'Unknown database'}</div>
+								<div class="text-sm text-[var(--brand-text-muted)]">
+									{new Date(job.created_at).toLocaleString()} · {job.progress}/{job.total_transcripts} transcripts
+								</div>
 							</div>
+							<span
+								class="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 {job.status === 'completed' ? 'bg-[var(--brand-success)]/10 text-[var(--brand-success)]' : job.status === 'failed' ? 'bg-[var(--brand-error)]/10 text-[var(--brand-error)]' : job.status === 'running' ? 'bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]' : 'bg-neutral-500/10 text-neutral-500'}"
+							>
+								{#if job.status === 'completed'}
+									<Check size={16} />
+								{:else if job.status === 'running'}
+									<Loader2 size={16} class="animate-spin" />
+								{:else if job.status === 'failed'}
+									<X size={16} />
+								{/if}
+								{job.status}
+							</span>
 						</div>
-						<span
-							class="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 {job.status === 'completed' ? 'bg-[var(--brand-success)]/10 text-[var(--brand-success)]' : job.status === 'failed' ? 'bg-[var(--brand-error)]/10 text-[var(--brand-error)]' : job.status === 'running' ? 'bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]' : 'bg-neutral-500/10 text-neutral-500'}"
-						>
-							{#if job.status === 'completed'}
-								<Check size={16} />
-							{:else if job.status === 'running'}
-								<Loader2 size={16} class="animate-spin" />
-							{:else if job.status === 'failed'}
-								<X size={16} />
-							{/if}
-							{job.status}
-						</span>
+						{#if job.error_message}
+							<div class="mt-2 p-2 rounded bg-[var(--brand-error)]/5 border border-[var(--brand-error)]/20">
+								<div class="text-xs text-[var(--brand-error)]">{job.error_message}</div>
+							</div>
+						{/if}
 					</div>
 				{/each}
 			</div>

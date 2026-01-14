@@ -39,7 +39,7 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 
 	// Get recent sync jobs
 	const recentJobs = await DB.prepare(
-		`SELECT id, status, progress, total_transcripts, database_name, created_at, completed_at
+		`SELECT id, status, progress, total_transcripts, database_name, error_message, created_at, completed_at
 		 FROM sync_jobs
 		 WHERE user_id = ?
 		 ORDER BY created_at DESC
@@ -52,6 +52,7 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 			progress: number;
 			total_transcripts: number;
 			database_name: string | null;
+			error_message: string | null;
 			created_at: string;
 			completed_at: string | null;
 		}>();

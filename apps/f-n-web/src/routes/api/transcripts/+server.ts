@@ -24,7 +24,7 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
 		return json({ error: 'Fireflies not connected' }, { status: 400 });
 	}
 
-	const limit = parseInt(url.searchParams.get('limit') || '50');
+	const limit = parseInt(url.searchParams.get('limit') || '500');
 	const skip = parseInt(url.searchParams.get('skip') || '0');
 
 	const client = createFirefliesClient(account.access_token);

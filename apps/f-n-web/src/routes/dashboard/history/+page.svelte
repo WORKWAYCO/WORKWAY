@@ -19,30 +19,37 @@
 	{:else}
 		<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] divide-y divide-[var(--brand-border)] bg-[var(--brand-surface-elevated)]">
 			{#each data.jobs as job}
-				<div class="p-4 flex items-center justify-between">
-					<div>
-						<div class="font-medium">{job.database_name || 'Unknown database'}</div>
-						<div class="text-sm text-[var(--brand-text-muted)]">
-							{new Date(job.created_at).toLocaleString()} · {job.progress}/{job.total_transcripts} transcripts
-						</div>
-						{#if job.completed_at}
-							<div class="text-xs text-[var(--brand-text-muted)] mt-1">
-								Completed {new Date(job.completed_at).toLocaleString()}
+				<div class="p-4">
+					<div class="flex items-center justify-between">
+						<div>
+							<div class="font-medium">{job.database_name || 'Unknown database'}</div>
+							<div class="text-sm text-[var(--brand-text-muted)]">
+								{new Date(job.created_at).toLocaleString()} · {job.progress}/{job.total_transcripts} transcripts
 							</div>
-						{/if}
+							{#if job.completed_at}
+								<div class="text-xs text-[var(--brand-text-muted)] mt-1">
+									Completed {new Date(job.completed_at).toLocaleString()}
+								</div>
+							{/if}
+						</div>
+						<span
+							class="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 {job.status === 'completed' ? 'bg-[var(--brand-success)]/10 text-[var(--brand-success)]' : job.status === 'failed' ? 'bg-[var(--brand-error)]/10 text-[var(--brand-error)]' : job.status === 'running' ? 'bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]' : 'bg-neutral-500/10 text-neutral-500'}"
+						>
+							{#if job.status === 'completed'}
+								<Check size={16} />
+							{:else if job.status === 'running'}
+								<Loader2 size={16} class="animate-spin" />
+							{:else if job.status === 'failed'}
+								<X size={16} />
+							{/if}
+							{job.status}
+						</span>
 					</div>
-					<span
-						class="px-2 py-1 rounded text-xs font-medium flex items-center gap-1 {job.status === 'completed' ? 'bg-[var(--brand-success)]/10 text-[var(--brand-success)]' : job.status === 'failed' ? 'bg-[var(--brand-error)]/10 text-[var(--brand-error)]' : job.status === 'running' ? 'bg-[var(--brand-accent)]/10 text-[var(--brand-accent)]' : 'bg-neutral-500/10 text-neutral-500'}"
-					>
-						{#if job.status === 'completed'}
-							<Check size={16} />
-						{:else if job.status === 'running'}
-							<Loader2 size={16} class="animate-spin" />
-						{:else if job.status === 'failed'}
-							<X size={16} />
-						{/if}
-						{job.status}
-					</span>
+					{#if job.error_message}
+						<div class="mt-2 p-2 rounded bg-[var(--brand-error)]/5 border border-[var(--brand-error)]/20">
+							<div class="text-xs text-[var(--brand-error)]">{job.error_message}</div>
+						</div>
+					{/if}
 				</div>
 			{/each}
 		</div>
