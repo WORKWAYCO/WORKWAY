@@ -43,6 +43,7 @@
  * - Summary (rich_text): AI-generated thread summary
  * - Contacts (relation): Links to Contacts database
  * - Thread ID (rich_text): Gmail thread ID for deduplication
+ * - Processed Messages (rich_text): Comma-separated Gmail message IDs (for incremental sync)
  *
  * @see /packages/workflows/src/meeting-intelligence-private - Pattern reference
  * @private For @halfdozen.co team only
@@ -719,12 +720,15 @@ export default defineWorkflow({
 			// Build page properties
 			const latestDate = emails[emails.length - 1].date;
 			const subject = emails[0].subject || '(No subject)';
+			const allMessageIds = emails.map((e) => e.messageId);
 
 			const properties: any = {
 				Interaction: { title: [{ text: { content: subject } }] },
 				Type: { select: { name: 'Email' } },
 				Date: { date: { start: latestDate } },
 				'Thread ID': { rich_text: [{ text: { content: thread.id } }] },
+				// Track which messages have been processed to enable incremental sync
+				'Processed Messages': { rich_text: [{ text: { content: allMessageIds.join(',') } }] },
 			};
 
 			if (summary) {
@@ -781,18 +785,104 @@ export default defineWorkflow({
 
 			// Create or update page
 			if (isUpdate) {
-				// Update existing page
+				// Update existing page with new messages
 				const pageId = existingPage.data[0].id;
+				const existingPageData = existingPage.data[0];
+
+				// Get previously processed message IDs from the page
+				let processedMessageIds: string[] = [];
+				let isLegacyPage = false;
+				try {
+					const processedMessagesProperty = existingPageData.properties?.['Processed Messages'];
+					if (processedMessagesProperty?.rich_text?.[0]?.text?.content) {
+						processedMessageIds = processedMessagesProperty.rich_text[0].text.content.split(',').filter(Boolean);
+					} else {
+						// Property doesn't exist or is empty - this is a legacy page from before tracking
+						// Assume all current messages are already synced to avoid duplicates
+						isLegacyPage = true;
+						console.log(`[Thread ${thread.id}] Legacy page without tracking - will initialize tracking and sync only future messages`);
+					}
+				} catch {
+					// Property might not exist yet for older pages
+					isLegacyPage = true;
+					console.log(`[Thread ${thread.id}] Legacy page without tracking - will initialize tracking and sync only future messages`);
+				}
+
+				// Filter to only NEW messages that haven't been processed
+				// For legacy pages (no tracking), skip content append but initialize tracking for future syncs
+				const newEmails = isLegacyPage
+					? [] // Don't append to legacy pages - just initialize tracking
+					: emails.filter((email) => !processedMessageIds.includes(email.messageId));
+
+				if (newEmails.length > 0) {
+					console.log(`[Thread ${thread.id}] Found ${newEmails.length} new message(s) to sync`);
+
+					// Build content blocks for NEW emails only (newest first)
+					const newContentBlocks: any[] = [];
+
+					// Add a visual separator for new messages
+					newContentBlocks.push({ divider: {} });
+					newContentBlocks.push({
+						callout: {
+							rich_text: [{ text: { content: `📬 ${newEmails.length} new message${newEmails.length > 1 ? 's' : ''} synced` } }],
+							icon: { emoji: '📬' },
+							color: 'green_background',
+						},
+					});
+
+					// Add new emails (newest first)
+					for (let i = newEmails.length - 1; i >= 0; i--) {
+						const email = newEmails[i];
+
+						if (i < newEmails.length - 1) {
+							newContentBlocks.push({ divider: {} });
+						}
+
+						// Email header
+						const fromName = email.from.name || email.from.email;
+						const toNames = email.to.map((t) => t.name || t.email).join(', ');
+						const dateFormatted = new Date(email.date).toLocaleString('en-US', {
+							month: 'short',
+							day: 'numeric',
+							year: 'numeric',
+							hour: 'numeric',
+							minute: '2-digit',
+						});
+
+						newContentBlocks.push({
+							quote: {
+								rich_text: [{ text: { content: `${fromName} → ${toNames} | ${dateFormatted}` } }],
+							},
+						});
+
+						// Email body with rich formatting
+						const bodyBlocks = htmlToNotionBlocks(email.body);
+						newContentBlocks.push(...bodyBlocks);
+					}
+
+					// Append new content blocks to the existing page
+					if (newContentBlocks.length > 0) {
+						// Notion limit: 100 blocks per request
+						for (let i = 0; i < newContentBlocks.length; i += 100) {
+							await integrations.notion.blocks.children.append({
+								block_id: pageId,
+								children: newContentBlocks.slice(i, i + 100),
+							});
+						}
+					}
+				}
+
+				// Update page properties (date, summary, contacts, and processed message IDs)
 				await integrations.notion.pages.update({
 					page_id: pageId,
 					properties: {
 						Date: properties.Date,
 						Summary: properties.Summary,
 						Contacts: properties.Contacts,
+						'Processed Messages': { rich_text: [{ text: { content: allMessageIds.join(',') } }] },
 					},
 				});
 
-				// Append new content (would need to track which messages are new)
 				results.push({
 					threadId: thread.id,
 					subject,
