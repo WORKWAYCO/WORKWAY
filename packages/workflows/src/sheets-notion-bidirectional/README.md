@@ -86,10 +86,14 @@ Your organization needs its own Google Cloud app. Here's how:
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Create a project (or pick an existing one)
-3. Turn on the Google Sheets API
-4. Create OAuth credentials (pick "Web application")
-5. Add this redirect URL: `https://api.workway.co/oauth/google/callback`
-6. Save your Client ID and Client Secret somewhere safe
+3. Turn on the **Google Sheets API**
+4. Go to **Credentials** → **Create Credentials** → **OAuth client ID**
+5. Pick **Web application**
+6. Add this **Authorized redirect URI**:
+   ```
+   https://api.workway.co/oauth/google-sheets/callback
+   ```
+7. Save your **Client ID** and **Client Secret** somewhere safe
 
 ### Step 2: Connect to WORKWAY
 
