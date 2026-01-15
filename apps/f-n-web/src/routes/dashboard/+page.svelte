@@ -99,10 +99,11 @@
 	// Persist database selection in localStorage
 	const SELECTED_DB_KEY = 'fn-selected-database';
 	
-	// Pagination state
+	// Pagination state - start small, load more on demand (Tufte: progressive disclosure)
 	let hasMoreTranscripts = $state(true);
 	let loadingMoreTranscripts = $state(false);
-	const TRANSCRIPTS_PER_PAGE = 500;
+	const INITIAL_TRANSCRIPTS = 20;  // Fast initial load
+	const LOAD_MORE_BATCH = 50;      // Reasonable batch size
 	
 	// Error state
 	let transcriptError = $state<string | null>(null);
@@ -192,7 +193,7 @@
 		transcriptError = null;
 		transcriptErrorHint = null;
 		try {
-			const res = await fetch(`/api/transcripts?limit=${TRANSCRIPTS_PER_PAGE}&skip=0`);
+			const res = await fetch(`/api/transcripts?limit=${INITIAL_TRANSCRIPTS}&skip=0`);
 			const json = await res.json() as { transcripts?: TranscriptItem[]; error?: string; hint?: string; retryAfter?: string };
 			
 			if (!res.ok || json.error) {
@@ -204,7 +205,7 @@
 			
 			if (json.transcripts) {
 				transcripts = json.transcripts;
-				hasMoreTranscripts = json.transcripts.length >= TRANSCRIPTS_PER_PAGE;
+				hasMoreTranscripts = json.transcripts.length >= INITIAL_TRANSCRIPTS;
 			}
 		} catch (e) {
 			console.error('Failed to load transcripts:', e);
@@ -218,11 +219,11 @@
 		
 		loadingMoreTranscripts = true;
 		try {
-			const res = await fetch(`/api/transcripts?limit=${TRANSCRIPTS_PER_PAGE}&skip=${transcripts.length}`);
+			const res = await fetch(`/api/transcripts?limit=${LOAD_MORE_BATCH}&skip=${transcripts.length}`);
 			const json = await res.json() as { transcripts?: TranscriptItem[] };
 			if (json.transcripts) {
 				transcripts = [...transcripts, ...json.transcripts];
-				hasMoreTranscripts = json.transcripts.length >= TRANSCRIPTS_PER_PAGE;
+				hasMoreTranscripts = json.transcripts.length >= LOAD_MORE_BATCH;
 			}
 		} catch (e) {
 			console.error('Failed to load more transcripts:', e);

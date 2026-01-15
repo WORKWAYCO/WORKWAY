@@ -59,14 +59,21 @@ const AI_SYSTEM_PROMPT = `You are an intelligent intake agent that understands u
 
 Your task:
 1. Analyze the user's natural language description
-2. Match to available templates from the provided context
-3. Return a confidence score (0.0-1.0)
+2. Match to available templates from the provided context ONLY if there's a genuine fit
+3. Return a confidence score (0.0-1.0) based on how well the match fits
 4. Decide the appropriate action based on confidence
 
-Rules:
-- confidence >= 0.8: You're confident about a template match
-- confidence 0.5-0.8: Need clarification to be sure
-- confidence < 0.5 OR complex requirements: Recommend consultation
+CRITICAL RULES:
+- ONLY match to templates that ACTUALLY exist in the context
+- If the user's industry/need is NOT covered by any template, set confidence < 0.5
+- DO NOT force a bad match - "gym" is NOT "medical-practice", "pet store" is NOT "fashion-boutique"
+- It's better to recommend consultation than suggest a poor-fit template
+
+Confidence scoring:
+- 0.85-1.0: Perfect match - user's need clearly maps to a template (e.g., "dental practice" → dental-practice)
+- 0.7-0.84: Good match but might need clarification on features
+- 0.5-0.69: Unclear - ask clarifying questions
+- 0.0-0.49: No good template match exists - recommend consultation
 
 For clarifying questions, ask at most 2-3 focused questions that would help narrow down the right solution.
 
@@ -76,7 +83,7 @@ Response format:
 {
   "understanding": "Brief 1-2 sentence summary of what the user needs",
   "confidence": 0.85,
-  "matched_template": "template-slug-if-matched",
+  "matched_template": "template-slug-if-matched OR null if no good match",
   "matched_reason": "Why this template fits their needs",
   "clarifying_questions": ["Question 1?", "Question 2?"],
   "consultation_reason": "Why they need custom consultation (if applicable)"
@@ -205,10 +212,13 @@ export default defineWorkflow({
 			// 3. Parse routing rules with defaults
 			const routingRules = parseRoutingRules(inputs.routingRules);
 
-			// 4. Build the AI prompt
+			// 4. Extract valid templates from context to prevent hallucination
+			const validTemplates = extractValidTemplates(context);
+
+			// 5. Build the AI prompt
 			const prompt = buildPrompt(inputs.userSpec, context);
 
-			// 5. Call Workers AI
+			// 6. Call Workers AI
 			const aiResult = await integrations.ai.generateText({
 				model: inputs.model || AIModels.LLAMA_3_8B,
 				system: inputs.systemPrompt || AI_SYSTEM_PROMPT,
@@ -217,24 +227,32 @@ export default defineWorkflow({
 				max_tokens: 500,
 			});
 
-			// 6. Parse AI response (handle markdown wrapping)
+			// 7. Parse AI response (handle markdown wrapping)
 			const parsed = parseAIResponse(aiResult.data?.response || '');
 
-			// 7. Determine action based on routing rules
-			const action = determineAction(parsed, routingRules);
+			// 8. Validate template against known valid templates
+			const validatedTemplate = validateTemplate(parsed.matched_template, validTemplates);
+			const templateWasHallucinated = parsed.matched_template && !validatedTemplate;
 
-			// 8. Build response
+			// 9. Determine action based on routing rules and template validity
+			const action = determineAction(parsed, routingRules, validTemplates);
+
+			// 10. Build response
 			const response: IntakeResponse = {
 				success: true,
 				conversation_id,
 				understanding: parsed.understanding || 'Unable to understand request',
 				confidence: parsed.confidence || 0,
 				action,
-				matched_template: action === 'show_template' ? parsed.matched_template : undefined,
+				// Only include template if it's valid (not hallucinated)
+				matched_template: action === 'show_template' ? validatedTemplate : undefined,
 				matched_reason: action === 'show_template' ? parsed.matched_reason : undefined,
 				clarifying_questions:
 					action === 'clarify'
-						? (parsed.clarifying_questions || []).slice(0, routingRules.clarify.max_questions)
+						? (parsed.clarifying_questions || [
+								// If template was hallucinated, add a clarifying question
+								...(templateWasHallucinated ? ['What specific industry or type of business is this for?'] : []),
+						  ]).slice(0, routingRules.clarify.max_questions)
 						: undefined,
 				consultation_reason: action === 'consultation' ? parsed.consultation_reason : undefined,
 			};
@@ -370,11 +388,56 @@ function parseAIResponse(response: string): AIResponse {
 }
 
 /**
+ * Extract valid template slugs from the LLM context
+ * Looks for patterns like **template-slug** - "description"
+ */
+function extractValidTemplates(context: string): Set<string> {
+	const templates = new Set<string>();
+	
+	// Match **template-slug** patterns (markdown bold template names)
+	const boldPattern = /\*\*([a-z][a-z0-9-]*)\*\*/g;
+	let match;
+	while ((match = boldPattern.exec(context)) !== null) {
+		// Filter out non-template bold text by checking for typical patterns
+		const slug = match[1];
+		if (slug.includes('-') || ['crm', 'inventory', 'restaurant'].includes(slug)) {
+			templates.add(slug);
+		}
+	}
+	
+	return templates;
+}
+
+/**
+ * Validate that a template slug exists in the valid set
+ * Returns the slug if valid, undefined if hallucinated
+ */
+function validateTemplate(
+	template: string | undefined,
+	validTemplates: Set<string>
+): string | undefined {
+	if (!template) return undefined;
+	
+	const normalized = template.toLowerCase().trim();
+	
+	// Direct match
+	if (validTemplates.has(normalized)) {
+		return normalized;
+	}
+	
+	// Try fuzzy matching for common variations
+	// e.g., "gym-website" might match "fitness" if we had one
+	// For now, strict validation - if it's not in the list, it's hallucinated
+	return undefined;
+}
+
+/**
  * Determine action based on confidence and routing rules
  */
 function determineAction(
 	parsed: AIResponse,
-	rules: RoutingRules
+	rules: RoutingRules,
+	validTemplates?: Set<string>
 ): 'show_template' | 'clarify' | 'consultation' {
 	const { confidence, consultation_reason, matched_template } = parsed;
 
@@ -388,9 +451,19 @@ function determineAction(
 		}
 	}
 
-	// High confidence with a matched template -> show it
-	if (confidence >= rules.show_template.confidence_threshold && matched_template) {
+	// Validate template if we have a valid set
+	const templateIsValid = validTemplates 
+		? validateTemplate(matched_template, validTemplates) !== undefined
+		: !!matched_template;
+
+	// High confidence with a VALID matched template -> show it
+	if (confidence >= rules.show_template.confidence_threshold && matched_template && templateIsValid) {
 		return 'show_template';
+	}
+
+	// If AI claimed high confidence but template is invalid (hallucinated), demote to clarify
+	if (confidence >= rules.show_template.confidence_threshold && matched_template && !templateIsValid) {
+		return 'clarify';
 	}
 
 	// Medium confidence -> ask clarifying questions
