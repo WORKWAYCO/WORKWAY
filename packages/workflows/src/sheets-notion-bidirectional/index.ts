@@ -382,13 +382,22 @@ export default defineWorkflow({
 		}
 	},
 
-	// Webhook handler for Notion → Sheets direction
-	webhooks: {
-		notionUpdate: webhook({
+	// TODO: Webhook handler for Notion → Sheets direction
+	// This uses a custom handler pattern not yet supported by the SDK.
+	// Uncomment and refactor when the SDK supports webhook handlers with custom logic.
+	/*
+	webhooks: [
+		webhook({
 			path: '/notion-webhook',
-			method: 'POST',
+			// Custom handler logic would go here
+		}),
+	],
+	*/
 
-			async handler({ request, inputs, integrations, env }) {
+	// Placeholder for future webhook handler implementation
+	// The original handler logic is preserved below for reference:
+	/*
+	async notionWebhookHandler({ request, inputs, integrations, env }) {
 				const startedAt = new Date().toISOString();
 				const startTime = Date.now();
 
@@ -549,14 +558,13 @@ export default defineWorkflow({
 						});
 					}
 
-					return result;
-				} catch (error) {
-					const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-					return { success: false, error: errorMessage };
-				}
-			},
-		}),
+				return result;
+			} catch (error) {
+				const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+				return { success: false, error: errorMessage };
+			}
 	},
+	*/
 
 	onError: async ({ error, inputs }) => {
 		const connectionId = inputs.google_connection_id || 'unknown';

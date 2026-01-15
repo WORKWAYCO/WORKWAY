@@ -88,9 +88,6 @@ export { default as dealTracker } from './deal-tracker/index.js';
 // Task Management
 export { default as taskSyncBridge } from './task-sync-bridge/index.js';
 
-// Cross-Workspace Sync
-export { default as databasesMirrored } from './databases-mirrored/index.js';
-
 // Developer Tools
 export { default as issuesSyncedToSprint } from './issues-synced-to-sprint/index.js';
 export { default as prReviewNotifier } from './pr-review-notifier/index.js';
@@ -354,23 +351,6 @@ export const integrationPairs = {
 		workflowId: 'task-sync-bridge',
 		outcome: 'Completed tasks logged to Notion',
 		outcomeFrame: 'when_tasks_complete',
-	},
-
-	// Cross-Workspace Sync (Notion to Notion)
-	'notion:notion': {
-		workflowId: 'databases-mirrored',
-		outcome: 'Support tickets that sync across workspaces',
-		outcomeFrame: 'when_tickets_arrive',
-	},
-	'notion:notion:support': {
-		workflowId: 'databases-mirrored',
-		outcome: 'Client tickets that manage themselves',
-		outcomeFrame: 'when_tickets_arrive',
-	},
-	'notion:notion:updates': {
-		workflowId: 'databases-mirrored',
-		outcome: 'Agentic updates between workspaces',
-		outcomeFrame: 'when_data_changes',
 	},
 
 	// Error Tracking & Incidents (WORKWAY Dogfooding!)
@@ -754,8 +734,7 @@ export const workflows = {
 	'task-sync-bridge': { id: 'task-sync-bridge', outcomeFrame: 'when_tasks_complete' },
 	// Email Sync (Private - BYOO)
 	'private-emails-documented': { id: 'private-emails-documented', outcomeFrame: 'when_emails_arrive', experimental: true },
-	// Cross-Workspace Sync
-	'databases-mirrored': { id: 'databases-mirrored', outcomeFrame: 'when_tickets_arrive' },
+	// Error Tracking & Developer Tools
 	'error-incident-manager': { id: 'error-incident-manager', outcomeFrame: 'when_errors_happen' },
 	'issues-synced-to-sprint': { id: 'issues-synced-to-sprint', outcomeFrame: 'when_issues_arrive' },
 	'pr-review-notifier': { id: 'pr-review-notifier', outcomeFrame: 'when_code_changes' },
