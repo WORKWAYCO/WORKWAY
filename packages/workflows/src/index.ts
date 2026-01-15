@@ -45,6 +45,9 @@ export { default as teamDigest } from './team-digest/index.js';
 export { default as standupBot } from './standup-bot/index.js';
 export { default as supportTicketRouter } from './support-ticket-router/index.js';
 
+// AI Intake & Routing
+export { default as conversationalIntakeAgent } from './conversational-intake-agent/index.js';
+
 // Sales & Onboarding
 export { default as salesLeadPipeline } from './sales-lead-pipeline/index.js';
 export { default as clientOnboarding } from './client-onboarding/index.js';
@@ -237,6 +240,13 @@ export const integrationPairs = {
 		workflowId: 'support-ticket-router',
 		outcome: 'Tickets routed to the right team',
 		outcomeFrame: 'when_tickets_arrive',
+	},
+
+	// AI Intake (HTTP → HTTP)
+	'http:http': {
+		workflowId: 'conversational-intake-agent',
+		outcome: 'Natural language that routes itself',
+		outcomeFrame: 'when_users_describe_needs',
 	},
 
 	// Onboarding
@@ -698,6 +708,12 @@ export const outcomeFrames = {
 		label: 'When researching content...',
 		description: 'Capture and document video content automatically',
 	},
+
+	// AI Intake
+	when_users_describe_needs: {
+		label: 'When users describe what they need...',
+		description: 'AI understands context and routes to the right solution',
+	},
 } as const;
 
 export type OutcomeFrameId = keyof typeof outcomeFrames;
@@ -761,6 +777,8 @@ export const workflows = {
 	// YouTube & Content
 	'youtube-playlist-sync': { id: 'youtube-playlist-sync', outcomeFrame: 'content_research' },
 	'youtube-playlist-sync-private': { id: 'youtube-playlist-sync-private', outcomeFrame: 'content_research', experimental: true },
+	// AI Intake
+	'conversational-intake-agent': { id: 'conversational-intake-agent', outcomeFrame: 'when_users_describe_needs' },
 } as const;
 
 export type WorkflowId = keyof typeof workflows;
