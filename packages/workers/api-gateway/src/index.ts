@@ -236,6 +236,30 @@ function createIntegrations(env: Env) {
 }
 
 // =============================================================================
+// INPUT NORMALIZATION
+// =============================================================================
+
+/**
+ * Convert snake_case keys to camelCase
+ * API consumers send snake_case, workflows expect camelCase
+ */
+function snakeToCamel(str: string): string {
+	return str.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+}
+
+/**
+ * Normalize input data from snake_case to camelCase
+ */
+function normalizeInputs(data: Record<string, unknown>): Record<string, unknown> {
+	const normalized: Record<string, unknown> = {};
+	for (const [key, value] of Object.entries(data)) {
+		const camelKey = snakeToCamel(key);
+		normalized[camelKey] = value;
+	}
+	return normalized;
+}
+
+// =============================================================================
 // ROUTE HANDLERS
 // =============================================================================
 
@@ -311,6 +335,9 @@ async function handleTrigger(
 
 	// 7. Execute workflow
 	try {
+		// Normalize inputs from snake_case to camelCase
+		const normalizedInputs = normalizeInputs(body.data);
+
 		// Build execution context
 		const context = {
 			trigger: {
@@ -319,8 +346,8 @@ async function handleTrigger(
 				payload: body.data,
 				timestamp: Date.now(),
 			},
-			inputs: body.data,
-			config: body.data,
+			inputs: normalizedInputs,
+			config: normalizedInputs,
 			integrations: createIntegrations(env),
 			env,
 			storage: createWorkflowStorage(env, executionId),
