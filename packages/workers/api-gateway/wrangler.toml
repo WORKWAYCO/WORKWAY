@@ -14,18 +14,15 @@ compatibility_flags = ["nodejs_compat"]
 # KV Namespaces
 [[kv_namespaces]]
 binding = "API_KEYS"
-id = "placeholder-api-keys"  # Replace with actual KV namespace ID
-# preview_id = "placeholder-api-keys-preview"
+id = "126746b45e274282a71fba77013be8d3"
 
 [[kv_namespaces]]
 binding = "IDEMPOTENCY"
-id = "placeholder-idempotency"  # Replace with actual KV namespace ID
-# preview_id = "placeholder-idempotency-preview"
+id = "651ca58110834aa1892bd9f5a95596e9"
 
 [[kv_namespaces]]
 binding = "WORKFLOW_STORAGE"
-id = "placeholder-workflow-storage"  # Replace with actual KV namespace ID
-# preview_id = "placeholder-workflow-storage-preview"
+id = "7e1d2080a29f420782e73432d72a284f"
 
 # Workers AI
 [ai]
