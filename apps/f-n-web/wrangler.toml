@@ -21,3 +21,8 @@ id = "3ef3373d79d44564a9582fc53d4cae49"
 [vars]
 ENVIRONMENT = "production"
 SITE_URL = "https://fn.workway.co"
+CRON_SECRET = "fn-auto-sync-2026"
+
+# Cron trigger for auto-sync (runs hourly)
+# Note: For Pages, use external cron service or Cloudflare Workers for scheduled jobs
+# This endpoint can be called by: curl -X POST -H "Authorization: Bearer fn-auto-sync-2026" https://fn.workway.co/api/cron/auto-sync

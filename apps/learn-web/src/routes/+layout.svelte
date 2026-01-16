@@ -7,7 +7,8 @@
 
 	const navItems = [
 		{ href: '/', label: 'Home' },
-		{ href: '/paths', label: 'Paths' }
+		{ href: '/paths', label: 'Paths' },
+		{ href: 'https://workway.co/waitlist', label: 'Become a Developer', external: true }
 	];
 </script>
 
@@ -24,12 +25,23 @@
 				<!-- Desktop Navigation -->
 				<div class="hidden md:flex items-center gap-8">
 					{#each navItems as item}
-						<a
-							href={item.href}
-							class="text-sm font-medium transition-colors text-[var(--color-fg-secondary)] hover:text-[var(--color-fg-primary)]"
-						>
-							{item.label}
-						</a>
+						{#if item.external}
+							<a
+								href={item.href}
+								target="_blank"
+								rel="noopener noreferrer"
+								class="text-sm font-medium transition-colors text-[var(--color-fg-secondary)] hover:text-[var(--color-fg-primary)]"
+							>
+								{item.label}
+							</a>
+						{:else}
+							<a
+								href={item.href}
+								class="text-sm font-medium transition-colors text-[var(--color-fg-secondary)] hover:text-[var(--color-fg-primary)]"
+							>
+								{item.label}
+							</a>
+						{/if}
 					{/each}
 
 					{#if data.user}
@@ -157,13 +169,18 @@
 					<h6 class="text-sm font-semibold text-[var(--color-fg-primary)] mb-md">WORKWAY</h6>
 					<ul class="space-y-sm">
 						<li>
-							<a href="https://workway.co" class="text-sm text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
-								Marketplace
+							<a href="https://workway.co/waitlist" class="text-sm text-[var(--color-fg-primary)] hover:text-[var(--color-fg-secondary)] transition-colors font-medium">
+								Become a Developer →
 							</a>
 						</li>
 						<li>
-							<a href="https://workway.co/developers" class="text-sm text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
-								Developers
+							<a href="https://workway.co/build" class="text-sm text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
+								Build
+							</a>
+						</li>
+						<li>
+							<a href="https://workway.co" class="text-sm text-[var(--color-fg-tertiary)] hover:text-[var(--color-fg-primary)] transition-colors">
+								Marketplace
 							</a>
 						</li>
 						<li>

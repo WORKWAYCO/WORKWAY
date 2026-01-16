@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { ArrowRight, Terminal, Workflow, Brain, Zap, Flame, Clock } from 'lucide-svelte';
+	import { ArrowRight, Terminal, Workflow, Brain, Zap, Flame, Clock, Users, CheckCircle } from 'lucide-svelte';
 	import type { PageData } from './$types';
 
 	let { data }: { data: PageData } = $props();
@@ -25,6 +25,12 @@
 			title: 'Systems Thinking',
 			description: 'Master compound workflows, private patterns, and agency architectures.'
 		}
+	];
+
+	const journeySteps = [
+		{ step: '1', title: 'Learn', description: 'Complete learning paths to understand the philosophy and patterns.' },
+		{ step: '2', title: 'Apply', description: 'Join the waitlist. Developers who learn first are prioritized.' },
+		{ step: '3', title: 'Build', description: 'Once approved, access the CLI and publish to the marketplace.' }
 	];
 
 	function formatDate(dateStr: string): string {
@@ -285,6 +291,47 @@
 					<p class="text-[var(--color-fg-muted)]">{feature.description}</p>
 				</div>
 			{/each}
+		</section>
+
+		<!-- Developer Journey -->
+		<section class="mb-section">
+			<div class="text-center mb-lg">
+				<h2 class="text-2xl md:text-3xl font-semibold mb-sm">Your path to becoming a WORKWAY developer</h2>
+				<p class="text-[var(--color-fg-muted)]">Quality over quantity. We accept 10 developers at a time.</p>
+			</div>
+
+			<div class="grid md:grid-cols-3 gap-md mb-lg">
+				{#each journeySteps as step}
+					<div class="card text-center relative">
+						<div class="w-12 h-12 rounded-full bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] flex items-center justify-center mx-auto mb-md">
+							<span class="text-xl font-bold text-[var(--color-fg-primary)]">{step.step}</span>
+						</div>
+						<h3 class="text-lg font-semibold mb-xs">{step.title}</h3>
+						<p class="text-sm text-[var(--color-fg-muted)]">{step.description}</p>
+					</div>
+				{/each}
+			</div>
+
+			<!-- Waitlist CTA -->
+			<div class="card bg-[var(--color-bg-elevated)] border-[var(--color-border-emphasis)] text-center max-w-xl mx-auto">
+				<div class="flex items-center justify-center gap-xs mb-md">
+					<Users size={20} class="text-[var(--color-fg-secondary)]" />
+					<span class="text-sm text-[var(--color-fg-muted)]">10 developers per cohort</span>
+				</div>
+				<h3 class="text-xl font-semibold mb-sm">Ready to apply?</h3>
+				<p class="text-[var(--color-fg-muted)] mb-md">
+					Developers who complete learning paths are prioritized. Show us you understand the philosophy.
+				</p>
+				<div class="flex flex-col sm:flex-row gap-sm justify-center">
+					<a href="/paths" class="button-secondary text-sm">
+						Learn First
+					</a>
+					<a href="https://workway.co/waitlist" class="button-primary text-sm">
+						Join Waitlist
+						<ArrowRight size={16} />
+					</a>
+				</div>
+			</div>
 		</section>
 
 		<!-- Philosophy -->

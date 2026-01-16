@@ -37,12 +37,15 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 				pm.database_id,
 				pm.mappings,
 				ca_ff.access_token as fireflies_token,
-				ca_notion.access_token as notion_token
+				ca_notion.access_token as notion_token,
+				u.email as user_email
 			FROM property_mappings pm
 			JOIN connected_accounts ca_ff 
 				ON pm.user_id = ca_ff.user_id AND ca_ff.provider = 'fireflies'
 			JOIN connected_accounts ca_notion 
 				ON pm.user_id = ca_notion.user_id AND ca_notion.provider = 'notion'
+			LEFT JOIN users u
+				ON pm.user_id = u.id
 			WHERE pm.auto_sync_enabled = 1
 		`).all<{
 			user_id: string;
@@ -50,6 +53,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 			mappings: string;
 			fireflies_token: string;
 			notion_token: string;
+			user_email: string | null;
 		}>();
 
 		if (!autoSyncUsers.results?.length) {
@@ -91,6 +95,7 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 				const result = await processSync({
 					jobId,
 					userId: user.user_id,
+					userEmail: user.user_email || '',
 					databaseId: user.database_id,
 					transcriptIds: unsyncedIds,
 					propertyMapping,

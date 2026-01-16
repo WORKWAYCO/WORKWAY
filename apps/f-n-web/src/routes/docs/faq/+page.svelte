@@ -115,7 +115,7 @@
 					Why don't I see Duration or Participants in my synced entries?
 				</summary>
 				<div class="p-4 bg-[var(--brand-surface)] text-sm text-[var(--brand-text-muted)]">
-					You need to configure Property Mapping. After selecting your database, expand the Property Mapping card and match Fireflies fields to your Notion properties. Duration requires a Number property, Participants and Keywords require Multi-select properties.
+					You need to configure Property Mapping. After selecting your database, expand the Property Mapping card and match Fireflies fields to your Notion properties. Duration requires a Number property, Participants can use Multi-select or Text, Keywords requires a Text property, and Owner requires a Select property.
 				</div>
 			</details>
 			<details class="group">

@@ -8,13 +8,14 @@
  * Zuhandenheit: The tool recedes - users see meetings in Notion, not sync mechanics.
  */
 
-import { createFirefliesClient, isRateLimitError } from '$lib/api/fireflies';
+import { createFirefliesClient, isRateLimitError, type FirefliesTranscript } from '$lib/api/fireflies';
 import { createNotionClient, formatTranscriptBlocks } from '$lib/api/notion';
-import type { PropertyMapping } from '../routes/api/property-mappings/+server';
+import type { PropertyMapping } from '../../routes/api/property-mappings/+server';
 
 export interface SyncParams {
 	jobId: string;
 	userId: string;
+	userEmail: string;
 	databaseId: string;
 	transcriptIds: string[];
 	propertyMapping: PropertyMapping;
@@ -35,7 +36,7 @@ export interface SyncResult {
  */
 export async function processSync(params: SyncParams): Promise<SyncResult> {
 	const { 
-		jobId, userId, databaseId, transcriptIds, propertyMapping, 
+		jobId, userId, userEmail, databaseId, transcriptIds, propertyMapping, 
 		firefliesApiKey, notionAccessToken, db, forceResync = false 
 	} = params;
 
@@ -101,7 +102,8 @@ export async function processSync(params: SyncParams): Promise<SyncResult> {
 				const properties = buildNotionProperties(
 					transcript, 
 					titlePropertyName, 
-					propertyMapping
+					propertyMapping,
+					userEmail
 				);
 
 				// Format content blocks
@@ -198,7 +200,8 @@ function buildNotionProperties(
 		summary?: { keywords?: string[] };
 	},
 	titlePropertyName: string,
-	propertyMapping: PropertyMapping
+	propertyMapping: PropertyMapping,
+	userEmail?: string
 ): Record<string, unknown> {
 	const properties: Record<string, unknown> = {
 		[titlePropertyName]: {
@@ -246,10 +249,17 @@ function buildNotionProperties(
 		}
 	}
 
-	// Keywords
+	// Keywords (as text, comma-separated)
 	if (propertyMapping.keywords && transcript.summary?.keywords?.length) {
 		properties[propertyMapping.keywords] = {
-			multi_select: transcript.summary.keywords.slice(0, 10).map((k) => ({ name: k }))
+			rich_text: [{ text: { content: transcript.summary.keywords.slice(0, 20).join(', ') } }]
+		};
+	}
+
+	// Owner (select property with user's login email)
+	if (propertyMapping.owner && userEmail) {
+		properties[propertyMapping.owner] = {
+			select: { name: userEmail }
 		};
 	}
 
@@ -269,7 +279,7 @@ export async function getUnsyncedTranscriptIds(
 	const fireflies = createFirefliesClient(firefliesApiKey);
 	
 	// Get recent transcripts from Fireflies
-	const transcripts = await fireflies.listTranscripts(limit, 0);
+	const transcripts = await fireflies.getTranscripts({ limit, skip: 0 });
 	
 	if (!transcripts?.length) {
 		return [];
@@ -286,6 +296,6 @@ export async function getUnsyncedTranscriptIds(
 
 	// Return unsynced IDs
 	return transcripts
-		.filter(t => !syncedIds.has(t.id))
-		.map(t => t.id);
+		.filter((t: FirefliesTranscript) => !syncedIds.has(t.id))
+		.map((t: FirefliesTranscript) => t.id);
 }

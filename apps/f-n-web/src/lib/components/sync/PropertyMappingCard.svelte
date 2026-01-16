@@ -14,6 +14,7 @@
 		keywords?: string;
 		date?: string;
 		url?: string;
+		owner?: string;
 	}
 
 	interface Props {
@@ -38,6 +39,7 @@
 	let keywords = $state('');
 	let date = $state('');
 	let url = $state('');
+	let owner = $state('');
 	let autoSync = $state(false);
 
 	// Sync form state when savedMapping changes
@@ -49,6 +51,7 @@
 		keywords = savedMapping?.keywords || '';
 		date = savedMapping?.date || '';
 		url = savedMapping?.url || '';
+		owner = savedMapping?.owner || '';
 		autoSync = autoSyncEnabled;
 	});
 	
@@ -73,6 +76,7 @@
 	const richTextProperties = $derived(properties.filter((p) => p.type === 'rich_text'));
 	const dateProperties = $derived(properties.filter((p) => p.type === 'date'));
 	const urlProperties = $derived(properties.filter((p) => p.type === 'url'));
+	const selectProperties = $derived(properties.filter((p) => p.type === 'select'));
 	
 	// Participants can use multi_select OR rich_text
 	const participantProperties = $derived([
@@ -82,7 +86,7 @@
 
 	// Count mapped fields
 	const mappedCount = $derived(
-		[duration, participants, keywords, date, url].filter((v) => v).length
+		[duration, participants, keywords, date, url, owner].filter((v) => v).length
 	);
 
 	async function handleSave() {
@@ -98,6 +102,7 @@
 		if (keywords) mapping.keywords = keywords;
 		if (date) mapping.date = date;
 		if (url) mapping.url = url;
+		if (owner) mapping.owner = owner;
 
 		try {
 			const response = await fetch('/api/property-mappings', {
@@ -206,10 +211,10 @@
 				<!-- Keywords -->
 				<div>
 					<label for="map-keywords" class="block text-sm font-medium mb-1">Keywords</label>
-					<p class="text-xs text-[var(--brand-text-muted)] mb-2">AI-extracted topics</p>
-					{#if multiSelectProperties.length === 0}
+					<p class="text-xs text-[var(--brand-text-muted)] mb-2">AI-extracted topics (comma-separated text)</p>
+					{#if richTextProperties.length === 0}
 						<p class="text-xs text-[var(--brand-text-muted)] italic">
-							Add a Multi-select property to your database
+							Add a Text property to your database
 						</p>
 					{:else}
 						<select
@@ -218,7 +223,29 @@
 							class="w-full px-3 py-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] bg-[var(--brand-surface)] text-sm"
 						>
 							<option value="">Don't map</option>
-							{#each multiSelectProperties as prop (prop.id)}
+							{#each richTextProperties as prop (prop.id)}
+								<option value={prop.name}>{prop.name}</option>
+							{/each}
+						</select>
+					{/if}
+				</div>
+
+				<!-- Owner -->
+				<div>
+					<label for="map-owner" class="block text-sm font-medium mb-1">Owner</label>
+					<p class="text-xs text-[var(--brand-text-muted)] mb-2">Automatically set to your login email</p>
+					{#if selectProperties.length === 0}
+						<p class="text-xs text-[var(--brand-text-muted)] italic">
+							Add a Select property to your database
+						</p>
+					{:else}
+						<select
+							id="map-owner"
+							bind:value={owner}
+							class="w-full px-3 py-2 border border-[var(--brand-border)] rounded-[var(--brand-radius)] bg-[var(--brand-surface)] text-sm"
+						>
+							<option value="">Don't map</option>
+							{#each selectProperties as prop (prop.id)}
 								<option value={prop.name}>{prop.name}</option>
 							{/each}
 						</select>

@@ -118,6 +118,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 		processSync({
 			jobId,
 			userId: locals.user.id,
+			userEmail: locals.user.email || '',
 			databaseId,
 			transcriptIds,
 			propertyMapping,
@@ -134,6 +135,7 @@ export const POST: RequestHandler = async ({ request, locals, platform }) => {
 async function processSync(params: {
 	jobId: string;
 	userId: string;
+	userEmail: string;
 	databaseId: string;
 	transcriptIds: string[];
 	propertyMapping: PropertyMapping;
@@ -142,7 +144,7 @@ async function processSync(params: {
 	db: D1Database;
 	forceResync: boolean;
 }) {
-	const { jobId, userId, databaseId, transcriptIds, propertyMapping, firefliesApiKey, notionAccessToken, db, forceResync } = params;
+	const { jobId, userId, userEmail, databaseId, transcriptIds, propertyMapping, firefliesApiKey, notionAccessToken, db, forceResync } = params;
 
 	const fireflies = createFirefliesClient(firefliesApiKey);
 	const notion = createNotionClient(notionAccessToken);
@@ -259,10 +261,17 @@ async function processSync(params: {
 					}
 				}
 
-				// Add keywords if mapped
+				// Add keywords if mapped (as text, comma-separated)
 				if (propertyMapping.keywords && transcript.summary?.keywords?.length) {
 					properties[propertyMapping.keywords] = {
-						multi_select: transcript.summary.keywords.slice(0, 10).map((k) => ({ name: k }))
+						rich_text: [{ text: { content: transcript.summary.keywords.slice(0, 20).join(', ') } }]
+					};
+				}
+
+				// Add owner if mapped (select with user's email)
+				if (propertyMapping.owner && userEmail) {
+					properties[propertyMapping.owner] = {
+						select: { name: userEmail }
 					};
 				}
 

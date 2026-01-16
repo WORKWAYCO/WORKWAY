@@ -5,9 +5,10 @@ export interface PropertyMapping {
 	duration?: string;      // Notion property name for number field
 	participants?: string;  // Notion property name for multi_select OR rich_text
 	participantsType?: 'multi_select' | 'rich_text';  // Type of participants field
-	keywords?: string;      // Notion property name for multi_select
+	keywords?: string;      // Notion property name for rich_text (text)
 	date?: string;          // Notion property name for date
 	url?: string;           // Notion property name for URL field (Fireflies URL)
+	owner?: string;         // Notion property name for select field (populated with user email)
 }
 
 // GET: Fetch saved mapping for a database
