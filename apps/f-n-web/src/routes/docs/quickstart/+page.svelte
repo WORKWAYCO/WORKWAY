@@ -1,97 +1,113 @@
 <script lang="ts">
-	import { Terminal, Check, ArrowRight, Copy, Zap, FileCode, Play } from 'lucide-svelte';
+	import { Copy, Check, ArrowRight, Terminal, Code2, Rocket, CheckCircle2 } from 'lucide-svelte';
 
-	let copiedStep = $state<number | null>(null);
+	let copiedIndex = $state<number | null>(null);
 
-	async function copyCommand(command: string, step: number) {
-		await navigator.clipboard.writeText(command);
-		copiedStep = step;
-		setTimeout(() => copiedStep = null, 2000);
+	async function copyCode(code: string, index: number) {
+		await navigator.clipboard.writeText(code);
+		copiedIndex = index;
+		setTimeout(() => copiedIndex = null, 2000);
 	}
 
 	const steps = [
 		{
 			title: 'Install the CLI',
-			description: 'Install the WORKWAY CLI globally to create and manage workflows.',
-			command: 'npm install -g @workway/cli',
+			code: 'npm install -g @workway/cli',
+			description: 'Install the WORKWAY CLI globally to access all development commands.'
 		},
 		{
 			title: 'Authenticate',
-			description: 'Log in to your WORKWAY account. This opens a browser for authentication.',
-			command: 'workway login',
+			code: 'workway login',
+			description: 'Opens a browser window to authenticate with your WORKWAY account.'
 		},
 		{
 			title: 'Create a workflow',
-			description: 'Initialize a new workflow project with the SDK and TypeScript configured.',
-			command: 'workway workflow init my-first-workflow',
+			code: 'workway workflow init my-first-workflow',
+			description: 'Scaffolds a new workflow project with TypeScript configuration.'
 		},
 		{
-			title: 'Start development',
-			description: 'Run the local development server with hot reload.',
-			command: 'cd my-first-workflow && workway workflow dev',
+			title: 'Test locally',
+			code: 'cd my-first-workflow && workway workflow test --mock',
+			description: 'Run your workflow locally with mocked integrations.'
 		},
+		{
+			title: 'Publish',
+			code: 'workway workflow publish',
+			description: 'Deploy your workflow to the WORKWAY platform.'
+		}
 	];
 </script>
 
 <svelte:head>
 	<title>Quickstart | WORKWAY Docs</title>
-	<meta name="description" content="Get started with WORKWAY in 5 minutes. Install the CLI, create a workflow, and deploy." />
+	<meta name="description" content="Get started with WORKWAY in under 5 minutes. Install the CLI, create your first workflow, and deploy." />
 </svelte:head>
 
-<article class="docs-page">
-	<!-- Breadcrumb -->
-	<nav class="breadcrumb">
-		<a href="/docs">Docs</a>
-		<span class="separator">/</span>
-		<span class="current">Quickstart</span>
-	</nav>
-
+<div class="p-6 md:p-10 max-w-4xl">
 	<!-- Header -->
-	<header class="page-header">
-		<div class="header-icon">
-			<Zap size={24} />
+	<div class="mb-12">
+		<div class="flex items-center gap-2 text-sm text-[var(--brand-text-muted)] mb-4">
+			<a href="/docs" class="hover:text-[var(--brand-text)]">Docs</a>
+			<span>/</span>
+			<span>Quickstart</span>
 		</div>
-		<h1 class="page-title">Quickstart</h1>
-		<p class="page-description">
-			Build and deploy your first workflow in under 5 minutes.
+		<h1 class="text-3xl md:text-4xl font-bold mb-4">Quickstart</h1>
+		<p class="text-lg text-[var(--color-fg-secondary)] max-w-2xl">
+			Create and deploy your first WORKWAY workflow in under 5 minutes.
 		</p>
-	</header>
+	</div>
 
 	<!-- Prerequisites -->
-	<section class="section">
-		<h2 class="section-title">Prerequisites</h2>
-		<div class="prereq-list">
-			<div class="prereq-item">
-				<Check size={16} class="prereq-icon" />
-				<span>Node.js 18+ installed</span>
-			</div>
-			<div class="prereq-item">
-				<Check size={16} class="prereq-icon" />
-				<span>A WORKWAY account (<a href="/auth/signup">sign up free</a>)</span>
-			</div>
+	<section class="mb-12">
+		<h2 class="text-xl font-semibold mb-4">Prerequisites</h2>
+		<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-5 bg-[var(--color-hover)]">
+			<ul class="space-y-3">
+				<li class="flex items-start gap-3">
+					<CheckCircle2 size={18} class="text-[var(--color-success)] mt-0.5 shrink-0" />
+					<div>
+						<span class="font-medium">Node.js 18+</span>
+						<span class="text-[var(--brand-text-muted)]"> — Required for the CLI and local development</span>
+					</div>
+				</li>
+				<li class="flex items-start gap-3">
+					<CheckCircle2 size={18} class="text-[var(--color-success)] mt-0.5 shrink-0" />
+					<div>
+						<span class="font-medium">WORKWAY Account</span>
+						<span class="text-[var(--brand-text-muted)]"> — <a href="/auth/signup" class="text-[var(--brand-text)] hover:underline">Sign up free</a> if you don't have one</span>
+					</div>
+				</li>
+			</ul>
 		</div>
 	</section>
 
 	<!-- Steps -->
-	<section class="section">
-		<h2 class="section-title">Setup Steps</h2>
-		<div class="steps-list">
+	<section class="mb-12">
+		<h2 class="text-xl font-semibold mb-6">Steps</h2>
+		<div class="space-y-6">
 			{#each steps as step, i}
-				<div class="step-card">
-					<div class="step-number">{i + 1}</div>
-					<div class="step-content">
-						<h3 class="step-title">{step.title}</h3>
-						<p class="step-description">{step.description}</p>
+				<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] overflow-hidden">
+					<div class="flex items-center gap-4 px-5 py-4 border-b border-[var(--brand-border)]">
+						<div class="w-8 h-8 rounded-full bg-[var(--brand-primary)] text-[var(--brand-bg)] flex items-center justify-center font-bold text-sm shrink-0">
+							{i + 1}
+						</div>
+						<div class="flex-1">
+							<h3 class="font-semibold">{step.title}</h3>
+							<p class="text-sm text-[var(--brand-text-muted)]">{step.description}</p>
+						</div>
+					</div>
+					<div class="flex items-center justify-between px-4 py-3 bg-[var(--color-hover)]">
+						<code class="font-mono text-sm">
+							<span class="text-[var(--brand-text-muted)]">$</span> {step.code}
+						</code>
 						<button 
-							class="step-command"
-							onclick={() => copyCommand(step.command, i)}
+							onclick={() => copyCode(step.code, i)}
+							class="text-[var(--brand-text-muted)] hover:text-[var(--brand-text)] transition-colors p-1"
+							aria-label="Copy to clipboard"
 						>
-							<Terminal size={14} class="command-icon" />
-							<code>{step.command}</code>
-							{#if copiedStep === i}
-								<Check size={14} class="copy-success" />
+							{#if copiedIndex === i}
+								<Check size={14} class="text-[var(--color-success)]" />
 							{:else}
-								<Copy size={14} class="copy-icon" />
+								<Copy size={14} />
 							{/if}
 						</button>
 					</div>
@@ -101,524 +117,102 @@
 	</section>
 
 	<!-- Project Structure -->
-	<section class="section">
-		<h2 class="section-title">Project Structure</h2>
-		<p class="section-description">
-			After running <code>workway workflow init</code>, you'll have:
+	<section class="mb-12">
+		<h2 class="text-xl font-semibold mb-4">Project Structure</h2>
+		<p class="text-[var(--color-fg-secondary)] mb-4">
+			After running <code class="font-mono text-sm bg-[var(--color-hover)] px-1.5 py-0.5 rounded">workway workflow init</code>, you'll have:
 		</p>
-		<div class="file-tree">
-			<div class="tree-item folder">
-				<FileCode size={14} />
-				<span>my-first-workflow/</span>
+		<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] overflow-hidden">
+			<div class="px-4 py-2 border-b border-[var(--brand-border)] bg-[var(--color-hover)]">
+				<span class="text-xs font-mono text-[var(--brand-text-muted)]">my-first-workflow/</span>
 			</div>
-			<div class="tree-item file indent-1">
-				<FileCode size={14} />
-				<span>workflow.ts</span>
-				<span class="file-desc">— Your workflow code</span>
-			</div>
-			<div class="tree-item file indent-1">
-				<FileCode size={14} />
-				<span>test-data.json</span>
-				<span class="file-desc">— Sample trigger data</span>
-			</div>
-			<div class="tree-item file indent-1">
-				<FileCode size={14} />
-				<span>package.json</span>
-				<span class="file-desc">— Dependencies</span>
-			</div>
-			<div class="tree-item file indent-1">
-				<FileCode size={14} />
-				<span>workway.config.json</span>
-				<span class="file-desc">— Project config</span>
-			</div>
+			<pre class="p-4 font-mono text-sm leading-relaxed"><code class="text-[var(--color-fg-secondary)]">├── workflow.ts          <span class="text-[var(--brand-text-muted)]"># Your workflow code</span>
+├── workway.config.json  <span class="text-[var(--brand-text-muted)]"># Workflow metadata</span>
+├── test-data.json       <span class="text-[var(--brand-text-muted)]"># Test fixtures</span>
+├── package.json         <span class="text-[var(--brand-text-muted)]"># Dependencies</span>
+└── tsconfig.json        <span class="text-[var(--brand-text-muted)]"># TypeScript config</span></code></pre>
 		</div>
 	</section>
 
-	<!-- Sample Workflow -->
-	<section class="section">
-		<h2 class="section-title">Your First Workflow</h2>
-		<p class="section-description">
-			The generated <code>workflow.ts</code> contains a simple example:
+	<!-- Basic Workflow -->
+	<section class="mb-12">
+		<h2 class="text-xl font-semibold mb-4">Your First Workflow</h2>
+		<p class="text-[var(--color-fg-secondary)] mb-4">
+			The generated <code class="font-mono text-sm bg-[var(--color-hover)] px-1.5 py-0.5 rounded">workflow.ts</code> contains a starter template:
 		</p>
-		<div class="code-block">
-			<div class="code-header">
-				<span class="code-filename">workflow.ts</span>
+		<div class="border border-[var(--brand-border)] rounded-[var(--brand-radius)] overflow-hidden">
+			<div class="px-4 py-2 border-b border-[var(--brand-border)] bg-[var(--color-hover)]">
+				<span class="text-xs font-mono text-[var(--brand-text-muted)]">workflow.ts</span>
 			</div>
-			<pre class="code-content"><code><span class="code-keyword">import</span> {'{'} defineWorkflow, manual {'}'} <span class="code-keyword">from</span> <span class="code-string">'@workway/sdk'</span>
+			<pre class="p-4 overflow-x-auto text-sm font-mono leading-relaxed"><code class="text-[var(--color-fg-secondary)]"><span class="text-[var(--brand-text-muted)]">import</span> {'{'} defineWorkflow, manual {'}'} <span class="text-[var(--brand-text-muted)]">from</span> <span class="text-[var(--color-success)]">'@workway/sdk'</span>
 
-<span class="code-keyword">export default</span> <span class="code-function">defineWorkflow</span>({'{'}
-  <span class="code-property">name</span>: <span class="code-string">'My First Workflow'</span>,
-  <span class="code-property">description</span>: <span class="code-string">'A simple workflow to get started'</span>,
-  <span class="code-property">type</span>: <span class="code-string">'integration'</span>,
+<span class="text-[var(--brand-text-muted)]">export default</span> <span class="text-[var(--brand-text)]">defineWorkflow</span>({'{'}
+  name: <span class="text-[var(--color-success)]">'My First Workflow'</span>,
+  description: <span class="text-[var(--color-success)]">'A simple workflow to get started'</span>,
+  type: <span class="text-[var(--color-success)]">'integration'</span>,
 
-  <span class="code-comment">// Manual trigger — click to run</span>
-  <span class="code-property">trigger</span>: <span class="code-function">manual</span>(),
+  <span class="text-[var(--brand-text-muted)]">// Trigger: manual button click</span>
+  trigger: <span class="text-[var(--brand-text)]">manual</span>(),
 
-  <span class="code-comment">// User inputs</span>
-  <span class="code-property">inputs</span>: {'{'}
-    <span class="code-property">message</span>: {'{'}
-      <span class="code-property">type</span>: <span class="code-string">'text'</span>,
-      <span class="code-property">label</span>: <span class="code-string">'Your message'</span>,
-      <span class="code-property">required</span>: <span class="code-keyword">true</span>
+  <span class="text-[var(--brand-text-muted)]">// User-configurable inputs</span>
+  inputs: {'{'}
+    message: {'{'}
+      type: <span class="text-[var(--color-success)]">'text'</span>,
+      label: <span class="text-[var(--color-success)]">'Message'</span>,
+      default: <span class="text-[var(--color-success)]">'Hello, WORKWAY!'</span>
     {'}'}
   {'}'},
 
-  <span class="code-comment">// Workflow logic</span>
-  <span class="code-keyword">async</span> <span class="code-function">execute</span>({'{'} inputs, log {'}'}) {'{'}
-    log.<span class="code-function">info</span>(<span class="code-string">'Workflow started'</span>, {'{'} <span class="code-property">message</span>: inputs.message {'}'})
+  <span class="text-[var(--brand-text-muted)]">// Workflow logic</span>
+  <span class="text-[var(--brand-text-muted)]">async</span> <span class="text-[var(--brand-text)]">execute</span>({'{'} inputs, log {'}'}) {'{'}
+    log.info(<span class="text-[var(--color-success)]">'Workflow started'</span>, {'{'} message: inputs.message {'}'})
     
-    <span class="code-comment">// Your logic here</span>
-    <span class="code-keyword">const</span> result = {'{'}
-      <span class="code-property">processed</span>: inputs.message.toUpperCase(),
-      <span class="code-property">timestamp</span>: <span class="code-keyword">new</span> <span class="code-function">Date</span>().<span class="code-function">toISOString</span>()
+    <span class="text-[var(--brand-text-muted)]">// Your logic here</span>
+    <span class="text-[var(--brand-text-muted)]">const</span> result = {'{'}
+      processed: <span class="text-[var(--color-success)]">true</span>,
+      message: inputs.message,
+      timestamp: <span class="text-[var(--brand-text-muted)]">new</span> Date().toISOString()
     {'}'}
 
-    <span class="code-keyword">return</span> {'{'} <span class="code-property">success</span>: <span class="code-keyword">true</span>, <span class="code-property">data</span>: result {'}'}
+    log.info(<span class="text-[var(--color-success)]">'Workflow completed'</span>, result)
+    <span class="text-[var(--brand-text-muted)]">return</span> result
   {'}'}
 {'}'})</code></pre>
 		</div>
 	</section>
 
-	<!-- Test & Deploy -->
-	<section class="section">
-		<h2 class="section-title">Test & Deploy</h2>
-		<div class="action-cards">
-			<div class="action-card">
-				<div class="action-icon">
-					<Play size={20} />
-				</div>
-				<h3 class="action-title">Test locally</h3>
-				<p class="action-description">Run your workflow with mock data</p>
-				<button 
-					class="action-command"
-					onclick={() => copyCommand('workway workflow test --mock', 10)}
-				>
-					<code>workway workflow test --mock</code>
-					{#if copiedStep === 10}
-						<Check size={14} class="copy-success" />
-					{:else}
-						<Copy size={14} class="copy-icon" />
-					{/if}
-				</button>
-			</div>
-			<div class="action-card">
-				<div class="action-icon highlight">
-					<Zap size={20} />
-				</div>
-				<h3 class="action-title">Deploy to production</h3>
-				<p class="action-description">Publish to the WORKWAY marketplace</p>
-				<button 
-					class="action-command"
-					onclick={() => copyCommand('workway workflow publish', 11)}
-				>
-					<code>workway workflow publish</code>
-					{#if copiedStep === 11}
-						<Check size={14} class="copy-success" />
-					{:else}
-						<Copy size={14} class="copy-icon" />
-					{/if}
-				</button>
-			</div>
-		</div>
-	</section>
-
 	<!-- Next Steps -->
-	<section class="section">
-		<h2 class="section-title">Next Steps</h2>
-		<div class="next-links">
-			<a href="/docs/workflows" class="next-link">
-				<div class="next-content">
-					<h3>Learn about workflows</h3>
-					<p>Understand triggers, integrations, and the execute function</p>
-				</div>
-				<ArrowRight size={16} class="next-arrow" />
+	<section>
+		<h2 class="text-xl font-semibold mb-4">Next Steps</h2>
+		<div class="grid md:grid-cols-2 gap-4">
+			<a href="/docs/concepts" class="group border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-5 hover:border-[var(--color-fg-secondary)]/50 transition-colors">
+				<h3 class="font-semibold mb-2 group-hover:text-[var(--brand-text)]">Core Concepts</h3>
+				<p class="text-sm text-[var(--brand-text-muted)]">Understand workflows, triggers, and integrations.</p>
+				<span class="inline-flex items-center gap-1 mt-3 text-xs text-[var(--color-fg-secondary)]">
+					Learn more <ArrowRight size={12} class="group-hover:translate-x-0.5 transition-transform" />
+				</span>
 			</a>
-			<a href="/docs/sdk/workers-ai" class="next-link">
-				<div class="next-content">
-					<h3>Add AI capabilities</h3>
-					<p>Use Workers AI for text generation, embeddings, and more</p>
-				</div>
-				<ArrowRight size={16} class="next-arrow" />
+			<a href="/docs/sdk" class="group border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-5 hover:border-[var(--color-fg-secondary)]/50 transition-colors">
+				<h3 class="font-semibold mb-2 group-hover:text-[var(--brand-text)]">SDK Reference</h3>
+				<p class="text-sm text-[var(--brand-text-muted)]">Explore the full SDK API and capabilities.</p>
+				<span class="inline-flex items-center gap-1 mt-3 text-xs text-[var(--color-fg-secondary)]">
+					View SDK <ArrowRight size={12} class="group-hover:translate-x-0.5 transition-transform" />
+				</span>
 			</a>
-			<a href="/docs/integrations" class="next-link">
-				<div class="next-content">
-					<h3>Connect integrations</h3>
-					<p>Slack, Notion, GitHub, Zoom, and 20+ more services</p>
-				</div>
-				<ArrowRight size={16} class="next-arrow" />
+			<a href="/docs/integrations" class="group border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-5 hover:border-[var(--color-fg-secondary)]/50 transition-colors">
+				<h3 class="font-semibold mb-2 group-hover:text-[var(--brand-text)]">Integrations</h3>
+				<p class="text-sm text-[var(--brand-text-muted)]">Connect to Zoom, Notion, Slack, and 40+ services.</p>
+				<span class="inline-flex items-center gap-1 mt-3 text-xs text-[var(--color-fg-secondary)]">
+					Browse integrations <ArrowRight size={12} class="group-hover:translate-x-0.5 transition-transform" />
+				</span>
+			</a>
+			<a href="/docs/guides/ai-workflows" class="group border border-[var(--brand-border)] rounded-[var(--brand-radius)] p-5 hover:border-[var(--color-fg-secondary)]/50 transition-colors">
+				<h3 class="font-semibold mb-2 group-hover:text-[var(--brand-text)]">AI Workflows</h3>
+				<p class="text-sm text-[var(--brand-text-muted)]">Add AI capabilities with Cloudflare Workers AI.</p>
+				<span class="inline-flex items-center gap-1 mt-3 text-xs text-[var(--color-fg-secondary)]">
+					Build with AI <ArrowRight size={12} class="group-hover:translate-x-0.5 transition-transform" />
+				</span>
 			</a>
 		</div>
 	</section>
-</article>
-
-<style>
-	.docs-page {
-		max-width: 800px;
-	}
-
-	/* Breadcrumb */
-	.breadcrumb {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font-size: 13px;
-		margin-bottom: 24px;
-	}
-
-	.breadcrumb a {
-		color: var(--docs-text-muted);
-		text-decoration: none;
-	}
-
-	.breadcrumb a:hover {
-		color: var(--docs-text);
-	}
-
-	.separator {
-		color: var(--docs-text-muted);
-	}
-
-	.current {
-		color: var(--docs-text-secondary);
-	}
-
-	/* Header */
-	.page-header {
-		margin-bottom: 48px;
-	}
-
-	.header-icon {
-		width: 48px;
-		height: 48px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--docs-accent-muted);
-		border-radius: 12px;
-		color: var(--docs-accent);
-		margin-bottom: 16px;
-	}
-
-	.page-title {
-		font-size: 2rem;
-		font-weight: 700;
-		letter-spacing: -0.02em;
-		margin-bottom: 8px;
-	}
-
-	.page-description {
-		font-size: 18px;
-		color: var(--docs-text-secondary);
-	}
-
-	/* Sections */
-	.section {
-		margin-bottom: 48px;
-	}
-
-	.section-title {
-		font-size: 18px;
-		font-weight: 600;
-		margin-bottom: 16px;
-	}
-
-	.section-description {
-		color: var(--docs-text-secondary);
-		margin-bottom: 16px;
-	}
-
-	.section-description code {
-		padding: 2px 6px;
-		background: var(--docs-bg-elevated);
-		border-radius: 4px;
-		font-family: var(--docs-font-mono);
-		font-size: 13px;
-	}
-
-	/* Prerequisites */
-	.prereq-list {
-		display: flex;
-		flex-direction: column;
-		gap: 8px;
-	}
-
-	.prereq-item {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		font-size: 14px;
-		color: var(--docs-text-secondary);
-	}
-
-	:global(.prereq-icon) {
-		color: var(--docs-success);
-	}
-
-	.prereq-item a {
-		color: var(--docs-accent);
-		text-decoration: none;
-	}
-
-	.prereq-item a:hover {
-		text-decoration: underline;
-	}
-
-	/* Steps */
-	.steps-list {
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
-	}
-
-	.step-card {
-		display: flex;
-		gap: 16px;
-		padding: 20px;
-		background: var(--docs-bg-elevated);
-		border: 1px solid var(--docs-border);
-		border-radius: var(--docs-radius);
-	}
-
-	.step-number {
-		width: 28px;
-		height: 28px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--docs-accent);
-		color: white;
-		font-size: 14px;
-		font-weight: 600;
-		border-radius: 50%;
-		flex-shrink: 0;
-	}
-
-	.step-content {
-		flex: 1;
-	}
-
-	.step-title {
-		font-size: 15px;
-		font-weight: 600;
-		margin-bottom: 4px;
-	}
-
-	.step-description {
-		font-size: 14px;
-		color: var(--docs-text-muted);
-		margin-bottom: 12px;
-	}
-
-	.step-command {
-		display: inline-flex;
-		align-items: center;
-		gap: 10px;
-		padding: 8px 12px;
-		background: var(--docs-bg-surface);
-		border: 1px solid var(--docs-border);
-		border-radius: 6px;
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.step-command:hover {
-		border-color: var(--docs-border-emphasis);
-	}
-
-	.step-command code {
-		font-family: var(--docs-font-mono);
-		font-size: 13px;
-		color: var(--docs-text);
-	}
-
-	:global(.command-icon) {
-		color: var(--docs-text-muted);
-	}
-
-	:global(.copy-icon) {
-		color: var(--docs-text-muted);
-	}
-
-	:global(.copy-success) {
-		color: var(--docs-success);
-	}
-
-	/* File Tree */
-	.file-tree {
-		background: var(--docs-bg-elevated);
-		border: 1px solid var(--docs-border);
-		border-radius: var(--docs-radius);
-		padding: 16px;
-		font-family: var(--docs-font-mono);
-		font-size: 13px;
-	}
-
-	.tree-item {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		padding: 4px 0;
-		color: var(--docs-text-secondary);
-	}
-
-	.tree-item.folder {
-		color: var(--docs-accent);
-	}
-
-	.tree-item.indent-1 {
-		padding-left: 24px;
-	}
-
-	.file-desc {
-		color: var(--docs-text-muted);
-		margin-left: 8px;
-	}
-
-	/* Code Block */
-	.code-block {
-		background: var(--docs-bg-elevated);
-		border: 1px solid var(--docs-border);
-		border-radius: var(--docs-radius);
-		overflow: hidden;
-	}
-
-	.code-header {
-		padding: 12px 16px;
-		border-bottom: 1px solid var(--docs-border);
-	}
-
-	.code-filename {
-		font-family: var(--docs-font-mono);
-		font-size: 13px;
-		color: var(--docs-text-muted);
-	}
-
-	.code-content {
-		padding: 20px;
-		margin: 0;
-		overflow-x: auto;
-		font-family: var(--docs-font-mono);
-		font-size: 13px;
-		line-height: 1.7;
-	}
-
-	.code-keyword { color: #c678dd; }
-	.code-string { color: #98c379; }
-	.code-function { color: #61afef; }
-	.code-property { color: #e5c07b; }
-	.code-comment { color: #5c6370; font-style: italic; }
-
-	/* Action Cards */
-	.action-cards {
-		display: grid;
-		grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-		gap: 16px;
-	}
-
-	.action-card {
-		padding: 20px;
-		background: var(--docs-bg-elevated);
-		border: 1px solid var(--docs-border);
-		border-radius: var(--docs-radius);
-	}
-
-	.action-icon {
-		width: 40px;
-		height: 40px;
-		display: flex;
-		align-items: center;
-		justify-content: center;
-		background: var(--docs-bg-surface);
-		border-radius: 10px;
-		color: var(--docs-text-secondary);
-		margin-bottom: 12px;
-	}
-
-	.action-icon.highlight {
-		background: var(--docs-accent-muted);
-		color: var(--docs-accent);
-	}
-
-	.action-title {
-		font-size: 15px;
-		font-weight: 600;
-		margin-bottom: 4px;
-	}
-
-	.action-description {
-		font-size: 13px;
-		color: var(--docs-text-muted);
-		margin-bottom: 12px;
-	}
-
-	.action-command {
-		display: flex;
-		align-items: center;
-		gap: 10px;
-		width: 100%;
-		padding: 10px 12px;
-		background: var(--docs-bg-surface);
-		border: 1px solid var(--docs-border);
-		border-radius: 6px;
-		cursor: pointer;
-		transition: all 0.15s ease;
-	}
-
-	.action-command:hover {
-		border-color: var(--docs-border-emphasis);
-	}
-
-	.action-command code {
-		flex: 1;
-		text-align: left;
-		font-family: var(--docs-font-mono);
-		font-size: 12px;
-		color: var(--docs-text);
-	}
-
-	/* Next Links */
-	.next-links {
-		display: flex;
-		flex-direction: column;
-		gap: 12px;
-	}
-
-	.next-link {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 16px;
-		background: var(--docs-bg-elevated);
-		border: 1px solid var(--docs-border);
-		border-radius: var(--docs-radius);
-		text-decoration: none;
-		transition: all 0.15s ease;
-	}
-
-	.next-link:hover {
-		border-color: var(--docs-accent);
-		background: var(--docs-accent-muted);
-	}
-
-	.next-content h3 {
-		font-size: 14px;
-		font-weight: 600;
-		color: var(--docs-text);
-		margin-bottom: 2px;
-	}
-
-	.next-content p {
-		font-size: 13px;
-		color: var(--docs-text-muted);
-	}
-
-	:global(.next-arrow) {
-		color: var(--docs-text-muted);
-		transition: transform 0.15s ease;
-	}
-
-	.next-link:hover :global(.next-arrow) {
-		transform: translateX(4px);
-		color: var(--docs-accent);
-	}
-</style>
+</div>

@@ -4,7 +4,6 @@ type EventType =
   | "page_view"
   | "lesson_start"
   | "lesson_complete"
-  | "praxis_submit"
   | "path_complete";
 
 interface TrackEventOptions {
@@ -53,13 +52,6 @@ export function trackLessonComplete(pathId: string, lessonId: string): void {
   trackEvent({
     eventType: "lesson_complete",
     eventData: { pathId, lessonId },
-  });
-}
-
-export function trackPraxisSubmit(praxisId: string, score?: number): void {
-  trackEvent({
-    eventType: "praxis_submit",
-    eventData: { praxisId, score },
   });
 }
 

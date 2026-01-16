@@ -8,7 +8,6 @@ interface ProgressResponse {
     lessonsTotal: number;
     progressPercent: number;
     totalTimeHours: number;
-    praxisCompleted: number;
   };
   paths: Array<{
     pathId: string;

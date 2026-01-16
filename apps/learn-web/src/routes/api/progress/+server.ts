@@ -46,7 +46,6 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
           lessonsTotal: TOTAL_LESSONS,
           progressPercent: 0,
           totalTimeHours: 0,
-          praxisCompleted: 0,
         },
         paths: paths.map((p) => ({
           pathId: p.id,
@@ -70,14 +69,6 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
       .prepare("SELECT * FROM lesson_progress WHERE learner_id = ?")
       .bind(learner.id)
       .all();
-
-    // Get praxis completions count
-    const praxisCount = await db
-      .prepare(
-        "SELECT COUNT(*) as count FROM praxis_completions WHERE learner_id = ?",
-      )
-      .bind(learner.id)
-      .first();
 
     // Calculate stats
     const lessonResults = lessonProgressRows.results as Array<{
@@ -188,7 +179,6 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
           (completedLessons.length / TOTAL_LESSONS) * 100,
         ),
         totalTimeHours: Math.round((totalTimeSeconds / 3600) * 10) / 10,
-        praxisCompleted: (praxisCount as { count: number } | null)?.count || 0,
       },
       paths: pathsProgress,
       lessons,

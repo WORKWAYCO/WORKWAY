@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { paths } from '$lib/content/paths';
-	import { Clock, CheckCircle2, BarChart3, BookOpen, Calendar, AlertCircle, LogIn } from 'lucide-svelte';
+	import { Clock, CheckCircle2, BarChart3, BookOpen, AlertCircle, LogIn } from 'lucide-svelte';
 
 	let { data } = $props();
 
@@ -63,7 +63,7 @@
 		</div>
 	{:else}
 		<!-- Stats overview -->
-		<div class="grid grid-cols-2 md:grid-cols-4 gap-md mb-xl">
+		<div class="grid grid-cols-3 gap-md mb-xl">
 			<div class="card">
 				<div class="flex items-center gap-sm mb-xs">
 					<div class="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--color-bg-elevated)] flex items-center justify-center">
@@ -97,16 +97,6 @@
 				<p class="text-2xl font-semibold">
 					{Math.floor(data.progress.overall.totalTimeHours)}h {Math.round((data.progress.overall.totalTimeHours % 1) * 60)}m
 				</p>
-			</div>
-
-			<div class="card">
-				<div class="flex items-center gap-sm mb-xs">
-					<div class="w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--color-bg-elevated)] flex items-center justify-center">
-						<Calendar size={16} class="text-[var(--color-fg-primary)]" />
-					</div>
-					<span class="text-sm text-[var(--color-fg-muted)]">Praxis</span>
-				</div>
-				<p class="text-2xl font-semibold">{data.progress.overall.praxisCompleted} done</p>
 			</div>
 		</div>
 

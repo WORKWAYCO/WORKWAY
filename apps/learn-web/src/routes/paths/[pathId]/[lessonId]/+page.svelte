@@ -97,11 +97,9 @@
 		}
 	});
 
-	// Praxis state
-	let praxisEvidence = $state('');
-	let isPraxisSubmitting = $state(false);
-	let isPraxisCompleted = $state(false);
-	let praxisFeedback = $state<{ success: boolean; feedback: string; nextSteps?: string[] } | null>(null);
+	// Optional reflection for lesson completion
+	let reflection = $state('');
+	let showReflection = $state(false);
 
 	async function markComplete() {
 		if (isSubmitting || isCompleted) return;
@@ -131,40 +129,6 @@
 			console.error('Failed to mark lesson complete:', error);
 		} finally {
 			isSubmitting = false;
-		}
-	}
-
-	async function submitPraxis() {
-		if (isPraxisSubmitting || !praxisEvidence.trim()) return;
-
-		isPraxisSubmitting = true;
-
-		// Calculate time spent in minutes
-		const timeSpentMinutes = Math.round((Date.now() - startTime) / 60000);
-
-		try {
-			const response = await fetch(`/api/praxis/${lessonId}`, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					evidence: praxisEvidence,
-					timeSpentMinutes
-				})
-			});
-
-			if (response.ok) {
-				const result = await response.json();
-				praxisFeedback = result;
-				isPraxisCompleted = true;
-				// Also mark lesson as completed
-				if (!isCompleted) {
-					isCompleted = true;
-				}
-			}
-		} catch (error) {
-			console.error('Failed to submit praxis:', error);
-		} finally {
-			isPraxisSubmitting = false;
 		}
 	}
 
@@ -385,20 +349,22 @@
 				{@html data.content.html}
 			</article>
 
-			<!-- Praxis section -->
+			<!-- Praxis section - hands-on challenge to take to Claude Code -->
 			{#if lesson.praxis || lesson.templateWorkflow}
 				<section class="mb-xl">
 					<div class="card border-[var(--color-border-emphasis)]">
-						<h2 class="text-lg font-medium mb-md flex items-center gap-xs">
+						<h2 class="text-lg font-medium mb-md">
 							<span class="text-[var(--color-fg-primary)]">Praxis</span>
-							<span class="text-[var(--color-fg-muted)]">— Hands-on Exercise</span>
-							{#if isPraxisCompleted}
-								<CheckCircle2 size={16} class="text-[var(--color-success)] ml-auto" />
-							{/if}
+							<span class="text-[var(--color-fg-muted)]">— Try it with Claude Code</span>
 						</h2>
 
 						{#if lesson.praxis}
-							<p class="text-[var(--color-fg-muted)] mb-md">{lesson.praxis}</p>
+							<div class="bg-[var(--color-bg-elevated)] border-l-2 border-[var(--color-border-emphasis)] pl-md py-sm mb-md">
+								<p class="text-[var(--color-fg-primary)] font-mono text-sm">{lesson.praxis}</p>
+							</div>
+							<p class="text-sm text-[var(--color-fg-muted)]">
+								Open your terminal and ask Claude Code. The learning happens in the doing.
+							</p>
 						{/if}
 
 						{#if lesson.templateWorkflow}
@@ -406,77 +372,11 @@
 								href="https://workway.co/workflow/{lesson.templateWorkflow.id}?source=learn&lesson={lesson.id}"
 								target="_blank"
 								rel="noopener noreferrer"
-								class="button-ghost mb-md"
+								class="button-ghost mt-md"
 							>
 								<ExternalLink size={16} />
 								Try: {lesson.templateWorkflow.name}
 							</a>
-						{/if}
-
-						<!-- Praxis Evidence Submission -->
-						{#if isAuthenticated}
-							{#if !isPraxisCompleted}
-								<div class="mt-md pt-md border-t border-[var(--color-border-default)]">
-									<label for="praxis-evidence" class="block text-sm font-medium mb-sm">
-										Share your work
-									</label>
-									<p class="text-sm text-[var(--color-fg-muted)] mb-sm">
-										Describe what you did, paste a link, or share a screenshot URL
-									</p>
-									<textarea
-										id="praxis-evidence"
-										bind:value={praxisEvidence}
-										placeholder="I completed the exercise by..."
-										rows="3"
-										class="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] px-md py-sm text-[var(--color-fg-primary)] placeholder:text-[var(--color-fg-subtle)] focus:outline-none focus:border-[var(--color-border-emphasis)] resize-y"
-									></textarea>
-									<button
-										onclick={submitPraxis}
-										disabled={isPraxisSubmitting || !praxisEvidence.trim()}
-										class="button-ghost mt-sm"
-									>
-										{#if isPraxisSubmitting}
-											Submitting...
-										{:else}
-											Complete Praxis
-										{/if}
-									</button>
-								</div>
-							{:else if praxisFeedback}
-								<!-- Feedback after submission -->
-								<div class="mt-md pt-md border-t border-[var(--color-border-default)]">
-									<div class="flex items-start gap-sm">
-										<CheckCircle2 size={20} class="text-[var(--color-success)] flex-shrink-0 mt-0.5" />
-										<div>
-											<p class="font-medium text-[var(--color-fg-primary)]">
-												{praxisFeedback.success ? 'Great work!' : 'Submitted'}
-											</p>
-											<p class="text-sm text-[var(--color-fg-muted)] mt-xs">
-												{praxisFeedback.feedback}
-											</p>
-											{#if praxisFeedback.nextSteps && praxisFeedback.nextSteps.length > 0}
-												<div class="mt-sm">
-													<p class="text-sm font-medium text-[var(--color-fg-primary)]">Next steps:</p>
-													<ul class="text-sm text-[var(--color-fg-muted)] mt-xs list-disc list-inside">
-														{#each praxisFeedback.nextSteps as step}
-															<li>{step}</li>
-														{/each}
-													</ul>
-												</div>
-											{/if}
-										</div>
-									</div>
-								</div>
-							{/if}
-						{:else}
-							<div class="mt-md pt-md border-t border-[var(--color-border-default)]">
-								<p class="text-sm text-[var(--color-fg-muted)] mb-sm">
-									Track your progress and submit praxis exercises
-								</p>
-								<a href="/auth/signin" class="button-ghost">
-									Sign in to submit
-								</a>
-							</div>
 						{/if}
 					</div>
 				</section>
@@ -485,6 +385,30 @@
 			<!-- Completion -->
 			<section class="mb-xl">
 				{#if isAuthenticated}
+					{#if !isCompleted}
+						<!-- Optional reflection toggle -->
+						{#if showReflection}
+							<div class="mb-md">
+								<label for="reflection" class="block text-sm font-medium mb-sm text-[var(--color-fg-muted)]">
+									What did you learn? <span class="text-[var(--color-fg-subtle)]">(optional, for your own reference)</span>
+								</label>
+								<textarea
+									id="reflection"
+									bind:value={reflection}
+									placeholder="Key insights, questions, or things to remember..."
+									rows="3"
+									class="w-full bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] px-md py-sm text-[var(--color-fg-primary)] placeholder:text-[var(--color-fg-subtle)] focus:outline-none focus:border-[var(--color-border-emphasis)] resize-y text-sm"
+								></textarea>
+							</div>
+						{:else}
+							<button
+								onclick={() => showReflection = true}
+								class="text-sm text-[var(--color-fg-muted)] hover:text-[var(--color-fg-primary)] mb-md transition-colors"
+							>
+								+ Add a reflection (optional)
+							</button>
+						{/if}
+					{/if}
 					<button
 						onclick={markComplete}
 						disabled={isCompleted || isSubmitting}
