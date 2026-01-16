@@ -16,6 +16,9 @@
 		ExternalLink,
 		Github
 	} from 'lucide-svelte';
+	import type { Snippet } from 'svelte';
+
+	let { children }: { children: Snippet } = $props();
 
 	let mobileMenuOpen = $state(false);
 	let expandedSections = $state<Record<string, boolean>>({
@@ -239,7 +242,9 @@
 
 		<!-- Mobile Sidebar -->
 		{#if mobileMenuOpen}
-			<div class="md:hidden fixed inset-0 z-40 bg-black/50" onclick={() => mobileMenuOpen = false}>
+			<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_static_element_interactions -->
+			<div class="md:hidden fixed inset-0 z-40 bg-black/50" role="button" tabindex="-1" onclick={() => mobileMenuOpen = false}>
+				<!-- svelte-ignore a11y_click_events_have_key_events a11y_no_noninteractive_element_interactions -->
 				<aside class="absolute left-0 top-[57px] bottom-0 w-72 bg-[var(--brand-bg)] border-r border-[var(--brand-border)] overflow-y-auto" onclick={(e) => e.stopPropagation()}>
 					<nav class="p-4">
 						<div class="space-y-1">
@@ -288,7 +293,7 @@
 
 		<!-- Main Content -->
 		<main class="flex-1 min-w-0">
-			<slot />
+			{@render children()}
 		</main>
 	</div>
 </div>
