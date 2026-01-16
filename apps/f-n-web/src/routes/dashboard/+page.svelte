@@ -4,6 +4,7 @@
 	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { PropertyMappingCard } from '$lib/components/sync';
+	import { Alert } from '$lib/components';
 
 	interface TranscriptItem {
 		id: string;
@@ -315,10 +316,7 @@
 
 	<!-- Success Messages -->
 	{#if $page.url.searchParams.get('success') === 'notion_connected'}
-		<div class="mb-6 p-4 bg-green-500/10 border border-green-500/20 rounded-[var(--brand-radius)] text-green-400 text-sm flex items-center gap-2">
-			<Check size={16} />
-			Notion connected successfully
-		</div>
+		<Alert type="success" class="mb-6">Notion connected successfully</Alert>
 	{/if}
 
 	<!-- Connection Status — only show when setup needed (tool recedes when ready) -->

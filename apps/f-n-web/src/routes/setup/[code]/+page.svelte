@@ -2,6 +2,7 @@
 	import type { PageData, ActionData } from './$types';
 	import { enhance } from '$app/forms';
 	import { Mic, BookOpen, Sparkles } from 'lucide-svelte';
+	import { Alert } from '$lib/components';
 
 	let { data, form }: { data: PageData; form: ActionData } = $props();
 

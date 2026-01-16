@@ -1,3 +1,6 @@
+// Base components
+export { default as Alert } from './Alert.svelte';
+
 // Sync components
 export * from './sync';
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
+	import { Alert } from '$lib/components';
 
 	let loading = $state(false);
 	let error = $state<string | null>(null);
@@ -13,13 +14,11 @@
 	<div class="w-full max-w-sm">
 		<div class="text-center mb-8">
 			<a href="/" class="brand-arrow text-3xl font-semibold">F→N</a>
-			<p class="text-white/60 mt-2">Create account</p>
+			<p class="muted-text mt-2">Create account</p>
 		</div>
 
 		{#if error}
-			<div class="bg-red-500/10 border border-red-500/20 rounded-md p-4 mb-6 text-red-400 text-sm">
-				{error}
-			</div>
+			<Alert type="error" class="mb-6">{error}</Alert>
 		{/if}
 
 		<form
@@ -47,7 +46,7 @@
 					name="email"
 					required
 					autocomplete="email"
-					class="w-full px-4 py-2 border border-white/10 rounded-md bg-white/5 text-white focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent"
+					class="form-input"
 				/>
 			</div>
 
@@ -60,30 +59,108 @@
 					required
 					minlength="8"
 					autocomplete="new-password"
-					class="w-full px-4 py-2 border border-white/10 rounded-md bg-white/5 text-white focus:outline-none focus:ring-2 focus:ring-white/30 focus:border-transparent"
+					class="form-input"
 				/>
-				<p class="text-xs text-white/40 mt-1">8+ characters</p>
+				<p class="hint-text">8+ characters</p>
 			</div>
 
 			<button
 				type="submit"
 				disabled={loading}
-				class="w-full bg-white text-black py-2 rounded-md font-medium hover:bg-white/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+				class="primary-button"
 			>
 				{loading ? 'Creating...' : 'Create account'}
 			</button>
 		</form>
 
-		<p class="mt-6 text-xs text-center text-white/40">
+		<p class="legal-text">
 			By signing up, you agree to our
-			<a href="/terms" class="underline hover:text-white">Terms</a>
+			<a href="/terms" class="legal-link">Terms</a>
 			and
-			<a href="/privacy" class="underline hover:text-white">Privacy</a>.
+			<a href="/privacy" class="legal-link">Privacy</a>.
 		</p>
 
-		<div class="mt-8 pt-6 border-t border-white/10 text-center text-sm text-white/60">
+		<div class="footer-divider">
 			Have an account?
-			<a href="/auth/login" class="text-white hover:underline">Sign in</a>
+			<a href="/auth/login" class="footer-link">Sign in</a>
 		</div>
 	</div>
 </div>
+
+<style>
+	.muted-text {
+		color: var(--color-fg-tertiary);
+	}
+
+	.form-input {
+		width: 100%;
+		padding: 0.5rem 1rem;
+		border: 1px solid var(--color-border-default);
+		border-radius: var(--radius-md);
+		background-color: var(--color-hover);
+		color: var(--color-fg-primary);
+	}
+
+	.form-input:focus {
+		outline: none;
+		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+		border-color: transparent;
+	}
+
+	.hint-text {
+		font-size: 0.75rem;
+		color: var(--color-fg-muted);
+		margin-top: 0.25rem;
+	}
+
+	.primary-button {
+		width: 100%;
+		background-color: var(--color-fg-primary);
+		color: var(--color-bg-pure);
+		padding: 0.5rem;
+		border-radius: var(--radius-md);
+		font-weight: 500;
+		transition: background-color 0.2s;
+	}
+
+	.primary-button:hover:not(:disabled) {
+		background-color: var(--color-fg-secondary);
+	}
+
+	.primary-button:disabled {
+		opacity: 0.5;
+		cursor: not-allowed;
+	}
+
+	.legal-text {
+		margin-top: 1.5rem;
+		font-size: 0.75rem;
+		text-align: center;
+		color: var(--color-fg-muted);
+	}
+
+	.legal-link {
+		text-decoration: underline;
+	}
+
+	.legal-link:hover {
+		color: var(--color-fg-primary);
+	}
+
+	.footer-divider {
+		margin-top: 2rem;
+		padding-top: 1.5rem;
+		border-top: 1px solid var(--color-border-default);
+		text-align: center;
+		font-size: 0.875rem;
+		color: var(--color-fg-tertiary);
+	}
+
+	.footer-link {
+		color: var(--color-fg-primary);
+	}
+
+	.footer-link:hover {
+		text-decoration: underline;
+	}
+</style>

@@ -2,6 +2,7 @@
 	import type { PageData, ActionData } from './$types';
 	import { Copy, Trash2, Check, Clock, Users, ExternalLink, BookOpen } from 'lucide-svelte';
 	import { enhance } from '$app/forms';
+	import { Alert } from '$lib/components';
 
 	interface Invitation {
 		id: string;
