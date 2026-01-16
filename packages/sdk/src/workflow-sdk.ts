@@ -915,18 +915,133 @@ export class WorkflowRegistry {
 // ============================================================================
 
 /**
- * Helper function to define a workflow with type safety
+ * Define a WORKWAY workflow - the primary entry point for building marketplace workflows.
  *
- * @example
+ * This function creates a workflow definition that can be published to the WORKWAY marketplace.
+ * Workflows compose integrations together to solve specific user problems.
+ *
+ * ## Philosophy (Zuhandenheit)
+ *
+ * The tool should recede; the outcome should remain.
+ * - Name workflows by their outcome: "Meeting notes that write themselves"
+ * - Not by their mechanism: "Zoom-Notion API Sync"
+ *
+ * ## Basic Structure
+ *
+ * @example Basic workflow with integrations
+ * ```typescript
+ * import { defineWorkflow, webhook } from '@workwayco/sdk';
+ *
+ * export default defineWorkflow({
+ *   name: 'Invoice Tracker',
+ *   version: '1.0.0',
+ *   description: 'Payments that track themselves',
+ *
+ *   integrations: [
+ *     { service: 'stripe', scopes: ['read_payments'] },
+ *     { service: 'notion', scopes: ['write'] },
+ *   ],
+ *
+ *   inputs: {
+ *     notionDatabaseId: {
+ *       type: 'notion_database_picker',
+ *       label: 'Invoice Database',
+ *       required: true,
+ *     },
+ *   },
+ *
+ *   trigger: webhook({ service: 'stripe', event: 'payment_intent.succeeded' }),
+ *
+ *   async execute({ trigger, inputs, integrations }) {
+ *     const payment = trigger.data;
+ *
+ *     await integrations.notion.pages.create({
+ *       parent: { database_id: inputs.notionDatabaseId },
+ *       properties: {
+ *         'Amount': { number: payment.amount / 100 },
+ *         'Customer': { email: payment.receipt_email },
+ *       },
+ *     });
+ *
+ *     return { success: true };
+ *   },
+ * });
+ * ```
+ *
+ * @example AI-powered workflow with Workers AI
+ * ```typescript
+ * import { defineWorkflow, webhook } from '@workwayco/sdk';
+ * import { createAIClient, AIModels } from '@workwayco/sdk/workers-ai';
+ *
+ * export default defineWorkflow({
+ *   name: 'Meeting Intelligence',
+ *   version: '1.0.0',
+ *
+ *   integrations: [
+ *     { service: 'zoom', scopes: ['meeting:read', 'recording:read'] },
+ *     { service: 'notion', scopes: ['write'] },
+ *   ],
+ *
+ *   inputs: {
+ *     notionDatabaseId: { type: 'notion_database_picker', required: true },
+ *   },
+ *
+ *   trigger: webhook({ service: 'zoom', event: 'recording.completed' }),
+ *
+ *   async execute({ trigger, inputs, integrations, env }) {
+ *     const ai = createAIClient(env);
+ *     const recording = trigger.data;
+ *
+ *     // Transcribe with Whisper
+ *     const transcript = await ai.transcribeAudio({
+ *       audio: await fetch(recording.download_url).then(r => r.arrayBuffer()),
+ *     });
+ *
+ *     // Summarize with Llama
+ *     const summary = await ai.generateText({
+ *       model: AIModels.LLAMA_3_8B,
+ *       prompt: `Summarize this meeting:\n\n${transcript.text}`,
+ *     });
+ *
+ *     // Save to Notion
+ *     await integrations.notion.pages.create({
+ *       parent: { database_id: inputs.notionDatabaseId },
+ *       properties: { Title: { title: [{ text: { content: recording.topic } }] } },
+ *       children: [{ type: 'paragraph', paragraph: { rich_text: [{ text: { content: summary.data } }] } }],
+ *     });
+ *
+ *     return { success: true };
+ *   },
+ * });
+ * ```
+ *
+ * @example Workflow with error handling
  * ```typescript
  * export default defineWorkflow({
- *   metadata: { ... },
- *   pricing: { ... },
- *   async execute(context) {
- *     // Implementation
- *   }
- * })
+ *   // ... other config
+ *
+ *   async execute({ trigger, inputs, integrations, log }) {
+ *     try {
+ *       // Main logic
+ *       return { success: true };
+ *     } catch (error) {
+ *       throw error; // Let onError handle it
+ *     }
+ *   },
+ *
+ *   onError({ error, trigger, log }) {
+ *     log.error('Workflow failed', { message: error.message });
+ *     return { success: false, error: error.message, retryable: true };
+ *   },
+ * });
  * ```
+ *
+ * @param definition - The workflow configuration object
+ * @returns The same definition, typed for use in the WORKWAY runtime
+ *
+ * @see {@link WorkflowDefinition} for full configuration options
+ * @see {@link webhook} for webhook trigger configuration
+ * @see {@link cron} for scheduled trigger configuration
  */
 export function defineWorkflow<TConfig = any>(definition: WorkflowDefinition<TConfig>): WorkflowDefinition<TConfig> {
 	return definition;

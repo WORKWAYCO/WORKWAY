@@ -50,6 +50,7 @@ import { aiEstimateCommand } from './commands/ai/estimate.js';
 import { createCommand } from './commands/agentic/create.js';
 import { explainCommand } from './commands/agentic/explain.js';
 import { modifyCommand } from './commands/agentic/modify.js';
+import { diagnoseCommand } from './commands/agentic/diagnose.js';
 import { marketplaceNeedsCommand, marketplaceSearchCommand, marketplaceBrowseCommand, marketplaceInfoCommand } from './commands/marketplace/index.js';
 import { dbCheckCommand } from './commands/db/check.js';
 import { dbSyncWorkflowsCommand } from './commands/db/sync-workflows.js';
@@ -568,6 +569,37 @@ program
 			Logger.error(error.message);
 			process.exit(1);
 		}
+	});
+
+program
+	.command('diagnose [file]')
+	.description('AI-powered workflow diagnosis - analyze code for issues and best practices')
+	.option('--verbose', 'Show all issues including info level')
+	.option('--json', 'Output as JSON')
+	.action(handleCommand(async (file: string, options: { verbose?: boolean; json?: boolean }) => {
+		await diagnoseCommand(file, options);
+	}));
+
+// ============================================================================
+// LEARN ALIAS - Quick access to learning resources
+// ============================================================================
+
+program
+	.command('learn')
+	.description('Open WORKWAY learning resources (alias for learn.workway.co)')
+	.action(() => {
+		Logger.header('WORKWAY Learn');
+		Logger.blank();
+		Logger.log('Learning resources are available at:');
+		Logger.blank();
+		Logger.log('  🌐 https://learn.workway.co');
+		Logger.blank();
+		Logger.log('Or install the learn CLI:');
+		Logger.log('  npm install -g @workway/learn');
+		Logger.log('  workway-learn init');
+		Logger.blank();
+		Logger.log('MCP server for Claude Code:');
+		Logger.log('  npx @workway/learn --server');
 	});
 
 // ============================================================================

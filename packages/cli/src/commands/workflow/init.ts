@@ -33,6 +33,7 @@ interface InitOptions {
 
 /**
  * Generate CLAUDE.md for workflow-specific context
+ * Comprehensive guide for AI-native workflow development with Claude Code
  */
 function generateClaudeMd(workflowName: string, description: string, projectName: string): string {
 	return `# ${workflowName}
@@ -41,110 +42,246 @@ function generateClaudeMd(workflowName: string, description: string, projectName
 
 ## Overview
 
-${description || 'Workflow description...'}
+${description || 'Describe the outcome this workflow achieves (not the mechanism).'}
 
-## Development Context
+## Philosophy
 
-This workflow was initialized with Claude Code integration. Use the WORKWAY SDK patterns:
+This workflow follows WORKWAY principles:
 
-### Quick Reference
+1. **Zuhandenheit** (Ready-to-hand): The tool should disappear during use
+2. **Weniger, aber besser** (Less, but better): Every line earns its place
+3. **Outcome Test**: Can you describe this without mentioning technology?
+
+## Workflow Structure
 
 \`\`\`typescript
-import { defineWorkflow, cron, webhook } from '@workwayco/sdk';
-import { createAIClient } from '@workwayco/sdk/workers-ai';
+import { defineWorkflow, webhook, cron, manual } from '@workwayco/sdk';
+import { createAIClient, AIModels } from '@workwayco/sdk/workers-ai';
 
 export default defineWorkflow({
   name: '${workflowName}',
   version: '1.0.0',
+  description: 'What disappears from the user to-do list',
 
+  // OAuth integrations - WORKWAY handles token refresh
   integrations: [
-    // Add your integrations here
+    { service: 'zoom', scopes: ['meeting:read', 'recording:read'] },
+    { service: 'notion', scopes: ['write'] },
+    { service: 'slack', scopes: ['chat:write'] },
   ],
 
+  // User configuration - fewer is better (0-2 required fields ideal)
   inputs: {
-    // Define user-facing inputs
+    notionDatabaseId: {
+      type: 'notion_database_picker',
+      label: 'Target Database',
+      required: true,
+    },
+    slackChannel: {
+      type: 'slack_channel_picker',
+      label: 'Notification Channel',
+      required: false,
+    },
   },
 
-  trigger: cron('0 9 * * 1-5'), // Weekdays at 9am
+  // Trigger types: webhook, cron, manual
+  trigger: webhook({ service: 'zoom', event: 'meeting.ended' }),
+  // trigger: cron('0 9 * * 1-5'),  // Weekdays at 9am
+  // trigger: manual(),  // User-initiated
 
-  async execute({ trigger, inputs, integrations, env }) {
-    // Implement workflow logic
+  async execute({ trigger, inputs, integrations, env, log }) {
+    // AI client - no API keys needed (Cloudflare Workers AI)
+    const ai = createAIClient(env);
 
-    // AI client (optional)
-    const ai = createAIClient(env).for('synthesis', 'standard');
+    // Your workflow logic here
 
-    return {
-      success: true,
-      message: 'Workflow executed successfully'
-    };
-  }
+    return { success: true };
+  },
+
+  // Optional: Graceful error handling
+  onError({ error, trigger, log }) {
+    log.error('Workflow failed', { message: error.message });
+    return { success: false, error: error.message, retryable: true };
+  },
 });
 \`\`\`
 
-### Available Patterns
+## SDK Patterns
 
-**AI Synthesis**:
+### AI Synthesis (Cloudflare Workers AI)
+
 \`\`\`typescript
-const result = await ai.synthesize(content, {
-  type: 'meeting' | 'email' | 'support' | 'feedback',
-  output: { themes: 'string[]', summary: 'string' }
+const ai = createAIClient(env);
+
+// Text generation
+const result = await ai.generateText({
+  model: AIModels.LLAMA_3_8B,  // $0.01/1M tokens
+  system: 'You summarize meeting transcripts.',
+  prompt: transcript,
+  max_tokens: 1000,
+});
+
+// Structured synthesis
+const analysis = await ai.synthesize(content, {
+  type: 'meeting',  // or 'email', 'support', 'feedback'
+  output: {
+    summary: 'string',
+    actionItems: 'string[]',
+    decisions: 'string[]',
+  },
+});
+
+// Sentiment
+const sentiment = await ai.analyzeSentiment({ text });
+// { sentiment: 'POSITIVE' | 'NEGATIVE', confidence: 0.95 }
+\`\`\`
+
+### Notion Integration
+
+\`\`\`typescript
+// Create a page in database
+await integrations.notion.pages.create({
+  parent: { database_id: inputs.notionDatabaseId },
+  properties: {
+    'Title': { title: [{ text: { content: 'Meeting Notes' } }] },
+    'Date': { date: { start: new Date().toISOString() } },
+    'Status': { select: { name: 'New' } },
+  },
+  children: [
+    { type: 'heading_2', heading_2: { rich_text: [{ text: { content: 'Summary' } }] } },
+    { type: 'paragraph', paragraph: { rich_text: [{ text: { content: summary } }] } },
+  ],
 });
 \`\`\`
 
-**Notion Documents**:
+### Slack Integration
+
 \`\`\`typescript
-await integrations.notion.createDocument({
-  database: inputs.notionDatabaseId,
-  template: 'summary' | 'report' | 'meeting',
-  data: { title, summary, sections }
+// Rich message with blocks
+await integrations.slack.chat.postMessage({
+  channel: inputs.slackChannel,
+  text: 'Meeting summary ready',
+  blocks: [
+    { type: 'header', text: { type: 'plain_text', text: '📋 Meeting Summary' } },
+    { type: 'section', text: { type: 'mrkdwn', text: \`*\${title}*\\n\${summary}\` } },
+    {
+      type: 'actions',
+      elements: [
+        { type: 'button', text: { type: 'plain_text', text: 'View' }, url: notionUrl },
+      ],
+    },
+  ],
 });
 \`\`\`
 
-**Linear Tasks**:
+### Linear Integration (Zuhandenheit style)
+
 \`\`\`typescript
+// Use names, not IDs
 await integrations.linear.issues.create({
   teamId: inputs.linearTeamId,
-  title: 'Task title',
-  assigneeByName: 'john',  // Zuhandenheit: no ID lookup needed
-  labels: ['bug', 'urgent']  // Labels by name
+  title: 'Follow up on customer feedback',
+  assigneeByName: 'john',    // No ID lookup needed
+  labels: ['follow-up'],      // Labels by name
+  priority: 2,                // 1=urgent, 4=low
 });
 \`\`\`
 
-**Slack Messages**:
+### Error Handling Pattern
+
 \`\`\`typescript
-await integrations.slack.sendMessage({
-  channel: inputs.slackChannel,
-  text: 'Message content'
-});
+async execute({ trigger, inputs, integrations, log }) {
+  try {
+    const result = await riskyOperation();
+    
+    if (!result.success) {
+      log.warn('Primary failed, using fallback');
+      return await fallbackOperation();
+    }
+    
+    return { success: true, data: result };
+  } catch (error) {
+    throw error;  // Let onError handle it
+  }
+},
+
+onError({ error, log }) {
+  log.error('Workflow failed', { error: error.message });
+  // Optional: notify Slack
+  return { success: false, error: error.message, retryable: error.code !== 'INVALID_INPUT' };
+},
 \`\`\`
 
-## Commands
+## Development Commands
 
 \`\`\`bash
-# Test workflow
-workway workflow test
+# Test with mocked integrations
+workway workflow test --mock
 
-# Run with test data
-workway workflow run --test
+# Test with live OAuth
+workway workflow test --live
 
-# Validate configuration
+# Validate workflow structure
 workway workflow validate
+
+# AI-powered diagnosis
+workway diagnose workflow.ts
 
 # Publish to marketplace
 workway workflow publish
 \`\`\`
 
-## Architecture Guidelines
+## Agentic Commands (AI-Powered)
 
-1. **Zuhandenheit**: Does the tool recede? Can you describe the outcome without mentioning technology?
-2. **Weniger, aber besser**: Can anything be removed?
-3. **Outcome Test**: "After [trigger], [outcome happens]"
+\`\`\`bash
+# Create workflow from natural language
+workway create "When a Zoom meeting ends, create Notion notes and Slack summary"
 
-## Related Documentation
+# Explain existing workflow
+workway explain workflow.ts
 
-- Root: \`../../UNDERSTANDING.md\` - All 49 WORKWAY workflows mapped
-- SDK: \`../../packages/sdk/README.md\` - Full SDK reference
-- Examples: \`../../packages/workflows/src/\` - Production workflow examples
+# Modify workflow with AI
+workway modify workflow.ts "add email fallback for users without Slack"
+\`\`\`
+
+## MCP Server Integration
+
+Add to \`.mcp.json\` for Claude Code:
+
+\`\`\`json
+{
+  "mcpServers": {
+    "workway": {
+      "command": "npx",
+      "args": ["@workwayco/mcp", "--server"]
+    }
+  }
+}
+\`\`\`
+
+Available MCP tools:
+- \`workflow_debug\` - End-to-end workflow testing
+- \`workflow_diagnose\` - AI-powered code analysis
+- \`workflow_validate\` - Structure validation
+- \`sdk_pattern\` - Get canonical SDK patterns
+- \`trigger_webhook\` - Test webhook triggers
+
+## Quality Checklist
+
+Before publishing:
+
+- [ ] **Outcome Test**: Can you describe this without mentioning technology?
+- [ ] **Config Minimal**: 0-2 required fields?
+- [ ] **Defaults Sensible**: Works out-of-box where possible?
+- [ ] **Errors Graceful**: onError handler with clear messages?
+- [ ] **Names Descriptive**: "Meeting notes that write themselves" not "Zoom-Notion Sync"
+
+## Resources
+
+- SDK: \`@workwayco/sdk\` README
+- CLI: \`workway --help\`
+- Learn: https://learn.workway.co
+- Examples: packages/workflows/src/
 `;
 }
 
