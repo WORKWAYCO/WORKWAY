@@ -1,18 +1,67 @@
 {
-  "executedAt": "2026-01-07T19:49:02.834Z",
+  "executedAt": "2026-01-17T22:45:11.514Z",
   "audits": [
     {
       "name": "scoring-rules",
       "auditType": "scoring-rules",
-      "executedAt": "2026-01-07T19:49:02.787Z",
-      "totalWorkflows": 49,
-      "workflowsAudited": 0,
-      "findingsCount": 0,
-      "findings": [],
+      "executedAt": "2026-01-17T22:45:11.295Z",
+      "totalWorkflows": 53,
+      "workflowsAudited": 3,
+      "findingsCount": 3,
+      "findings": [
+        {
+          "workflowId": "newsletter-autopilot",
+          "workflowName": "Newsletter Autopilot",
+          "severity": "medium",
+          "category": "scoring-rules",
+          "issue": "Missing discoveryMoments configuration",
+          "recommendation": "Add pathway.discoveryMoments to enable workflow discovery",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "discovery"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/newsletter-autopilot/index.ts"
+        },
+        {
+          "workflowId": "sheets-notion-bidirectional",
+          "workflowName": "Google Sheets ↔ Notion Sync (Private)",
+          "severity": "medium",
+          "category": "scoring-rules",
+          "issue": "Missing discoveryMoments configuration",
+          "recommendation": "Add pathway.discoveryMoments to enable workflow discovery",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "discovery"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sheets-notion-bidirectional/index.ts"
+        },
+        {
+          "workflowId": "youtube-playlist-sync-private",
+          "workflowName": "YouTube Playlist Sync (Private)",
+          "severity": "medium",
+          "category": "scoring-rules",
+          "issue": "Missing discoveryMoments configuration",
+          "recommendation": "Add pathway.discoveryMoments to enable workflow discovery",
+          "autoFixable": false,
+          "priority": "P2",
+          "labels": [
+            "audit",
+            "workflows",
+            "discovery"
+          ],
+          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/youtube-playlist-sync-private/index.ts"
+        }
+      ],
       "summary": {
         "critical": 0,
         "high": 0,
-        "medium": 0,
+        "medium": 3,
         "low": 0,
         "autoFixable": 0
       }
@@ -20,8 +69,8 @@
     {
       "name": "required-properties",
       "auditType": "required-properties",
-      "executedAt": "2026-01-07T19:49:02.789Z",
-      "totalWorkflows": 49,
+      "executedAt": "2026-01-17T22:45:11.300Z",
+      "totalWorkflows": 53,
       "workflowsAudited": 8,
       "findingsCount": 8,
       "findings": [
@@ -253,8 +302,8 @@
     {
       "name": "api-endpoint-health",
       "auditType": "api-endpoint-health",
-      "executedAt": "2026-01-07T19:49:02.793Z",
-      "totalWorkflows": 49,
+      "executedAt": "2026-01-17T22:45:11.317Z",
+      "totalWorkflows": 53,
       "workflowsAudited": 0,
       "findingsCount": 0,
       "findings": [],
@@ -269,8 +318,8 @@
     {
       "name": "oauth-provider-coverage",
       "auditType": "oauth-provider-coverage",
-      "executedAt": "2026-01-07T19:49:02.794Z",
-      "totalWorkflows": 49,
+      "executedAt": "2026-01-17T22:45:11.318Z",
+      "totalWorkflows": 53,
       "workflowsAudited": 0,
       "findingsCount": 0,
       "findings": [],
@@ -285,8 +334,8 @@
     {
       "name": "user-input-field-quality",
       "auditType": "user-input-field-quality",
-      "executedAt": "2026-01-07T19:49:02.802Z",
-      "totalWorkflows": 49,
+      "executedAt": "2026-01-17T22:45:11.331Z",
+      "totalWorkflows": 53,
       "workflowsAudited": 0,
       "findingsCount": 0,
       "findings": [],
@@ -301,101 +350,15 @@
     {
       "name": "error-message-helpfulness",
       "auditType": "error-message-helpfulness",
-      "executedAt": "2026-01-07T19:49:02.803Z",
-      "totalWorkflows": 49,
-      "workflowsAudited": 5,
-      "findingsCount": 5,
-      "findings": [
-        {
-          "workflowId": "invoice-generator",
-          "workflowName": "Invoice Generator",
-          "severity": "medium",
-          "category": "error-message-helpfulness",
-          "issue": "Workflow lacks explicit error handling",
-          "recommendation": "Add failureMessage to critical steps to provide user feedback when things go wrong.",
-          "autoFixable": false,
-          "priority": "P2",
-          "labels": [
-            "audit",
-            "workflows",
-            "error-handling",
-            "missing"
-          ],
-          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/invoice-generator/index.ts"
-        },
-        {
-          "workflowId": "onboarding",
-          "workflowName": "Onboarding Automation",
-          "severity": "medium",
-          "category": "error-message-helpfulness",
-          "issue": "Workflow lacks explicit error handling",
-          "recommendation": "Add failureMessage to critical steps to provide user feedback when things go wrong.",
-          "autoFixable": false,
-          "priority": "P2",
-          "labels": [
-            "audit",
-            "workflows",
-            "error-handling",
-            "missing"
-          ],
-          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/onboarding/index.ts"
-        },
-        {
-          "workflowId": "payment-reminders",
-          "workflowName": "Payment Reminder System",
-          "severity": "medium",
-          "category": "error-message-helpfulness",
-          "issue": "Workflow lacks explicit error handling",
-          "recommendation": "Add failureMessage to critical steps to provide user feedback when things go wrong.",
-          "autoFixable": false,
-          "priority": "P2",
-          "labels": [
-            "audit",
-            "workflows",
-            "error-handling",
-            "missing"
-          ],
-          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/payment-reminders/index.ts"
-        },
-        {
-          "workflowId": "standup-bot",
-          "workflowName": "Standup Reminder Bot",
-          "severity": "medium",
-          "category": "error-message-helpfulness",
-          "issue": "Workflow lacks explicit error handling",
-          "recommendation": "Add failureMessage to critical steps to provide user feedback when things go wrong.",
-          "autoFixable": false,
-          "priority": "P2",
-          "labels": [
-            "audit",
-            "workflows",
-            "error-handling",
-            "missing"
-          ],
-          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/standup-bot/index.ts"
-        },
-        {
-          "workflowId": "team-digest",
-          "workflowName": "Team Digest Generator",
-          "severity": "medium",
-          "category": "error-message-helpfulness",
-          "issue": "Workflow lacks explicit error handling",
-          "recommendation": "Add failureMessage to critical steps to provide user feedback when things go wrong.",
-          "autoFixable": false,
-          "priority": "P2",
-          "labels": [
-            "audit",
-            "workflows",
-            "error-handling",
-            "missing"
-          ],
-          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/team-digest/index.ts"
-        }
-      ],
+      "executedAt": "2026-01-17T22:45:11.333Z",
+      "totalWorkflows": 53,
+      "workflowsAudited": 0,
+      "findingsCount": 0,
+      "findings": [],
       "summary": {
         "critical": 0,
         "high": 0,
-        "medium": 5,
+        "medium": 0,
         "low": 0,
         "autoFixable": 0
       }
@@ -403,10 +366,10 @@
     {
       "name": "schema-consistency",
       "auditType": "schema-consistency",
-      "executedAt": "2026-01-07T19:49:02.821Z",
-      "totalWorkflows": 49,
-      "workflowsAudited": 22,
-      "findingsCount": 24,
+      "executedAt": "2026-01-17T22:45:11.368Z",
+      "totalWorkflows": 53,
+      "workflowsAudited": 21,
+      "findingsCount": 21,
       "findings": [
         {
           "workflowId": "calendar-meeting-prep",
@@ -506,69 +469,6 @@
           "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
           "context": {
             "correctPattern": "config: {...}"
-          }
-        },
-        {
-          "workflowId": "databases-mirrored",
-          "workflowName": "Notion Two-Way Sync",
-          "severity": "low",
-          "category": "schema-consistency",
-          "issue": "Step name \"_client_notion_token\" doesn't follow convention",
-          "recommendation": "Use lowercase with underscores (snake_case) for step names",
-          "autoFixable": true,
-          "priority": "P3",
-          "labels": [
-            "audit",
-            "workflows",
-            "consistency",
-            "naming"
-          ],
-          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
-          "context": {
-            "currentName": "_client_notion_token",
-            "expectedPattern": "lowercase with underscores (snake_case)"
-          }
-        },
-        {
-          "workflowId": "databases-mirrored",
-          "workflowName": "Notion Two-Way Sync",
-          "severity": "low",
-          "category": "schema-consistency",
-          "issue": "Step name \"_client_database\" doesn't follow convention",
-          "recommendation": "Use lowercase with underscores (snake_case) for step names",
-          "autoFixable": true,
-          "priority": "P3",
-          "labels": [
-            "audit",
-            "workflows",
-            "consistency",
-            "naming"
-          ],
-          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
-          "context": {
-            "currentName": "_client_database",
-            "expectedPattern": "lowercase with underscores (snake_case)"
-          }
-        },
-        {
-          "workflowId": "databases-mirrored",
-          "workflowName": "Notion Two-Way Sync",
-          "severity": "low",
-          "category": "schema-consistency",
-          "issue": "Step name \"_client_email\" doesn't follow convention",
-          "recommendation": "Use lowercase with underscores (snake_case) for step names",
-          "autoFixable": true,
-          "priority": "P3",
-          "labels": [
-            "audit",
-            "workflows",
-            "consistency",
-            "naming"
-          ],
-          "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
-          "context": {
-            "currentName": "_client_email",
-            "expectedPattern": "lowercase with underscores (snake_case)"
           }
         },
         {
@@ -877,7 +777,7 @@
           "severity": "low",
           "category": "schema-consistency",
           "issue": "Inconsistent version formats across workflows (3 different formats)",
-          "recommendation": "Standardize on \"1.0.0\" format (used by 46/49 workflows)",
+          "recommendation": "Standardize on \"1.0.0\" format (used by 51/53 workflows)",
           "autoFixable": true,
           "priority": "P3",
           "labels": [
@@ -892,7 +792,7 @@
             "versionFormats": [
               {
                 "format": "1.0.0",
-                "workflowCount": 46,
+                "workflowCount": 51,
                 "workflows": [
                   "accounting-stays-current",
                   "ai-newsletter",
@@ -902,18 +802,17 @@
                 ]
               },
               {
-                "format": "2.0.0",
-                "workflowCount": 2,
-                "workflows": [
-                  "databases-mirrored",
-                  "private-emails-documented"
-                ]
-              },
-              {
                 "format": "3.5.0",
                 "workflowCount": 1,
                 "workflows": [
                   "meeting-intelligence-private"
+                ]
+              },
+              {
+                "format": "2.0.0",
+                "workflowCount": 1,
+                "workflows": [
+                  "private-emails-documented"
                 ]
               }
             ],
@@ -925,15 +824,15 @@
         "critical": 0,
         "high": 0,
         "medium": 20,
-        "low": 4,
-        "autoFixable": 24
+        "low": 1,
+        "autoFixable": 21
       }
     },
     {
       "name": "field-mapping-completeness",
       "auditType": "field-mapping-completeness",
-      "executedAt": "2026-01-07T19:49:02.829Z",
-      "totalWorkflows": 49,
+      "executedAt": "2026-01-17T22:45:11.451Z",
+      "totalWorkflows": 53,
       "workflowsAudited": 0,
       "findingsCount": 0,
       "findings": [],
@@ -948,13 +847,13 @@
   ],
   "summary": {
     "totalAudits": 8,
-    "totalFindings": 37,
+    "totalFindings": 32,
     "bySeverity": {
       "critical": 0,
       "high": 0,
-      "medium": 25,
-      "low": 12
+      "medium": 23,
+      "low": 9
     },
-    "autoFixable": 24
+    "autoFixable": 21
   }
 }

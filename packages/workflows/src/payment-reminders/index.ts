@@ -278,6 +278,17 @@ Invoice URL: ${invoice.hosted_invoice_url}
 			results,
 		};
 	},
+
+	onError: async ({ error, inputs, integrations }) => {
+		// Notify admin about payment reminder failure
+		if (inputs.escalationEmail && integrations.gmail) {
+			await integrations.gmail.messages.send({
+				to: inputs.escalationEmail,
+				subject: `⚠️ Payment Reminder System Error`,
+				body: `The payment reminder system encountered an error:\n\n${error.message}\n\nPlease check the Stripe integration and workflow configuration.`,
+			});
+		}
+	},
 });
 
 export const metadata = {

@@ -229,6 +229,16 @@ export default defineWorkflow({
 			notionPageCreated: !!inputs.standupDatabase,
 		};
 	},
+
+	onError: async ({ error, inputs, integrations }) => {
+		// Notify channel about standup failure
+		if (inputs.standupChannel && integrations.slack) {
+			await integrations.slack.chat.postMessage({
+				channel: inputs.standupChannel,
+				text: `⚠️ Standup automation encountered an issue: ${error.message}. Please share your updates manually today.`,
+			});
+		}
+	},
 });
 
 // Additional workflow for collecting and summarizing responses

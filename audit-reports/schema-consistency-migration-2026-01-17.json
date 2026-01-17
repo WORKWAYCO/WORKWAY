@@ -1,0 +1,12 @@
+{
+  "executedAt": "2026-01-17T22:43:49.820Z",
+  "dryRun": false,
+  "totalFindings": 21,
+  "fixedFindings": 0,
+  "failedFixes": 0,
+  "skippedFindings": 20,
+  "filesModified": 0,
+  "backupPath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/.schema-backup",
+  "changes": [],
+  "errors": []
+}

@@ -1,14 +1,63 @@
 {
   "auditType": "scoring-rules",
-  "executedAt": "2026-01-07T19:49:02.787Z",
-  "totalWorkflows": 49,
-  "workflowsAudited": 0,
-  "findingsCount": 0,
-  "findings": [],
+  "executedAt": "2026-01-17T22:45:11.295Z",
+  "totalWorkflows": 53,
+  "workflowsAudited": 3,
+  "findingsCount": 3,
+  "findings": [
+    {
+      "workflowId": "newsletter-autopilot",
+      "workflowName": "Newsletter Autopilot",
+      "severity": "medium",
+      "category": "scoring-rules",
+      "issue": "Missing discoveryMoments configuration",
+      "recommendation": "Add pathway.discoveryMoments to enable workflow discovery",
+      "autoFixable": false,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "discovery"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/newsletter-autopilot/index.ts"
+    },
+    {
+      "workflowId": "sheets-notion-bidirectional",
+      "workflowName": "Google Sheets ↔ Notion Sync (Private)",
+      "severity": "medium",
+      "category": "scoring-rules",
+      "issue": "Missing discoveryMoments configuration",
+      "recommendation": "Add pathway.discoveryMoments to enable workflow discovery",
+      "autoFixable": false,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "discovery"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/sheets-notion-bidirectional/index.ts"
+    },
+    {
+      "workflowId": "youtube-playlist-sync-private",
+      "workflowName": "YouTube Playlist Sync (Private)",
+      "severity": "medium",
+      "category": "scoring-rules",
+      "issue": "Missing discoveryMoments configuration",
+      "recommendation": "Add pathway.discoveryMoments to enable workflow discovery",
+      "autoFixable": false,
+      "priority": "P2",
+      "labels": [
+        "audit",
+        "workflows",
+        "discovery"
+      ],
+      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/youtube-playlist-sync-private/index.ts"
+    }
+  ],
   "summary": {
     "critical": 0,
     "high": 0,
-    "medium": 0,
+    "medium": 3,
     "low": 0,
     "autoFixable": 0
   }

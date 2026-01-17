@@ -222,6 +222,16 @@ export default defineWorkflow({
 			},
 		};
 	},
+
+	onError: async ({ error, inputs, integrations }) => {
+		// Notify channel about digest failure
+		if (inputs.digestChannel && integrations.slack) {
+			await integrations.slack.chat.postMessage({
+				channel: inputs.digestChannel,
+				text: `⚠️ Team Digest generation failed: ${error.message}. Yesterday's activity summary is unavailable.`,
+			});
+		}
+	},
 });
 
 export const metadata = {

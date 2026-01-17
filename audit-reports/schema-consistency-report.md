@@ -1,9 +1,9 @@
 # SCHEMA-CONSISTENCY Audit Report
 
-**Executed:** 2026-01-07T19:49:02.821Z
-**Total Workflows:** 49
-**Workflows Audited:** 22
-**Findings:** 24
+**Executed:** 2026-01-17T22:45:11.368Z
+**Total Workflows:** 53
+**Workflows Audited:** 21
+**Findings:** 21
 
 ## Summary
 
@@ -12,10 +12,10 @@
 | Critical | 0 |
 | High | 0 |
 | Medium | 20 |
-| Low | 4 |
-| **Total** | **24** |
+| Low | 1 |
+| **Total** | **21** |
 
-**Auto-fixable:** 24 findings
+**Auto-fixable:** 21 findings
 
 ## Medium Severity Findings
 
@@ -401,71 +401,11 @@
 
 ## Low Severity Findings
 
-### Notion Two-Way Sync (`databases-mirrored`)
-
-**Issue:** Step name "_client_notion_token" doesn't follow convention
-
-**Recommendation:** Use lowercase with underscores (snake_case) for step names
-
-**Priority:** P3
-**Auto-fixable:** Yes
-**File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts`
-
-**Context:**
-```json
-{
-  "currentName": "_client_notion_token",
-  "expectedPattern": "lowercase with underscores (snake_case)"
-}
-```
-
----
-
-### Notion Two-Way Sync (`databases-mirrored`)
-
-**Issue:** Step name "_client_database" doesn't follow convention
-
-**Recommendation:** Use lowercase with underscores (snake_case) for step names
-
-**Priority:** P3
-**Auto-fixable:** Yes
-**File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts`
-
-**Context:**
-```json
-{
-  "currentName": "_client_database",
-  "expectedPattern": "lowercase with underscores (snake_case)"
-}
-```
-
----
-
-### Notion Two-Way Sync (`databases-mirrored`)
-
-**Issue:** Step name "_client_email" doesn't follow convention
-
-**Recommendation:** Use lowercase with underscores (snake_case) for step names
-
-**Priority:** P3
-**Auto-fixable:** Yes
-**File:** `/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts`
-
-**Context:**
-```json
-{
-  "currentName": "_client_email",
-  "expectedPattern": "lowercase with underscores (snake_case)"
-}
-```
-
----
-
 ### All Workflows (`GLOBAL`)
 
 **Issue:** Inconsistent version formats across workflows (3 different formats)
 
-**Recommendation:** Standardize on "1.0.0" format (used by 46/49 workflows)
+**Recommendation:** Standardize on "1.0.0" format (used by 51/53 workflows)
 
 **Priority:** P3
 **Auto-fixable:** Yes
@@ -477,7 +417,7 @@
   "versionFormats": [
     {
       "format": "1.0.0",
-      "workflowCount": 46,
+      "workflowCount": 51,
       "workflows": [
         "accounting-stays-current",
         "ai-newsletter",
@@ -487,18 +427,17 @@
       ]
     },
     {
-      "format": "2.0.0",
-      "workflowCount": 2,
-      "workflows": [
-        "databases-mirrored",
-        "private-emails-documented"
-      ]
-    },
-    {
       "format": "3.5.0",
       "workflowCount": 1,
       "workflows": [
         "meeting-intelligence-private"
+      ]
+    },
+    {
+      "format": "2.0.0",
+      "workflowCount": 1,
+      "workflows": [
+        "private-emails-documented"
       ]
     }
   ],

@@ -257,6 +257,11 @@ export default defineWorkflow({
 			stripeInvoiceUrl,
 		};
 	},
+
+	onError: async ({ error, inputs }) => {
+		console.error(`Invoice Generator failed for project database ${inputs.projectsDatabase}:`, error.message);
+		// Note: No notification channel configured - error is logged for monitoring
+	},
 });
 
 export const metadata = {

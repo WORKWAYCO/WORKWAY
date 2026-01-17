@@ -234,6 +234,16 @@ export default defineWorkflow({
 			teamNotified: true,
 		};
 	},
+
+	onError: async ({ error, inputs, integrations }) => {
+		// Notify team about onboarding failure
+		if (inputs.announcementChannel && integrations.slack) {
+			await integrations.slack.chat.postMessage({
+				channel: inputs.announcementChannel,
+				text: `⚠️ Onboarding automation encountered an issue: ${error.message}. Please check the team database and retry.`,
+			});
+		}
+	},
 });
 
 export const metadata = {

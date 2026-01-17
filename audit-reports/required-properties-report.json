@@ -1,7 +1,7 @@
 {
   "auditType": "required-properties",
-  "executedAt": "2026-01-07T19:49:02.789Z",
-  "totalWorkflows": 49,
+  "executedAt": "2026-01-17T22:45:11.300Z",
+  "totalWorkflows": 53,
   "workflowsAudited": 8,
   "findingsCount": 8,
   "findings": [

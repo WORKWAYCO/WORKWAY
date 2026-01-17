@@ -1,9 +1,9 @@
 {
   "auditType": "schema-consistency",
-  "executedAt": "2026-01-07T19:49:02.821Z",
-  "totalWorkflows": 49,
-  "workflowsAudited": 22,
-  "findingsCount": 24,
+  "executedAt": "2026-01-17T22:45:11.368Z",
+  "totalWorkflows": 53,
+  "workflowsAudited": 21,
+  "findingsCount": 21,
   "findings": [
     {
       "workflowId": "calendar-meeting-prep",
@@ -103,69 +103,6 @@
       "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/content-calendar/index.ts",
       "context": {
         "correctPattern": "config: {...}"
-      }
-    },
-    {
-      "workflowId": "databases-mirrored",
-      "workflowName": "Notion Two-Way Sync",
-      "severity": "low",
-      "category": "schema-consistency",
-      "issue": "Step name \"_client_notion_token\" doesn't follow convention",
-      "recommendation": "Use lowercase with underscores (snake_case) for step names",
-      "autoFixable": true,
-      "priority": "P3",
-      "labels": [
-        "audit",
-        "workflows",
-        "consistency",
-        "naming"
-      ],
-      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
-      "context": {
-        "currentName": "_client_notion_token",
-        "expectedPattern": "lowercase with underscores (snake_case)"
-      }
-    },
-    {
-      "workflowId": "databases-mirrored",
-      "workflowName": "Notion Two-Way Sync",
-      "severity": "low",
-      "category": "schema-consistency",
-      "issue": "Step name \"_client_database\" doesn't follow convention",
-      "recommendation": "Use lowercase with underscores (snake_case) for step names",
-      "autoFixable": true,
-      "priority": "P3",
-      "labels": [
-        "audit",
-        "workflows",
-        "consistency",
-        "naming"
-      ],
-      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
-      "context": {
-        "currentName": "_client_database",
-        "expectedPattern": "lowercase with underscores (snake_case)"
-      }
-    },
-    {
-      "workflowId": "databases-mirrored",
-      "workflowName": "Notion Two-Way Sync",
-      "severity": "low",
-      "category": "schema-consistency",
-      "issue": "Step name \"_client_email\" doesn't follow convention",
-      "recommendation": "Use lowercase with underscores (snake_case) for step names",
-      "autoFixable": true,
-      "priority": "P3",
-      "labels": [
-        "audit",
-        "workflows",
-        "consistency",
-        "naming"
-      ],
-      "filePath": "/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/workflows/src/databases-mirrored/index.ts",
-      "context": {
-        "currentName": "_client_email",
-        "expectedPattern": "lowercase with underscores (snake_case)"
       }
     },
     {
@@ -474,7 +411,7 @@
       "severity": "low",
       "category": "schema-consistency",
       "issue": "Inconsistent version formats across workflows (3 different formats)",
-      "recommendation": "Standardize on \"1.0.0\" format (used by 46/49 workflows)",
+      "recommendation": "Standardize on \"1.0.0\" format (used by 51/53 workflows)",
       "autoFixable": true,
       "priority": "P3",
       "labels": [
@@ -489,7 +426,7 @@
         "versionFormats": [
           {
             "format": "1.0.0",
-            "workflowCount": 46,
+            "workflowCount": 51,
             "workflows": [
               "accounting-stays-current",
               "ai-newsletter",
@@ -499,18 +436,17 @@
             ]
           },
           {
-            "format": "2.0.0",
-            "workflowCount": 2,
-            "workflows": [
-              "databases-mirrored",
-              "private-emails-documented"
-            ]
-          },
-          {
             "format": "3.5.0",
             "workflowCount": 1,
             "workflows": [
               "meeting-intelligence-private"
+            ]
+          },
+          {
+            "format": "2.0.0",
+            "workflowCount": 1,
+            "workflows": [
+              "private-emails-documented"
             ]
           }
         ],
@@ -522,7 +458,7 @@
     "critical": 0,
     "high": 0,
     "medium": 20,
-    "low": 4,
-    "autoFixable": 24
+    "low": 1,
+    "autoFixable": 21
   }
 }
