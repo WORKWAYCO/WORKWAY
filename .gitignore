@@ -62,3 +62,6 @@ packages/integrations/openapi/generated/
 # Local config and archives
 .mcp.json
 .archive/
+
+# Schema migration backups
+packages/workflows/.schema-backup/
