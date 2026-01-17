@@ -12,12 +12,42 @@
  * 5. Render and send to subscribers
  * 6. Track analytics for feedback loop
  * 
- * Integrations: WORKWAY API, Resend, Perplexity (optional)
+ * Notifications: Email via Resend (no Slack required)
  * Trigger: Scheduled (bi-weekly, 1st and 15th of month)
  */
 
 import { defineWorkflow, schedule } from '@workwayco/sdk';
 import { AIModels } from '@workwayco/sdk';
+
+// Helper to send admin notifications via Resend
+async function sendAdminNotification(
+	resendApiKey: string,
+	adminEmail: string,
+	subject: string,
+	html: string,
+	text: string
+) {
+	if (!resendApiKey || !adminEmail) return;
+	
+	try {
+		await fetch('https://api.resend.com/emails', {
+			method: 'POST',
+			headers: {
+				'Authorization': `Bearer ${resendApiKey}`,
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({
+				from: 'WORKWAY Newsletter <newsletter@workway.co>',
+				to: adminEmail,
+				subject,
+				html,
+				text,
+			}),
+		});
+	} catch (error) {
+		console.error('[Newsletter Autopilot] Failed to send notification:', error);
+	}
+}
 
 // Newsletter content types (matching newsletter-taste.ts)
 interface NewsletterSection {
@@ -153,7 +183,7 @@ export default defineWorkflow({
 			maxRefinementCycles: { value: 3 },
 		},
 
-		essentialFields: ['api_token', 'slack_webhook'],
+		essentialFields: ['api_token', 'resend_api_key', 'admin_email'],
 
 		zuhandenheit: {
 			timeToValue: 14 * 24 * 60, // 14 days (bi-weekly)
@@ -164,7 +194,7 @@ export default defineWorkflow({
 	},
 
 	pricing: {
-		model: 'internal',
+		model: 'free',
 		description: 'WORKWAY internal workflow',
 	},
 
@@ -185,21 +215,32 @@ export default defineWorkflow({
 			label: 'API Base URL',
 			default: 'https://workway-api.half-dozen.workers.dev',
 		},
+		resend_api_key: {
+			type: 'secret',
+			label: 'Resend API Key',
+			required: true,
+			description: 'For sending notification emails',
+		},
+		admin_email: {
+			type: 'string',
+			label: 'Admin Email',
+			required: true,
+			description: 'Email for escalation and success notifications',
+		},
 		perplexity_api_key: {
 			type: 'secret',
 			label: 'Perplexity API Key',
 			required: false,
 			description: 'Optional: For industry insight research',
 		},
-		slack_webhook: {
-			type: 'string',
-			label: 'Slack Webhook URL',
-			required: true,
-			description: 'For escalation notifications',
-		},
 		notify_on_escalation: {
 			type: 'boolean',
 			label: 'Notify on Escalation',
+			default: true,
+		},
+		notify_on_success: {
+			type: 'boolean',
+			label: 'Notify on Success',
 			default: true,
 		},
 		max_refinement_cycles: {
@@ -440,23 +481,30 @@ Return improved JSON content addressing all feedback.`;
 			// Escalate to human
 			console.log('[Newsletter Autopilot] Escalating to human review...');
 
-			if (inputs.slackWebhook && inputs.notifyOnEscalation) {
-				await fetch(inputs.slackWebhook, {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' },
-					body: JSON.stringify({
-						text: `Newsletter needs human review after ${cycles} refinement cycles.`,
-						blocks: [
-							{
-								type: 'section',
-								text: {
-									type: 'mrkdwn',
-									text: `*Newsletter Autopilot: Human Review Needed*\n\nThe newsletter failed to pass taste review after ${cycles} refinement attempts.\n\n*Issue:* ${content.title}\n*Feedback:* ${review?.feedback.join(', ') || 'Unknown'}\n\n<https://workway.co/admin/newsletter/issues/${issueSlug}|Review and Edit →>`,
-								},
-							},
-						],
-					}),
-				});
+			if (inputs.notifyOnEscalation) {
+				await sendAdminNotification(
+					inputs.resendApiKey,
+					inputs.adminEmail,
+					`⚠️ Newsletter needs human review`,
+					`
+						<h2>Newsletter Autopilot: Human Review Needed</h2>
+						<p>The newsletter failed to pass taste review after <strong>${cycles}</strong> refinement attempts.</p>
+						<p><strong>Issue:</strong> ${content.title}</p>
+						<p><strong>Feedback:</strong></p>
+						<ul>${(review?.feedback || []).map(f => `<li>${f}</li>`).join('')}</ul>
+						<p><strong>Suggestions:</strong></p>
+						<ul>${(review?.suggestions || []).map(s => `<li>${s}</li>`).join('')}</ul>
+						<p><a href="https://workway.co/admin/newsletter/issues/${issueSlug}" style="background:#000;color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px;display:inline-block;">Review and Edit →</a></p>
+					`,
+					`Newsletter Autopilot: Human Review Needed
+
+The newsletter failed to pass taste review after ${cycles} refinement attempts.
+
+Issue: ${content.title}
+Feedback: ${(review?.feedback || []).join(', ')}
+
+Review and edit: https://workway.co/admin/newsletter/issues/${issueSlug}`
+				);
 			}
 
 			return {
@@ -497,23 +545,30 @@ Return improved JSON content addressing all feedback.`;
 		const sendData = await sendResponse.json() as { stats: { recipients: number; sent: number; failed: number } };
 
 		// Notify success
-		if (inputs.slackWebhook) {
-			await fetch(inputs.slackWebhook, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					text: `Newsletter sent successfully to ${sendData.stats.sent} subscribers!`,
-					blocks: [
-						{
-							type: 'section',
-							text: {
-								type: 'mrkdwn',
-								text: `*Newsletter Autopilot: Sent Successfully*\n\n*Subject:* ${content.title}\n*Recipients:* ${sendData.stats.sent}\n*Taste Score:* ${review?.overallScore || 'N/A'}/10\n*Refinement Cycles:* ${cycles}\n\n<https://workway.co/newsletter/issues/${issueSlug}|View Issue →>`,
-							},
-						},
-					],
-				}),
-			});
+		if (inputs.notifyOnSuccess) {
+			await sendAdminNotification(
+				inputs.resendApiKey,
+				inputs.adminEmail,
+				`✅ Newsletter sent to ${sendData.stats.sent} subscribers`,
+				`
+					<h2>Newsletter Autopilot: Sent Successfully</h2>
+					<table style="border-collapse:collapse;margin:16px 0;">
+						<tr><td style="padding:8px 16px 8px 0;color:#666;">Subject:</td><td style="padding:8px 0;"><strong>${content.title}</strong></td></tr>
+						<tr><td style="padding:8px 16px 8px 0;color:#666;">Recipients:</td><td style="padding:8px 0;">${sendData.stats.sent}</td></tr>
+						<tr><td style="padding:8px 16px 8px 0;color:#666;">Taste Score:</td><td style="padding:8px 0;">${review?.overallScore || 'N/A'}/10</td></tr>
+						<tr><td style="padding:8px 16px 8px 0;color:#666;">Refinement Cycles:</td><td style="padding:8px 0;">${cycles}</td></tr>
+					</table>
+					<p><a href="https://workway.co/newsletter/issues/${issueSlug}" style="background:#000;color:#fff;padding:12px 24px;text-decoration:none;border-radius:4px;display:inline-block;">View Issue →</a></p>
+				`,
+				`Newsletter Autopilot: Sent Successfully
+
+Subject: ${content.title}
+Recipients: ${sendData.stats.sent}
+Taste Score: ${review?.overallScore || 'N/A'}/10
+Refinement Cycles: ${cycles}
+
+View issue: https://workway.co/newsletter/issues/${issueSlug}`
+			);
 		}
 
 		return {
@@ -530,14 +585,22 @@ Return improved JSON content addressing all feedback.`;
 	onError: async ({ error, inputs }) => {
 		console.error('[Newsletter Autopilot] Error:', error.message);
 
-		if (inputs.slackWebhook && inputs.notifyOnEscalation) {
-			await fetch(inputs.slackWebhook, {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
-					text: `Newsletter Autopilot failed: ${error.message}`,
-				}),
-			});
+		if (inputs.notifyOnEscalation) {
+			await sendAdminNotification(
+				inputs.resendApiKey,
+				inputs.adminEmail,
+				`❌ Newsletter Autopilot Error`,
+				`
+					<h2>Newsletter Autopilot Failed</h2>
+					<p style="color:#d32f2f;"><strong>Error:</strong> ${error.message}</p>
+					<p>Please check the logs and try again.</p>
+				`,
+				`Newsletter Autopilot Failed
+
+Error: ${error.message}
+
+Please check the logs and try again.`
+			);
 		}
 	},
 });

@@ -77,12 +77,14 @@ Uses Workers AI (LLAMA_3_8B) with custom system prompt enforcing:
 - Forbidden marketing phrases
 - Structured JSON output
 
-### Slack Notifications
+### Email Notifications (via Resend)
 
-Webhook for:
-- Success: "Newsletter sent to X subscribers"
-- Escalation: "Human review needed after Y cycles"
-- Error: "Newsletter Autopilot failed: error message"
+Admin receives email for:
+- ✅ Success: "Newsletter sent to X subscribers"
+- ⚠️ Escalation: "Human review needed after Y cycles"
+- ❌ Error: "Newsletter Autopilot failed: error message"
+
+No Slack required. All notifications go to the configured admin email.
 
 ## Configuration
 
@@ -90,9 +92,11 @@ Webhook for:
 |-------|------|----------|-------------|
 | `api_token` | secret | Yes | WORKWAY admin API token |
 | `api_base_url` | string | No | API base URL |
+| `resend_api_key` | secret | Yes | Resend API key for notifications |
+| `admin_email` | string | Yes | Admin email for notifications |
 | `perplexity_api_key` | secret | No | For industry insights |
-| `slack_webhook` | string | Yes | Notification webhook |
-| `notify_on_escalation` | boolean | No | Send Slack on escalation |
+| `notify_on_escalation` | boolean | No | Send email on escalation (default: true) |
+| `notify_on_success` | boolean | No | Send email on success (default: true) |
 | `max_refinement_cycles` | number | No | Default: 3 |
 
 ## Content Schema
@@ -129,8 +133,8 @@ interface NewsletterContent {
 
 - API errors: Retry once, then fail
 - AI generation errors: Fall back to minimal template
-- Send errors: Mark issue as 'failed', notify via Slack
-- All errors trigger `onError` handler with Slack notification
+- Send errors: Mark issue as 'failed', notify admin via email
+- All errors trigger `onError` handler with email notification
 
 ## Modification Guidelines
 
@@ -155,8 +159,8 @@ Manual trigger:
 1. Create test subscriber: `POST /newsletter/subscribe`
 2. Verify email: `GET /newsletter/verify/:token`
 3. Run workflow manually via WORKWAY dashboard
-4. Check Slack for notifications
-5. Verify email received
+4. Check admin inbox for notifications
+5. Verify newsletter email received
 
 ## Related Files
 
