@@ -122,6 +122,9 @@ export { default as youtubePlaylistSyncPrivate } from './youtube-playlist-sync-p
 // Data Sync (Private - BYOO)
 export { default as sheetsNotionBidirectional } from './sheets-notion-bidirectional/index.js';
 
+// Newsletter (Internal - WORKWAY Dogfooding)
+export { default as newsletterAutopilot } from './newsletter-autopilot/index.js';
+
 // ============================================================================
 // INTEGRATION PAIR REGISTRY
 // ============================================================================
@@ -758,6 +761,8 @@ export const workflows = {
 	'youtube-playlist-sync-private': { id: 'youtube-playlist-sync-private', outcomeFrame: 'content_research', experimental: true },
 	// AI Intake
 	'conversational-intake-agent': { id: 'conversational-intake-agent', outcomeFrame: 'when_users_describe_needs' },
+	// Newsletter (Internal)
+	'newsletter-autopilot': { id: 'newsletter-autopilot', outcomeFrame: 'biweekly_automatically', internal: true },
 } as const;
 
 export type WorkflowId = keyof typeof workflows;
