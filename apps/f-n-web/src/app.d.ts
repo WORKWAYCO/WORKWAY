@@ -22,6 +22,8 @@ declare global {
 				CACHE: KVNamespace;
 				NOTION_CLIENT_ID?: string;
 				NOTION_CLIENT_SECRET?: string;
+				YOUTUBE_CLIENT_ID?: string;
+				YOUTUBE_CLIENT_SECRET?: string;
 				SITE_URL?: string;
 			};
 			context: ExecutionContext;

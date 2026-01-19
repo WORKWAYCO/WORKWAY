@@ -27,7 +27,7 @@ const REASONABLE_TOTAL_WEIGHT_RANGE = { min: 0.3, max: 1.5 };
  */
 const PROPERTY_USE_CASES: Record<string, string[]> = {
 	invoice_amount: ['finance', 'billing', 'accounting', 'payment'],
-	customer_email: ['crm', 'sales', 'support', 'customer'],
+	customer_email: ['crm', 'sales', 'support', 'customer', 'finance', 'billing', 'accounting', 'payment'],
 	appointment_time: ['calendar', 'scheduling', 'booking', 'appointment'],
 	project_name: ['project', 'task', 'work', 'construction'],
 	deal_stage: ['crm', 'sales', 'deal', 'pipeline'],
