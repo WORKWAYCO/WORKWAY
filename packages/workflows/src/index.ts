@@ -122,6 +122,9 @@ export { default as youtubePlaylistSyncPrivate } from './youtube-playlist-sync-p
 // Data Sync (Private - BYOO)
 export { default as sheetsNotionBidirectional } from './sheets-notion-bidirectional/index.js';
 
+// Notion Database Sharing (Agency → Client)
+export { default as databasesMirrored } from './databases-mirrored/index.js';
+
 // Newsletter (Internal - WORKWAY Dogfooding)
 export { default as newsletterAutopilot } from './newsletter-autopilot/index.js';
 
@@ -209,6 +212,13 @@ export const integrationPairs = {
 		outcomeFrame: 'when_data_diverges',
 		experimental: false,
 		requiresBYOO: true,
+	},
+
+	// Notion Database Sharing (Agency → Client)
+	'notion:notion': {
+		workflowId: 'databases-mirrored',
+		outcome: 'Notion databases that stay in sync across workspaces',
+		outcomeFrame: 'when_collaborating',
 	},
 
 	// Payments
@@ -697,6 +707,12 @@ export const outcomeFrames = {
 		label: 'When users describe what they need...',
 		description: 'AI understands context and routes to the right solution',
 	},
+
+	// Collaboration
+	when_collaborating: {
+		label: 'When collaborating across workspaces...',
+		description: 'Keep databases in sync without sharing workspace access',
+	},
 } as const;
 
 export type OutcomeFrameId = keyof typeof outcomeFrames;
@@ -763,6 +779,8 @@ export const workflows = {
 	'conversational-intake-agent': { id: 'conversational-intake-agent', outcomeFrame: 'when_users_describe_needs' },
 	// Newsletter (Internal)
 	'newsletter-autopilot': { id: 'newsletter-autopilot', outcomeFrame: 'biweekly_automatically', internal: true },
+	// Notion Database Sharing
+	'databases-mirrored': { id: 'databases-mirrored', outcomeFrame: 'when_collaborating' },
 } as const;
 
 export type WorkflowId = keyof typeof workflows;
