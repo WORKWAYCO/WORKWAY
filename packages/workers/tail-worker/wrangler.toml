@@ -1,0 +1,30 @@
+# WORKWAY Tail Worker
+#
+# Receives trace events from other workers for distributed tracing
+# and log aggregation. Processes events non-blockingly.
+#
+# Tail workers receive events AFTER the original worker responds,
+# so they don't impact request latency.
+
+name = "workway-tail-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# This worker consumes tail events from other workers.
+# Configure tail_consumers on source workers, not here.
+#
+# Example in api-gateway/wrangler.toml:
+# [[tail_consumers]]
+# service = "workway-tail-worker"
+
+# KV for storing trace data (optional - for debugging)
+# [[kv_namespaces]]
+# binding = "TRACES"
+# id = "placeholder-create-with-wrangler-kv-create"
+
+[vars]
+# Environment for log filtering
+ENVIRONMENT = "production"
+# Log level: debug, info, warn, error
+LOG_LEVEL = "info"

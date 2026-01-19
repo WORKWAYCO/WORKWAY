@@ -284,6 +284,23 @@ export {
 } from './analytics-engine';
 
 // ============================================================================
+// Distributed Tracing
+// ============================================================================
+
+export type { TraceContext, LogLevel, LogEntry } from './tracing';
+export {
+	getTraceId,
+	propagateTrace,
+	createTraceHeaders,
+	createTraceContext,
+	createChildSpan,
+	createLogger,
+	timed,
+	createTimer,
+	TRACE_ID_HEADER,
+} from './tracing';
+
+// ============================================================================
 // ACTION RESULT (Shared utilities)
 // ============================================================================
 

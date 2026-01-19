@@ -67,6 +67,15 @@ binding = "ANALYTICS"
 dataset = "workway_metrics"
 
 # =============================================================================
+# Tail Worker (Distributed Tracing)
+# =============================================================================
+# Send trace events to the tail worker for log aggregation and analysis.
+# Events are sent AFTER the response, so they don't impact latency.
+
+[[tail_consumers]]
+service = "workway-tail-worker"
+
+# =============================================================================
 # Workers AI
 # =============================================================================
 
