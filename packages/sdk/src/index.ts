@@ -317,6 +317,24 @@ export {
 } from './sli-queries';
 
 // ============================================================================
+// R2 Storage
+// ============================================================================
+
+export type {
+	UploadOptions,
+	UploadResult,
+	ListOptions,
+	ListResult,
+	DownloadResult,
+} from './r2-storage';
+export {
+	R2Storage,
+	createR2Storage,
+	backupD1ToR2,
+	listD1Backups,
+} from './r2-storage';
+
+// ============================================================================
 // ACTION RESULT (Shared utilities)
 // ============================================================================
 
