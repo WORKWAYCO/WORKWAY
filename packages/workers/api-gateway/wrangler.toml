@@ -11,7 +11,34 @@ compatibility_flags = ["nodejs_compat"]
 # Production route
 # routes = [{ pattern = "api.workway.co/*", zone_name = "workway.co" }]
 
+# =============================================================================
+# Rate Limiting
+# =============================================================================
+# Native Cloudflare rate limiting to protect the API from abuse.
+# See docs/API_RATE_LIMITS.md for full documentation.
+
+# Note: Cloudflare Rate Limiting is configured via the dashboard or API.
+# These comments document the intended configuration:
+#
+# Rule 1: Global API limit
+#   - Match: /workflows/*
+#   - Action: Block
+#   - Threshold: 1000 requests per minute
+#
+# Rule 2: Auth endpoint protection (brute force)
+#   - Match: /auth/*
+#   - Action: Block
+#   - Threshold: 20 requests per minute
+#
+# Rule 3: Per-API-key limit (requires Enterprise)
+#   - Match: All authenticated requests
+#   - Action: Block
+#   - Threshold: Based on tier (free: 100/min, pro: 1000/min, enterprise: 10000/min)
+
+# =============================================================================
 # KV Namespaces
+# =============================================================================
+
 [[kv_namespaces]]
 binding = "API_KEYS"
 id = "126746b45e274282a71fba77013be8d3"
@@ -24,12 +51,28 @@ id = "651ca58110834aa1892bd9f5a95596e9"
 binding = "WORKFLOW_STORAGE"
 id = "7e1d2080a29f420782e73432d72a284f"
 
+# Rate limit tracking KV (for per-API-key limits)
+[[kv_namespaces]]
+binding = "RATE_LIMITS"
+id = "placeholder-create-with-wrangler-kv-create"
+
+# =============================================================================
 # Workers AI
+# =============================================================================
+
 [ai]
 binding = "AI"
 
+# =============================================================================
+# Environment Variables
+# =============================================================================
+
+[vars]
+# Rate limit defaults (can be overridden per API key in KV)
+RATE_LIMIT_DEFAULT = "1000"
+RATE_LIMIT_WINDOW_SECONDS = "60"
+
 # Environment variables (set via wrangler secret for production)
-# [vars]
 # ENVIRONMENT = "production"
 
 # Development overrides

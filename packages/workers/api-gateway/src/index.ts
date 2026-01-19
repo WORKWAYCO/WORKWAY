@@ -26,8 +26,13 @@ export interface Env {
 	IDEMPOTENCY: KVNamespace;
 	/** KV namespace for workflow storage (passed to workflows) */
 	WORKFLOW_STORAGE: KVNamespace;
+	/** KV namespace for rate limit tracking */
+	RATE_LIMITS: KVNamespace;
 	/** Workers AI binding */
 	AI: Ai;
+	/** Rate limit defaults */
+	RATE_LIMIT_DEFAULT: string;
+	RATE_LIMIT_WINDOW_SECONDS: string;
 }
 
 interface APIKeyData {
@@ -141,6 +146,78 @@ async function checkIdempotency(
 
 	const cached = await env.IDEMPOTENCY.get<TriggerResponse>(key, 'json');
 	return cached;
+}
+
+// =============================================================================
+// RATE LIMITING
+// =============================================================================
+
+interface RateLimitState {
+	count: number;
+	windowStart: number;
+}
+
+interface RateLimitResult {
+	allowed: boolean;
+	remaining: number;
+	resetAt: number;
+	limit: number;
+}
+
+/**
+ * Check rate limit for an API key using sliding window
+ *
+ * Returns rate limit info including remaining requests.
+ * Uses KV for distributed state across edge locations.
+ */
+async function checkRateLimit(
+	apiKey: string,
+	env: Env,
+	customLimit?: number
+): Promise<RateLimitResult> {
+	const limit = customLimit ?? parseInt(env.RATE_LIMIT_DEFAULT || '1000', 10);
+	const windowSeconds = parseInt(env.RATE_LIMIT_WINDOW_SECONDS || '60', 10);
+	const windowMs = windowSeconds * 1000;
+	const now = Date.now();
+
+	const rateLimitKey = `rate:${apiKey}`;
+
+	// Get current state
+	let state = await env.RATE_LIMITS.get<RateLimitState>(rateLimitKey, 'json');
+
+	// Initialize or reset window if expired
+	if (!state || now - state.windowStart >= windowMs) {
+		state = { count: 0, windowStart: now };
+	}
+
+	// Increment count
+	state.count++;
+
+	// Calculate reset time
+	const resetAt = state.windowStart + windowMs;
+
+	// Store updated state (with TTL slightly longer than window)
+	await env.RATE_LIMITS.put(rateLimitKey, JSON.stringify(state), {
+		expirationTtl: windowSeconds + 10,
+	});
+
+	return {
+		allowed: state.count <= limit,
+		remaining: Math.max(0, limit - state.count),
+		resetAt,
+		limit,
+	};
+}
+
+/**
+ * Build rate limit headers for response
+ */
+function rateLimitHeaders(result: RateLimitResult): Record<string, string> {
+	return {
+		'X-RateLimit-Limit': result.limit.toString(),
+		'X-RateLimit-Remaining': result.remaining.toString(),
+		'X-RateLimit-Reset': Math.ceil(result.resetAt / 1000).toString(),
+	};
 }
 
 /**
@@ -291,7 +368,26 @@ async function handleTrigger(
 		return jsonResponse({ success: false, error: authResult.error }, 401, headers);
 	}
 
-	// 2. Check organization access (optional)
+	// 2. Check rate limit (per API key)
+	const apiKey = request.headers.get('Authorization')?.slice(7) || '';
+	const rateLimitResult = await checkRateLimit(apiKey, env, authResult.keyData.rateLimit);
+
+	// Add rate limit headers to all responses
+	Object.assign(headers, rateLimitHeaders(rateLimitResult));
+
+	if (!rateLimitResult.allowed) {
+		return jsonResponse(
+			{
+				success: false,
+				error: 'Rate limit exceeded',
+				retryAfter: Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000),
+			},
+			429,
+			headers
+		);
+	}
+
+	// 3. Check organization access (optional)
 	const requestOrgId = request.headers.get('X-Organization-ID');
 	if (requestOrgId && requestOrgId !== authResult.keyData.orgId) {
 		return jsonResponse(
@@ -301,14 +397,14 @@ async function handleTrigger(
 		);
 	}
 
-	// 3. Check idempotency
+	// 4. Check idempotency
 	const idempotencyKey = request.headers.get('Idempotency-Key');
 	const cachedResult = await checkIdempotency(idempotencyKey, env);
 	if (cachedResult) {
 		return jsonResponse({ ...cachedResult, cached: true }, 200, headers);
 	}
 
-	// 4. Find workflow
+	// 5. Find workflow
 	const workflow = WORKFLOW_REGISTRY[workflowId];
 	if (!workflow) {
 		return jsonResponse(
@@ -318,7 +414,7 @@ async function handleTrigger(
 		);
 	}
 
-	// 5. Parse request body
+	// 6. Parse request body
 	let body: TriggerRequest;
 	try {
 		body = await request.json();
@@ -330,10 +426,10 @@ async function handleTrigger(
 		);
 	}
 
-	// 6. Generate execution ID
+	// 7. Generate execution ID
 	const executionId = crypto.randomUUID();
 
-	// 7. Execute workflow
+	// 8. Execute workflow
 	try {
 		// Normalize inputs from snake_case to camelCase
 		const normalizedInputs = normalizeInputs(body.data);
