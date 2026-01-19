@@ -1,0 +1,114 @@
+title: RLM Integration for Gas Town Quality Assessment
+property: cloudflare
+complexity: standard
+
+overview: |
+  Integrate CREATE SOMETHING's RLM (Recursive Language Model) implementation
+  to enable comprehensive quality assessment of Gas Town worker outputs.
+
+  Based on MIT CSAIL paper (arxiv:2512.24601), RLM processes 10M+ token
+  contexts by treating context as a Python variable instead of prompt content.
+
+  This enables processing ALL worker outputs (vs sampling 5-10 files) for:
+  - Code quality assessment (DRY, patterns, conventions)
+  - Completeness verification (acceptance criteria met)
+  - Security analysis (auth, injection, secrets)
+  - Git hygiene (commit messages, file organization)
+
+features:
+  - title: RLM Python SDK Integration
+    priority: 0
+    description: |
+      Port CREATE SOMETHING's RLM implementation to WORKWAY.
+      Create Python package that can be called from TypeScript/Node.js.
+    files:
+      - packages/rlm/pyproject.toml
+      - packages/rlm/src/workway_rlm/__init__.py
+      - packages/rlm/src/workway_rlm/environment.py
+      - packages/rlm/src/workway_rlm/session.py
+      - packages/rlm/src/workway_rlm/providers/__init__.py
+      - packages/rlm/src/workway_rlm/providers/claude.py
+      - packages/rlm/README.md
+    acceptance:
+      - test: Python package installs cleanly
+        verify: cd packages/rlm && pip install -e .
+      - test: Can create RLMSession and run query
+        verify: pytest packages/rlm/tests/test_session.py
+      - Environment has context as variable (not in prompt)
+      - Sub-LM query function (llm_query) works
+      - Cost tracking implemented
+
+  - title: Node.js Bridge for RLM
+    priority: 0
+    depends_on:
+      - RLM Python SDK Integration
+    description: |
+      Create TypeScript/Node.js interface to call Python RLM SDK.
+      Use child_process to spawn Python, communicate via JSON.
+    files:
+      - packages/rlm/src/index.ts
+      - packages/rlm/src/rlm-bridge.ts
+      - packages/rlm/src/types.ts
+      - packages/rlm/package.json
+      - packages/rlm/tsconfig.json
+    acceptance:
+      - test: TypeScript can call Python RLM
+        verify: pnpm test --filter=@workwayco/rlm
+      - Bridge spawns Python subprocess correctly
+      - JSON serialization works for large contexts
+      - Error handling for Python failures
+      - Type definitions for RLMResult, RLMConfig
+
+  - title: Gas Town Worker Assessment Integration
+    priority: 1
+    depends_on:
+      - Node.js Bridge for RLM
+    description: |
+      Integrate RLM with Gas Town Observer (Witness) to assess worker outputs.
+      Create assessment function that processes all worker logs/outputs.
+    files:
+      - packages/harness/src/rlm-assessment.ts
+      - packages/harness/src/witness.ts
+      - .claude/skills/rlm-worker-assessment.md
+    acceptance:
+      - test: RLM can process all Gas Town worker outputs
+        verify: pnpm test --filter=@workwayco/harness
+      - Witness calls RLM assessment after workers complete
+      - Per-worker quality scores generated
+      - Aggregate findings summarized
+      - Cost per assessment < $0.50
+      - Assessment completes in < 2 minutes
+
+  - title: CLI Command for RLM Assessment
+    priority: 2
+    depends_on:
+      - Gas Town Worker Assessment Integration
+    description: |
+      Add workway-cli command to run RLM assessment manually.
+      Useful for testing and one-off analyses.
+    files:
+      - packages/cli/src/commands/rlm/assess.ts
+      - packages/cli/src/commands/rlm/index.ts
+      - packages/cli/src/index.ts
+    acceptance:
+      - test: CLI command works
+        verify: workway rlm assess --workers <worker-ids>
+      - Can specify worker IDs or use latest Gas Town run
+      - Outputs quality scores and findings
+      - JSON output mode for programmatic use
+      - --verbose flag shows RLM trajectory
+
+requirements:
+  - Python 3.11+ must be available in PATH
+  - ANTHROPIC_API_KEY environment variable set
+  - CREATE SOMETHING's RLM implementation as reference
+  - Compatible with existing Gas Town infrastructure
+  - No breaking changes to harness API
+
+success:
+  - RLM processes 6+ Gas Town worker outputs successfully
+  - Identifies quality issues missed by current sampling
+  - Cost per assessment run < $0.50
+  - Assessment latency < 2 minutes
+  - Integration tests pass
+  - Documentation complete with examples

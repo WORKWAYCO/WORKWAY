@@ -1,0 +1,26 @@
+{
+  "name": "@workwayco/rlm",
+  "version": "0.1.0",
+  "description": "RLM (Recursive Language Model) for WORKWAY - long-context processing",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:python": "python -m pytest tests/",
+    "clean": "rm -rf dist"
+  },
+  "keywords": [
+    "rlm",
+    "llm",
+    "long-context",
+    "workway"
+  ],
+  "author": "WORKWAY",
+  "license": "MIT",
+  "dependencies": {},
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  }
+}
