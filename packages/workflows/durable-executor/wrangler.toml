@@ -1,0 +1,35 @@
+# WORKWAY Durable Executor
+#
+# Uses Cloudflare Workflows for durable, resumable execution of
+# long-running jobs. Steps are automatically retried on failure
+# and state is persisted across executions.
+#
+# Features:
+# - Automatic retry with exponential backoff
+# - Step-level state persistence
+# - Long sleep durations (minutes to days)
+# - Progress tracking via instance status
+
+name = "workway-durable-executor"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Cloudflare Workflows binding
+[[workflows]]
+name = "workflow-executor"
+binding = "WORKFLOW"
+class_name = "WorkflowExecutor"
+
+# Analytics for workflow metrics
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "workway_metrics"
+
+# KV for workflow metadata
+[[kv_namespaces]]
+binding = "WORKFLOW_META"
+id = "placeholder-create-with-wrangler-kv-create"
+
+[vars]
+ENVIRONMENT = "production"
