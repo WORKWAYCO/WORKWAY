@@ -72,11 +72,27 @@
 				</li>
 				<li class="flex items-start gap-3">
 					<Check size={16} class="text-[var(--brand-success)] mt-0.5 flex-shrink-0" />
-					<span class="text-sm"><strong>Date</strong> — When the meeting occurred (if your database has a Date property)</span>
+					<span class="text-sm"><strong>Date</strong> — When the meeting occurred (if mapped)</span>
 				</li>
 				<li class="flex items-start gap-3">
 					<Check size={16} class="text-[var(--brand-success)] mt-0.5 flex-shrink-0" />
-					<span class="text-sm"><strong>Fireflies URL</strong> — Link back to the original transcript</span>
+					<span class="text-sm"><strong>Duration</strong> — Meeting length in minutes (if mapped)</span>
+				</li>
+				<li class="flex items-start gap-3">
+					<Check size={16} class="text-[var(--brand-success)] mt-0.5 flex-shrink-0" />
+					<span class="text-sm"><strong>Participants</strong> — Attendee names (if mapped)</span>
+				</li>
+				<li class="flex items-start gap-3">
+					<Check size={16} class="text-[var(--brand-success)] mt-0.5 flex-shrink-0" />
+					<span class="text-sm"><strong>Keywords</strong> — AI-extracted topics (if mapped)</span>
+				</li>
+				<li class="flex items-start gap-3">
+					<Check size={16} class="text-[var(--brand-success)] mt-0.5 flex-shrink-0" />
+					<span class="text-sm"><strong>Owner</strong> — Your login email (if mapped)</span>
+				</li>
+				<li class="flex items-start gap-3">
+					<Check size={16} class="text-[var(--brand-success)] mt-0.5 flex-shrink-0" />
+					<span class="text-sm"><strong>Fireflies URL</strong> — Link back to the original transcript (if mapped)</span>
 				</li>
 			</ul>
 
@@ -130,13 +146,18 @@
 						</tr>
 						<tr class="border-b border-[var(--brand-border)]">
 							<td class="py-2 pr-4">Participants</td>
-							<td class="py-2 pr-4">Multi-select</td>
-							<td class="py-2">Attendee names</td>
+							<td class="py-2 pr-4">Multi-select or Text</td>
+							<td class="py-2">Attendee names (Multi-select for filtering, Text for simplicity)</td>
 						</tr>
 						<tr class="border-b border-[var(--brand-border)]">
 							<td class="py-2 pr-4">Keywords</td>
-							<td class="py-2 pr-4">Multi-select</td>
-							<td class="py-2">AI-extracted topics</td>
+							<td class="py-2 pr-4">Text</td>
+							<td class="py-2">AI-extracted topics (comma-separated)</td>
+						</tr>
+						<tr class="border-b border-[var(--brand-border)]">
+							<td class="py-2 pr-4">Owner</td>
+							<td class="py-2 pr-4">Select</td>
+							<td class="py-2">Automatically set to your login email</td>
 						</tr>
 						<tr>
 							<td class="py-2 pr-4">Meeting Date</td>
