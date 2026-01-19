@@ -304,17 +304,7 @@ export {
 // SLI/SLO Queries
 // ============================================================================
 
-export type { SLIQueryResult, SLOStatus } from './sli-queries';
-export {
-	SLOTargets,
-	SLIQueries,
-	querySLI,
-	calculateAvailability,
-	calculateErrorRate,
-	checkLatencySLO,
-	checkAvailabilitySLO,
-	checkErrorRateSLO,
-} from './sli-queries';
+export { SLI_QUERIES } from './sli-queries';
 
 // ============================================================================
 // R2 Storage
