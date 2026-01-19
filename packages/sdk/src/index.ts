@@ -208,8 +208,17 @@ export {
 	type RetryContext,
 } from './retry';
 
-// Cache utilities
+// Cache utilities (KV-based)
 export { Cache, createCache, type CacheOptions, type CacheEntry } from './cache';
+
+// Edge Cache utilities (Cloudflare Cache API)
+export {
+	EdgeCache,
+	createEdgeCache,
+	edgeCaches,
+	type EdgeCacheOptions,
+	type EdgeCacheMetadata,
+} from './edge-cache';
 
 // Storage utilities
 export {
