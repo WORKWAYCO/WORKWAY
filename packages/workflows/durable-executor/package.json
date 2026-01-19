@@ -1,0 +1,20 @@
+{
+  "name": "@workwayco/durable-executor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "WORKWAY Durable Executor - Cloudflare Workflows for long-running jobs",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "deploy:prod": "wrangler deploy --env production",
+    "tail": "wrangler tail",
+    "types": "wrangler types"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20241127.0",
+    "typescript": "^5.3.3",
+    "wrangler": "^3.91.0"
+  }
+}

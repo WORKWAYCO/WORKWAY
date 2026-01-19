@@ -29,7 +29,7 @@ dataset = "workway_metrics"
 # KV for workflow metadata
 [[kv_namespaces]]
 binding = "WORKFLOW_META"
-id = "placeholder-create-with-wrangler-kv-create"
+id = "970fc0da7cf14fc7b40bc22d99eb4ab5"
 
 [vars]
 ENVIRONMENT = "production"

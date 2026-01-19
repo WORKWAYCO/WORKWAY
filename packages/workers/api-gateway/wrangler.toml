@@ -54,7 +54,7 @@ id = "7e1d2080a29f420782e73432d72a284f"
 # Rate limit tracking KV (for per-API-key limits)
 [[kv_namespaces]]
 binding = "RATE_LIMITS"
-id = "placeholder-create-with-wrangler-kv-create"
+id = "6e5661115fb7400997a25efabebb6637"
 
 # =============================================================================
 # Analytics Engine

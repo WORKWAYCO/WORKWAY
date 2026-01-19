@@ -26,7 +26,7 @@ new_classes = ["TenantState"]
 # KV for tenant metadata (quotas, tiers)
 [[kv_namespaces]]
 binding = "TENANT_METADATA"
-id = "placeholder-create-with-wrangler-kv-create"
+id = "d22079f994c34a5e9a8a77fadef6bee4"
 
 [vars]
 # Default rate limits
