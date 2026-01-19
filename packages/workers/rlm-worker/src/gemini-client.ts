@@ -49,15 +49,18 @@ export async function callGemini(
 		maxOutputTokens?: number;
 	} = {},
 ): Promise<{ response: string; inputTokens: number; outputTokens: number }> {
-	// Map model names
+	// Map model names to Gemini API v1beta models
+	// Use -latest suffix for stable access to current generation
 	const modelMap: Record<string, string> = {
-		'gemini-flash': 'gemini-2.0-flash-exp',
-		'gemini-pro': 'gemini-2.0-flash-thinking-exp-1219',
-		'flash': 'gemini-2.0-flash-exp',
-		'pro': 'gemini-2.0-flash-thinking-exp-1219',
+		'gemini-flash': 'gemini-flash-latest',
+		'gemini-pro': 'gemini-pro-latest',
+		'flash': 'gemini-flash-latest',
+		'pro': 'gemini-pro-latest',
+		'gemini-2.5-flash': 'gemini-2.5-flash',
+		'gemini-2.5-pro': 'gemini-2.5-pro',
 	};
 
-	const geminiModel = modelMap[model] || 'gemini-2.0-flash-exp';
+	const geminiModel = modelMap[model] || 'gemini-flash-latest';
 
 	const requestBody: GeminiRequest = {
 		contents: [
