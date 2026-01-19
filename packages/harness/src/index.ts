@@ -153,6 +153,16 @@ export type {
   ReviewerConfig,
 } from './reviewer.js';
 
+// RLM Assessment (Comprehensive Worker Quality Analysis)
+export {
+  assessWorkers,
+  formatAssessmentResult,
+} from './rlm-assessment.js';
+export type {
+  WorkerQualityAssessment,
+  WorkersAssessmentResult,
+} from './rlm-assessment.js';
+
 // Types
 export type {
   HarnessMode,

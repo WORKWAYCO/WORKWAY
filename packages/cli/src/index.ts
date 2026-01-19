@@ -57,6 +57,7 @@ import { dbSyncWorkflowsCommand } from './commands/db/sync-workflows.js';
 import { beadsNotionInitCommand } from './commands/beads/notion-init.js';
 import { beadsNotionSyncCommand } from './commands/beads/notion.js';
 import { registerSLICommand } from './commands/sli/index.js';
+import { rlmAssessCommand } from './commands/rlm/index.js';
 import { Logger } from './utils/logger.js';
 import { handleCommand, handleCommandError } from './utils/command-handler.js';
 
@@ -608,6 +609,28 @@ program
 // ============================================================================
 
 registerSLICommand(program);
+
+// ============================================================================
+// RLM COMMANDS - Recursive Language Model Assessment
+// ============================================================================
+
+const rlmCommand = program.command('rlm').description('RLM (Recursive Language Model) quality assessment');
+
+rlmCommand
+	.command('assess')
+	.description('Assess Gas Town worker outputs using RLM')
+	.option('--workers <ids>', 'Comma-separated worker IDs (e.g., a548b2a,aaca4cf)')
+	.option('--json', 'Output results as JSON')
+	.option('--verbose', 'Show RLM execution details')
+	.option('--output-dir <dir>', 'Custom output directory for worker files')
+	.action(handleCommand(async (options: any) => {
+		await rlmAssessCommand({
+			workers: options.workers,
+			json: options.json,
+			verbose: options.verbose,
+			outputDir: options.outputDir,
+		});
+	}));
 
 // ============================================================================
 // ERROR HANDLING
