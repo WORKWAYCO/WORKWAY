@@ -272,6 +272,18 @@ export type { AIModelOptions } from './workers-ai';
 export { WorkersAI, AIModels, createAIClient } from './workers-ai';
 
 // ============================================================================
+// Analytics Engine (Custom Metrics)
+// ============================================================================
+
+export type { MetricPoint, OperationType } from './analytics-engine';
+export {
+	WorkwayAnalytics,
+	createAnalytics,
+	Operations,
+	AnalyticsQueries,
+} from './analytics-engine';
+
+// ============================================================================
 // ACTION RESULT (Shared utilities)
 // ============================================================================
 

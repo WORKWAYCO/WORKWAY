@@ -28,6 +28,8 @@ export interface Env {
 	WORKFLOW_STORAGE: KVNamespace;
 	/** KV namespace for rate limit tracking */
 	RATE_LIMITS: KVNamespace;
+	/** Analytics Engine for metrics */
+	ANALYTICS: AnalyticsEngineDataset;
 	/** Workers AI binding */
 	AI: Ai;
 	/** Rate limit defaults */
@@ -343,7 +345,14 @@ function normalizeInputs(data: Record<string, unknown>): Record<string, unknown>
 /**
  * Health check endpoint
  */
-function handleHealth(): Response {
+function handleHealth(env: Env): Response {
+	// Record health check metric (system tenant)
+	env.ANALYTICS?.writeDataPoint({
+		blobs: ['system', '', 'api.health', 'success', ''],
+		doubles: [0, 0, 200, Date.now()],
+		indexes: ['system'],
+	});
+
 	return jsonResponse({
 		status: 'healthy',
 		timestamp: new Date().toISOString(),
@@ -361,10 +370,22 @@ async function handleTrigger(
 	origin?: string
 ): Promise<Response> {
 	const headers = corsHeaders(origin);
+	const startTime = Date.now();
 
 	// 1. Validate API key
 	const authResult = await validateAPIKey(request.headers.get('Authorization'), env);
+
+	// Helper to record metrics (defined after authResult is available)
+	const recordMetric = (status: 'success' | 'error', statusCode: number) => {
+		env.ANALYTICS?.writeDataPoint({
+			blobs: [authResult.valid ? authResult.keyData.orgId : 'anonymous', workflowId, 'workflow.trigger', status, ''],
+			doubles: [Date.now() - startTime, 0, statusCode, Date.now()],
+			indexes: [authResult.valid ? authResult.keyData.orgId : 'anonymous'],
+		});
+	};
+
 	if (!authResult.valid) {
+		recordMetric('error', 401);
 		return jsonResponse({ success: false, error: authResult.error }, 401, headers);
 	}
 
@@ -376,6 +397,7 @@ async function handleTrigger(
 	Object.assign(headers, rateLimitHeaders(rateLimitResult));
 
 	if (!rateLimitResult.allowed) {
+		recordMetric('error', 429);
 		return jsonResponse(
 			{
 				success: false,
@@ -390,6 +412,7 @@ async function handleTrigger(
 	// 3. Check organization access (optional)
 	const requestOrgId = request.headers.get('X-Organization-ID');
 	if (requestOrgId && requestOrgId !== authResult.keyData.orgId) {
+		recordMetric('error', 403);
 		return jsonResponse(
 			{ success: false, error: 'Organization ID mismatch' },
 			403,
@@ -407,6 +430,7 @@ async function handleTrigger(
 	// 5. Find workflow
 	const workflow = WORKFLOW_REGISTRY[workflowId];
 	if (!workflow) {
+		recordMetric('error', 404);
 		return jsonResponse(
 			{ success: false, error: `Workflow '${workflowId}' not found` },
 			404,
@@ -419,6 +443,7 @@ async function handleTrigger(
 	try {
 		body = await request.json();
 	} catch {
+		recordMetric('error', 400);
 		return jsonResponse(
 			{ success: false, error: 'Invalid JSON body' },
 			400,
@@ -467,6 +492,9 @@ async function handleTrigger(
 		// Store idempotency
 		await storeIdempotency(idempotencyKey, response, env);
 
+		// Record success metric
+		recordMetric('success', 200);
+
 		return jsonResponse(response, 200, headers);
 	} catch (error) {
 		console.error(`Workflow execution error (${workflowId}):`, error);
@@ -476,6 +504,9 @@ async function handleTrigger(
 			executionId,
 			error: error instanceof Error ? error.message : 'Workflow execution failed',
 		};
+
+		// Record error metric
+		recordMetric('error', 500);
 
 		return jsonResponse(errorResponse, 500, headers);
 	}
@@ -501,7 +532,7 @@ export default {
 
 		// Route: GET /health
 		if (path === '/health' && request.method === 'GET') {
-			return handleHealth();
+			return handleHealth(env);
 		}
 
 		// Route: POST /workflows/{workflowId}/trigger

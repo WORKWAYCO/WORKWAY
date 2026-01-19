@@ -57,6 +57,16 @@ binding = "RATE_LIMITS"
 id = "placeholder-create-with-wrangler-kv-create"
 
 # =============================================================================
+# Analytics Engine
+# =============================================================================
+# Custom metrics for tenant attribution, latency tracking, and business KPIs.
+# Query via Cloudflare dashboard or GraphQL API.
+
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "workway_metrics"
+
+# =============================================================================
 # Workers AI
 # =============================================================================
 
