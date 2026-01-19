@@ -60,7 +60,10 @@ export {
   shouldCreateCheckpoint,
   generateCheckpoint,
   formatCheckpointDisplay,
+  checkAndCreateCheckpointFromHook,
+  DEFAULT_HOOK_CONFIG as DEFAULT_CHECKPOINT_HOOK_CONFIG,
 } from './checkpoint.js';
+export type { HookCheckpointConfig } from './checkpoint.js';
 
 // Redirect detection
 export {
@@ -76,8 +79,8 @@ export type { BeadsSnapshot, RedirectCheckResult } from './redirect.js';
 export { Coordinator } from './coordinator.js';
 export type { CoordinatorOptions, WorkAssignment } from './coordinator.js';
 
-export { Worker, WorkerPool } from './worker.js';
-export type { WorkerState, WorkerResult } from './worker.js';
+export { Worker, WorkerPool, DEFAULT_WORKER_CONFIG } from './worker.js';
+export type { WorkerState, WorkerResult, WorkerConfig, WorkerExecutionMode } from './worker.js';
 
 export { Observer } from './observer.js';
 export type { ProgressSnapshot, HealthCheck } from './observer.js';

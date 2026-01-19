@@ -9,6 +9,10 @@
  * - Executes in isolated session
  * - Reports completion to coordinator
  * - Never coordinates other workers
+ *
+ * Claude Code 2.1.0+: Supports two execution modes:
+ * - CLI spawning (traditional - full Claude Code CLI process)
+ * - Forked skills (lightweight - forked sub-agent contexts)
  */
 
 import type {
@@ -24,6 +28,91 @@ import {
   discoverDryContext,
 } from './session.js';
 import { DEFAULT_MODE_CONFIGS } from './types.js';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Worker Execution Modes (Claude Code 2.1.0+)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Worker execution mode.
+ *
+ * - cli: Spawn full Claude Code CLI process (traditional, heavy-weight)
+ * - forked-skill: Use Claude Code 2.1.0+ forked sub-agent contexts (lightweight)
+ */
+export type WorkerExecutionMode = 'cli' | 'forked-skill';
+
+/**
+ * Worker configuration.
+ */
+export interface WorkerConfig {
+  /** Execution mode */
+  executionMode: WorkerExecutionMode;
+  /** Path to polecat-worker.md skill (for forked-skill mode) */
+  skillPath?: string;
+  /** Harness mode */
+  mode?: HarnessMode;
+  /** Mode configuration */
+  modeConfig?: HarnessModeConfig;
+}
+
+/**
+ * Default worker configuration.
+ */
+export const DEFAULT_WORKER_CONFIG: WorkerConfig = {
+  executionMode: 'cli', // Default to CLI for backward compatibility
+  skillPath: '.claude/skills/polecat-worker.md',
+};
+
+/**
+ * Execute work using forked skill-based worker.
+ * Lightweight execution via Claude Code 2.1.0+ skill system.
+ *
+ * This invokes the polecat-worker.md skill which spawns a forked
+ * sub-agent context with bounded attention.
+ */
+async function executeWithForkedSkill(
+  issue: BeadsIssue,
+  context: PrimingContext,
+  config: WorkerConfig,
+  cwd: string,
+  dryRun: boolean
+): Promise<SessionResult> {
+  if (dryRun) {
+    return {
+      issueId: issue.id,
+      outcome: 'success',
+      summary: '[DRY RUN] Would execute via forked skill',
+      gitCommit: null,
+      contextUsed: 0,
+      durationMs: 0,
+      error: null,
+    };
+  }
+
+  // TODO: Implement skill invocation
+  // This will use the Skill tool to invoke polecat-worker.md
+  // with the issue context. For now, fall back to CLI.
+  console.log(`   [Worker] Forked skill mode not yet implemented, falling back to CLI`);
+  return runSession(issue, context, { cwd, dryRun, mode: config.mode, modeConfig: config.modeConfig });
+}
+
+/**
+ * Execute work assignment.
+ * Routes to appropriate execution mode.
+ */
+async function executeWork(
+  issue: BeadsIssue,
+  context: PrimingContext,
+  config: WorkerConfig,
+  cwd: string,
+  dryRun: boolean
+): Promise<SessionResult> {
+  if (config.executionMode === 'forked-skill') {
+    return executeWithForkedSkill(issue, context, config, cwd, dryRun);
+  } else {
+    return runSession(issue, context, { cwd, dryRun, mode: config.mode, modeConfig: config.modeConfig });
+  }
+}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Worker State
@@ -71,10 +160,9 @@ export class Worker {
   private state: WorkerState;
   private cwd: string;
   private dryRun: boolean;
-  private mode?: HarnessMode;
-  private modeConfig?: HarnessModeConfig;
+  private config: WorkerConfig;
 
-  constructor(id: string, cwd: string, dryRun = false, mode?: HarnessMode, modeConfig?: HarnessModeConfig) {
+  constructor(id: string, cwd: string, dryRun = false, config?: Partial<WorkerConfig>) {
     this.state = {
       id,
       status: 'idle',
@@ -85,8 +173,11 @@ export class Worker {
     };
     this.cwd = cwd;
     this.dryRun = dryRun;
-    this.mode = mode;
-    this.modeConfig = modeConfig || (mode ? DEFAULT_MODE_CONFIGS[mode] : undefined);
+    this.config = {
+      ...DEFAULT_WORKER_CONFIG,
+      ...config,
+      modeConfig: config?.modeConfig || (config?.mode ? DEFAULT_MODE_CONFIGS[config.mode] : undefined),
+    };
   }
 
   /**
@@ -150,16 +241,13 @@ export class Worker {
         ],
       };
 
-      // Execute session with mode config
-      const sessionResult = await runSession(
+      // Execute work using configured execution mode
+      const sessionResult = await executeWork(
         issue,
         enhancedContext,
-        { 
-          cwd: this.cwd, 
-          dryRun: this.dryRun,
-          mode: this.mode,
-          modeConfig: this.modeConfig,
-        }
+        this.config,
+        this.cwd,
+        this.dryRun
       );
 
       // Update worker state
@@ -229,22 +317,21 @@ export class WorkerPool {
   private workers: Map<string, Worker>;
   private cwd: string;
   private dryRun: boolean;
-  private mode?: HarnessMode;
-  private modeConfig?: HarnessModeConfig;
+  private config: Partial<WorkerConfig>;
 
-  constructor(cwd: string, dryRun = false, mode?: HarnessMode, modeConfig?: HarnessModeConfig) {
+  constructor(cwd: string, dryRun = false, config?: Partial<WorkerConfig>) {
     this.workers = new Map();
     this.cwd = cwd;
     this.dryRun = dryRun;
-    this.mode = mode;
-    this.modeConfig = modeConfig;
+    this.config = config || {};
   }
 
   /**
    * Add a worker to the pool.
    */
-  addWorker(id: string): Worker {
-    const worker = new Worker(id, this.cwd, this.dryRun, this.mode, this.modeConfig);
+  addWorker(id: string, workerConfig?: Partial<WorkerConfig>): Worker {
+    const mergedConfig = { ...this.config, ...workerConfig };
+    const worker = new Worker(id, this.cwd, this.dryRun, mergedConfig);
     this.workers.set(id, worker);
     return worker;
   }

@@ -284,6 +284,93 @@ function formatCheckpointDescription(checkpoint: Omit<Checkpoint, 'id' | 'timest
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Hook-Based Checkpoint Triggering (Claude Code 2.1.0+)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Check and potentially create checkpoint from PostToolUse hook.
+ * This is called automatically by the harness-checkpoint.md skill.
+ *
+ * @returns true if checkpoint was created, false otherwise
+ */
+export async function checkAndCreateCheckpointFromHook(
+  cwd: string
+): Promise<{ created: boolean; reason: string }> {
+  try {
+    // Read harness state from .harness/state.json
+    const { readFile } = await import('node:fs/promises');
+    const { join } = await import('node:path');
+
+    const statePath = join(cwd, '.harness/state.json');
+    const stateContent = await readFile(statePath, 'utf-8');
+    const state: HarnessState = JSON.parse(stateContent);
+
+    // Read tracker state
+    const trackerPath = join(cwd, '.harness/tracker.json');
+    const trackerContent = await readFile(trackerPath, 'utf-8');
+    const tracker: CheckpointTracker = JSON.parse(trackerContent);
+
+    // Check if we need a checkpoint
+    const lastResult = tracker.sessionsResults[tracker.sessionsResults.length - 1];
+    const hasRedirects = false; // TODO: Detect redirects from bd list changes
+
+    const decision = shouldCreateCheckpoint(
+      tracker,
+      state.checkpointPolicy,
+      lastResult,
+      hasRedirects
+    );
+
+    if (!decision.create) {
+      return { created: false, reason: 'Checkpoint criteria not met' };
+    }
+
+    // Create checkpoint
+    const checkpoint = await generateCheckpoint(
+      tracker,
+      state,
+      '', // No redirect notes from hook
+      cwd
+    );
+
+    // Reset tracker
+    resetTracker(tracker);
+
+    // Update state
+    state.lastCheckpoint = checkpoint.id;
+
+    // Write updated state and tracker
+    const { writeFile } = await import('node:fs/promises');
+    await writeFile(statePath, JSON.stringify(state, null, 2));
+    await writeFile(trackerPath, JSON.stringify(tracker, null, 2));
+
+    return { created: true, reason: decision.reason };
+  } catch (error) {
+    // Hook failures should not crash the session
+    console.error('Checkpoint hook error:', error);
+    return { created: false, reason: 'Hook error' };
+  }
+}
+
+/**
+ * Enable or disable hook-based checkpoints via harness configuration.
+ */
+export interface HookCheckpointConfig {
+  /** Enable hook-based checkpoint monitoring */
+  enabled: boolean;
+  /** Check interval (every N tool uses) to avoid overhead */
+  checkInterval: number;
+}
+
+/**
+ * Default hook checkpoint configuration.
+ */
+export const DEFAULT_HOOK_CONFIG: HookCheckpointConfig = {
+  enabled: true,
+  checkInterval: 5, // Check every 5 tool uses
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Display
 // ─────────────────────────────────────────────────────────────────────────────
 
