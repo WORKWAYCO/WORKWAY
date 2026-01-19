@@ -54,7 +54,7 @@ export default defineWorkflow({
 			weeklyDigest: { value: true },
 		},
 
-		essentialFields: ['spreadsheetId'],
+		essentialFields: ['spreadsheet_id'],
 
 		zuhandenheit: {
 			timeToValue: 3,
@@ -77,15 +77,15 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['send_messages'], optional: true },
 	],
 
-	inputs: {
+	config: {
 		// Spreadsheet settings
-		spreadsheetId: {
+		spreadsheet_id: {
 			type: 'text',
 			label: 'Google Spreadsheet ID',
 			required: true,
 			description: 'ID from the spreadsheet URL',
 		},
-		sheetName: {
+		sheet_name: {
 			type: 'text',
 			label: 'Sheet Name',
 			default: 'Time Tracking',
@@ -93,19 +93,19 @@ export default defineWorkflow({
 		},
 
 		// Tracking settings
-		trackByIssue: {
+		track_by_issue: {
 			type: 'boolean',
 			label: 'Track by Issue',
 			default: true,
 			description: 'Create a row for each issue',
 		},
-		groupByProject: {
+		group_by_project: {
 			type: 'boolean',
 			label: 'Group by Project',
 			default: true,
 			description: 'Include project column for grouping',
 		},
-		includeEstimates: {
+		include_estimates: {
 			type: 'boolean',
 			label: 'Include Estimates',
 			default: true,
@@ -113,19 +113,19 @@ export default defineWorkflow({
 		},
 
 		// Time calculation
-		useLinearEstimates: {
+		use_linear_estimates: {
 			type: 'boolean',
 			label: 'Use Linear Estimates',
 			default: true,
 			description: 'Use Linear\'s estimate field for time',
 		},
-		estimateToHours: {
+		estimate_to_hours: {
 			type: 'json',
 			label: 'Estimate Mapping',
 			default: '{"0": 0, "1": 1, "2": 2, "3": 4, "5": 8, "8": 16}',
 			description: 'Map Linear estimates to hours',
 		},
-		trackCycleTime: {
+		track_cycle_time: {
 			type: 'boolean',
 			label: 'Track Cycle Time',
 			default: true,
@@ -133,19 +133,19 @@ export default defineWorkflow({
 		},
 
 		// Filtering
-		teamIds: {
+		team_ids: {
 			type: 'text',
 			label: 'Teams to Track',
 			required: false,
 			description: 'Limit to specific teams (empty = all)',
 		},
-		projectIds: {
+		project_ids: {
 			type: 'text',
 			label: 'Projects to Track',
 			required: false,
 			description: 'Limit to specific projects (empty = all)',
 		},
-		completedStates: {
+		completed_states: {
 			type: 'text',
 			label: 'Completed States',
 			default: 'Done, Deployed, Released',
@@ -153,13 +153,13 @@ export default defineWorkflow({
 		},
 
 		// Slack settings
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Weekly Digest Channel',
 			required: false,
 			description: 'Channel for weekly time summary',
 		},
-		weeklyDigest: {
+		weekly_digest: {
 			type: 'boolean',
 			label: 'Send Weekly Digest',
 			default: true,

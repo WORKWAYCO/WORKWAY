@@ -43,6 +43,7 @@
  * - Summary (rich_text): AI-generated thread summary
  * - Contacts (relation): Links to Contacts database
  * - Thread ID (rich_text): Gmail thread ID for deduplication
+ * - Processed Messages (rich_text): Comma-separated Gmail message IDs (for incremental sync)
  *
  * @see /packages/workflows/src/meeting-intelligence-private - Pattern reference
  * @private For @halfdozen.co team only
@@ -85,7 +86,7 @@ function getOrgConfig(config?: Record<string, unknown>) {
 		connectionUrl:
 			(config?.connectionUrl as string) ||
 			(typeof process !== 'undefined' ? process.env.GMAIL_CONNECTION_URL : undefined) ||
-			'https://arc.halfdozen.co', // Default for backwards compatibility
+			'https://arc.workway.co', // Default for backwards compatibility
 	};
 }
 
@@ -490,7 +491,7 @@ export default defineWorkflow({
 			gmailLabel: { value: 'Log to Notion' },
 		},
 
-		essentialFields: ['gmailConnectionId'],
+		essentialFields: ['gmail_connection_id'],
 
 		zuhandenheit: {
 			timeToValue: 5, // Minutes - be honest about BYOO setup
@@ -512,8 +513,8 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
 	],
 
-	inputs: {
-		gmailConnectionId: {
+	config: {
+		gmail_connection_id: {
 			type: 'string',
 			label: 'Gmail Connection ID',
 			required: true,
@@ -524,11 +525,18 @@ export default defineWorkflow({
 		// interactionsDatabaseId removed - all data goes to central hub
 		// contactsDatabaseId removed - all data goes to central hub
 
-		gmailLabel: {
+		gmail_label: {
 			type: 'string',
 			label: 'Gmail Label',
 			default: 'Log to Notion',
 			description: 'Only sync threads with this label',
+		},
+
+		force_resync: {
+			type: 'boolean',
+			label: 'Force Resync',
+			default: false,
+			description: 'When enabled, re-syncs ALL messages in existing threads (use to backfill missed follow-ups). Disable after backfill is complete.',
 		},
 	},
 
@@ -584,6 +592,7 @@ export default defineWorkflow({
 
 		const labelName = inputs.gmailLabel || orgConfig.gmailLabel;
 		const internalDomains = orgConfig.internalDomains;
+		const forceResync = inputs.forceResync === true;
 
 		// 1. Get label ID for the sync label
 		const labelsResponse = await integrations.gmail.request('/gmail/v1/users/me/labels', {
@@ -719,12 +728,15 @@ export default defineWorkflow({
 			// Build page properties
 			const latestDate = emails[emails.length - 1].date;
 			const subject = emails[0].subject || '(No subject)';
+			const allMessageIds = emails.map((e) => e.messageId);
 
 			const properties: any = {
 				Interaction: { title: [{ text: { content: subject } }] },
 				Type: { select: { name: 'Email' } },
 				Date: { date: { start: latestDate } },
 				'Thread ID': { rich_text: [{ text: { content: thread.id } }] },
+				// Track which messages have been processed to enable incremental sync
+				'Processed Messages': { rich_text: [{ text: { content: allMessageIds.join(',') } }] },
 			};
 
 			if (summary) {
@@ -781,18 +793,124 @@ export default defineWorkflow({
 
 			// Create or update page
 			if (isUpdate) {
-				// Update existing page
+				// Update existing page with new messages
 				const pageId = existingPage.data[0].id;
+				const existingPageData = existingPage.data[0];
+
+				// Get previously processed message IDs from the page
+				let processedMessageIds: string[] = [];
+				let isLegacyPage = false;
+				try {
+					const processedMessagesProperty = existingPageData.properties?.['Processed Messages'];
+					if (processedMessagesProperty?.rich_text?.[0]?.text?.content) {
+						processedMessageIds = processedMessagesProperty.rich_text[0].text.content.split(',').filter(Boolean);
+					} else {
+						// Property doesn't exist or is empty - this is a legacy page from before tracking
+						isLegacyPage = true;
+						if (forceResync) {
+							console.log(`[Thread ${thread.id}] Legacy page + force resync enabled - will sync ALL messages`);
+						} else {
+							console.log(`[Thread ${thread.id}] Legacy page without tracking - will initialize tracking and sync only future messages`);
+						}
+					}
+				} catch {
+					// Property might not exist yet for older pages
+					isLegacyPage = true;
+					if (forceResync) {
+						console.log(`[Thread ${thread.id}] Legacy page + force resync enabled - will sync ALL messages`);
+					} else {
+						console.log(`[Thread ${thread.id}] Legacy page without tracking - will initialize tracking and sync only future messages`);
+					}
+				}
+
+				// Filter to only NEW messages that haven't been processed
+				// For legacy pages: skip content append UNLESS forceResync is enabled
+				// forceResync allows backfilling missed follow-ups for legacy pages
+				let newEmails: ParsedEmail[];
+				if (forceResync) {
+					// Force resync: sync ALL messages not yet processed (for legacy pages, this means all messages)
+					newEmails = isLegacyPage
+						? emails // Sync all messages for legacy pages when force resync is on
+						: emails.filter((email) => !processedMessageIds.includes(email.messageId));
+				} else {
+					// Normal mode: only sync new messages, skip legacy pages
+					newEmails = isLegacyPage
+						? [] // Don't append to legacy pages - just initialize tracking
+						: emails.filter((email) => !processedMessageIds.includes(email.messageId));
+				}
+
+				if (newEmails.length > 0) {
+					console.log(`[Thread ${thread.id}] Found ${newEmails.length} new message(s) to sync`);
+
+					// Build content blocks for NEW emails only (newest first)
+					const newContentBlocks: any[] = [];
+
+					// Add a visual separator for new messages
+					newContentBlocks.push({ divider: {} });
+					const syncLabel = forceResync && isLegacyPage
+						? `🔄 Backfilled ${newEmails.length} message${newEmails.length > 1 ? 's' : ''} (force resync)`
+						: `📬 ${newEmails.length} new message${newEmails.length > 1 ? 's' : ''} synced`;
+					newContentBlocks.push({
+						callout: {
+							rich_text: [{ text: { content: syncLabel } }],
+							icon: { emoji: forceResync && isLegacyPage ? '🔄' : '📬' },
+							color: forceResync && isLegacyPage ? 'yellow_background' : 'green_background',
+						},
+					});
+
+					// Add new emails (newest first)
+					for (let i = newEmails.length - 1; i >= 0; i--) {
+						const email = newEmails[i];
+
+						if (i < newEmails.length - 1) {
+							newContentBlocks.push({ divider: {} });
+						}
+
+						// Email header
+						const fromName = email.from.name || email.from.email;
+						const toNames = email.to.map((t) => t.name || t.email).join(', ');
+						const dateFormatted = new Date(email.date).toLocaleString('en-US', {
+							month: 'short',
+							day: 'numeric',
+							year: 'numeric',
+							hour: 'numeric',
+							minute: '2-digit',
+						});
+
+						newContentBlocks.push({
+							quote: {
+								rich_text: [{ text: { content: `${fromName} → ${toNames} | ${dateFormatted}` } }],
+							},
+						});
+
+						// Email body with rich formatting
+						const bodyBlocks = htmlToNotionBlocks(email.body);
+						newContentBlocks.push(...bodyBlocks);
+					}
+
+					// Append new content blocks to the existing page
+					if (newContentBlocks.length > 0) {
+						// Notion limit: 100 blocks per request
+						for (let i = 0; i < newContentBlocks.length; i += 100) {
+							await integrations.notion.blocks.children.append({
+								block_id: pageId,
+								children: newContentBlocks.slice(i, i + 100),
+							});
+						}
+					}
+				}
+
+				// Update page properties (date, summary, contacts, and processed message IDs)
 				await integrations.notion.pages.update({
 					page_id: pageId,
 					properties: {
 						Date: properties.Date,
 						Summary: properties.Summary,
 						Contacts: properties.Contacts,
+						'Processed Messages': { rich_text: [{ text: { content: allMessageIds.join(',') } }] },
 					},
 				});
 
-				// Append new content (would need to track which messages are new)
 				results.push({
 					threadId: thread.id,
 					subject,
@@ -893,7 +1011,7 @@ export const metadata = {
 	analyticsUrl: 'https://workway.co/workflows/private/private-emails-documented/analytics',
 
 	// Setup URL - initial BYOO connection setup (configurable via GMAIL_CONNECTION_URL env var)
-	setupUrl: 'https://arc.halfdozen.co/setup',
+	setupUrl: 'https://arc.workway.co/setup',
 
 	stats: { rating: 0, users: 0, reviews: 0 },
 };

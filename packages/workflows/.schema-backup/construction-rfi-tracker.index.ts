@@ -105,7 +105,7 @@ export default defineWorkflow({
 			logToNotion: { value: true },
 		},
 
-		essentialFields: ['companyId', 'projectId'],
+		essentialFields: ['company_id', 'project_id'],
 
 		zuhandenheit: {
 			timeToValue: 1, // Immediate - runs on schedule
@@ -128,56 +128,56 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_content', 'insert_content'], optional: true },
 	],
 
-	inputs: {
-		companyId: {
+	config: {
+		company_id: {
 			type: 'text',
 			label: 'Procore Company ID',
 			required: true,
 			description: 'Your company ID from Procore',
 		},
-		projectId: {
+		project_id: {
 			type: 'text',
 			label: 'Procore Project ID',
 			required: true,
 			description: 'The project to track RFIs for',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'RFI Alerts Channel',
 			required: true,
 			description: 'Channel for RFI notifications',
 		},
-		escalationChannel: {
+		escalation_channel: {
 			type: 'text',
 			label: 'Escalation Channel',
 			required: false,
 			description: 'Channel for overdue RFI escalations (defaults to main channel)',
 		},
-		dailyDigest: {
+		daily_digest: {
 			type: 'boolean',
 			label: 'Daily RFI Digest',
 			default: true,
 			description: 'Send daily summary of open RFIs every morning',
 		},
-		overdueAlerts: {
+		overdue_alerts: {
 			type: 'boolean',
 			label: 'Overdue Alerts',
 			default: true,
 			description: 'Send immediate alerts when RFIs become overdue',
 		},
-		escalationDays: {
+		escalation_days: {
 			type: 'number',
 			label: 'Escalation Threshold (Days)',
 			default: 3,
 			description: 'Days overdue before escalating to PM',
 		},
-		logToNotion: {
+		log_to_notion: {
 			type: 'boolean',
 			label: 'Log to Notion',
 			default: true,
 			description: 'Log RFI activity to a Notion database for documentation',
 		},
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Notion Database ID',
 			required: false,

@@ -60,7 +60,7 @@ export default defineWorkflow({
 			timezone: { inferFrom: 'user_timezone' },
 		},
 
-		essentialFields: ['practiceName', 'practicePhone'],
+		essentialFields: ['practice_name', 'practice_phone'],
 
 		zuhandenheit: {
 			timeToValue: 60, // 1 hour until first check
@@ -83,41 +83,41 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['send_messages'], optional: true },
 	],
 
-	inputs: {
-		practiceName: {
+	config: {
+		practice_name: {
 			type: 'string',
 			label: 'Practice Name',
 			required: true,
 		},
-		practicePhone: {
+		practice_phone: {
 			type: 'phone',
 			label: 'Practice Phone Number',
 			required: true,
 		},
-		confirmationHoursAfter: {
+		confirmation_hours_after: {
 			type: 'number',
 			label: 'Send Confirmation (hours after booking)',
 			default: 1,
 			description: 'How soon after booking to send confirmation',
 		},
-		reminderHoursBefore: {
+		reminder_hours_before: {
 			type: 'number',
 			label: 'Send Reminder (hours before appointment)',
 			default: 24,
 		},
-		formHoursBefore: {
+		form_hours_before: {
 			type: 'number',
 			label: 'Send Forms (hours before appointment)',
 			default: 48,
 			description: 'When to send intake/consent forms',
 		},
-		enableReplyToConfirm: {
+		enable_reply_to_confirm: {
 			type: 'boolean',
 			label: 'Allow "C" to Confirm',
 			default: true,
 			description: 'Let patients reply "C" to confirm their appointment',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'string',
 			label: 'Slack Channel for Alerts',
 			description: 'Get notified about unconfirmed appointments and no-shows',

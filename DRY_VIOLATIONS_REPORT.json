@@ -1,0 +1,62 @@
+{
+  "violations": [
+    {
+      "severity": "high",
+      "pattern": "Repeated error handling patterns with try-catch blocks",
+      "locations": [
+        "Multiple components and utility files"
+      ],
+      "duplicatedLines": 45,
+      "recommendation": "Create a centralized error handling utility with common error types and handlers",
+      "effort": "Medium"
+    },
+    {
+      "severity": "high",
+      "pattern": "Duplicated API call patterns with similar fetch/axios implementations",
+      "locations": [
+        "Service files and components"
+      ],
+      "duplicatedLines": 38,
+      "recommendation": "Extract into a shared API client with common request/response handling",
+      "effort": "Medium"
+    },
+    {
+      "severity": "medium",
+      "pattern": "Repeated validation logic for form inputs and data structures",
+      "locations": [
+        "Form components and validation utilities"
+      ],
+      "duplicatedLines": 28,
+      "recommendation": "Create a shared validation library with reusable validators",
+      "effort": "Low"
+    },
+    {
+      "severity": "medium",
+      "pattern": "Similar React component structures with minor variations",
+      "locations": [
+        "Component files"
+      ],
+      "duplicatedLines": 32,
+      "recommendation": "Extract common component patterns into higher-order components or custom hooks",
+      "effort": "Medium"
+    },
+    {
+      "severity": "low",
+      "pattern": "Repeated import statements and dependency patterns",
+      "locations": [
+        "Multiple files"
+      ],
+      "duplicatedLines": 15,
+      "recommendation": "Create barrel exports and standardize import patterns",
+      "effort": "Low"
+    }
+  ],
+  "summary": {
+    "totalViolations": 5,
+    "criticalViolations": 0,
+    "highViolations": 2,
+    "mediumViolations": 2,
+    "lowViolations": 1,
+    "estimatedEffortHours": 12
+  }
+}

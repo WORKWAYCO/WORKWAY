@@ -92,7 +92,7 @@ export default defineWorkflow({
 			enableRecovery: { value: true },
 		},
 
-		essentialFields: ['practiceId', 'googleReviewUrl'],
+		essentialFields: ['practice_id', 'google_review_url'],
 
 		zuhandenheit: {
 			timeToValue: 1,
@@ -115,74 +115,74 @@ export default defineWorkflow({
 		{ service: 'twilio', scopes: ['messages:write'], optional: true },
 	],
 
-	inputs: {
-		practiceId: {
+	config: {
+		practice_id: {
 			type: 'text',
 			label: 'Sikka Practice ID',
 			required: true,
 			description: 'Your practice ID from Sikka portal',
 		},
-		practiceName: {
+		practice_name: {
 			type: 'text',
 			label: 'Practice Name',
 			required: true,
 			description: 'Your practice name for personalized messages',
 		},
-		googleReviewUrl: {
+		google_review_url: {
 			type: 'url',
 			label: 'Google Review URL',
 			required: true,
 			description: 'Direct link to your Google Business review page',
 		},
-		yelpReviewUrl: {
+		yelp_review_url: {
 			type: 'url',
 			label: 'Yelp Review URL',
 			required: false,
 			description: 'Direct link to your Yelp review page',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Feedback Alert Channel',
 			required: false,
 			description: 'Channel for positive feedback and recovery alerts',
 		},
-		sendAfterMinutes: {
+		send_after_minutes: {
 			type: 'number',
 			label: 'Send After (minutes)',
 			default: 60,
 			description: 'Minutes after appointment ends to send feedback request',
 		},
-		happyThreshold: {
+		happy_threshold: {
 			type: 'number',
 			label: 'Happy Score Threshold',
 			default: 8,
 			description: 'Score 1-10 at or above which patient is asked for review',
 		},
-		enableRecovery: {
+		enable_recovery: {
 			type: 'boolean',
 			label: 'Enable Recovery Workflow',
 			default: true,
 			description: 'Alert staff to personally follow up with unhappy patients',
 		},
-		satisfactionMessage: {
+		satisfaction_message: {
 			type: 'textarea',
 			label: 'Satisfaction Request',
 			default: 'Hi {{firstName}}, thanks for visiting {{practiceName}} today! How was your experience? Reply with a number 1-10 (10 = excellent)',
 			description: 'Initial satisfaction check message',
 		},
-		reviewRequestMessage: {
+		review_request_message: {
 			type: 'textarea',
 			label: 'Review Request (Happy)',
 			default: 'Thanks! We\'re so glad you had a great experience. Would you mind sharing it? It takes 30 seconds and helps others find us: {{reviewUrl}}',
 			description: 'Message sent to happy patients',
 		},
-		recoveryMessage: {
+		recovery_message: {
 			type: 'textarea',
 			label: 'Recovery Message (Unhappy)',
 			default: 'We\'re sorry your experience wasn\'t perfect. Our office manager {{managerName}} will call you today to make it right. Thank you for giving us the chance.',
 			description: 'Message sent to unhappy patients before staff follow-up',
 		},
-		officeManagerName: {
+		office_manager_name: {
 			type: 'text',
 			label: 'Office Manager Name',
 			default: '',

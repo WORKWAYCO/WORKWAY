@@ -76,7 +76,7 @@ export default defineWorkflow({
 			labelPrefix: { value: 'github:' },
 		},
 
-		essentialFields: ['linearTeamId'],
+		essentialFields: ['linear_team_id'],
 
 		zuhandenheit: {
 			timeToValue: 2,
@@ -98,38 +98,38 @@ export default defineWorkflow({
 		{ service: 'linear', scopes: ['issues:write', 'issues:read'] },
 	],
 
-	inputs: {
-		linearTeamId: {
+	config: {
+		linear_team_id: {
 			type: 'text',
 			label: 'Linear Team',
 			required: true,
 			description: 'Select the Linear team where issues will be created',
 		},
-		linearProjectId: {
+		linear_project_id: {
 			type: 'text',
 			label: 'Linear Project (optional)',
 			required: false,
 			description: 'Optionally assign issues to a specific project',
 		},
-		syncComments: {
+		sync_comments: {
 			type: 'boolean',
 			label: 'Sync Comments',
 			default: true,
 			description: 'Sync GitHub issue comments to Linear',
 		},
-		syncAssignees: {
+		sync_assignees: {
 			type: 'boolean',
 			label: 'Sync Assignees',
 			default: true,
 			description: 'Attempt to match GitHub assignees to Linear users by email',
 		},
-		labelPrefix: {
+		label_prefix: {
 			type: 'string',
 			label: 'Label Prefix',
 			default: 'github:',
 			description: 'Prefix added to GitHub labels when synced to Linear',
 		},
-		filterLabels: {
+		filter_labels: {
 			type: 'multi_select',
 			label: 'Filter by Labels (optional)',
 			required: false,

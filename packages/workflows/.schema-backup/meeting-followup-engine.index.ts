@@ -65,7 +65,7 @@ export default defineWorkflow({
 			createFollowUpTasks: { value: true },
 		},
 
-		essentialFields: ['todoistProjectId'],
+		essentialFields: ['todoist_project_id'],
 
 		zuhandenheit: {
 			timeToValue: 5,
@@ -89,26 +89,26 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['chat:write', 'channels:read'], optional: true },
 	],
 
-	inputs: {
-		todoistProjectId: {
+	config: {
+		todoist_project_id: {
 			type: 'text',
 			label: 'Meeting Tasks Project',
 			required: true,
 			description: 'Todoist project for meeting prep and follow-up tasks',
 		},
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Meetings Database',
 			required: false,
 			description: 'Optional: Notion database to log meetings',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Meeting Notifications',
 			required: false,
 			description: 'Optional: Channel for meeting alerts',
 		},
-		triggerOn: {
+		trigger_on: {
 			type: 'select',
 			label: 'Trigger On',
 			required: true,
@@ -120,25 +120,25 @@ export default defineWorkflow({
 			default: 'both',
 			description: 'When to run the workflow',
 		},
-		createPrepTasks: {
+		create_prep_tasks: {
 			type: 'boolean',
 			label: 'Create Prep Tasks',
 			default: true,
 			description: 'Create preparation tasks when meeting is scheduled',
 		},
-		createFollowUpTasks: {
+		create_follow_up_tasks: {
 			type: 'boolean',
 			label: 'Create Follow-up Tasks',
 			default: true,
 			description: 'Create follow-up tasks after meeting',
 		},
-		enableAIAgenda: {
+		enable_a_i_agenda: {
 			type: 'boolean',
 			label: 'AI Meeting Agenda',
 			default: true,
 			description: 'Use AI to generate meeting agenda and talking points',
 		},
-		followUpHours: {
+		follow_up_hours: {
 			type: 'number',
 			label: 'Follow-up Window (hours)',
 			default: 24,

@@ -1,0 +1,14 @@
+name = "fn-cron"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+account_id = "5c3e9cf4d55ce171b844fad0931607f9"
+compatibility_flags = ["nodejs_compat"]
+
+# Cron triggers - runs every hour at minute 0
+[triggers]
+crons = ["0 * * * *"]
+
+# Environment variables
+[vars]
+FN_URL = "https://fn.workway.co"
+CRON_SECRET = "fn-auto-sync-2026"

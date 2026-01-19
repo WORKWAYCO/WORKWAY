@@ -92,7 +92,7 @@ export default defineWorkflow({
 			enableWaitlistBackfill: { value: true },
 		},
 
-		essentialFields: ['practiceId'],
+		essentialFields: ['practice_id'],
 
 		zuhandenheit: {
 			timeToValue: 1, // Immediate - runs on schedule
@@ -115,14 +115,14 @@ export default defineWorkflow({
 		{ service: 'twilio', scopes: ['messages:write'], optional: true },
 	],
 
-	inputs: {
-		practiceId: {
+	config: {
+		practice_id: {
 			type: 'text',
 			label: 'Sikka Practice ID',
 			required: true,
 			description: 'Your practice ID from Sikka portal',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Staff Notification Channel',
 			required: false,
@@ -146,19 +146,19 @@ export default defineWorkflow({
 			default: true,
 			description: 'Send reminder 2 hours before appointment',
 		},
-		enableWaitlistBackfill: {
+		enable_waitlist_backfill: {
 			type: 'boolean',
 			label: 'Waitlist Backfill',
 			default: true,
 			description: 'Automatically offer canceled slots to waitlist patients',
 		},
-		highRiskThreshold: {
+		high_risk_threshold: {
 			type: 'number',
 			label: 'No-Show Risk Threshold',
 			default: 70,
 			description: 'Alert staff when no-show probability exceeds this % (based on history)',
 		},
-		messageTemplate: {
+		message_template: {
 			type: 'textarea',
 			label: 'Reminder Message Template',
 			default: 'Hi {{firstName}}, this is a reminder of your dental appointment at {{practiceName}} on {{appointmentDate}} at {{appointmentTime}}. Reply CONFIRM to confirm or RESCHEDULE to change.',

@@ -53,7 +53,7 @@ export default defineWorkflow({
 			lookAheadDays: { value: 1 },
 		},
 
-		essentialFields: ['airtableBaseId', 'airtableTableId', 'slackChannel'],
+		essentialFields: ['airtable_base_id', 'airtable_table_id', 'slack_channel'],
 
 		zuhandenheit: {
 			timeToValue: 1440, // Next morning
@@ -75,54 +75,54 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['chat:write', 'channels:read'] },
 	],
 
-	inputs: {
-		airtableBaseId: {
+	config: {
+		airtable_base_id: {
 			type: 'text',
 			label: 'Content Calendar Base',
 			required: true,
 			description: 'Airtable base with your content calendar',
 		},
-		airtableTableId: {
+		airtable_table_id: {
 			type: 'text',
 			label: 'Content Table',
 			required: true,
 			description: 'Table containing content items',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Content Updates Channel',
 			required: true,
 			description: 'Channel for daily content reminders',
 		},
-		dateFieldName: {
+		date_field_name: {
 			type: 'text',
 			label: 'Publish Date Field',
 			required: true,
 			default: 'Publish Date',
 			description: 'Name of the date field in Airtable',
 		},
-		titleFieldName: {
+		title_field_name: {
 			type: 'text',
 			label: 'Title Field',
 			required: true,
 			default: 'Title',
 			description: 'Name of the title field',
 		},
-		ownerFieldName: {
+		owner_field_name: {
 			type: 'text',
 			label: 'Owner Field',
 			required: false,
 			default: 'Owner',
 			description: 'Name of the owner/assignee field (email)',
 		},
-		statusFieldName: {
+		status_field_name: {
 			type: 'text',
 			label: 'Status Field',
 			required: false,
 			default: 'Status',
 			description: 'Name of the status field',
 		},
-		scheduleHour: {
+		schedule_hour: {
 			type: 'number',
 			label: 'Reminder Hour (24h)',
 			default: 8,
@@ -130,7 +130,7 @@ export default defineWorkflow({
 			max: 23,
 			description: 'Hour to send daily reminder',
 		},
-		lookAheadDays: {
+		look_ahead_days: {
 			type: 'number',
 			label: 'Look Ahead Days',
 			default: 1,
@@ -138,7 +138,7 @@ export default defineWorkflow({
 			max: 7,
 			description: 'How many days ahead to include',
 		},
-		enableAIBriefs: {
+		enable_a_i_briefs: {
 			type: 'boolean',
 			label: 'AI Content Briefs',
 			default: true,

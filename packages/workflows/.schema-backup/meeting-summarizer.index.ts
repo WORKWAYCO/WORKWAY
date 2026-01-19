@@ -47,7 +47,7 @@ export default defineWorkflow({
 			summaryLength: { value: 'standard' },
 		},
 
-		essentialFields: ['meetingNotesDatabase'],
+		essentialFields: ['meeting_notes_database'],
 
 		zuhandenheit: {
 			timeToValue: 2,
@@ -69,25 +69,25 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['send_messages'] },
 	],
 
-	inputs: {
-		meetingNotesDatabase: {
+	config: {
+		meeting_notes_database: {
 			type: 'text',
 			label: 'Meeting Notes Database',
 			required: true,
 			description: 'Database containing meeting notes',
 		},
-		notifyChannel: {
+		notify_channel: {
 			type: 'text',
 			label: 'Notification Channel',
 			description: 'Where to post summaries (optional)',
 		},
-		autoAssignTasks: {
+		auto_assign_tasks: {
 			type: 'boolean',
 			label: 'Auto-assign Tasks',
 			default: true,
 			description: 'Automatically assign action items to mentioned people',
 		},
-		summaryLength: {
+		summary_length: {
 			type: 'select',
 			label: 'Summary Length',
 			options: ['brief', 'standard', 'detailed'],

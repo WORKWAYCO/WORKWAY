@@ -8,7 +8,7 @@
 import { readFile } from 'fs/promises';
 import { join } from 'path';
 import { glob } from 'glob';
-import { runRLM, type RLMResult } from '@workwayco/rlm';
+import { runCloudflareRLM, type RLMResult } from '@workwayco/rlm';
 
 /**
  * Quality assessment for a single worker
@@ -251,10 +251,10 @@ Output format (JSON preferred):
 }
 `.trim();
 
-		// Run RLM assessment
-		const rlmResult: RLMResult = await runRLM(context, query, {
-			rootModel: 'sonnet',
-			subModel: 'haiku',
+		// Run RLM assessment using Gemini (code-specific models)
+		const rlmResult: RLMResult = await runCloudflareRLM(context, query, {
+			rootModel: 'gemini-pro',
+			subModel: 'gemini-flash',
 			maxIterations: 15,
 			maxSubCalls: 80,
 		});

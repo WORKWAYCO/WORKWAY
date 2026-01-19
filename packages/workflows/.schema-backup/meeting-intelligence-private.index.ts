@@ -31,7 +31,7 @@
  * @private For @halfdozen.co team only
  */
 
-import { defineWorkflow, cron } from '@workwayco/sdk';
+import { defineWorkflow, cron, manual } from '@workwayco/sdk';
 import { AIModels } from '@workwayco/sdk';
 
 // ============================================================================
@@ -135,7 +135,7 @@ export default defineWorkflow({
 			analysisDepth: { value: 'standard' },
 		},
 
-		essentialFields: ['zoomConnectionId'],
+		essentialFields: ['zoom_connection_id'],
 
 		zuhandenheit: {
 			timeToValue: 5, // Minutes, not seconds - be honest
@@ -156,8 +156,8 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
 	],
 
-	inputs: {
-		zoomConnectionId: {
+	config: {
+		zoom_connection_id: {
 			type: 'string',
 			label: 'Zoom Connection ID',
 			required: true,
@@ -167,21 +167,21 @@ export default defineWorkflow({
 		// Database is hardcoded to Internal LLM for @halfdozen.co users
 		// notionDatabaseId removed - all data goes to central hub
 
-		lookbackDays: {
+		lookback_days: {
 			type: 'number',
 			label: 'Days to Look Back',
 			default: 1,
 			description: 'How many days of meetings to include',
 		},
 
-		enableAI: {
+		enable_a_i: {
 			type: 'boolean',
 			label: 'AI Analysis',
 			default: true,
 			description: 'Extract action items, decisions, and key topics',
 		},
 
-		analysisDepth: {
+		analysis_depth: {
 			type: 'select',
 			label: 'Analysis Depth',
 			options: ['brief', 'standard', 'detailed'],
@@ -189,11 +189,16 @@ export default defineWorkflow({
 		},
 	},
 
-	// Daily cron trigger only (no webhooks without OAuth)
+	// Dual triggers: Daily cron + manual trigger from extension
 	trigger: cron({
 		schedule: '0 7 * * *', // 7 AM UTC daily
 		timezone: 'UTC',
 	}),
+
+	// Support manual trigger from browser extension
+	webhooks: [
+		manual({ description: 'Manual sync triggered from browser extension' })
+	],
 
 	async execute({ trigger, inputs, integrations, env }) {
 		const startTime = Date.now();
@@ -210,6 +215,10 @@ export default defineWorkflow({
 			notionPageUrl?: string;
 			actionItemCount: number;
 		}> = [];
+
+		// Determine if data was pre-fetched (manual trigger) or needs fetching (cron)
+		const isManualTrigger = trigger.type === 'manual';
+		const preFetchedData = isManualTrigger ? (trigger as any).data : null;
 
 		// Get user identifier (from inputs - set during setup)
 		const userId = inputs.zoomConnectionId;
@@ -231,35 +240,41 @@ export default defineWorkflow({
 			startedAt,
 		});
 
-		// Check Zoom connection status
-		const connectionStatus = await checkZoomConnection(userId);
+		// Skip connection check if data already fetched
+		if (!isManualTrigger) {
+			// Check Zoom connection status
+			const connectionStatus = await checkZoomConnection(userId);
 
-		if (!connectionStatus.connected) {
-			// Track failed execution (connection expired)
-			await trackExecution(userId, apiSecret, {
-				status: 'failed',
-				startedAt,
-				completedAt: new Date().toISOString(),
-				executionTimeMs: Date.now() - startTime,
-				errorMessage: 'Zoom session expired',
-			});
+			if (!connectionStatus.connected) {
+				// Track failed execution (connection expired)
+				await trackExecution(userId, apiSecret, {
+					status: 'failed',
+					startedAt,
+					completedAt: new Date().toISOString(),
+					executionTimeMs: Date.now() - startTime,
+					errorMessage: 'Zoom session expired',
+				});
 
-			return {
-				success: false,
-				error: 'Zoom session expired. Please refresh your connection.',
-				action: 'refresh_connection',
-				actionLabel: 'Refresh Connection',
-				actionUrl: `${ZOOM_CONNECTION_URL}/setup/${userId}`,
-				upgradeHint:
-					'Want automatic sync without manual refresh? Use the Meeting Intelligence workflow with Zoom OAuth.',
-				upgradeWorkflowId: 'meeting-intelligence',
-			};
+				return {
+					success: false,
+					error: 'Zoom session expired. Please refresh your connection.',
+					action: 'refresh_connection',
+					actionLabel: 'Refresh Connection',
+					actionUrl: `${ZOOM_CONNECTION_URL}/setup/${userId}`,
+					upgradeHint:
+						'Want automatic sync without manual refresh? Use the Meeting Intelligence workflow with Zoom OAuth.',
+					upgradeWorkflowId: 'meeting-intelligence',
+				};
+			}
 		}
 
 		// ========================================================================
 		// PROCESS MEETINGS
 		// ========================================================================
-		const meetings = await fetchMeetings(userId, inputs.lookbackDays || 1);
+		// Use pre-fetched data if available (manual trigger), otherwise fetch fresh (cron)
+		const meetings = preFetchedData?.meetings
+			? { success: true, data: preFetchedData.meetings }
+			: await fetchMeetings(userId, inputs.lookbackDays || 1);
 
 		if (meetings.success && meetings.data.length > 0) {
 			for (const meeting of meetings.data) {
@@ -315,7 +330,10 @@ export default defineWorkflow({
 		// ========================================================================
 		// PROCESS CLIPS
 		// ========================================================================
-		const clips = await fetchClips(userId, inputs.lookbackDays || 7);
+		// Use pre-fetched data if available (manual trigger), otherwise fetch fresh (cron)
+		const clips = preFetchedData?.clips
+			? { success: true, data: preFetchedData.clips }
+			: await fetchClips(userId, inputs.lookbackDays || 7);
 
 		if (clips.success && clips.data.length > 0) {
 			for (const clip of clips.data) {

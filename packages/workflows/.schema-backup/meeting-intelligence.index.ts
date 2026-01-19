@@ -80,7 +80,7 @@ export default defineWorkflow({
 		},
 
 		// Only these 1-2 fields are required for first activation
-		essentialFields: ['notionDatabaseId'],
+		essentialFields: ['notion_database_id'],
 
 		zuhandenheit: {
 			timeToValue: 3, // Minutes to first outcome
@@ -104,15 +104,15 @@ export default defineWorkflow({
 		{ service: 'hubspot', scopes: ['crm.objects.deals.read', 'crm.objects.deals.write', 'crm.objects.contacts.read'], optional: true },
 	],
 
-	inputs: {
+	config: {
 		// Core configuration
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Meeting Notes Database',
 			required: true,
 			description: 'Where to store meeting notes',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Meeting Summaries Channel',
 			required: true,
@@ -120,14 +120,14 @@ export default defineWorkflow({
 		},
 
 		// Sync settings
-		syncMode: {
+		sync_mode: {
 			type: 'select',
 			label: 'What to Sync',
 			options: ['meetings_only', 'clips_only', 'both'],
 			default: 'both',
 			description: 'Sync meetings, clips, or both',
 		},
-		lookbackDays: {
+		lookback_days: {
 			type: 'number',
 			label: 'Days to Look Back',
 			default: 1,
@@ -135,14 +135,14 @@ export default defineWorkflow({
 		},
 
 		// Transcript settings
-		transcriptMode: {
+		transcript_mode: {
 			type: 'select',
 			label: 'Transcript Extraction',
 			options: ['oauth_only', 'prefer_speakers', 'always_browser'],
 			default: 'prefer_speakers',
 			description: 'oauth_only: Fast but may lack speaker names. prefer_speakers: Falls back to browser scraper for speaker attribution.',
 		},
-		browserScraperUrl: {
+		browser_scraper_url: {
 			type: 'text',
 			label: 'Browser Scraper URL',
 			default: 'https://zoom-scraper.half-dozen.workers.dev',
@@ -150,13 +150,13 @@ export default defineWorkflow({
 		},
 
 		// AI settings
-		enableAI: {
+		enable_a_i: {
 			type: 'boolean',
 			label: 'AI Analysis',
 			default: true,
 			description: 'Extract action items, decisions, and key topics',
 		},
-		analysisDepth: {
+		analysis_depth: {
 			type: 'select',
 			label: 'Analysis Depth',
 			options: ['brief', 'standard', 'detailed'],
@@ -164,31 +164,31 @@ export default defineWorkflow({
 		},
 
 		// Notification settings
-		postToSlack: {
+		post_to_slack: {
 			type: 'boolean',
 			label: 'Post Slack Summary',
 			default: true,
 		},
 		// CRM settings
-		updateCRM: {
+		update_c_r_m: {
 			type: 'boolean',
 			label: 'Update CRM (HubSpot)',
 			default: false,
 			description: 'Log meeting activity and update deals in HubSpot',
 		},
-		crmDealSearchEnabled: {
+		crm_deal_search_enabled: {
 			type: 'boolean',
 			label: 'Auto-find Deals',
 			default: true,
 			description: 'Search HubSpot for deals matching attendee companies',
 		},
-		crmLogMeetingActivity: {
+		crm_log_meeting_activity: {
 			type: 'boolean',
 			label: 'Log Meeting in CRM',
 			default: true,
 			description: 'Create a meeting activity record in HubSpot',
 		},
-		crmUpdateDealNotes: {
+		crm_update_deal_notes: {
 			type: 'boolean',
 			label: 'Update Deal Notes',
 			default: true,

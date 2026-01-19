@@ -7,7 +7,14 @@
  * @packageDocumentation
  */
 
+// Python-based RLM (legacy)
 export { runRLM, checkPythonRLM } from './rlm-bridge';
+
+// Cloudflare-native RLM (recommended)
+export { runCloudflareRLM, checkCloudflareRLM } from './cloudflare-bridge';
+export type { CloudflareRLMConfig } from './cloudflare-bridge';
+
+// Common types
 export type {
 	RLMConfig,
 	RLMResult,

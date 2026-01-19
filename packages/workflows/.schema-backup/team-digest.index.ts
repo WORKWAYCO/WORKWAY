@@ -56,7 +56,7 @@ export default defineWorkflow({
 			timezone: { inferFrom: 'user_timezone' },
 		},
 
-		essentialFields: ['digestChannel'],
+		essentialFields: ['digest_channel'],
 
 		zuhandenheit: {
 			timeToValue: 1440, // 24 hours until first digest
@@ -78,14 +78,14 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_pages', 'read_databases'] },
 	],
 
-	inputs: {
-		digestChannel: {
+	config: {
+		digest_channel: {
 			type: 'text',
 			label: 'Digest Channel',
 			required: true,
 			description: 'Where to post the daily digest',
 		},
-		digestTime: {
+		digest_time: {
 			type: 'time',
 			label: 'Digest Time',
 			default: '09:00',
@@ -96,13 +96,13 @@ export default defineWorkflow({
 			label: 'Timezone',
 			default: 'America/New_York',
 		},
-		slackChannels: {
+		slack_channels: {
 			type: 'array',
 			label: 'Channels to Monitor',
 			items: { type: 'text' },
 			description: 'Which Slack channels to include in digest',
 		},
-		notionDatabase: {
+		notion_database: {
 			type: 'text',
 			label: 'Notion Tasks Database',
 			description: 'Track task updates from this database',

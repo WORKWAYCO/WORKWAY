@@ -60,7 +60,9 @@ export default defineWorkflow({
 			timezone: { inferFrom: 'user_timezone' },
 		},
 
-		essentialFields: ['slackChannel'],
+		essentialFields: ['slack_channel'],
+
+		requiredProperties: ['invoice_number', 'invoice_amount', 'invoice_date', 'payment_status', 'customer_email'],
 
 		zuhandenheit: {
 			timeToValue: 1,
@@ -84,50 +86,50 @@ export default defineWorkflow({
 		{ service: 'gmail', scopes: ['create_drafts'], optional: true },
 	],
 
-	inputs: {
-		slackChannel: {
+	config: {
+		slack_channel: {
 			type: 'text',
 			label: 'Celebration Channel',
 			required: true,
 			description: 'Slack channel for win announcements (e.g., #wins, #revenue)',
 		},
-		celebrateMinimum: {
+		celebrate_minimum: {
 			type: 'number',
 			label: 'Minimum Amount to Celebrate ($)',
 			default: 100,
 			description: 'Only celebrate payments above this amount',
 		},
-		includeCustomerDetails: {
+		include_customer_details: {
 			type: 'boolean',
 			label: 'Include Customer Name',
 			default: true,
 			description: 'Show customer name in celebrations',
 		},
-		closeDealInCRM: {
+		close_deal_in_c_r_m: {
 			type: 'boolean',
 			label: 'Auto-close HubSpot Deal',
 			default: true,
 			description: 'Automatically mark associated deal as closed-won',
 		},
-		draftThankYouEmail: {
+		draft_thank_you_email: {
 			type: 'boolean',
 			label: 'Draft Thank-You Email',
 			default: true,
 			description: 'Create a draft thank-you email in Gmail',
 		},
-		customCelebrationEmoji: {
+		custom_celebration_emoji: {
 			type: 'text',
 			label: 'Celebration Emoji',
 			default: '🎉',
 			description: 'Emoji prefix for celebration messages',
 		},
-		includeMRR: {
+		include_m_r_r: {
 			type: 'boolean',
 			label: 'Show Running MRR',
 			default: false,
 			description: 'Include monthly recurring revenue running total',
 		},
-		companyName: {
+		company_name: {
 			type: 'text',
 			label: 'Your Company Name',
 			description: 'Used in thank-you emails',

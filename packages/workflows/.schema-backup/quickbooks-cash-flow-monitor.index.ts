@@ -51,7 +51,9 @@ export default defineWorkflow({
 			timezone: { inferFrom: 'user_timezone' },
 		},
 
-		essentialFields: ['slackChannel'],
+		essentialFields: ['slack_channel'],
+
+		requiredProperties: ['invoice_number', 'invoice_amount', 'invoice_date', 'payment_status', 'customer_email'],
 
 		zuhandenheit: {
 			timeToValue: 1440,
@@ -74,14 +76,14 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['write_pages'], optional: true },
 	],
 
-	inputs: {
-		slackChannel: {
+	config: {
+		slack_channel: {
 			type: 'text',
 			label: 'Finance Channel',
 			required: true,
 			description: 'Slack channel for daily reports (e.g., #finance)',
 		},
-		reportTime: {
+		report_time: {
 			type: 'time',
 			label: 'Daily Report Time',
 			default: '08:00',
@@ -91,25 +93,25 @@ export default defineWorkflow({
 			label: 'Timezone',
 			default: 'America/New_York',
 		},
-		alertThreshold: {
+		alert_threshold: {
 			type: 'number',
 			label: 'Alert Threshold ($)',
 			default: 10000,
 			description: 'Alert when receivables over 60 days exceed this amount',
 		},
-		criticalAgingDays: {
+		critical_aging_days: {
 			type: 'number',
 			label: 'Critical Aging (days)',
 			default: 60,
 			description: 'Invoices older than this trigger alerts',
 		},
-		includeCustomerBreakdown: {
+		include_customer_breakdown: {
 			type: 'boolean',
 			label: 'Include Customer Breakdown',
 			default: true,
 			description: 'Show top customers with outstanding balances',
 		},
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Notion Database (optional)',
 			description: 'Log daily reports to Notion for tracking',

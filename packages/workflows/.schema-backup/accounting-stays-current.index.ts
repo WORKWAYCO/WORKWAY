@@ -59,6 +59,8 @@ export default defineWorkflow({
 
 		essentialFields: [],
 
+		requiredProperties: ['invoice_number', 'invoice_amount', 'invoice_date', 'payment_status', 'customer_email'],
+
 		zuhandenheit: {
 			timeToValue: 1,
 			worksOutOfBox: true,

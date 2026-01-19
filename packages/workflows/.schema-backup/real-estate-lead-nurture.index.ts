@@ -59,7 +59,7 @@ export default defineWorkflow({
 			tone: { value: 'professional' },
 		},
 
-		essentialFields: ['agentName', 'agentEmail', 'agentPhone'],
+		essentialFields: ['agent_name', 'agent_email', 'agent_phone'],
 
 		zuhandenheit: {
 			timeToValue: 5, // 5 minutes - responds to new leads quickly
@@ -83,43 +83,43 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['send_messages'], optional: true },
 	],
 
-	inputs: {
-		agentName: {
+	config: {
+		agent_name: {
 			type: 'string',
 			label: 'Your Name',
 			required: true,
 		},
-		agentEmail: {
+		agent_email: {
 			type: 'email',
 			label: 'Your Email',
 			required: true,
 		},
-		agentPhone: {
+		agent_phone: {
 			type: 'phone',
 			label: 'Your Phone',
 			required: true,
 		},
-		brokerageName: {
+		brokerage_name: {
 			type: 'string',
 			label: 'Brokerage Name',
 		},
-		followUpDays: {
+		follow_up_days: {
 			type: 'array',
 			label: 'Follow-up Schedule (days after inquiry)',
 			items: { type: 'number' },
 			default: [1, 3, 7, 14],
 		},
-		calendlyLink: {
+		calendly_link: {
 			type: 'url',
 			label: 'Calendly Booking Link',
 			description: 'Link for leads to schedule showings',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'string',
 			label: 'Slack Channel for Hot Leads',
 			description: 'Get notified when high-value leads come in',
 		},
-		minHotLeadPrice: {
+		min_hot_lead_price: {
 			type: 'number',
 			label: 'Hot Lead Price Threshold',
 			default: 500000,

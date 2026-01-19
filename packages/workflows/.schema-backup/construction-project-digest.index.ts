@@ -92,7 +92,7 @@ export default defineWorkflow({
 			riskAlerts: { value: true },
 		},
 
-		essentialFields: ['companyId'],
+		essentialFields: ['company_id'],
 
 		zuhandenheit: {
 			timeToValue: 7, // Weekly cadence
@@ -115,62 +115,62 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['read_content', 'insert_content'], optional: true },
 	],
 
-	inputs: {
-		companyId: {
+	config: {
+		company_id: {
 			type: 'text',
 			label: 'Procore Company ID',
 			required: true,
 			description: 'Your company ID from Procore',
 		},
-		projectIds: {
+		project_ids: {
 			type: 'text',
 			label: 'Project IDs (comma-separated)',
 			required: false,
 			description: 'Specific projects to track. Leave blank for all active projects.',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Digest Channel',
 			required: true,
 			description: 'Channel for weekly project digests',
 		},
-		executiveChannel: {
+		executive_channel: {
 			type: 'text',
 			label: 'Executive Summary Channel',
 			required: false,
 			description: 'Optional channel for executive-level summary',
 		},
-		weeklyDigest: {
+		weekly_digest: {
 			type: 'boolean',
 			label: 'Weekly Digest',
 			default: true,
 			description: 'Send comprehensive weekly digest every Monday',
 		},
-		riskAlerts: {
+		risk_alerts: {
 			type: 'boolean',
 			label: 'Risk Alerts',
 			default: true,
 			description: 'Send immediate alerts when projects become at-risk',
 		},
-		healthThreshold: {
+		health_threshold: {
 			type: 'number',
 			label: 'At-Risk Threshold',
 			default: 70,
 			description: 'Health score below which project is flagged as at-risk',
 		},
-		criticalThreshold: {
+		critical_threshold: {
 			type: 'number',
 			label: 'Critical Threshold',
 			default: 50,
 			description: 'Health score below which project is flagged as critical',
 		},
-		archiveToNotion: {
+		archive_to_notion: {
 			type: 'boolean',
 			label: 'Archive Reports',
 			default: true,
 			description: 'Archive weekly reports to Notion',
 		},
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Notion Database ID',
 			required: false,

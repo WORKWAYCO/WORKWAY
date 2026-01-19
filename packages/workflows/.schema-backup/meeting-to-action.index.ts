@@ -103,9 +103,9 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['send_messages'], optional: true },
 	],
 
-	inputs: {
+	config: {
 		// Task destination
-		taskDestination: {
+		task_destination: {
 			type: 'select',
 			label: 'Create Tasks In',
 			options: ['todoist', 'linear', 'both'],
@@ -114,7 +114,7 @@ export default defineWorkflow({
 		},
 
 		// Todoist settings
-		todoistProject: {
+		todoist_project: {
 			type: 'text',
 			label: 'Todoist Project',
 			required: false,
@@ -122,13 +122,13 @@ export default defineWorkflow({
 		},
 
 		// Linear settings
-		linearTeam: {
+		linear_team: {
 			type: 'text',
 			label: 'Linear Team',
 			required: false,
 			description: 'Team to create issues in',
 		},
-		linearProject: {
+		linear_project: {
 			type: 'text',
 			label: 'Linear Project',
 			required: false,
@@ -136,19 +136,19 @@ export default defineWorkflow({
 		},
 
 		// Extraction settings
-		minimumConfidence: {
+		minimum_confidence: {
 			type: 'number',
 			label: 'Minimum Confidence',
 			default: 0.7,
 			description: 'Only create tasks with AI confidence above this threshold (0.0-1.0)',
 		},
-		createSubtasks: {
+		create_subtasks: {
 			type: 'boolean',
 			label: 'Group as Subtasks',
 			default: true,
 			description: 'Create a parent task for the meeting with action items as subtasks',
 		},
-		defaultPriority: {
+		default_priority: {
 			type: 'select',
 			label: 'Default Priority',
 			options: ['high', 'medium', 'low'],
@@ -157,13 +157,13 @@ export default defineWorkflow({
 		},
 
 		// Assignee matching
-		matchAssignees: {
+		match_assignees: {
 			type: 'boolean',
 			label: 'Match Assignees',
 			default: true,
 			description: 'Try to match mentioned names to team members',
 		},
-		teamMemberMapping: {
+		team_member_mapping: {
 			type: 'json',
 			label: 'Name to ID Mapping',
 			default: '{}',
@@ -171,13 +171,13 @@ export default defineWorkflow({
 		},
 
 		// Notification settings
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Action Item Notifications',
 			required: false,
 			description: 'Channel to post extracted action items',
 		},
-		postToSlack: {
+		post_to_slack: {
 			type: 'boolean',
 			label: 'Post to Slack',
 			default: true,
@@ -185,7 +185,7 @@ export default defineWorkflow({
 		},
 
 		// Sync settings (for cron trigger)
-		lookbackDays: {
+		lookback_days: {
 			type: 'number',
 			label: 'Days to Look Back',
 			default: 1,

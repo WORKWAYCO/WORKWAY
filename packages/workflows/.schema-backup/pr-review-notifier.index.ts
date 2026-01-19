@@ -94,75 +94,75 @@ export default defineWorkflow({
 		{ service: 'discord', scopes: ['bot', 'messages.write'], optional: true },
 	],
 
-	inputs: {
-		notificationPlatform: {
+	config: {
+		notification_platform: {
 			type: 'select',
 			label: 'Notification Platform',
 			options: ['slack', 'discord', 'both'],
 			default: 'slack',
 			description: 'Where to send PR notifications',
 		},
-		slackChannelId: {
+		slack_channel_id: {
 			type: 'text',
 			label: 'Slack Channel',
 			required: false,
 			description: 'Slack channel for PR notifications',
 		},
-		discordChannelId: {
+		discord_channel_id: {
 			type: 'text',
 			label: 'Discord Channel',
 			required: false,
 			description: 'Discord channel for PR notifications',
 		},
-		notifyOnOpen: {
+		notify_on_open: {
 			type: 'boolean',
 			label: 'Notify on PR Open',
 			default: true,
 			description: 'Send notification when a PR is opened',
 		},
-		notifyOnReviewRequest: {
+		notify_on_review_request: {
 			type: 'boolean',
 			label: 'Notify on Review Request',
 			default: true,
 			description: 'Send notification when review is requested',
 		},
-		notifyOnApproval: {
+		notify_on_approval: {
 			type: 'boolean',
 			label: 'Notify on Approval',
 			default: true,
 			description: 'Send notification when PR is approved',
 		},
-		notifyOnChangesRequested: {
+		notify_on_changes_requested: {
 			type: 'boolean',
 			label: 'Notify on Changes Requested',
 			default: true,
 			description: 'Send notification when changes are requested',
 		},
-		notifyOnMerge: {
+		notify_on_merge: {
 			type: 'boolean',
 			label: 'Notify on Merge',
 			default: false,
 			description: 'Send notification when PR is merged',
 		},
-		staleThresholdHours: {
+		stale_threshold_hours: {
 			type: 'number',
 			label: 'Stale PR Threshold (hours)',
 			default: 24,
 			description: 'Hours before a PR is considered stale',
 		},
-		userMapping: {
+		user_mapping: {
 			type: 'key_value_list',
 			label: 'GitHub to Slack/Discord User Mapping',
 			required: false,
 			description: 'Map GitHub usernames to Slack/Discord user IDs for @mentions',
 		},
-		excludeDraft: {
+		exclude_draft: {
 			type: 'boolean',
 			label: 'Exclude Draft PRs',
 			default: true,
 			description: 'Don\'t notify for draft PRs',
 		},
-		filterLabels: {
+		filter_labels: {
 			type: 'multi_select',
 			label: 'Filter by Labels',
 			required: false,

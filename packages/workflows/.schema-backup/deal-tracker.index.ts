@@ -61,7 +61,9 @@ export default defineWorkflow({
 			trackLostDeals: { value: true },
 		},
 
-		essentialFields: ['slackChannel'],
+		essentialFields: ['slack_channel'],
+
+		requiredProperties: ['deal_name', 'deal_value', 'deal_stage', 'customer_email', 'close_date'],
 
 		zuhandenheit: {
 			timeToValue: 60,
@@ -84,32 +86,32 @@ export default defineWorkflow({
 		{ service: 'notion', scopes: ['insert_content'], optional: true },
 	],
 
-	inputs: {
-		slackChannel: {
+	config: {
+		slack_channel: {
 			type: 'text',
 			label: 'Sales Channel',
 			required: true,
 			description: 'Channel for deal updates',
 		},
-		notionDatabaseId: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Deal History Database',
 			required: false,
 			description: 'Optional: Log deal changes to Notion',
 		},
-		celebrateWins: {
+		celebrate_wins: {
 			type: 'boolean',
 			label: 'Celebrate Wins',
 			default: true,
 			description: 'Special celebration for closed-won deals',
 		},
-		trackLostDeals: {
+		track_lost_deals: {
 			type: 'boolean',
 			label: 'Track Lost Deals',
 			default: true,
 			description: 'Notify when deals are lost',
 		},
-		minimumDealAmount: {
+		minimum_deal_amount: {
 			type: 'number',
 			label: 'Minimum Deal Amount ($)',
 			default: 0,

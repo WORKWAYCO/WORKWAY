@@ -68,7 +68,7 @@ export default defineWorkflow({
 			notifyOnCancellation: { value: true },
 		},
 
-		essentialFields: ['notionDatabaseId'],
+		essentialFields: ['notion_database_id'],
 
 		zuhandenheit: {
 			timeToValue: 1, // Instant on booking
@@ -91,32 +91,32 @@ export default defineWorkflow({
 		{ service: 'slack', scopes: ['chat:write', 'channels:read'], optional: true },
 	],
 
-	inputs: {
-		notionDatabaseId: {
+	config: {
+		notion_database_id: {
 			type: 'text',
 			label: 'Meetings Database',
 			required: true,
 			description: 'Notion database to log meetings',
 		},
-		slackChannel: {
+		slack_channel: {
 			type: 'text',
 			label: 'Notification Channel',
 			required: false,
 			description: 'Channel for booking notifications',
 		},
-		notifyOnBooking: {
+		notify_on_booking: {
 			type: 'boolean',
 			label: 'Notify on Booking',
 			default: true,
 			description: 'Send Slack notification when meeting is booked',
 		},
-		notifyOnCancellation: {
+		notify_on_cancellation: {
 			type: 'boolean',
 			label: 'Notify on Cancellation',
 			default: true,
 			description: 'Send Slack notification when meeting is canceled',
 		},
-		includeQuestionsInNotion: {
+		include_questions_in_notion: {
 			type: 'boolean',
 			label: 'Include Form Answers',
 			default: true,

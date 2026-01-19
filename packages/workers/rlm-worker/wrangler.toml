@@ -1,0 +1,45 @@
+name = "rlm-worker"
+main = "src/index.ts"
+compatibility_date = "2024-01-01"
+
+# Cloudflare Workers AI binding
+[ai]
+binding = "AI"
+
+# Durable Objects for RLM sessions
+[[durable_objects.bindings]]
+name = "RLM_SESSIONS"
+class_name = "RLMSession"
+
+# Migrations for Durable Objects
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RLMSession"]
+
+# R2 for large context storage
+[[r2_buckets]]
+binding = "RLM_CONTEXT_STORAGE"
+bucket_name = "rlm-contexts"
+
+# KV for result caching
+[[kv_namespaces]]
+binding = "RLM_CACHE"
+id = "cf48374eb36b48e29e1b70338d85dca0"
+
+# Production KV
+[[env.production.kv_namespaces]]
+binding = "RLM_CACHE"
+id = "rlm_cache_production"
+
+# Analytics Engine for metrics
+[[analytics_engine_datasets]]
+binding = "RLM_ANALYTICS"
+
+# Environment variables
+[vars]
+MAX_ITERATIONS = "20"
+MAX_SUB_CALLS = "100"
+CONTEXT_CHUNK_SIZE = "50000"
+
+# Secrets (set via: wrangler secret put GOOGLE_API_KEY)
+# GOOGLE_API_KEY - Gemini API key
