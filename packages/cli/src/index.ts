@@ -56,6 +56,7 @@ import { dbCheckCommand } from './commands/db/check.js';
 import { dbSyncWorkflowsCommand } from './commands/db/sync-workflows.js';
 import { beadsNotionInitCommand } from './commands/beads/notion-init.js';
 import { beadsNotionSyncCommand } from './commands/beads/notion.js';
+import { registerSLICommand } from './commands/sli/index.js';
 import { Logger } from './utils/logger.js';
 import { handleCommand, handleCommandError } from './utils/command-handler.js';
 
@@ -601,6 +602,12 @@ program
 		Logger.log('MCP server for Claude Code:');
 		Logger.log('  npx @workway/learn --server');
 	});
+
+// ============================================================================
+// SLI COMMANDS - Service Level Indicators
+// ============================================================================
+
+registerSLICommand(program);
 
 // ============================================================================
 // ERROR HANDLING
