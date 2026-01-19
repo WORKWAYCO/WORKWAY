@@ -301,6 +301,22 @@ export {
 } from './tracing';
 
 // ============================================================================
+// SLI/SLO Queries
+// ============================================================================
+
+export type { SLIQueryResult, SLOStatus } from './sli-queries';
+export {
+	SLOTargets,
+	SLIQueries,
+	querySLI,
+	calculateAvailability,
+	calculateErrorRate,
+	checkLatencySLO,
+	checkAvailabilitySLO,
+	checkErrorRateSLO,
+} from './sli-queries';
+
+// ============================================================================
 // ACTION RESULT (Shared utilities)
 // ============================================================================
 
