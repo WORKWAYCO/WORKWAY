@@ -22,26 +22,7 @@ import {
   DEFAULT_MOLECULE_CONFIG,
 } from './types.js';
 import { getIssue, createIssue, updateIssueStatus } from './beads.js';
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
-
-const execAsync = promisify(exec);
-
-/**
- * Execute a bd command.
- */
-async function bd(args: string[], cwd: string): Promise<string> {
-  try {
-    const { stdout } = await execAsync(`bd ${args.join(' ')}`, {
-      cwd,
-      env: { ...process.env },
-    });
-    return stdout.trim();
-  } catch (error) {
-    const err = error as { stderr?: string; message: string };
-    throw new Error(`bd command failed: ${err.stderr || err.message}`);
-  }
-}
+import { bd } from './lib/bd-client.js';
 
 /**
  * MoleculeManager handles step-level workflow execution with crash recovery.

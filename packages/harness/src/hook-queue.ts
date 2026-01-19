@@ -12,8 +12,7 @@
  * Zuhandenheit: Crashes don't block progress. Work persists; agents restart.
  */
 
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
+import { bd } from './lib/bd-client.js';
 import type {
   BeadsIssue,
   HookState,
@@ -27,24 +26,6 @@ import {
   getOpenIssues,
   updateIssueStatus,
 } from './beads.js';
-
-const execAsync = promisify(exec);
-
-/**
- * Execute a bd command.
- */
-async function bd(args: string, cwd?: string): Promise<string> {
-  try {
-    const { stdout } = await execAsync(`bd ${args}`, {
-      cwd: cwd || process.cwd(),
-      env: { ...process.env },
-    });
-    return stdout.trim();
-  } catch (error) {
-    const err = error as { stderr?: string; message: string };
-    throw new Error(`bd command failed: ${err.stderr || err.message}`);
-  }
-}
 
 /**
  * HookQueue manages crash-resilient work distribution.

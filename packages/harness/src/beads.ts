@@ -11,74 +11,17 @@
  * - Using CLI ensures all operations go through SQLite
  */
 
-import { exec } from 'node:child_process';
-import { promisify } from 'node:util';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { bd } from './lib/bd-client.js';
 import type {
   BeadsIssue,
   Feature,
   Checkpoint,
 } from './types.js';
 
-const execAsync = promisify(exec);
-
 // Path to the Beads issues file (relative to repo root)
 const ISSUES_FILE = '.beads/issues.jsonl';
-
-/**
- * Find the bd CLI path.
- * Falls back to common locations if not in PATH.
- */
-async function findBdPath(): Promise<string> {
-  // Try PATH first
-  try {
-    const { stdout } = await execAsync('which bd');
-    return stdout.trim();
-  } catch {
-    // Fall back to common locations
-    const commonPaths = [
-      '/opt/homebrew/bin/bd',
-      '/usr/local/bin/bd',
-      `${process.env.HOME}/.local/bin/bd`,
-    ];
-
-    for (const path of commonPaths) {
-      try {
-        await execAsync(`test -x ${path}`);
-        return path;
-      } catch {
-        continue;
-      }
-    }
-
-    throw new Error('bd CLI not found. Install it or add to PATH.');
-  }
-}
-
-// Cache the bd path
-let bdPath: string | null = null;
-
-/**
- * Execute a bd command and return the result.
- */
-async function bd(args: string, cwd?: string): Promise<string> {
-  try {
-    // Find bd path on first use
-    if (!bdPath) {
-      bdPath = await findBdPath();
-    }
-
-    const { stdout } = await execAsync(`${bdPath} ${args}`, {
-      cwd: cwd || process.cwd(),
-      env: { ...process.env },
-    });
-    return stdout.trim();
-  } catch (error) {
-    const err = error as { stderr?: string; message: string };
-    throw new Error(`bd command failed: ${err.stderr || err.message}`);
-  }
-}
 
 /**
  * Read all issues from Beads.
