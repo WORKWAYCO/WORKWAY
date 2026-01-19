@@ -1,11 +1,12 @@
 /**
  * Cloudflare-native RLM Engine
  *
- * Recursive Language Model implementation using Workers AI or Gemini
+ * Recursive Language Model implementation using Workers AI, Gemini, or Anthropic
  */
 
 import { Env, RLMConfig, RLMIteration, ChunkResult, SubCallRequest } from './types';
 import { callGemini, estimateGeminiCost } from './gemini-client';
+import { callAnthropic, estimateAnthropicCost } from './anthropic-client';
 
 /**
  * Chunk large context into manageable pieces
@@ -23,19 +24,26 @@ export function chunkContext(context: string, chunkSize: number): string[] {
 }
 
 /**
- * Call LLM (Workers AI or Gemini) with a prompt
+ * Call LLM (Workers AI, Gemini, or Anthropic) with a prompt
  */
 export async function callLLM(
 	env: Env,
 	model: string,
 	prompt: string,
-	provider: 'workers-ai' | 'gemini' = 'workers-ai',
+	provider: 'workers-ai' | 'gemini' | 'anthropic' = 'workers-ai',
 ): Promise<{ response: string; inputTokens: number; outputTokens: number }> {
 	if (provider === 'gemini') {
 		if (!env.GOOGLE_API_KEY) {
 			throw new Error('GOOGLE_API_KEY not configured for Gemini');
 		}
 		return await callGemini(env.GOOGLE_API_KEY, model, prompt);
+	}
+
+	if (provider === 'anthropic') {
+		if (!env.ANTHROPIC_API_KEY) {
+			throw new Error('ANTHROPIC_API_KEY not configured for Anthropic');
+		}
+		return await callAnthropic(env.ANTHROPIC_API_KEY, model, prompt);
 	}
 
 	// Workers AI fallback
@@ -73,7 +81,7 @@ export async function callLLM(
 export async function processChunk(
 	env: Env,
 	request: SubCallRequest,
-	provider: 'workers-ai' | 'gemini' = 'workers-ai',
+	provider: 'workers-ai' | 'gemini' | 'anthropic' = 'workers-ai',
 ): Promise<ChunkResult> {
 	const prompt = `Analyze this code chunk and answer the query.
 
@@ -101,7 +109,7 @@ export async function synthesizeResults(
 	query: string,
 	chunkResults: ChunkResult[],
 	rootModel: string,
-	provider: 'workers-ai' | 'gemini' = 'workers-ai',
+	provider: 'workers-ai' | 'gemini' | 'anthropic' = 'workers-ai',
 ): Promise<string> {
 	// Build synthesis prompt
 	let prompt = `You are synthesizing code analysis from ${chunkResults.length} chunks.
@@ -231,15 +239,21 @@ export async function executeRLM(
 
 /**
  * Estimate cost based on token usage
+ * Anthropic: $3/$15 per 1M tokens (Sonnet), $15/$75 (Opus), $0.80/$4 (Haiku)
  * Gemini 2.0: $0.15/$0.60 per 1M tokens (input/output)
  * Workers AI: Free for up to 10k neurons/day, then $0.011 per 1k neurons
  */
 export function estimateCost(
 	iterations: RLMIteration[],
-	provider: 'workers-ai' | 'gemini' = 'gemini',
+	provider: 'workers-ai' | 'gemini' | 'anthropic' = 'gemini',
+	model?: string,
 ): number {
 	const totalInputTokens = iterations.reduce((sum, iter) => sum + iter.inputTokens, 0);
 	const totalOutputTokens = iterations.reduce((sum, iter) => sum + iter.outputTokens, 0);
+
+	if (provider === 'anthropic') {
+		return estimateAnthropicCost(totalInputTokens, totalOutputTokens, model || 'claude-sonnet-4-20250514');
+	}
 
 	if (provider === 'gemini') {
 		return estimateGeminiCost(totalInputTokens, totalOutputTokens);

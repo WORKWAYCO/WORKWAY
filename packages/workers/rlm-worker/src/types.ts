@@ -14,6 +14,7 @@ export interface Env {
 	MAX_SUB_CALLS: string;
 	CONTEXT_CHUNK_SIZE: string;
 	GOOGLE_API_KEY?: string; // Gemini API key
+	ANTHROPIC_API_KEY?: string; // Anthropic/Claude API key
 }
 
 export interface RLMRequest {
@@ -23,13 +24,29 @@ export interface RLMRequest {
 }
 
 export interface RLMConfig {
-	rootModel?: 'claude' | 'llama-3.1-8b' | 'llama-3.1-70b' | 'gemini-flash' | 'gemini-pro';
-	subModel?: 'claude' | 'llama-3.1-8b' | 'llama-3.1-70b' | 'gemini-flash' | 'gemini-pro';
+	rootModel?:
+		| 'claude'
+		| 'llama-3.1-8b'
+		| 'llama-3.1-70b'
+		| 'gemini-flash'
+		| 'gemini-pro'
+		| 'claude-sonnet'
+		| 'claude-opus'
+		| 'claude-haiku';
+	subModel?:
+		| 'claude'
+		| 'llama-3.1-8b'
+		| 'llama-3.1-70b'
+		| 'gemini-flash'
+		| 'gemini-pro'
+		| 'claude-sonnet'
+		| 'claude-opus'
+		| 'claude-haiku';
 	maxIterations?: number;
 	maxSubCalls?: number;
 	chunkSize?: number;
 	useCache?: boolean;
-	provider?: 'workers-ai' | 'gemini'; // Which LLM provider to use
+	provider?: 'workers-ai' | 'gemini' | 'anthropic'; // Which LLM provider to use
 }
 
 export interface RLMResult {

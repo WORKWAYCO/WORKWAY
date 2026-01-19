@@ -70,12 +70,13 @@ export class RLMSession extends DurableObject<Env> {
 
 			// Track analytics
 			const provider = this.state.config.provider || 'gemini';
+			const rootModel = this.state.config.rootModel;
 			this.env.RLM_ANALYTICS.writeDataPoint({
 				blobs: [this.state.sessionId, this.state.status, provider],
 				doubles: [
 					result.iterations.length,
 					result.subCalls,
-					estimateCost(result.iterations, provider),
+					estimateCost(result.iterations, provider, rootModel),
 					Date.now() - this.state.startTime,
 				],
 				indexes: [this.state.sessionId],
@@ -117,13 +118,14 @@ export class RLMSession extends DurableObject<Env> {
 		const state = await this.getStatus();
 
 		const provider = state.config.provider || 'gemini';
+		const rootModel = state.config.rootModel;
 
 		return {
 			success: state.status === 'completed',
 			answer: state.result || null,
 			iterations: state.iterations,
 			subCalls: state.subCalls,
-			costUsd: estimateCost(state.iterations, provider),
+			costUsd: estimateCost(state.iterations, provider, rootModel),
 			durationMs: Date.now() - state.startTime,
 			error: state.error,
 		};

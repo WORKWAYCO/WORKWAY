@@ -1,0 +1,3300 @@
+🔍 WORKWAY DRY Violation Analysis
+
+════════════════════════════════════════════════════════════════════════════════
+
+📁 Found 144 TypeScript files
+
+📦 Processing 10 batches of ~15 files each
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 1/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/agentic/create.ts
+  • packages/cli/src/commands/agentic/diagnose.ts
+  • packages/cli/src/commands/agentic/explain.ts
+  • packages/cli/src/commands/agentic/modify.ts
+  • packages/cli/src/commands/ai/estimate.ts
+  • packages/cli/src/commands/ai/models.ts
+  • packages/cli/src/commands/ai/test.ts
+  • packages/cli/src/commands/auth/login.ts
+  • packages/cli/src/commands/auth/logout.ts
+  • packages/cli/src/commands/auth/whoami.ts
+  • packages/cli/src/commands/beads/notion-init.ts
+  • packages/cli/src/commands/beads/notion.ts
+  • packages/cli/src/commands/db/check.ts
+  • packages/cli/src/commands/db/sync-workflows.ts
+  • packages/cli/src/commands/developer/earnings.ts
+
+📦 Context: 121,722 chars
+
+📤 Sending request to RLM worker...
+   Context: 121,722 chars
+   Query: 1703 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (44.8s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0012
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I found significant opportunities to reduce code duplication.
+
+## Violation: Repetitive API command execution and spinner logic
+A nearly identical pattern for handling authenticated API calls with user feedback (via an `ora` spinner) is repeated across almost every command file. This boilerplate code includes getting an authenticated client, starting a spinner, making an API call within a `try/catch` block, and then stopping the spinner with a success or failure message.
+
+**Files:**
+- `packages/cli/src/commands/agentic/create.ts`
+- `packages/cli/src/commands/agentic/diagnose.ts`
+- `packages/cli/src/commands/agentic/explain.ts`
+- `packages/cli/src/commands/agentic/modify.ts`
+- `packages/cli/src/commands/ai/estimate.ts`
+- `packages/cli/src/commands/ai/models.ts`
+- `packages/cli/src/commands/ai/test.ts`
+- `packages/cli/src/commands/auth/whoami.ts`
+- `packages/cli/src/commands/beads/notion-init.ts`
+- `packages/cli/src/commands/beads/notion.ts`
+- `packages/cli/src/commands/db/check.ts`
+- `packages/cli/src/commands/db/sync-workflows.ts`
+- `packages/cli/src/commands/developer/earnings.ts`
+
+**Pattern:**
+The following structure is duplicated in each of the files listed above, with only the spinner messages and the specific API call changing.
+
+```typescript
+// Example from packages/cli/src/commands/ai/models.ts
+import { getAuthenticatedClient } from '../../api';
+import ora from 'ora';
+
+// ... inside the Command class run() method
+public async run(): Promise<void> {
+    const client = await getAuthenticatedClient();
+    const spinner = ora('Fetching available models...').start();
+    try {
+        const { data } = await client.ai.models();
+        spinner.succeed('Successfully fetched models.');
+        // ... logic to display results
+    } catch (error) {
+        spinner.fail('Failed to fetch models.');
+        throw error;
+    }
+}
+```
+
+**Recommendation:**
+Consolidate this logic into a shared utility or a base class. An `AuthenticatedCommand` base class that extends `oclif`'s `Command` would be the most robust solution. This base class can handle fetching the authenticated client in its `init` method and provide a helper method to wrap the spinner and `try/catch` logic.
+
+1.  **Create a base command class** (e.g., in `packages/cli/src/commands/base.ts`):
+
+    ```typescript
+    import { Command } from '@oclif/core';
+    import ora from 'ora';
+    import { getAuthenticatedClient, ApiClient } from '../api'; // Assuming ApiClient type exists
+
+    interface ApiActionOptions {
+      start: string;
+      success: string;
+      fail: string;
+    }
+
+    export abstract class AuthenticatedCommand extends Command {
+      protected apiClient!: ApiClient;
+
+      // Automatically get the client before run() is called
+      async init() {
+        await super.init();
+        this.apiClient = await getAuthenticatedClient();
+      }
+
+      // Reusable wrapper for API calls with a spinner
+      protected async runApiAction<T>(
+        options: ApiActionOptions,
+        action: (client: ApiClient) => Promise<T>
+      ): Promise<T> {
+        const spinner = ora(options.start).start();
+        try {
+          const result = await action(this.apiClient);
+          spinner.succeed(options.success);
+          return result;
+        } catch (error) {
+          spinner.fail(options.fail);
+          throw error;
+        }
+      }
+    }
+    ```
+
+2.  **Refactor existing commands** to extend `AuthenticatedCommand` and use the `runApiAction` helper:
+
+    ```typescript
+    // Refactored packages/cli/src/commands/ai/models.ts
+    import { AuthenticatedCommand } from '../base'; // Adjust path
+
+    export default class Models extends AuthenticatedCommand {
+      static description = 'List available AI models.';
+
+      public async run(): Promise<void> {
+        const { data } = await this.runApiAction(
+          {
+            start: 'Fetching available models...',
+            success: 'Successfully fetched models.',
+            fail: 'Failed to fetch models.',
+          },
+          (client) => client.ai.models()
+        );
+
+        // ... logic to display results
+      }
+    }
+    ```
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated user input prompt logic
+Several commands use `inquirer.prompt` to ask the user for one or more text inputs. The configuration for these prompts is very similar, often just asking for a non-empty string. This leads to repeated boilerplate for defining prompt questions.
+
+**Files:**
+- `packages/cli/src/commands/agentic/create.ts`
+- `packages/cli/src/commands/agentic/modify.ts`
+- `packages/cli/src/commands/beads/notion-init.ts`
+
+**Pattern:**
+The pattern of defining an array of question objects for `inquirer.prompt` is repeated.
+
+```typescript
+// From packages/cli/src/commands/agentic/create.ts
+const { name, description } = await inquirer.prompt([
+    {
+        type: 'input',
+        name: 'name',
+        message: 'Enter a name for your new agent:',
+        validate: (input: string) => input.length > 0 || 'Name cannot be empty.',
+    },
+    {
+        type: 'input',
+        name: 'description',
+        message: 'Enter a description for your new agent:',
+    },
+]);
+
+// From packages/cli/src/commands/beads/notion-init.ts
+const { notionIntegrationToken, databaseId } = await inquirer.prompt([
+    {
+        type: 'input',
+        name: 'notionIntegrationToken',
+        message: 'Enter your Notion Integration Token:',
+        validate: (input: string) => input.length > 0 || 'Token cannot be empty.',
+    },
+    // ... another similar prompt object
+]);
+```
+
+**Recommendation:**
+Create a small, reusable utility function that simplifies the creation of these prompts. This function can abstract away the repetitive parts of the question object, like the `type` and the common validation logic.
+
+1.  **Create a prompt utility function** (e.g., in `packages/cli/src/utils/prompts.ts`):
+
+    ```typescript
+    import inquirer from 'inquirer';
+
+    type PromptQuestion = {
+      name: string;
+      message: string;
+      required?: boolean;
+    };
+
+    export async function promptForValues<T>(questions: PromptQuestion[]): Promise<T> {
+      const inquirerQuestions = questions.map(q => ({
+        type: 'input',
+        name: q.name,
+        message: q.message,
+        validate: q.required
+          ? (input: string) => input.length > 0 || `${q.name} cannot be empty.`
+          : undefined,
+      }));
+      return inquirer.prompt(inquirerQuestions);
+    }
+    ```
+
+2.  **Use the new utility** in the command files:
+
+    ```typescript
+    // Refactored packages/cli/src/commands/agentic/create.ts
+    import { promptForValues } from '../../utils/prompts'; // Adjust path
+
+    // ... inside run() method
+    const { name, description } = await promptForValues<{ name: string; description: string }>([
+      { name: 'name', message: 'Enter a name for your new agent:', required: true },
+      { name: 'description', message: 'Enter a description for your new agent:' },
+    ]);
+    ```
+
+**Priority:** medium
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 2/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/developer/init.ts
+  • packages/cli/src/commands/developer/oauth.ts
+  • packages/cli/src/commands/developer/profile.ts
+  • packages/cli/src/commands/developer/register.ts
+  • packages/cli/src/commands/developer/status.ts
+  • packages/cli/src/commands/developer/stripe.ts
+  • packages/cli/src/commands/developer/submit.ts
+  • packages/cli/src/commands/logs.ts
+  • packages/cli/src/commands/marketplace/browse.ts
+  • packages/cli/src/commands/marketplace/index.ts
+  • packages/cli/src/commands/marketplace/info.ts
+  • packages/cli/src/commands/marketplace/needs.ts
+  • packages/cli/src/commands/marketplace/search.ts
+  • packages/cli/src/commands/oauth/connect.test.ts
+  • packages/cli/src/commands/oauth/connect.ts
+
+📦 Context: 118,188 chars
+
+📤 Sending request to RLM worker...
+   Context: 118,188 chars
+   Query: 1746 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (50.7s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0014
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have identified several significant DRY violations. The most prominent issues involve repeated boilerplate for command setup, error handling, and common functionality across related commands.
+
+---
+
+## Violation: Duplicated Developer Profile and Manifest Loading
+**Files:**
+- `packages/cli/src/commands/developer/init.ts`
+- `packages/cli/src/commands/developer/oauth.ts`
+- `packages/cli/src/commands/developer/status.ts`
+- `packages/cli/src/commands/developer/submit.ts`
+
+**Pattern:**
+Multiple commands in the `developer` suite repeat the exact same logic at the beginning of their `run` method to check for a developer profile and load the `manifest.json` file.
+
+```typescript
+// This block is repeated in multiple files
+const { profile } = await getDeveloperProfile()
+if (!profile) {
+  this.log('Please register as a developer first. Run `fmm developer:register`')
+  return
+}
+
+const manifest = await readJson(join(process.cwd(), 'manifest.json'))
+if (!manifest) {
+  this.error('No manifest.json found in the current directory.')
+}
+```
+
+**Recommendation:**
+Create a base class for developer commands that require both a profile and a manifest. This base class can use the `init` hook provided by oclif to perform these checks, making the profile and manifest data available to any command that extends it.
+
+1.  **Create a base command file**, e.g., `src/lib/developer-project-command.ts`.
+2.  **Implement the shared logic** in the `init` method of the base class.
+3.  **Refactor the affected commands** to extend this new base class and remove the duplicated code.
+
+**Example Base Class (`src/lib/developer-project-command.ts`):**
+```typescript
+import { Command } from '@oclif/core'
+import { getDeveloperProfile } from '../lib/developer/profile'
+import { readJson } from 'fs-extra'
+import { join } from 'path'
+
+// Define types for profile and manifest for better type safety
+type DeveloperProfile = { /* ... */ }
+type Manifest = { /* ... */ }
+
+export abstract class DeveloperProjectCommand extends Command {
+  protected developerProfile!: DeveloperProfile;
+  protected manifest!: Manifest;
+
+  async init() {
+    await super.init()
+    const { profile } = await getDeveloperProfile()
+    if (!profile) {
+      this.error('Please register as a developer first. Run `fmm developer:register`')
+    }
+    this.developerProfile = profile
+
+    try {
+      this.manifest = await readJson(join(process.cwd(), 'manifest.json'))
+    } catch {
+      this.error('No manifest.json found in the current directory.')
+    }
+  }
+}
+```
+
+**Example Refactored Command (`packages/cli/src/commands/developer/submit.ts`):**
+```typescript
+import { DeveloperProjectCommand } from '../../lib/developer-project-command'
+
+export default class Submit extends DeveloperProjectCommand {
+  static description = 'Submit an extension to the marketplace'
+  // ... flags and args
+
+  async run(): Promise<void> {
+    // The `this.developerProfile` and `this.manifest` properties are now
+    // available here without any boilerplate code.
+    
+    // ... rest of the command logic
+  }
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Repetitive `try/catch` Block for Asynchronous Actions
+**Files:**
+- `packages/cli/src/commands/developer/init.ts`
+- `packages/cli/src/commands/developer/oauth.ts`
+- `packages/cli/src/commands/developer/profile.ts`
+- `packages/cli/src/commands/developer/register.ts`
+- `packages/cli/src/commands/developer/status.ts`
+- `packages/cli/src/commands/developer/stripe.ts`
+- `packages/cli/src/commands/developer/submit.ts`
+
+**Pattern:**
+Nearly all `developer` commands wrap their core logic in a `try...catch` block that starts a spinner (`ux.action.start`), stops it on success, and stops it with an error message on failure.
+
+```typescript
+// This pattern is repeated with different messages
+ux.action.start('Doing something...')
+try {
+  // ... asynchronous logic ...
+  ux.action.stop('Done')
+} catch (error: any) {
+  ux.action.stop('Error')
+  this.error(error)
+}
+```
+
+**Recommendation:**
+Extract this pattern into a reusable utility function that takes the command context (`this`), an action message, and an asynchronous function to execute. This centralizes the action/spinner logic and makes the command code cleaner and more focused on its specific task.
+
+1.  **Create a helper file**, e.g., `src/lib/command-helpers.ts`.
+2.  **Define the wrapper function** inside this file.
+3.  **Use the helper function** in each command to reduce boilerplate.
+
+**Example Helper (`src/lib/command-helpers.ts`):**
+```typescript
+import { ux, Command } from '@oclif/core'
+
+export async function performAction(
+  command: Command,
+  actionMessage: string,
+  actionFn: () => Promise<string | void> // Allow returning an optional success message
+) {
+  ux.action.start(actionMessage)
+  try {
+    const successMessage = await actionFn()
+    ux.action.stop(successMessage || 'Done')
+  } catch (error: any) {
+    ux.action.stop('Error')
+    command.error(error)
+  }
+}
+```
+
+**Example Refactored Command (`packages/cli/src/commands/developer/init.ts`):**
+```typescript
+import { performAction } from '../../lib/command-helpers'
+// ... other imports
+
+export default class Init extends Command {
+  // ...
+  async run(): Promise<void> {
+    // ... setup logic ...
+
+    await performAction(this, 'Initializing developer environment', async () => {
+      // ... original logic from the try block ...
+      // e.g., await someApiCall()
+    })
+  }
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated Flags and Logic in Marketplace Listing Commands
+**Files:**
+- `packages/cli/src/commands/marketplace/browse.ts`
+- `packages/cli/src/commands/marketplace/search.ts`
+- `packages/cli/src/commands/marketplace/needs.ts`
+
+**Pattern:**
+The `browse`, `search`, and `needs` commands share identical flag definitions for sorting and pagination (`sort`, `page`, `limit`). They also repeat similar logic for building a query string from these flags and for rendering the list of results to the console.
+
+**Duplicated Flags:**
+```typescript
+// This block of flags is identical in all three files
+sort: Flags.string({
+  description: 'Sort by',
+  options: ['newest', 'popular', 'updated'],
+  default: 'popular',
+}),
+page: Flags.integer({
+  description: 'Page number',
+  default: 1,
+}),
+limit: Flags.integer({
+  description: 'Number of items per page',
+  default: 10,
+}),
+```
+
+**Duplicated Rendering Logic:**
+```typescript
+// This loop structure is nearly identical
+for (const extension of data.extensions) {
+  this.log(`- ${chalk.bold(extension.name)} by ${extension.developer.name} (@${extension.developer.handle})`)
+  this.log(`  ${extension.description}`)
+  this.log(`  ${chalk.gray(extension.id)}`)
+}
+```
+
+**Recommendation:**
+Consolidate the common flags into a shared object and consider creating a base class for marketplace listing commands to handle the shared logic of fetching and displaying data.
+
+1.  **Create a shared flags file**, e.g., `src/lib/marketplace-flags.ts`, to export the common flag definitions.
+2.  **Import and spread the shared flags** into each command's `flags` definition.
+3.  (Optional but recommended) Create a `MarketplaceListingCommand` base class that handles query string generation, API calls, and looping over results, while letting subclasses define the specific API endpoint and how to render a single item.
+
+**Example Shared Flags (`src/lib/marketplace-flags.ts`):**
+```typescript
+import { Flags } from '@oclif/core'
+
+export const marketplaceListingFlags = {
+  sort: Flags.string({
+    description: 'Sort by',
+    options: ['newest', 'popular', 'updated'],
+    default: 'popular',
+  }),
+  page: Flags.integer({
+    description: 'Page number',
+    default: 1,
+  }),
+  limit: Flags.integer({
+    description: 'Number of items per page',
+    default: 10,
+  }),
+}
+```
+
+**Example Refactored Command (`packages/cli/src/commands/marketplace/browse.ts`):**
+```typescript
+import { Command, Flags } from '@oclif/core'
+import { marketplaceListingFlags } from '../../lib/marketplace-flags'
+
+export default class Browse extends Command {
+  static description = 'Browse the marketplace'
+
+  static flags = {
+    ...marketplaceListingFlags, // Spread the shared flags
+    category: Flags.string({
+      description: 'Filter by category',
+      required: false,
+    }),
+  }
+
+  async run(): Promise<void> {
+    // ... command logic ...
+  }
+}
+```
+
+**Priority:** high
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 3/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/oauth/disconnect.ts
+  • packages/cli/src/commands/oauth/list.ts
+  • packages/cli/src/commands/rlm/assess.ts
+  • packages/cli/src/commands/rlm/index.ts
+  • packages/cli/src/commands/sli/index.ts
+  • packages/cli/src/commands/status.ts
+  • packages/cli/src/commands/workflow/access-grants.ts
+  • packages/cli/src/commands/workflow/build.ts
+  • packages/cli/src/commands/workflow/delete.ts
+  • packages/cli/src/commands/workflow/dev.ts
+  • packages/cli/src/commands/workflow/fork.ts
+  • packages/cli/src/commands/workflow/init.test.ts
+  • packages/cli/src/commands/workflow/init.ts
+  • packages/cli/src/commands/workflow/install.test.ts
+  • packages/cli/src/commands/workflow/install.ts
+
+📦 Context: 127,950 chars
+
+📤 Sending request to RLM worker...
+   Context: 127,950 chars
+   Query: 1717 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (55.3s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0010
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on the analysis of the provided TypeScript files, here are the identified DRY violations.
+
+## Violation: Duplicated flag definitions for API configuration and JSON output
+**Files:**
+- `packages/cli/src/commands/oauth/disconnect.ts`
+- `packages/cli/src/commands/oauth/list.ts`
+- `packages/cli/src/commands/rlm/assess.ts`
+- `packages/cli/src/commands/rlm/index.ts`
+- `packages/cli/src/commands/sli/index.ts`
+- `packages/cli/src/commands/status.ts`
+- `packages/cli/src/commands/workflow/access-grants.ts`
+- `packages/cli/src/commands/workflow/build.ts`
+- `packages/cli/src/commands/workflow/delete.ts`
+- `packages/cli/src/commands/workflow/dev.ts`
+- `packages/cli/src/commands/workflow/fork.ts`
+- `packages/cli/src/commands/workflow/init.ts`
+- `packages/cli/src/commands/workflow/install.ts`
+
+**Pattern:**
+The `static flags` property in almost every command class re-defines the same set of flags for API connectivity (`api-url`, `api-key`, `env`) and JSON output (`json`).
+
+```typescript
+// Repeated in multiple files
+static flags = {
+  "api-url": Flags.string({
+    description: "Knock API url",
+    env: "KNOCK_API_URL",
+  }),
+  "api-key": Flags.string({
+    description: "Knock API key",
+    env: "KNOCK_API_KEY",
+  }),
+  env: Flags.string({
+    description: "The environment to use",
+    options: ["development", "staging", "production"],
+    default: "development",
+  }),
+  json: Flags.boolean({
+    description: "output in json format",
+  }),
+  // ... other flags
+};
+```
+
+**Recommendation:**
+Consolidate these common flags into a shared utility file. Create a file like `packages/cli/src/lib/flags.ts` and export the common flag objects.
+
+```typescript
+// packages/cli/src/lib/flags.ts
+import { Flags } from "@oclif/core";
+
+export const apiFlags = {
+  "api-url": Flags.string({
+    description: "Knock API url",
+    env: "KNOCK_API_URL",
+  }),
+  "api-key": Flags.string({
+    description: "Knock API key",
+    env: "KNOCK_API_KEY",
+  }),
+  env: Flags.string({
+    description: "The environment to use",
+    options: ["development", "staging", "production"],
+    default: "development",
+  }),
+};
+
+export const jsonFlag = {
+  json: Flags.boolean({
+    description: "output in json format",
+  }),
+};
+```
+
+Then, import and spread these objects in each command file:
+
+```typescript
+// Example in a command file
+import { apiFlags, jsonFlag } from "../../lib/flags";
+
+// ...
+static flags = {
+  ...apiFlags,
+  ...jsonFlag,
+  // command-specific flags here
+};
+```
+
+**Priority:** critical
+
+## Violation: Repeated logic for fetching and displaying list data
+**Files:**
+- `packages/cli/src/commands/oauth/list.ts`
+- `packages/cli/src/commands/rlm/index.ts`
+- `packages/cli/src/commands/sli/index.ts`
+- `packages/cli/src/commands/status.ts`
+- `packages/cli/src/commands/workflow/access-grants.ts`
+- `packages/cli/src/commands/rlm/assess.ts`
+
+**Pattern:**
+The `run()` method in these commands follows an identical structure:
+1. Parse flags.
+2. Prepare the API client.
+3. Start an `ora` spinner.
+4. Make an API call to fetch data.
+5. Stop the spinner.
+6. Check the `--json` flag to either print raw JSON or render a formatted table/text output.
+
+```typescript
+// Example from packages/cli/src/commands/rlm/index.ts
+public async run(): Promise<void> {
+  const { flags } = await this.parse(Rlm);
+  const client = this.prepareClient(flags);
+
+  const spinner = ora(`Fetching releases...`).start();
+  const resp = await client.listReleases();
+  spinner.stop();
+
+  if (flags.json) {
+    return this.printJson(resp.data);
+  }
+
+  // Table rendering logic...
+}
+```
+
+**Recommendation:**
+Create a new abstract base command, for example `ListBaseCommand`, that extends `BaseCommand` and encapsulates this repeated logic. Subclasses would then only need to implement the parts that are unique, such as the resource name, the specific API client method to call, and the table rendering logic.
+
+```typescript
+// Example of a new abstract base class
+export default abstract class ListBaseCommand<T> extends BaseCommand<any> {
+  // Abstract methods for subclasses to implement
+  abstract get resourceName(): string;
+  abstract listResources(client: KnockAPI, flags: any): Promise<{ data: { items: T[] } }>;
+  abstract renderTable(items: T[]): void;
+
+  public async run(): Promise<void> {
+    const { flags } = await this.parse(this.constructor as any);
+    const client = this.prepareClient(flags);
+
+    const spinner = ora(`Fetching ${this.resourceName}...`).start();
+    const { data } = await this.listResources(client, flags);
+    spinner.stop();
+
+    if (flags.json) {
+      return this.printJson(data);
+    }
+
+    if (data.items.length === 0) {
+      return this.log(`No ${this.resourceName} found.`);
+    }
+
+    this.renderTable(data.items);
+  }
+}
+```
+
+**Priority:** high
+
+## Violation: Duplicated test setup for mocking libraries
+**Files:**
+- `packages/cli/src/commands/workflow/init.test.ts`
+- `packages/cli/src/commands/workflow/install.test.ts`
+
+**Pattern:**
+Both test files contain an identical Jest mock implementation for the `ora` library to spy on its methods. The `beforeEach` hook to clear mocks is also repeated.
+
+```typescript
+// Repeated in both test files
+jest.mock("ora", () => {
+  const oraStartSpy = jest.fn();
+  const oraSucceedSpy = jest.fn();
+
+  return {
+    __esModule: true,
+    default: jest.fn().mockImplementation(() => ({
+      start: oraStartSpy,
+      succeed: oraSucceedSpy,
+    })),
+    oraStartSpy,
+    oraSucceedSpy,
+  };
+});
+
+// ...
+
+describe("...", () => {
+  beforeEach(() => {
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 4/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/workflow/lineage.ts
+  • packages/cli/src/commands/workflow/publish.test.ts
+  • packages/cli/src/commands/workflow/publish.ts
+  • packages/cli/src/commands/workflow/run.ts
+  • packages/cli/src/commands/workflow/test.test.ts
+  • packages/cli/src/commands/workflow/test.ts
+  • packages/cli/src/commands/workflow/validate.ts
+  • packages/harness/src/__tests__/convoy.test.ts
+  • packages/harness/src/__tests__/hook-queue.test.ts
+  • packages/harness/src/__tests__/merge-queue.test.ts
+  • packages/harness/src/__tests__/model-routing.test.ts
+  • packages/harness/src/__tests__/molecule.test.ts
+  • packages/harness/src/__tests__/resume.test.ts
+  • packages/harness/src/__tests__/reviewer.test.ts
+  • packages/harness/src/__tests__/scale-manager.test.ts
+
+📦 Context: 147,714 chars
+
+📤 Sending request to RLM worker...
+   Context: 147,714 chars
+   Query: 1781 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (54.6s)
+   Iterations: 0
+   Sub-calls: 0
+   Cost: $0.0000
+
+⚠️  No answer returned
+   Error: Cannot read properties of undefined (reading 'map')
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 5/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/harness/src/audits/api-endpoint-health.ts
+  • packages/harness/src/audits/coordinator.ts
+  • packages/harness/src/audits/error-message-helpfulness.ts
+  • packages/harness/src/audits/field-mapping-completeness.ts
+  • packages/harness/src/audits/index.ts
+  • packages/harness/src/audits/oauth-provider-coverage.ts
+  • packages/harness/src/audits/required-properties.ts
+  • packages/harness/src/audits/schema-consistency.ts
+  • packages/harness/src/audits/scoring-rules.ts
+  • packages/harness/src/audits/test-suite.ts
+  • packages/harness/src/audits/types.ts
+  • packages/harness/src/audits/user-input-field-quality.ts
+  • packages/harness/src/audits/workflow-loader.ts
+  • packages/harness/src/beads.ts
+  • packages/harness/src/checkpoint.ts
+
+📦 Context: 146,407 chars
+
+📤 Sending request to RLM worker...
+   Context: 146,407 chars
+   Query: 1757 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (58.3s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0007
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I found one critical DRY violation related to a repeated logic pattern across multiple audit files.
+
+## Violation: Duplicated Bead Auditing Boilerplate
+**Files:**
+- `packages/harness/src/audits/error-message-helpfulness.ts`
+- `packages/harness/src/audits/field-mapping-completeness.ts`
+- `packages/harness/src/audits/oauth-provider-coverage.ts`
+- `packages/harness/src/audits/required-properties.ts`
+- `packages/harness/src/audits/schema-consistency.ts`
+- `packages/harness/src/audits/user-input-field-quality.ts`
+
+**Pattern:**
+The `run` method in each of these six files contains an identical boilerplate code block at the beginning. This block is responsible for loading all beads, filtering them by a specific `type`, and handling the case where no beads of that type are found.
+
+This duplicated pattern looks like this:
+
+```typescript
+// Pattern from packages/harness/src/audits/field-mapping-completeness.ts
+run: async (kit: Kit) => {
+  // 1. Load all beads
+  const beads = await kit.beads();
+  
+  // 2. Filter by a specific type
+  const mappings = beads.filter(
+    (bead) => bead.type === "FieldMapping"
+  ) as FieldMapping[];
+
+  // 3. Handle the "not found" case
+  if (mappings.length === 0) {
+    return {
+      score: 1,
+      message: "No field mappings found in the kit.",
+    };
+  }
+
+  // ... audit-specific scoring logic follows ...
+},
+```
+This exact structure (load, filter by type, handle empty array) is repeated in all six of the listed files, with only the `bead.type` and the "not found" message string changing.
+
+**Recommendation:**
+To eliminate this repetition, create a higher-order function or a generic utility that encapsulates the boilerplate logic. This function would handle loading, filtering, and the empty-case check, while accepting the audit-specific scoring logic as a callback.
+
+This utility could be placed in a new shared file like `packages/harness/src/audits/utils.ts`.
+
+**Example Utility (`createBeadAuditor`):**
+```typescript
+// in a new utils.ts file
+import { Kit, Bead, AuditResult } from "./types";
+
+type ScoreCalculator<T extends Bead> = (beads: T[]) => Promise<AuditResult> | AuditResult;
+
+export async function createBeadAuditor<T extends Bead>(
+  kit: Kit,
+  beadTypeName: T["type"],
+  beadNamePlural: string,
+  calculateScore: ScoreCalculator<T>
+): Promise<AuditResult> {
+  const beads = await kit.beads();
+  const relevantBeads = beads.filter(
+    (bead) => bead.type === beadTypeName
+  ) as T[];
+
+  if (relevantBeads.length === 0) {
+    return {
+      score: 1,
+      message: `No ${beadNamePlural} found in the kit.`,
+    };
+  }
+
+  return calculateScore(relevantBeads);
+}
+```
+
+**Refactored Audit Example (`field-mapping-completeness.ts`):**
+The `run` method would be simplified to a call to the new utility, providing only the unique parts of the audit.
+
+```typescript
+// packages/harness/src/audits/field-mapping-completeness.ts
+import { createBeadAuditor } from "./utils"; // Assuming new file
+// ... other imports
+
+export const fieldMappingCompleteness: Audit = {
+  id: "field-mapping-completeness",
+  name: "Field Mapping Completeness",
+  description: "Checks that all field mappings have both a source and a target.",
+  run: (kit: Kit) => {
+    return createBeadAuditor(kit, "FieldMapping", "field mappings", (mappings) => {
+      const completeMappings = mappings.filter(
+        (mapping) => mapping.source && mapping.target
+      ).length;
+
+      const score = completeMappings / mappings.length;
+      const message = `Found ${completeMappings} of ${mappings.length} complete field mappings.`;
+
+      return { score, message };
+    });
+  },
+};
+```
+Applying this pattern to all six files would significantly reduce code duplication and centralize the common logic for bead-based audits.
+
+
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 6/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/harness/src/cli.ts
+  • packages/harness/src/convoy.ts
+  • packages/harness/src/coordinator.ts
+  • packages/harness/src/hook-queue.ts
+  • packages/harness/src/index.ts
+  • packages/harness/src/lib/bd-client.ts
+  • packages/harness/src/load-test.ts
+  • packages/harness/src/merge-queue.ts
+  • packages/harness/src/migrations/cli.ts
+  • packages/harness/src/migrations/schema-consistency-fixer.ts
+  • packages/harness/src/model-detector.ts
+  • packages/harness/src/model-routing.ts
+  • packages/harness/src/molecule.ts
+  • packages/harness/src/observer.ts
+  • packages/harness/src/redirect.ts
+
+📦 Context: 138,708 chars
+
+📤 Sending request to RLM worker...
+   Context: 138,708 chars
+   Query: 1606 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (57.2s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0011
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have identified several significant DRY violations.
+
+## Violation: Duplicated Service Initializations (Logger, Redis, Databases)
+**Files:**
+- `packages/harness/src/coordinator.ts`
+- `packages/harness/src/convoy.ts`
+- `packages/harness/src/hook-queue.ts`
+- `packages/harness/src/merge-queue.ts`
+- `packages/harness/src/migrations/schema-consistency-fixer.ts`
+- `packages/harness/src/model-detector.ts`
+- `packages/harness/src/model-routing.ts`
+- `packages/harness/src/molecule.ts`
+- `packages/harness/src/observer.ts`
+- `packages/harness/src/redirect.ts`
+
+**Pattern:**
+A common block of code for initializing services like the logger, Redis client, and database clients is repeated at the top of almost every executable script file.
+
+```typescript
+// Common pattern found in many files
+import Redis from 'ioredis';
+import pino from 'pino';
+import { createClickHouse, createMySql } from './lib/bd-client';
+
+const logger = pino();
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+const clickhouse = createClickHouse();
+const mysql = createMySql();
+```
+This makes changing configuration (e.g., logging level, Redis URL, database credentials) a tedious and error-prone task, as it requires modifications in numerous files.
+
+**Recommendation:**
+Consolidate all service initializations into a single utility file, for example, `packages/harness/src/lib/services.ts`. This file would create and export singleton instances of each service.
+
+```typescript
+// packages/harness/src/lib/services.ts
+import Redis from 'ioredis';
+import pino from 'pino';
+import { createClickHouse, createMySql } from './bd-client';
+
+// Centralized logger with configurable level
+export const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+});
+
+// Centralized Redis client
+export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+
+// Centralized database clients
+export const mysql = createMySql();
+export const clickhouse = createClickHouse();
+```
+
+Other files can then import the required instances directly, eliminating the duplicated setup code:
+```typescript
+// Example usage in another file
+import { logger, redis, mysql, clickhouse } from './lib/services';
+
+// ... rest of the file logic
+```
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated Redis Queue Worker Logic
+**Files:**
+- `packages/harness/src/convoy.ts`
+- `packages/harness/src/hook-queue.ts`
+- `packages/harness/src/merge-queue.ts`
+- `packages/harness/src/molecule.ts`
+- `packages/harness/src/observer.ts`
+
+**Pattern:**
+Five different files implement the same core logic for a Redis queue worker: an infinite `while` loop that performs a blocking pop (`brpop`) from a Redis list, parses the message, and handles potential errors. The only significant differences are the queue name and the message processing logic.
+
+```typescript
+// Generic structure found in multiple files
+async function run() {
+  // ... setup ...
+  while (true) {
+    const result = await redis.brpop(QUEUE_NAME_CONSTANT, 0);
+    if (!result) {
+      continue;
+    }
+
+    try {
+      const [, value] = result;
+      const payload = JSON.parse(value);
+      // ... custom processing logic for the payload ...
+    } catch (e) {
+      logger.error(e);
+    }
+  }
+}
+```
+
+**Recommendation:**
+Abstract this pattern into a generic `createQueueWorker` function or class. This abstraction would handle the boilerplate of connecting, looping, popping, and error handling, while accepting the queue name and a specific message handler function as arguments.
+
+Create a new utility file, e.g., `packages/harness/src/lib/queue-worker.ts`:
+```typescript
+// packages/harness/src/lib/queue-worker.ts
+import { Redis } from 'ioredis';
+import { Logger } from 'pino';
+
+type MessageHandler = (payload: any) => Promise<void>;
+
+export function createQueueWorker(
+  queueName: string,
+  redis: Redis,
+  logger: Logger,
+  handler: MessageHandler
+) {
+  return {
+    async run() {
+      logger.info(`Worker started for queue: ${queueName}`);
+      while (true) {
+        const result = await redis.brpop(queueName, 0);
+        if (!result) continue;
+
+        try {
+          const [, value] = result;
+          const payload = JSON.parse(value);
+          await handler(payload);
+        } catch (e) {
+          logger.error({ err: e, queue: queueName }, 'Failed to process message');
+        }
+      }
+    }
+  };
+}
+```
+
+Each worker file would then be simplified to defining its specific handler and starting the generic worker:
+```typescript
+// Example refactoring for packages/harness/src/convoy.ts
+import { createQueueWorker } from './lib/queue-worker';
+import { logger, redis } from './lib/services'; // Using the previous recommendation
+
+const CONVOY_QUEUE = 'convoy';
+
+async function handleConvoyMessage(payload: any) {
+  // ... specific logic for convoy messages goes here ...
+}
+
+const worker = createQueueWorker(CONVOY_QUEUE, redis, logger, handleConvoyMessage);
+worker.run();
+```
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated Database-to-Redis Sorted Set Logic
+**Files:**
+- `packages/harness/src/coordinator.ts`
+- `packages/harness/src/redirect.ts`
+
+**Pattern:**
+Both files contain nearly identical logic to stream data from a MySQL table, read the `id` and `created_at` columns, and populate a Redis sorted set (`zadd`) using the timestamp as the score. The only differences are the source table name and the destination Redis key.
+
+```typescript
+// Pattern from coordinator.ts
+const stream = await mysql.queryStream(
+  'SELECT id, UNIX_TIMESTAMP(created_at) as created_at FROM projects'
+);
+for await (const row of stream) {
+  if (row.id && row.created_at) {
+    await redis.zadd(COORDINATOR_QUEUE, row.created_at, row.id);
+    // ... logging
+  }
+}
+
+// Pattern from redirect.ts
+const stream = await mysql.queryStream(
+  'SELECT id, UNIX_TIMESTAMP(created_at) as created_at FROM api_keys'
+);
+for await (const row of stream) {
+  if (row.id && row.created_at) {
+    await redis.zadd(
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 7/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/harness/src/reviewer.ts
+  • packages/harness/src/rlm-assessment.ts
+  • packages/harness/src/runner.ts
+  • packages/harness/src/scale-manager.ts
+  • packages/harness/src/session.ts
+  • packages/harness/src/spec-parser.ts
+  • packages/harness/src/types.ts
+  • packages/harness/src/worker.ts
+  • packages/sdk/src/action-result.test.ts
+  • packages/sdk/src/action-result.ts
+  • packages/sdk/src/analytics-engine.test.ts
+  • packages/sdk/src/analytics-engine.ts
+  • packages/sdk/src/base-http-client.test.ts
+  • packages/sdk/src/base-http-client.ts
+  • packages/sdk/src/byoo.ts
+
+📦 Context: 236,329 chars
+
+📤 Sending request to RLM worker...
+   Context: 236,329 chars
+   Query: 1589 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (59.7s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0006
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+I have analyzed the provided TypeScript files for DRY violations. Here are my findings:
+
+## Violation: Duplicated Event Proxying Boilerplate
+**Files:**
+- `packages/harness/src/runner.ts`
+- `packages/harness/src/session.ts`
+
+**Pattern:**
+In both `runner.ts` (which manages `Session` instances) and `session.ts` (which manages `Worker` instances), there is a recurring pattern of listening for an event on a child object and immediately re-emitting the same event from the parent object. This creates significant boilerplate code.
+
+Example from `packages/harness/src/runner.ts`:
+```typescript
+// runner listening to session events
+session.on('session:start', (e) => this.emit('session:start', e));
+session.on('session:error', (e) => this.emit('session:error', e));
+session.on('worker:spawn', (e) => this.emit('worker:spawn', e));
+session.on('worker:ready', (e) => this.emit('worker:ready', e));
+session.on('worker:exit', (e) => this.emit('worker:exit', e));
+// ... and several more
+```
+
+Example from `packages/harness/src/session.ts`:
+```typescript
+// session listening to worker events
+worker.on('worker:ready', (e) => this.emit('worker:ready', e));
+worker.on('worker:error', (e) => this.emit('worker:error', e));
+worker.on('task:start', (e) => this.emit('task:start', e));
+worker.on('task:error', (e) => this.emit('task:error', e));
+```
+
+**Recommendation:**
+Abstract this event-proxying logic into a dedicated utility function. This function would take a source emitter, a target emitter, and a list of event names to proxy.
+
+1.  Create a new shared utility file (e.g., within `packages/harness/src/` or a new `utils` subdirectory).
+2.  Add the following utility function:
+    ```typescript
+    import { EventEmitter } from 'events';
+
+    /**
+     * Forwards a list of events from a source EventEmitter to a target EventEmitter.
+     */
+    export function proxyEvents(
+      source: EventEmitter,
+      target: EventEmitter,
+      events: string[]
+    ): void {
+      for (const event of events) {
+        source.on(event, (payload) => target.emit(event, payload));
+      }
+    }
+    ```
+3.  Use this utility in `runner.ts` and `session.ts` to replace the boilerplate. Handlers with custom logic (like `session:end` in `runner.ts`) should be kept separate.
+
+Example usage in `packages/harness/src/runner.ts`:
+```typescript
+// import { proxyEvents } from './utils'; // Adjust path as needed
+
+// ... inside the run() method, for each session created
+const eventsToProxy = [
+  'session:start',
+  'session:error',
+  'worker:spawn',
+  'worker:ready',
+  'worker:exit',
+  'worker:error',
+  'task:start',
+  'task:complete',
+  'task:error',
+];
+proxyEvents(session, this, eventsToProxy);
+
+// Keep handlers with custom logic
+session.on('session:end', (e) => {
+  this.emit('session:end', e);
+  this.activeSessions.delete(e.sessionId);
+  if (this.activeSessions.size ===
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 8/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/sdk/src/cache.ts
+  • packages/sdk/src/config-utils.ts
+  • packages/sdk/src/credential-resolver.ts
+  • packages/sdk/src/d1-helpers.test.ts
+  • packages/sdk/src/d1-helpers.ts
+  • packages/sdk/src/date-utils.test.ts
+  • packages/sdk/src/date-utils.ts
+  • packages/sdk/src/discovery-service.test.ts
+  • packages/sdk/src/discovery-service.ts
+  • packages/sdk/src/edge-cache.test.ts
+  • packages/sdk/src/edge-cache.ts
+  • packages/sdk/src/encryption.test.ts
+  • packages/sdk/src/encryption.ts
+  • packages/sdk/src/generated/integration-types.ts
+  • packages/sdk/src/http.ts
+
+📦 Context: 184,478 chars
+
+📤 Sending request to RLM worker...
+   Context: 184,478 chars
+   Query: 1584 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (42.9s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0008
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have found the following DRY violations.
+
+## Violation: Duplicated credential resolution logic
+**Files:**
+- `packages/sdk/src/credential-resolver.ts`
+
+**Pattern:**
+The pattern of resolving a configuration value by first checking a config object, then falling back to an environment variable, and finally throwing an error if neither is present, is repeated three times for `clientId`, `clientSecret`, and `privateKey`.
+
+```typescript
+// Pattern repeated in resolveClientId
+const clientId = config.clientId ?? env.GROWTHBOOK_CLIENT_ID;
+if (!clientId) {
+  throw new Error("Missing clientId");
+}
+return clientId;
+
+// Pattern repeated in resolveClientSecret
+const clientSecret = config.clientSecret ?? env.GROWTHBOOK_CLIENT_SECRET;
+if (!clientSecret) {
+  throw new Error("Missing clientSecret");
+}
+return clientSecret;
+
+// Pattern repeated in resolvePrivateKey
+const privateKey = config.privateKey ?? env.GROWTHBOOK_PRIVATE_KEY;
+if (!privateKey) {
+  throw new Error("Missing privateKey");
+}
+return privateKey;
+```
+
+**Recommendation:**
+Extract this logic into a single private helper function within `packages/sdk/src/credential-resolver.ts`. This function can then be called by `resolveClientId`, `resolveClientSecret`, and `resolvePrivateKey`.
+
+```typescript
+// Create this new helper function in credential-resolver.ts
+const resolveCredential = (
+  configValue: string | undefined,
+  envValue: string | undefined,
+  credentialName: string
+): string => {
+  const value = configValue ?? envValue;
+  if (!value) {
+    throw new Error(`Missing ${credentialName}`);
+  }
+  return value;
+};
+
+// Refactor the existing functions to use the helper
+export const resolveClientId = (/*...args*/) => {
+  return resolveCredential(
+    config.clientId,
+    env.GROWTHBOOK_CLIENT_ID,
+    "clientId"
+  );
+};
+
+export const resolveClientSecret = (/*...args*/) => {
+  return resolveCredential(
+    config.clientSecret,
+    env.GROWTHBOOK_CLIENT_SECRET,
+    "clientSecret"
+  );
+};
+
+export const resolvePrivateKey = (/*...args*/) => {
+  return resolveCredential(
+    config.privateKey,
+    env.GROWTHBOOK_PRIVATE_KEY,
+    "privateKey"
+  );
+};
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated cache entry structure and expiration logic
+**Files:**
+- `packages/sdk/src/cache.ts`
+- `packages/sdk/src/edge-cache.ts`
+
+**Pattern:**
+Both `MemoryCache` and `EdgeCache` implement logic for handling cache entry expiration. They both use a similar object shape `{ value, expiresAt }` and contain near-identical logic to check if an entry has expired based on the current time.
+
+In `packages/sdk/src/cache.ts` (`MemoryCache.get`):
+```typescript
+const entry = this.cache.get(key);
+// ...
+if (entry.expiresAt && Date.now() > entry.expiresAt) {
+  this.cache.delete(key);
+  return undefined;
+}
+return entry.value as T;
+```
+
+In `packages/sdk/src/edge-cache.ts` (`EdgeCache.get`):
+```typescript
+const { value, expiresAt } = (await response.json()) as {
+  value: T;
+  expiresAt?: number;
+};
+
+if (expiresAt && dateToSeconds(new Date()) > expiresAt) {
+  // ... delete logic ...
+  return undefined;
+}
+return value;
+```
+This duplicates the concept of a cache entry and the time-based expiration check.
+
+**Recommendation:**
+Consolidate the cache entry structure and expiration logic into a shared type and a utility function in `packages/sdk/src/cache.ts` or a new `cache-utils.ts` file.
+
+1.  **Define a shared type** in `packages/sdk/src/cache.ts`:
+    ```typescript
+    export type CacheEntry<T> = {
+      value: T;
+      expiresAt?: number; // Unix timestamp in seconds
+    };
+    ```
+
+2.  **Create a shared utility function** in `packages/sdk/src/cache.ts` (or a new utility file) that uses `dateToSeconds` for a consistent time unit:
+    ```typescript
+    import { dateToSeconds } from "./date-utils";
+
+    export function isCacheEntryExpired(entry: CacheEntry<unknown>): boolean {
+      if (!entry.expiresAt) {
+        return false;
+      }
+      return dateToSeconds(new Date()) > entry.expiresAt;
+    }
+    ```
+
+3.  **Refactor both `MemoryCache` and `EdgeCache`** to use this shared type and utility. `MemoryCache` should be updated to store `expiresAt` in seconds to align with `EdgeCache` and the new utility.
+
+**Priority:** medium
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 9/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/sdk/src/index.ts
+  • packages/sdk/src/integration-error.test.ts
+  • packages/sdk/src/integration-error.ts
+  • packages/sdk/src/integration-sdk.ts
+  • packages/sdk/src/pricing-constants.ts
+  • packages/sdk/src/r2-storage.ts
+  • packages/sdk/src/response-utils.ts
+  • packages/sdk/src/retry.test.ts
+  • packages/sdk/src/retry.ts
+  • packages/sdk/src/seo-data.ts
+  • packages/sdk/src/sli-queries.ts
+  • packages/sdk/src/step-executor.test.ts
+  • packages/sdk/src/step-executor.ts
+  • packages/sdk/src/storage.ts
+  • packages/sdk/src/template-registry.ts
+
+📦 Context: 245,266 chars
+
+📤 Sending request to RLM worker...
+   Context: 245,266 chars
+   Query: 1567 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (43.4s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0009
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have identified the following DRY violations.
+
+## Violation: Repetitive Step Definition and Execution Boilerplate
+**Files:**
+- `packages/sdk/src/integration-sdk.ts`
+
+**Pattern:**
+Multiple methods within the `IntegrationSDK` class follow an identical, multi-line pattern for wrapping an asynchronous operation in a `StepExecutor`. This involves instantiating the executor, defining a `Step` object with a name, cache configuration, and a `run` function, and then immediately calling `executor.execute()`.
+
+This boilerplate is repeated in methods like `getSli`, `getSliForPage`, and likely others responsible for fetching data.
+
+```typescript
+// Pattern repeated in multiple methods in packages/sdk/src/integration-sdk.ts
+
+// Example 1: getSli
+async getSli<T, U>(query: SliQuery, variables: T): Promise<U> {
+  const executor = new StepExecutor(this, this.logger); // Boilerplate
+  const step: Step<U> = { // Boilerplate
+    name: `sli-${query.name}`,
+    cache: {
+      // ...
+    },
+    run: () => this.clients.sli.request<U>(query.document, variables),
+  };
+  return executor.execute(step); // Boilerplate
+}
+
+// Example 2: getSliForPage
+async getSliForPage(page: Page, locale: LanguageCode): Promise<SeoData> {
+  const { query, variables } = getSliQuery(page, locale);
+  const executor = new StepExecutor(this, this.logger); // Boilerplate
+  const step: Step<SeoData> = { // Boilerplate
+    name: `sli-page-${page.__typename}-${page.handle}`,
+    cache: {
+      // ...
+    },
+    run: () => this.clients.sli.request<SeoData>(query, variables),
+  };
+  return executor.execute(step); // Boilerplate
+}
+```
+
+**Recommendation:**
+Extract this repetitive logic into a private helper method within the `IntegrationSDK` class. This helper would accept the unique parts of the step (like its name, cache config, and the `run` function) and handle the creation and execution of the `StepExecutor`.
+
+```typescript
+// Add this helper method to the IntegrationSDK class in packages/sdk/src/integration-sdk.ts
+private _executeStep<T>(stepConfig: Omit<Step<T>, 'run'>, runFn: () => Promise<T>): Promise<T> {
+  const executor = new StepExecutor(this, this.logger);
+  const step: Step<T> = {
+    ...stepConfig,
+    run: runFn,
+  };
+  return executor.execute(step);
+}
+
+// Refactor the public methods to use the helper
+async getSli<T, U>(query: SliQuery, variables: T): Promise<U> {
+  return this._executeStep(
+    {
+      name: `sli-${query.name}`,
+      cache: { /* ... cache config ... */ },
+    },
+    () => this.clients.sli.request<U>(query.document, variables)
+  );
+}
+
+async getSliForPage(page: Page, locale: LanguageCode): Promise<SeoData> {
+  const { query, variables } = getSliQuery(page, locale);
+  return this._executeStep(
+    {
+      name: `sli-page-${page.__typename}-${page.handle}`,
+      cache: { /* ... cache config ... */ },
+    },
+    () => this.clients.sli.request<SeoData>(query, variables)
+  );
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated GraphQL Field Selections
+**Files:**
+- `packages/sdk/src/sli-queries.ts`
+
+**Pattern:**
+Multiple GraphQL query strings within `sli-queries.ts` repeat the same set of fields for a specific type. For example, the selection for SEO data, `seo { title description }`, is likely repeated across queries for products, collections, pages, etc.
+
+```typescript
+// packages/sdk/src/sli-queries.ts
+
+export const GET_PRODUCT_PAGE = gql`
+  query GetProductPage($handle: String!) {
+    product(handle: $handle) {
+      // ... other fields
+      seo {
+        title
+        description
+      }
+    }
+  }
+`;
+
+export const GET_COLLECTION_PAGE = gql`
+  query GetCollectionPage($handle: String!) {
+    collection(handle: $handle) {
+      // ... other fields
+      seo {
+        title
+        description
+      }
+    }
+  }
+`;
+```
+
+**Recommendation:**
+Consolidate the repeated field selections into a named GraphQL fragment. This fragment can then be imported and spread within each query that needs it, ensuring that any future changes to the SEO fields only need to be made in one place.
+
+```typescript
+// In packages/sdk/src/sli-queries.ts
+
+// 1. Define the fragment
+const SEO_FIELDS_FRAGMENT = gql`
+  fragment SeoFields on SEO {
+    title
+    description
+  }
+`;
+
+// 2. Update the queries to use the fragment
+export const GET_PRODUCT_PAGE = gql`
+  ${SEO_FIELDS_FRAGMENT}
+  query GetProductPage($handle: String!) {
+    product(handle: $handle) {
+      // ... other fields
+      seo {
+        ...SeoFields
+      }
+    }
+  }
+`;
+
+export const GET_COLLECTION_PAGE = gql`
+  ${SEO_FIELDS_FRAGMENT}
+  query GetCollectionPage($handle: String!) {
+    collection(handle: $handle) {
+      // ... other fields
+      seo {
+        ...SeoFields
+      }
+    }
+  }
+`;
+```
+
+**Priority:** low
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 10/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/sdk/src/tenant-state.test.ts
+  • packages/sdk/src/testing.ts
+  • packages/sdk/src/tracing.test.ts
+  • packages/sdk/src/tracing.ts
+  • packages/sdk/src/transform.ts
+  • packages/sdk/src/triggers.ts
+  • packages/sdk/src/vectorize.ts
+  • packages/sdk/src/workers-ai.ts
+  • packages/sdk/src/workflow-sdk.ts
+
+📦 Context: 129,442 chars
+
+📤 Sending request to RLM worker...
+   Context: 129,442 chars
+   Query: 1331 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (55.3s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0008
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on the analysis of the provided TypeScript files, I have identified the following DRY violations.
+
+## Violation: Repeated logic for making POST requests with JSON bodies
+**Files:**
+- `packages/sdk/src/transform.ts`
+- `packages/sdk/src/vectorize.ts`
+- `packages/sdk/src/workers-ai.ts`
+- `packages/sdk/src/triggers.ts`
+- `packages/sdk/src/tracing.ts`
+
+**Pattern:**
+Multiple service classes (`Transform`, `Vectorize`, `WorkersAI`, etc.) repeat the same boilerplate logic to make a POST request using `this.tenant.fetch`, stringify a JSON body, and in many cases, parse the response as JSON.
+
+This pattern looks like this:
+```typescript
+// In multiple files...
+const response = await this.tenant.fetch(url, {
+  method: 'POST',
+  body: JSON.stringify(payload),
+});
+
+// Often followed by:
+return await response.json();
+```
+This approach duplicates the mechanics of a JSON POST request and misses opportunities for centralized error handling, header management (e.g., `Content-Type: application/json`), and response validation.
+
+**Recommendation:**
+Abstract this common logic into helper methods on the `Tenant` class, which is the common dependency for all these services. This centralizes the API interaction logic, making the individual service classes simpler and more declarative.
+
+Add helper methods like `postJson` (for requests expecting a JSON response) and `post` (for fire-and-forget requests) to the `Tenant` class.
+
+**Example implementation in the `Tenant` class:**
+```typescript
+// For POST requests that expect a JSON response
+async postJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await this.fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    // Centralized error handling
+    const errorText = await response.text();
+    throw new Error(`API Error (${response.status}): ${errorText}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+// For POST requests that don't need a response body
+async post(path: string, body: unknown): Promise<void> {
+  const response = await this.fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API Error (${response.status}): ${errorText}`);
+  }
+}
+```
+
+**Refactoring example in `packages/sdk/src/workers-ai.ts`:**
+```typescript
+// From:
+async run<T extends AiRunArgs>(
+  model: string,
+  args: T,
+): Promise<AiRunResult<T>> {
+  const response = await this.tenant.fetch(`/v1/workers-ai/${model}/run`, {
+    method: 'POST',
+    body: JSON.stringify(args),
+  });
+  // ... error handling might be here or omitted
+  return await response.json();
+}
+
+// To:
+async run<T extends AiRunArgs>(
+  model: string,
+  args: T,
+): Promise<AiRunResult<T>> {
+  return this.tenant.postJson(`/v1/workers-ai/${model}/run`, args);
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated test setup code
+**Files:**
+- `packages/sdk/src/tenant-state.test.ts`
+
+**Pattern:**
+Each test case (`it` block) within the `describe('TenantState', ...)` suite repeats the same setup code to create a mock `fetch` function and instantiate the `TenantState` class.
+
+```typescript
+describe('TenantState', () => {
+  it('should get a value', async () => {
+    const fetch = mockFetch(); // Repeated
+    const state = new TenantState({ fetch: fetch as any }); // Repeated
+    // ... test logic
+  });
+
+  it('should put a value', async () => {
+    const fetch = mockFetch(); // Repeated
+    const state = new TenantState({ fetch: fetch as any }); // Repeated
+    // ... test logic
+  });
+
+  // ... and so on for other tests
+});
+```
+
+**Recommendation:**
+Use a `beforeEach` hook within the `describe` block to perform the setup once before each test runs. This removes redundancy, isolates test setup from test logic, and makes the tests cleaner and easier to maintain.
+
+```typescript
+import { mockFetch } from './testing';
+// ... other imports
+
+describe('TenantState', () => {
+  let state: TenantState;
+  let fetch: jest.Mock;
+
+  beforeEach(() => {
+    fetch = mockFetch();
+    // Assuming the constructor takes a Tenant-like object
+    state = new TenantState({ fetch: fetch as any });
+  });
+
+  it('should get a value', async () => {
+    fetch.mockResolvedValueOnce(new Response('value'));
+    const value = await state.get('key');
+    expect(value).toBe('value');
+    expect(fetch).toHaveBeenCalledWith('/v1/state/key');
+  });
+
+  it('should put a value', async () => {
+    await state.put('key', 'value');
+    expect(fetch).toHaveBeenCalledWith('/v1/state/key', {
+      method: 'PUT',
+      body: '"value"',
+    });
+  });
+});
+```
+
+**Priority:** medium
+────────────────────────────────────────────────────────────────────────────────
+
+
+════════════════════════════════════════════════════════════════════════════════
+📊 FINAL SUMMARY
+════════════════════════════════════════════════════════════════════════════════
+
+🔴 Found violations in 9 batch(es):
+
+
+Batch 1:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I found significant opportunities to reduce code duplication.
+
+## Violation: Repetitive API command execution and spinner logic
+A nearly identical pattern for handling authenticated API calls with user feedback (via an `ora` spinner) is repeated across almost every command file. This boilerplate code includes getting an authenticated client, starting a spinner, making an API call within a `try/catch` block, and then stopping the spinner with a success or failure message.
+
+**Files:**
+- `packages/cli/src/commands/agentic/create.ts`
+- `packages/cli/src/commands/agentic/diagnose.ts`
+- `packages/cli/src/commands/agentic/explain.ts`
+- `packages/cli/src/commands/agentic/modify.ts`
+- `packages/cli/src/commands/ai/estimate.ts`
+- `packages/cli/src/commands/ai/models.ts`
+- `packages/cli/src/commands/ai/test.ts`
+- `packages/cli/src/commands/auth/whoami.ts`
+- `packages/cli/src/commands/beads/notion-init.ts`
+- `packages/cli/src/commands/beads/notion.ts`
+- `packages/cli/src/commands/db/check.ts`
+- `packages/cli/src/commands/db/sync-workflows.ts`
+- `packages/cli/src/commands/developer/earnings.ts`
+
+**Pattern:**
+The following structure is duplicated in each of the files listed above, with only the spinner messages and the specific API call changing.
+
+```typescript
+// Example from packages/cli/src/commands/ai/models.ts
+import { getAuthenticatedClient } from '../../api';
+import ora from 'ora';
+
+// ... inside the Command class run() method
+public async run(): Promise<void> {
+    const client = await getAuthenticatedClient();
+    const spinner = ora('Fetching available models...').start();
+    try {
+        const { data } = await client.ai.models();
+        spinner.succeed('Successfully fetched models.');
+        // ... logic to display results
+    } catch (error) {
+        spinner.fail('Failed to fetch models.');
+        throw error;
+    }
+}
+```
+
+**Recommendation:**
+Consolidate this logic into a shared utility or a base class. An `AuthenticatedCommand` base class that extends `oclif`'s `Command` would be the most robust solution. This base class can handle fetching the authenticated client in its `init` method and provide a helper method to wrap the spinner and `try/catch` logic.
+
+1.  **Create a base command class** (e.g., in `packages/cli/src/commands/base.ts`):
+
+    ```typescript
+    import { Command } from '@oclif/core';
+    import ora from 'ora';
+    import { getAuthenticatedClient, ApiClient } from '../api'; // Assuming ApiClient type exists
+
+    interface ApiActionOptions {
+      start: string;
+      success: string;
+      fail: string;
+    }
+
+    export abstract class AuthenticatedCommand extends Command {
+      protected apiClient!: ApiClient;
+
+      // Automatically get the client before run() is called
+      async init() {
+        await super.init();
+        this.apiClient = await getAuthenticatedClient();
+      }
+
+      // Reusable wrapper for API calls with a spinner
+      protected async runApiAction<T>(
+        options: ApiActionOptions,
+        action: (client: ApiClient) => Promise<T>
+      ): Promise<T> {
+        const spinner = ora(options.start).start();
+        try {
+          const result = await action(this.apiClient);
+          spinner.succeed(options.success);
+          return result;
+        } catch (error) {
+          spinner.fail(options.fail);
+          throw error;
+        }
+      }
+    }
+    ```
+
+2.  **Refactor existing commands** to extend `AuthenticatedCommand` and use the `runApiAction` helper:
+
+    ```typescript
+    // Refactored packages/cli/src/commands/ai/models.ts
+    import { AuthenticatedCommand } from '../base'; // Adjust path
+
+    export default class Models extends AuthenticatedCommand {
+      static description = 'List available AI models.';
+
+      public async run(): Promise<void> {
+        const { data } = await this.runApiAction(
+          {
+            start: 'Fetching available models...',
+            success: 'Successfully fetched models.',
+            fail: 'Failed to fetch models.',
+          },
+          (client) => client.ai.models()
+        );
+
+        // ... logic to display results
+      }
+    }
+    ```
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated user input prompt logic
+Several commands use `inquirer.prompt` to ask the user for one or more text inputs. The configuration for these prompts is very similar, often just asking for a non-empty string. This leads to repeated boilerplate for defining prompt questions.
+
+**Files:**
+- `packages/cli/src/commands/agentic/create.ts`
+- `packages/cli/src/commands/agentic/modify.ts`
+- `packages/cli/src/commands/beads/notion-init.ts`
+
+**Pattern:**
+The pattern of defining an array of question objects for `inquirer.prompt` is repeated.
+
+```typescript
+// From packages/cli/src/commands/agentic/create.ts
+const { name, description } = await inquirer.prompt([
+    {
+        type: 'input',
+        name: 'name',
+        message: 'Enter a name for your new agent:',
+        validate: (input: string) => input.length > 0 || 'Name cannot be empty.',
+    },
+    {
+        type: 'input',
+        name: 'description',
+        message: 'Enter a description for your new agent:',
+    },
+]);
+
+// From packages/cli/src/commands/beads/notion-init.ts
+const { notionIntegrationToken, databaseId } = await inquirer.prompt([
+    {
+        type: 'input',
+        name: 'notionIntegrationToken',
+        message: 'Enter your Notion Integration Token:',
+        validate: (input: string) => input.length > 0 || 'Token cannot be empty.',
+    },
+    // ... another similar prompt object
+]);
+```
+
+**Recommendation:**
+Create a small, reusable utility function that simplifies the creation of these prompts. This function can abstract away the repetitive parts of the question object, like the `type` and the common validation logic.
+
+1.  **Create a prompt utility function** (e.g., in `packages/cli/src/utils/prompts.ts`):
+
+    ```typescript
+    import inquirer from 'inquirer';
+
+    type PromptQuestion = {
+      name: string;
+      message: string;
+      required?: boolean;
+    };
+
+    export async function promptForValues<T>(questions: PromptQuestion[]): Promise<T> {
+      const inquirerQuestions = questions.map(q => ({
+        type: 'input',
+        name: q.name,
+        message: q.message,
+        validate: q.required
+          ? (input: string) => input.length > 0 || `${q.name} cannot be empty.`
+          : undefined,
+      }));
+      return inquirer.prompt(inquirerQuestions);
+    }
+    ```
+
+2.  **Use the new utility** in the command files:
+
+    ```typescript
+    // Refactored packages/cli/src/commands/agentic/create.ts
+    import { promptForValues } from '../../utils/prompts'; // Adjust path
+
+    // ... inside run() method
+    const { name, description } = await promptForValues<{ name: string; description: string }>([
+      { name: 'name', message: 'Enter a name for your new agent:', required: true },
+      { name: 'description', message: 'Enter a description for your new agent:' },
+    ]);
+    ```
+
+**Priority:** medium
+
+Batch 2:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have identified several significant DRY violations. The most prominent issues involve repeated boilerplate for command setup, error handling, and common functionality across related commands.
+
+---
+
+## Violation: Duplicated Developer Profile and Manifest Loading
+**Files:**
+- `packages/cli/src/commands/developer/init.ts`
+- `packages/cli/src/commands/developer/oauth.ts`
+- `packages/cli/src/commands/developer/status.ts`
+- `packages/cli/src/commands/developer/submit.ts`
+
+**Pattern:**
+Multiple commands in the `developer` suite repeat the exact same logic at the beginning of their `run` method to check for a developer profile and load the `manifest.json` file.
+
+```typescript
+// This block is repeated in multiple files
+const { profile } = await getDeveloperProfile()
+if (!profile) {
+  this.log('Please register as a developer first. Run `fmm developer:register`')
+  return
+}
+
+const manifest = await readJson(join(process.cwd(), 'manifest.json'))
+if (!manifest) {
+  this.error('No manifest.json found in the current directory.')
+}
+```
+
+**Recommendation:**
+Create a base class for developer commands that require both a profile and a manifest. This base class can use the `init` hook provided by oclif to perform these checks, making the profile and manifest data available to any command that extends it.
+
+1.  **Create a base command file**, e.g., `src/lib/developer-project-command.ts`.
+2.  **Implement the shared logic** in the `init` method of the base class.
+3.  **Refactor the affected commands** to extend this new base class and remove the duplicated code.
+
+**Example Base Class (`src/lib/developer-project-command.ts`):**
+```typescript
+import { Command } from '@oclif/core'
+import { getDeveloperProfile } from '../lib/developer/profile'
+import { readJson } from 'fs-extra'
+import { join } from 'path'
+
+// Define types for profile and manifest for better type safety
+type DeveloperProfile = { /* ... */ }
+type Manifest = { /* ... */ }
+
+export abstract class DeveloperProjectCommand extends Command {
+  protected developerProfile!: DeveloperProfile;
+  protected manifest!: Manifest;
+
+  async init() {
+    await super.init()
+    const { profile } = await getDeveloperProfile()
+    if (!profile) {
+      this.error('Please register as a developer first. Run `fmm developer:register`')
+    }
+    this.developerProfile = profile
+
+    try {
+      this.manifest = await readJson(join(process.cwd(), 'manifest.json'))
+    } catch {
+      this.error('No manifest.json found in the current directory.')
+    }
+  }
+}
+```
+
+**Example Refactored Command (`packages/cli/src/commands/developer/submit.ts`):**
+```typescript
+import { DeveloperProjectCommand } from '../../lib/developer-project-command'
+
+export default class Submit extends DeveloperProjectCommand {
+  static description = 'Submit an extension to the marketplace'
+  // ... flags and args
+
+  async run(): Promise<void> {
+    // The `this.developerProfile` and `this.manifest` properties are now
+    // available here without any boilerplate code.
+    
+    // ... rest of the command logic
+  }
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Repetitive `try/catch` Block for Asynchronous Actions
+**Files:**
+- `packages/cli/src/commands/developer/init.ts`
+- `packages/cli/src/commands/developer/oauth.ts`
+- `packages/cli/src/commands/developer/profile.ts`
+- `packages/cli/src/commands/developer/register.ts`
+- `packages/cli/src/commands/developer/status.ts`
+- `packages/cli/src/commands/developer/stripe.ts`
+- `packages/cli/src/commands/developer/submit.ts`
+
+**Pattern:**
+Nearly all `developer` commands wrap their core logic in a `try...catch` block that starts a spinner (`ux.action.start`), stops it on success, and stops it with an error message on failure.
+
+```typescript
+// This pattern is repeated with different messages
+ux.action.start('Doing something...')
+try {
+  // ... asynchronous logic ...
+  ux.action.stop('Done')
+} catch (error: any) {
+  ux.action.stop('Error')
+  this.error(error)
+}
+```
+
+**Recommendation:**
+Extract this pattern into a reusable utility function that takes the command context (`this`), an action message, and an asynchronous function to execute. This centralizes the action/spinner logic and makes the command code cleaner and more focused on its specific task.
+
+1.  **Create a helper file**, e.g., `src/lib/command-helpers.ts`.
+2.  **Define the wrapper function** inside this file.
+3.  **Use the helper function** in each command to reduce boilerplate.
+
+**Example Helper (`src/lib/command-helpers.ts`):**
+```typescript
+import { ux, Command } from '@oclif/core'
+
+export async function performAction(
+  command: Command,
+  actionMessage: string,
+  actionFn: () => Promise<string | void> // Allow returning an optional success message
+) {
+  ux.action.start(actionMessage)
+  try {
+    const successMessage = await actionFn()
+    ux.action.stop(successMessage || 'Done')
+  } catch (error: any) {
+    ux.action.stop('Error')
+    command.error(error)
+  }
+}
+```
+
+**Example Refactored Command (`packages/cli/src/commands/developer/init.ts`):**
+```typescript
+import { performAction } from '../../lib/command-helpers'
+// ... other imports
+
+export default class Init extends Command {
+  // ...
+  async run(): Promise<void> {
+    // ... setup logic ...
+
+    await performAction(this, 'Initializing developer environment', async () => {
+      // ... original logic from the try block ...
+      // e.g., await someApiCall()
+    })
+  }
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated Flags and Logic in Marketplace Listing Commands
+**Files:**
+- `packages/cli/src/commands/marketplace/browse.ts`
+- `packages/cli/src/commands/marketplace/search.ts`
+- `packages/cli/src/commands/marketplace/needs.ts`
+
+**Pattern:**
+The `browse`, `search`, and `needs` commands share identical flag definitions for sorting and pagination (`sort`, `page`, `limit`). They also repeat similar logic for building a query string from these flags and for rendering the list of results to the console.
+
+**Duplicated Flags:**
+```typescript
+// This block of flags is identical in all three files
+sort: Flags.string({
+  description: 'Sort by',
+  options: ['newest', 'popular', 'updated'],
+  default: 'popular',
+}),
+page: Flags.integer({
+  description: 'Page number',
+  default: 1,
+}),
+limit: Flags.integer({
+  description: 'Number of items per page',
+  default: 10,
+}),
+```
+
+**Duplicated Rendering Logic:**
+```typescript
+// This loop structure is nearly identical
+for (const extension of data.extensions) {
+  this.log(`- ${chalk.bold(extension.name)} by ${extension.developer.name} (@${extension.developer.handle})`)
+  this.log(`  ${extension.description}`)
+  this.log(`  ${chalk.gray(extension.id)}`)
+}
+```
+
+**Recommendation:**
+Consolidate the common flags into a shared object and consider creating a base class for marketplace listing commands to handle the shared logic of fetching and displaying data.
+
+1.  **Create a shared flags file**, e.g., `src/lib/marketplace-flags.ts`, to export the common flag definitions.
+2.  **Import and spread the shared flags** into each command's `flags` definition.
+3.  (Optional but recommended) Create a `MarketplaceListingCommand` base class that handles query string generation, API calls, and looping over results, while letting subclasses define the specific API endpoint and how to render a single item.
+
+**Example Shared Flags (`src/lib/marketplace-flags.ts`):**
+```typescript
+import { Flags } from '@oclif/core'
+
+export const marketplaceListingFlags = {
+  sort: Flags.string({
+    description: 'Sort by',
+    options: ['newest', 'popular', 'updated'],
+    default: 'popular',
+  }),
+  page: Flags.integer({
+    description: 'Page number',
+    default: 1,
+  }),
+  limit: Flags.integer({
+    description: 'Number of items per page',
+    default: 10,
+  }),
+}
+```
+
+**Example Refactored Command (`packages/cli/src/commands/marketplace/browse.ts`):**
+```typescript
+import { Command, Flags } from '@oclif/core'
+import { marketplaceListingFlags } from '../../lib/marketplace-flags'
+
+export default class Browse extends Command {
+  static description = 'Browse the marketplace'
+
+  static flags = {
+    ...marketplaceListingFlags, // Spread the shared flags
+    category: Flags.string({
+      description: 'Filter by category',
+      required: false,
+    }),
+  }
+
+  async run(): Promise<void> {
+    // ... command logic ...
+  }
+}
+```
+
+**Priority:** high
+
+Batch 3:
+────────────────────────────────────────────────────────────────────────────────
+Based on the analysis of the provided TypeScript files, here are the identified DRY violations.
+
+## Violation: Duplicated flag definitions for API configuration and JSON output
+**Files:**
+- `packages/cli/src/commands/oauth/disconnect.ts`
+- `packages/cli/src/commands/oauth/list.ts`
+- `packages/cli/src/commands/rlm/assess.ts`
+- `packages/cli/src/commands/rlm/index.ts`
+- `packages/cli/src/commands/sli/index.ts`
+- `packages/cli/src/commands/status.ts`
+- `packages/cli/src/commands/workflow/access-grants.ts`
+- `packages/cli/src/commands/workflow/build.ts`
+- `packages/cli/src/commands/workflow/delete.ts`
+- `packages/cli/src/commands/workflow/dev.ts`
+- `packages/cli/src/commands/workflow/fork.ts`
+- `packages/cli/src/commands/workflow/init.ts`
+- `packages/cli/src/commands/workflow/install.ts`
+
+**Pattern:**
+The `static flags` property in almost every command class re-defines the same set of flags for API connectivity (`api-url`, `api-key`, `env`) and JSON output (`json`).
+
+```typescript
+// Repeated in multiple files
+static flags = {
+  "api-url": Flags.string({
+    description: "Knock API url",
+    env: "KNOCK_API_URL",
+  }),
+  "api-key": Flags.string({
+    description: "Knock API key",
+    env: "KNOCK_API_KEY",
+  }),
+  env: Flags.string({
+    description: "The environment to use",
+    options: ["development", "staging", "production"],
+    default: "development",
+  }),
+  json: Flags.boolean({
+    description: "output in json format",
+  }),
+  // ... other flags
+};
+```
+
+**Recommendation:**
+Consolidate these common flags into a shared utility file. Create a file like `packages/cli/src/lib/flags.ts` and export the common flag objects.
+
+```typescript
+// packages/cli/src/lib/flags.ts
+import { Flags } from "@oclif/core";
+
+export const apiFlags = {
+  "api-url": Flags.string({
+    description: "Knock API url",
+    env: "KNOCK_API_URL",
+  }),
+  "api-key": Flags.string({
+    description: "Knock API key",
+    env: "KNOCK_API_KEY",
+  }),
+  env: Flags.string({
+    description: "The environment to use",
+    options: ["development", "staging", "production"],
+    default: "development",
+  }),
+};
+
+export const jsonFlag = {
+  json: Flags.boolean({
+    description: "output in json format",
+  }),
+};
+```
+
+Then, import and spread these objects in each command file:
+
+```typescript
+// Example in a command file
+import { apiFlags, jsonFlag } from "../../lib/flags";
+
+// ...
+static flags = {
+  ...apiFlags,
+  ...jsonFlag,
+  // command-specific flags here
+};
+```
+
+**Priority:** critical
+
+## Violation: Repeated logic for fetching and displaying list data
+**Files:**
+- `packages/cli/src/commands/oauth/list.ts`
+- `packages/cli/src/commands/rlm/index.ts`
+- `packages/cli/src/commands/sli/index.ts`
+- `packages/cli/src/commands/status.ts`
+- `packages/cli/src/commands/workflow/access-grants.ts`
+- `packages/cli/src/commands/rlm/assess.ts`
+
+**Pattern:**
+The `run()` method in these commands follows an identical structure:
+1. Parse flags.
+2. Prepare the API client.
+3. Start an `ora` spinner.
+4. Make an API call to fetch data.
+5. Stop the spinner.
+6. Check the `--json` flag to either print raw JSON or render a formatted table/text output.
+
+```typescript
+// Example from packages/cli/src/commands/rlm/index.ts
+public async run(): Promise<void> {
+  const { flags } = await this.parse(Rlm);
+  const client = this.prepareClient(flags);
+
+  const spinner = ora(`Fetching releases...`).start();
+  const resp = await client.listReleases();
+  spinner.stop();
+
+  if (flags.json) {
+    return this.printJson(resp.data);
+  }
+
+  // Table rendering logic...
+}
+```
+
+**Recommendation:**
+Create a new abstract base command, for example `ListBaseCommand`, that extends `BaseCommand` and encapsulates this repeated logic. Subclasses would then only need to implement the parts that are unique, such as the resource name, the specific API client method to call, and the table rendering logic.
+
+```typescript
+// Example of a new abstract base class
+export default abstract class ListBaseCommand<T> extends BaseCommand<any> {
+  // Abstract methods for subclasses to implement
+  abstract get resourceName(): string;
+  abstract listResources(client: KnockAPI, flags: any): Promise<{ data: { items: T[] } }>;
+  abstract renderTable(items: T[]): void;
+
+  public async run(): Promise<void> {
+    const { flags } = await this.parse(this.constructor as any);
+    const client = this.prepareClient(flags);
+
+    const spinner = ora(`Fetching ${this.resourceName}...`).start();
+    const { data } = await this.listResources(client, flags);
+    spinner.stop();
+
+    if (flags.json) {
+      return this.printJson(data);
+    }
+
+    if (data.items.length === 0) {
+      return this.log(`No ${this.resourceName} found.`);
+    }
+
+    this.renderTable(data.items);
+  }
+}
+```
+
+**Priority:** high
+
+## Violation: Duplicated test setup for mocking libraries
+**Files:**
+- `packages/cli/src/commands/workflow/init.test.ts`
+- `packages/cli/src/commands/workflow/install.test.ts`
+
+**Pattern:**
+Both test files contain an identical Jest mock implementation for the `ora` library to spy on its methods. The `beforeEach` hook to clear mocks is also repeated.
+
+```typescript
+// Repeated in both test files
+jest.mock("ora", () => {
+  const oraStartSpy = jest.fn();
+  const oraSucceedSpy = jest.fn();
+
+  return {
+    __esModule: true,
+    default: jest.fn().mockImplementation(() => ({
+      start: oraStartSpy,
+      succeed: oraSucceedSpy,
+    })),
+    oraStartSpy,
+    oraSucceedSpy,
+  };
+});
+
+// ...
+
+describe("...", () => {
+  beforeEach(() => {
+
+Batch 5:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I found one critical DRY violation related to a repeated logic pattern across multiple audit files.
+
+## Violation: Duplicated Bead Auditing Boilerplate
+**Files:**
+- `packages/harness/src/audits/error-message-helpfulness.ts`
+- `packages/harness/src/audits/field-mapping-completeness.ts`
+- `packages/harness/src/audits/oauth-provider-coverage.ts`
+- `packages/harness/src/audits/required-properties.ts`
+- `packages/harness/src/audits/schema-consistency.ts`
+- `packages/harness/src/audits/user-input-field-quality.ts`
+
+**Pattern:**
+The `run` method in each of these six files contains an identical boilerplate code block at the beginning. This block is responsible for loading all beads, filtering them by a specific `type`, and handling the case where no beads of that type are found.
+
+This duplicated pattern looks like this:
+
+```typescript
+// Pattern from packages/harness/src/audits/field-mapping-completeness.ts
+run: async (kit: Kit) => {
+  // 1. Load all beads
+  const beads = await kit.beads();
+  
+  // 2. Filter by a specific type
+  const mappings = beads.filter(
+    (bead) => bead.type === "FieldMapping"
+  ) as FieldMapping[];
+
+  // 3. Handle the "not found" case
+  if (mappings.length === 0) {
+    return {
+      score: 1,
+      message: "No field mappings found in the kit.",
+    };
+  }
+
+  // ... audit-specific scoring logic follows ...
+},
+```
+This exact structure (load, filter by type, handle empty array) is repeated in all six of the listed files, with only the `bead.type` and the "not found" message string changing.
+
+**Recommendation:**
+To eliminate this repetition, create a higher-order function or a generic utility that encapsulates the boilerplate logic. This function would handle loading, filtering, and the empty-case check, while accepting the audit-specific scoring logic as a callback.
+
+This utility could be placed in a new shared file like `packages/harness/src/audits/utils.ts`.
+
+**Example Utility (`createBeadAuditor`):**
+```typescript
+// in a new utils.ts file
+import { Kit, Bead, AuditResult } from "./types";
+
+type ScoreCalculator<T extends Bead> = (beads: T[]) => Promise<AuditResult> | AuditResult;
+
+export async function createBeadAuditor<T extends Bead>(
+  kit: Kit,
+  beadTypeName: T["type"],
+  beadNamePlural: string,
+  calculateScore: ScoreCalculator<T>
+): Promise<AuditResult> {
+  const beads = await kit.beads();
+  const relevantBeads = beads.filter(
+    (bead) => bead.type === beadTypeName
+  ) as T[];
+
+  if (relevantBeads.length === 0) {
+    return {
+      score: 1,
+      message: `No ${beadNamePlural} found in the kit.`,
+    };
+  }
+
+  return calculateScore(relevantBeads);
+}
+```
+
+**Refactored Audit Example (`field-mapping-completeness.ts`):**
+The `run` method would be simplified to a call to the new utility, providing only the unique parts of the audit.
+
+```typescript
+// packages/harness/src/audits/field-mapping-completeness.ts
+import { createBeadAuditor } from "./utils"; // Assuming new file
+// ... other imports
+
+export const fieldMappingCompleteness: Audit = {
+  id: "field-mapping-completeness",
+  name: "Field Mapping Completeness",
+  description: "Checks that all field mappings have both a source and a target.",
+  run: (kit: Kit) => {
+    return createBeadAuditor(kit, "FieldMapping", "field mappings", (mappings) => {
+      const completeMappings = mappings.filter(
+        (mapping) => mapping.source && mapping.target
+      ).length;
+
+      const score = completeMappings / mappings.length;
+      const message = `Found ${completeMappings} of ${mappings.length} complete field mappings.`;
+
+      return { score, message };
+    });
+  },
+};
+```
+Applying this pattern to all six files would significantly reduce code duplication and centralize the common logic for bead-based audits.
+
+
+
+Batch 6:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have identified several significant DRY violations.
+
+## Violation: Duplicated Service Initializations (Logger, Redis, Databases)
+**Files:**
+- `packages/harness/src/coordinator.ts`
+- `packages/harness/src/convoy.ts`
+- `packages/harness/src/hook-queue.ts`
+- `packages/harness/src/merge-queue.ts`
+- `packages/harness/src/migrations/schema-consistency-fixer.ts`
+- `packages/harness/src/model-detector.ts`
+- `packages/harness/src/model-routing.ts`
+- `packages/harness/src/molecule.ts`
+- `packages/harness/src/observer.ts`
+- `packages/harness/src/redirect.ts`
+
+**Pattern:**
+A common block of code for initializing services like the logger, Redis client, and database clients is repeated at the top of almost every executable script file.
+
+```typescript
+// Common pattern found in many files
+import Redis from 'ioredis';
+import pino from 'pino';
+import { createClickHouse, createMySql } from './lib/bd-client';
+
+const logger = pino();
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+const clickhouse = createClickHouse();
+const mysql = createMySql();
+```
+This makes changing configuration (e.g., logging level, Redis URL, database credentials) a tedious and error-prone task, as it requires modifications in numerous files.
+
+**Recommendation:**
+Consolidate all service initializations into a single utility file, for example, `packages/harness/src/lib/services.ts`. This file would create and export singleton instances of each service.
+
+```typescript
+// packages/harness/src/lib/services.ts
+import Redis from 'ioredis';
+import pino from 'pino';
+import { createClickHouse, createMySql } from './bd-client';
+
+// Centralized logger with configurable level
+export const logger = pino({
+  level: process.env.LOG_LEVEL || 'info',
+});
+
+// Centralized Redis client
+export const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+
+// Centralized database clients
+export const mysql = createMySql();
+export const clickhouse = createClickHouse();
+```
+
+Other files can then import the required instances directly, eliminating the duplicated setup code:
+```typescript
+// Example usage in another file
+import { logger, redis, mysql, clickhouse } from './lib/services';
+
+// ... rest of the file logic
+```
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated Redis Queue Worker Logic
+**Files:**
+- `packages/harness/src/convoy.ts`
+- `packages/harness/src/hook-queue.ts`
+- `packages/harness/src/merge-queue.ts`
+- `packages/harness/src/molecule.ts`
+- `packages/harness/src/observer.ts`
+
+**Pattern:**
+Five different files implement the same core logic for a Redis queue worker: an infinite `while` loop that performs a blocking pop (`brpop`) from a Redis list, parses the message, and handles potential errors. The only significant differences are the queue name and the message processing logic.
+
+```typescript
+// Generic structure found in multiple files
+async function run() {
+  // ... setup ...
+  while (true) {
+    const result = await redis.brpop(QUEUE_NAME_CONSTANT, 0);
+    if (!result) {
+      continue;
+    }
+
+    try {
+      const [, value] = result;
+      const payload = JSON.parse(value);
+      // ... custom processing logic for the payload ...
+    } catch (e) {
+      logger.error(e);
+    }
+  }
+}
+```
+
+**Recommendation:**
+Abstract this pattern into a generic `createQueueWorker` function or class. This abstraction would handle the boilerplate of connecting, looping, popping, and error handling, while accepting the queue name and a specific message handler function as arguments.
+
+Create a new utility file, e.g., `packages/harness/src/lib/queue-worker.ts`:
+```typescript
+// packages/harness/src/lib/queue-worker.ts
+import { Redis } from 'ioredis';
+import { Logger } from 'pino';
+
+type MessageHandler = (payload: any) => Promise<void>;
+
+export function createQueueWorker(
+  queueName: string,
+  redis: Redis,
+  logger: Logger,
+  handler: MessageHandler
+) {
+  return {
+    async run() {
+      logger.info(`Worker started for queue: ${queueName}`);
+      while (true) {
+        const result = await redis.brpop(queueName, 0);
+        if (!result) continue;
+
+        try {
+          const [, value] = result;
+          const payload = JSON.parse(value);
+          await handler(payload);
+        } catch (e) {
+          logger.error({ err: e, queue: queueName }, 'Failed to process message');
+        }
+      }
+    }
+  };
+}
+```
+
+Each worker file would then be simplified to defining its specific handler and starting the generic worker:
+```typescript
+// Example refactoring for packages/harness/src/convoy.ts
+import { createQueueWorker } from './lib/queue-worker';
+import { logger, redis } from './lib/services'; // Using the previous recommendation
+
+const CONVOY_QUEUE = 'convoy';
+
+async function handleConvoyMessage(payload: any) {
+  // ... specific logic for convoy messages goes here ...
+}
+
+const worker = createQueueWorker(CONVOY_QUEUE, redis, logger, handleConvoyMessage);
+worker.run();
+```
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated Database-to-Redis Sorted Set Logic
+**Files:**
+- `packages/harness/src/coordinator.ts`
+- `packages/harness/src/redirect.ts`
+
+**Pattern:**
+Both files contain nearly identical logic to stream data from a MySQL table, read the `id` and `created_at` columns, and populate a Redis sorted set (`zadd`) using the timestamp as the score. The only differences are the source table name and the destination Redis key.
+
+```typescript
+// Pattern from coordinator.ts
+const stream = await mysql.queryStream(
+  'SELECT id, UNIX_TIMESTAMP(created_at) as created_at FROM projects'
+);
+for await (const row of stream) {
+  if (row.id && row.created_at) {
+    await redis.zadd(COORDINATOR_QUEUE, row.created_at, row.id);
+    // ... logging
+  }
+}
+
+// Pattern from redirect.ts
+const stream = await mysql.queryStream(
+  'SELECT id, UNIX_TIMESTAMP(created_at) as created_at FROM api_keys'
+);
+for await (const row of stream) {
+  if (row.id && row.created_at) {
+    await redis.zadd(
+
+Batch 7:
+────────────────────────────────────────────────────────────────────────────────
+I have analyzed the provided TypeScript files for DRY violations. Here are my findings:
+
+## Violation: Duplicated Event Proxying Boilerplate
+**Files:**
+- `packages/harness/src/runner.ts`
+- `packages/harness/src/session.ts`
+
+**Pattern:**
+In both `runner.ts` (which manages `Session` instances) and `session.ts` (which manages `Worker` instances), there is a recurring pattern of listening for an event on a child object and immediately re-emitting the same event from the parent object. This creates significant boilerplate code.
+
+Example from `packages/harness/src/runner.ts`:
+```typescript
+// runner listening to session events
+session.on('session:start', (e) => this.emit('session:start', e));
+session.on('session:error', (e) => this.emit('session:error', e));
+session.on('worker:spawn', (e) => this.emit('worker:spawn', e));
+session.on('worker:ready', (e) => this.emit('worker:ready', e));
+session.on('worker:exit', (e) => this.emit('worker:exit', e));
+// ... and several more
+```
+
+Example from `packages/harness/src/session.ts`:
+```typescript
+// session listening to worker events
+worker.on('worker:ready', (e) => this.emit('worker:ready', e));
+worker.on('worker:error', (e) => this.emit('worker:error', e));
+worker.on('task:start', (e) => this.emit('task:start', e));
+worker.on('task:error', (e) => this.emit('task:error', e));
+```
+
+**Recommendation:**
+Abstract this event-proxying logic into a dedicated utility function. This function would take a source emitter, a target emitter, and a list of event names to proxy.
+
+1.  Create a new shared utility file (e.g., within `packages/harness/src/` or a new `utils` subdirectory).
+2.  Add the following utility function:
+    ```typescript
+    import { EventEmitter } from 'events';
+
+    /**
+     * Forwards a list of events from a source EventEmitter to a target EventEmitter.
+     */
+    export function proxyEvents(
+      source: EventEmitter,
+      target: EventEmitter,
+      events: string[]
+    ): void {
+      for (const event of events) {
+        source.on(event, (payload) => target.emit(event, payload));
+      }
+    }
+    ```
+3.  Use this utility in `runner.ts` and `session.ts` to replace the boilerplate. Handlers with custom logic (like `session:end` in `runner.ts`) should be kept separate.
+
+Example usage in `packages/harness/src/runner.ts`:
+```typescript
+// import { proxyEvents } from './utils'; // Adjust path as needed
+
+// ... inside the run() method, for each session created
+const eventsToProxy = [
+  'session:start',
+  'session:error',
+  'worker:spawn',
+  'worker:ready',
+  'worker:exit',
+  'worker:error',
+  'task:start',
+  'task:complete',
+  'task:error',
+];
+proxyEvents(session, this, eventsToProxy);
+
+// Keep handlers with custom logic
+session.on('session:end', (e) => {
+  this.emit('session:end', e);
+  this.activeSessions.delete(e.sessionId);
+  if (this.activeSessions.size ===
+
+Batch 8:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have found the following DRY violations.
+
+## Violation: Duplicated credential resolution logic
+**Files:**
+- `packages/sdk/src/credential-resolver.ts`
+
+**Pattern:**
+The pattern of resolving a configuration value by first checking a config object, then falling back to an environment variable, and finally throwing an error if neither is present, is repeated three times for `clientId`, `clientSecret`, and `privateKey`.
+
+```typescript
+// Pattern repeated in resolveClientId
+const clientId = config.clientId ?? env.GROWTHBOOK_CLIENT_ID;
+if (!clientId) {
+  throw new Error("Missing clientId");
+}
+return clientId;
+
+// Pattern repeated in resolveClientSecret
+const clientSecret = config.clientSecret ?? env.GROWTHBOOK_CLIENT_SECRET;
+if (!clientSecret) {
+  throw new Error("Missing clientSecret");
+}
+return clientSecret;
+
+// Pattern repeated in resolvePrivateKey
+const privateKey = config.privateKey ?? env.GROWTHBOOK_PRIVATE_KEY;
+if (!privateKey) {
+  throw new Error("Missing privateKey");
+}
+return privateKey;
+```
+
+**Recommendation:**
+Extract this logic into a single private helper function within `packages/sdk/src/credential-resolver.ts`. This function can then be called by `resolveClientId`, `resolveClientSecret`, and `resolvePrivateKey`.
+
+```typescript
+// Create this new helper function in credential-resolver.ts
+const resolveCredential = (
+  configValue: string | undefined,
+  envValue: string | undefined,
+  credentialName: string
+): string => {
+  const value = configValue ?? envValue;
+  if (!value) {
+    throw new Error(`Missing ${credentialName}`);
+  }
+  return value;
+};
+
+// Refactor the existing functions to use the helper
+export const resolveClientId = (/*...args*/) => {
+  return resolveCredential(
+    config.clientId,
+    env.GROWTHBOOK_CLIENT_ID,
+    "clientId"
+  );
+};
+
+export const resolveClientSecret = (/*...args*/) => {
+  return resolveCredential(
+    config.clientSecret,
+    env.GROWTHBOOK_CLIENT_SECRET,
+    "clientSecret"
+  );
+};
+
+export const resolvePrivateKey = (/*...args*/) => {
+  return resolveCredential(
+    config.privateKey,
+    env.GROWTHBOOK_PRIVATE_KEY,
+    "privateKey"
+  );
+};
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated cache entry structure and expiration logic
+**Files:**
+- `packages/sdk/src/cache.ts`
+- `packages/sdk/src/edge-cache.ts`
+
+**Pattern:**
+Both `MemoryCache` and `EdgeCache` implement logic for handling cache entry expiration. They both use a similar object shape `{ value, expiresAt }` and contain near-identical logic to check if an entry has expired based on the current time.
+
+In `packages/sdk/src/cache.ts` (`MemoryCache.get`):
+```typescript
+const entry = this.cache.get(key);
+// ...
+if (entry.expiresAt && Date.now() > entry.expiresAt) {
+  this.cache.delete(key);
+  return undefined;
+}
+return entry.value as T;
+```
+
+In `packages/sdk/src/edge-cache.ts` (`EdgeCache.get`):
+```typescript
+const { value, expiresAt } = (await response.json()) as {
+  value: T;
+  expiresAt?: number;
+};
+
+if (expiresAt && dateToSeconds(new Date()) > expiresAt) {
+  // ... delete logic ...
+  return undefined;
+}
+return value;
+```
+This duplicates the concept of a cache entry and the time-based expiration check.
+
+**Recommendation:**
+Consolidate the cache entry structure and expiration logic into a shared type and a utility function in `packages/sdk/src/cache.ts` or a new `cache-utils.ts` file.
+
+1.  **Define a shared type** in `packages/sdk/src/cache.ts`:
+    ```typescript
+    export type CacheEntry<T> = {
+      value: T;
+      expiresAt?: number; // Unix timestamp in seconds
+    };
+    ```
+
+2.  **Create a shared utility function** in `packages/sdk/src/cache.ts` (or a new utility file) that uses `dateToSeconds` for a consistent time unit:
+    ```typescript
+    import { dateToSeconds } from "./date-utils";
+
+    export function isCacheEntryExpired(entry: CacheEntry<unknown>): boolean {
+      if (!entry.expiresAt) {
+        return false;
+      }
+      return dateToSeconds(new Date()) > entry.expiresAt;
+    }
+    ```
+
+3.  **Refactor both `MemoryCache` and `EdgeCache`** to use this shared type and utility. `MemoryCache` should be updated to store `expiresAt` in seconds to align with `EdgeCache` and the new utility.
+
+**Priority:** medium
+
+Batch 9:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have identified the following DRY violations.
+
+## Violation: Repetitive Step Definition and Execution Boilerplate
+**Files:**
+- `packages/sdk/src/integration-sdk.ts`
+
+**Pattern:**
+Multiple methods within the `IntegrationSDK` class follow an identical, multi-line pattern for wrapping an asynchronous operation in a `StepExecutor`. This involves instantiating the executor, defining a `Step` object with a name, cache configuration, and a `run` function, and then immediately calling `executor.execute()`.
+
+This boilerplate is repeated in methods like `getSli`, `getSliForPage`, and likely others responsible for fetching data.
+
+```typescript
+// Pattern repeated in multiple methods in packages/sdk/src/integration-sdk.ts
+
+// Example 1: getSli
+async getSli<T, U>(query: SliQuery, variables: T): Promise<U> {
+  const executor = new StepExecutor(this, this.logger); // Boilerplate
+  const step: Step<U> = { // Boilerplate
+    name: `sli-${query.name}`,
+    cache: {
+      // ...
+    },
+    run: () => this.clients.sli.request<U>(query.document, variables),
+  };
+  return executor.execute(step); // Boilerplate
+}
+
+// Example 2: getSliForPage
+async getSliForPage(page: Page, locale: LanguageCode): Promise<SeoData> {
+  const { query, variables } = getSliQuery(page, locale);
+  const executor = new StepExecutor(this, this.logger); // Boilerplate
+  const step: Step<SeoData> = { // Boilerplate
+    name: `sli-page-${page.__typename}-${page.handle}`,
+    cache: {
+      // ...
+    },
+    run: () => this.clients.sli.request<SeoData>(query, variables),
+  };
+  return executor.execute(step); // Boilerplate
+}
+```
+
+**Recommendation:**
+Extract this repetitive logic into a private helper method within the `IntegrationSDK` class. This helper would accept the unique parts of the step (like its name, cache config, and the `run` function) and handle the creation and execution of the `StepExecutor`.
+
+```typescript
+// Add this helper method to the IntegrationSDK class in packages/sdk/src/integration-sdk.ts
+private _executeStep<T>(stepConfig: Omit<Step<T>, 'run'>, runFn: () => Promise<T>): Promise<T> {
+  const executor = new StepExecutor(this, this.logger);
+  const step: Step<T> = {
+    ...stepConfig,
+    run: runFn,
+  };
+  return executor.execute(step);
+}
+
+// Refactor the public methods to use the helper
+async getSli<T, U>(query: SliQuery, variables: T): Promise<U> {
+  return this._executeStep(
+    {
+      name: `sli-${query.name}`,
+      cache: { /* ... cache config ... */ },
+    },
+    () => this.clients.sli.request<U>(query.document, variables)
+  );
+}
+
+async getSliForPage(page: Page, locale: LanguageCode): Promise<SeoData> {
+  const { query, variables } = getSliQuery(page, locale);
+  return this._executeStep(
+    {
+      name: `sli-page-${page.__typename}-${page.handle}`,
+      cache: { /* ... cache config ... */ },
+    },
+    () => this.clients.sli.request<SeoData>(query, variables)
+  );
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated GraphQL Field Selections
+**Files:**
+- `packages/sdk/src/sli-queries.ts`
+
+**Pattern:**
+Multiple GraphQL query strings within `sli-queries.ts` repeat the same set of fields for a specific type. For example, the selection for SEO data, `seo { title description }`, is likely repeated across queries for products, collections, pages, etc.
+
+```typescript
+// packages/sdk/src/sli-queries.ts
+
+export const GET_PRODUCT_PAGE = gql`
+  query GetProductPage($handle: String!) {
+    product(handle: $handle) {
+      // ... other fields
+      seo {
+        title
+        description
+      }
+    }
+  }
+`;
+
+export const GET_COLLECTION_PAGE = gql`
+  query GetCollectionPage($handle: String!) {
+    collection(handle: $handle) {
+      // ... other fields
+      seo {
+        title
+        description
+      }
+    }
+  }
+`;
+```
+
+**Recommendation:**
+Consolidate the repeated field selections into a named GraphQL fragment. This fragment can then be imported and spread within each query that needs it, ensuring that any future changes to the SEO fields only need to be made in one place.
+
+```typescript
+// In packages/sdk/src/sli-queries.ts
+
+// 1. Define the fragment
+const SEO_FIELDS_FRAGMENT = gql`
+  fragment SeoFields on SEO {
+    title
+    description
+  }
+`;
+
+// 2. Update the queries to use the fragment
+export const GET_PRODUCT_PAGE = gql`
+  ${SEO_FIELDS_FRAGMENT}
+  query GetProductPage($handle: String!) {
+    product(handle: $handle) {
+      // ... other fields
+      seo {
+        ...SeoFields
+      }
+    }
+  }
+`;
+
+export const GET_COLLECTION_PAGE = gql`
+  ${SEO_FIELDS_FRAGMENT}
+  query GetCollectionPage($handle: String!) {
+    collection(handle: $handle) {
+      // ... other fields
+      seo {
+        ...SeoFields
+      }
+    }
+  }
+`;
+```
+
+**Priority:** low
+
+Batch 10:
+────────────────────────────────────────────────────────────────────────────────
+Based on the analysis of the provided TypeScript files, I have identified the following DRY violations.
+
+## Violation: Repeated logic for making POST requests with JSON bodies
+**Files:**
+- `packages/sdk/src/transform.ts`
+- `packages/sdk/src/vectorize.ts`
+- `packages/sdk/src/workers-ai.ts`
+- `packages/sdk/src/triggers.ts`
+- `packages/sdk/src/tracing.ts`
+
+**Pattern:**
+Multiple service classes (`Transform`, `Vectorize`, `WorkersAI`, etc.) repeat the same boilerplate logic to make a POST request using `this.tenant.fetch`, stringify a JSON body, and in many cases, parse the response as JSON.
+
+This pattern looks like this:
+```typescript
+// In multiple files...
+const response = await this.tenant.fetch(url, {
+  method: 'POST',
+  body: JSON.stringify(payload),
+});
+
+// Often followed by:
+return await response.json();
+```
+This approach duplicates the mechanics of a JSON POST request and misses opportunities for centralized error handling, header management (e.g., `Content-Type: application/json`), and response validation.
+
+**Recommendation:**
+Abstract this common logic into helper methods on the `Tenant` class, which is the common dependency for all these services. This centralizes the API interaction logic, making the individual service classes simpler and more declarative.
+
+Add helper methods like `postJson` (for requests expecting a JSON response) and `post` (for fire-and-forget requests) to the `Tenant` class.
+
+**Example implementation in the `Tenant` class:**
+```typescript
+// For POST requests that expect a JSON response
+async postJson<T>(path: string, body: unknown): Promise<T> {
+  const response = await this.fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    // Centralized error handling
+    const errorText = await response.text();
+    throw new Error(`API Error (${response.status}): ${errorText}`);
+  }
+  return response.json() as Promise<T>;
+}
+
+// For POST requests that don't need a response body
+async post(path: string, body: unknown): Promise<void> {
+  const response = await this.fetch(path, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API Error (${response.status}): ${errorText}`);
+  }
+}
+```
+
+**Refactoring example in `packages/sdk/src/workers-ai.ts`:**
+```typescript
+// From:
+async run<T extends AiRunArgs>(
+  model: string,
+  args: T,
+): Promise<AiRunResult<T>> {
+  const response = await this.tenant.fetch(`/v1/workers-ai/${model}/run`, {
+    method: 'POST',
+    body: JSON.stringify(args),
+  });
+  // ... error handling might be here or omitted
+  return await response.json();
+}
+
+// To:
+async run<T extends AiRunArgs>(
+  model: string,
+  args: T,
+): Promise<AiRunResult<T>> {
+  return this.tenant.postJson(`/v1/workers-ai/${model}/run`, args);
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated test setup code
+**Files:**
+- `packages/sdk/src/tenant-state.test.ts`
+
+**Pattern:**
+Each test case (`it` block) within the `describe('TenantState', ...)` suite repeats the same setup code to create a mock `fetch` function and instantiate the `TenantState` class.
+
+```typescript
+describe('TenantState', () => {
+  it('should get a value', async () => {
+    const fetch = mockFetch(); // Repeated
+    const state = new TenantState({ fetch: fetch as any }); // Repeated
+    // ... test logic
+  });
+
+  it('should put a value', async () => {
+    const fetch = mockFetch(); // Repeated
+    const state = new TenantState({ fetch: fetch as any }); // Repeated
+    // ... test logic
+  });
+
+  // ... and so on for other tests
+});
+```
+
+**Recommendation:**
+Use a `beforeEach` hook within the `describe` block to perform the setup once before each test runs. This removes redundancy, isolates test setup from test logic, and makes the tests cleaner and easier to maintain.
+
+```typescript
+import { mockFetch } from './testing';
+// ... other imports
+
+describe('TenantState', () => {
+  let state: TenantState;
+  let fetch: jest.Mock;
+
+  beforeEach(() => {
+    fetch = mockFetch();
+    // Assuming the constructor takes a Tenant-like object
+    state = new TenantState({ fetch: fetch as any });
+  });
+
+  it('should get a value', async () => {
+    fetch.mockResolvedValueOnce(new Response('value'));
+    const value = await state.get('key');
+    expect(value).toBe('value');
+    expect(fetch).toHaveBeenCalledWith('/v1/state/key');
+  });
+
+  it('should put a value', async () => {
+    await state.put('key', 'value');
+    expect(fetch).toHaveBeenCalledWith('/v1/state/key', {
+      method: 'PUT',
+      body: '"value"',
+    });
+  });
+});
+```
+
+**Priority:** medium
+
+════════════════════════════════════════════════════════════════════════════════

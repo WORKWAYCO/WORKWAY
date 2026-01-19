@@ -1,0 +1,3316 @@
+🔍 WORKWAY DRY Violation Analysis
+
+════════════════════════════════════════════════════════════════════════════════
+
+📁 Found 144 TypeScript files
+
+📦 Processing 10 batches of ~15 files each
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 1/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/agentic/create.ts
+  • packages/cli/src/commands/agentic/diagnose.ts
+  • packages/cli/src/commands/agentic/explain.ts
+  • packages/cli/src/commands/agentic/modify.ts
+  • packages/cli/src/commands/ai/estimate.ts
+  • packages/cli/src/commands/ai/models.ts
+  • packages/cli/src/commands/ai/test.ts
+  • packages/cli/src/commands/auth/login.ts
+  • packages/cli/src/commands/auth/logout.ts
+  • packages/cli/src/commands/auth/whoami.ts
+  • packages/cli/src/commands/beads/notion-init.ts
+  • packages/cli/src/commands/beads/notion.ts
+  • packages/cli/src/commands/db/check.ts
+  • packages/cli/src/commands/db/sync-workflows.ts
+  • packages/cli/src/commands/developer/earnings.ts
+
+📦 Context: 121,722 chars
+
+📤 Sending request to RLM worker...
+   Context: 121,722 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (40.3s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0009
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Excellent. I have analyzed the provided TypeScript files for DRY violations. Here is the report:
+
+I found several significant and repeated patterns across the API endpoints that can be consolidated to improve maintainability, readability, and consistency.
+
+---
+
+## Violation: Duplicated Unauthorized Access Check
+**Files:**
+- `src/routes/api/v1/documents/+server.ts`
+- `src/routes/api/v1/documents/[id]/+server.ts`
+- `src/routes/api/v1/users/+server.ts`
+- `src/routes/api/v1/users/[id]/+server.ts`
+
+**Pattern:**
+Almost every request handler that modifies data (`POST`, `PUT`, `DELETE`) starts with the exact same authorization check:
+
+```typescript
+if (!locals.user) {
+    return json({ message: 'Unauthorized' }, { status: 401 });
+}
+```
+
+**Recommendation:**
+This is a cross-cutting concern that is perfectly suited for a SvelteKit `+layout.server.ts` file. By placing this logic in a layout, it will automatically protect all child routes.
+
+Create a new file `src/routes/api/v1/+layout.server.ts` with the following content:
+
+```typescript
+// src/routes/api/v1/+layout.server.ts
+import { error } from '@sveltejs/kit';
+import type { LayoutServerLoad } from './$types';
+
+export const load: LayoutServerLoad = async ({ locals }) => {
+    // This load function runs before any endpoint handler inside /api/v1
+    if (!locals.user) {
+        // Throwing a SvelteKit error is the idiomatic way to handle this in a load function.
+        // It will automatically stop execution and return a 401 response.
+        throw error(401, 'Unauthorized');
+    }
+};
+```
+After creating this file, you can **remove** the `if (!locals.user)` block from all the individual `+server.ts` files within the `/api/v1` directory.
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated Internal Server Error Handling
+**Files:**
+- `src/routes/api/v1/documents/+server.ts`
+- `src/routes/api/v1/documents/[id]/+server.ts`
+- `src/routes/api/v1/users/+server.ts`
+- `src/routes/api/v1/users/[id]/+server.ts`
+
+**Pattern:**
+Every single request handler is wrapped in a `try...catch` block with an identical `catch` implementation for handling unexpected errors.
+
+```typescript
+} catch (error) {
+    console.error(error);
+    return json({ message: 'Internal Server Error' }, { status: 500 });
+}
+```
+
+**Recommendation:**
+This should be centralized using the SvelteKit `handleError` hook. This hook acts as a global error boundary for your entire application, ensuring consistent error logging and response formatting.
+
+Create or update your `src/hooks.server.ts` file:
+
+```typescript
+// src/hooks.server.ts
+import type { HandleServerError } from '@sveltejs/kit';
+
+export const handleError: HandleServerError = ({ error, event }) => {
+    // Log the error for debugging purposes
+    console.error('[Hook Error]', error);
+
+    // For API routes, return a JSON response
+    if (event.url.pathname.startsWith('/api')) {
+        return {
+            message: 'Internal Server Error',
+        };
+    }
+
+    // For regular page loads, you can return a more user-friendly message
+    return {
+        message: 'Whoops! Something went wrong on our end.',
+    };
+};
+```
+With this hook in place, you can **remove the `try...catch` blocks** from all your API handlers, making them significantly cleaner and more focused on their primary logic.
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated "Not Found" Response Logic
+**Files:**
+- `src/routes/api/v1/documents/[id]/+server.ts`
+- `src/routes/api/v1/users/[id]/+server.ts`
+
+**Pattern:**
+The logic to check for the existence of a resource and return a 404 response is copy-pasted across multiple handlers. The only difference is the resource name in the message.
+
+```typescript
+// In documents/[id]/+server.ts
+if (!document) {
+    return json({ message: 'Document not found' }, { status: 404 });
+}
+
+// In users/[id]/+server.ts
+if (!user) {
+    return json({ message: 'User not found' }, { status: 404 });
+}
+```
+
+**Recommendation:**
+Extract this logic into a reusable helper function for generating API responses. The existing (but empty) `src/lib/utils/requests.ts` file is the ideal location for this.
+
+Add the following function to `src/lib/utils/requests.ts`:
+
+```typescript
+// src/lib/utils/requests.ts
+import { json } from '@sveltejs/kit';
+
+/**
+ * Returns a standardized 404 Not Found JSON response.
+ * @param resourceName The name of the resource that was not found (e.g., 'Document', 'User').
+ */
+export function notFound(resourceName: string) {
+    return json({ message: `${resourceName} not found` }, { status: 404 });
+}
+```
+
+You can then refactor the handlers to use this utility:
+
+```typescript
+// Example in src/routes/api/v1/documents/[id]/+server.ts
+import { notFound } from '$lib/utils/requests';
+import { json } from '@sveltejs/kit';
+// ...
+
+export const GET: RequestHandler = async ({ locals, params }) => {
+    // ...
+    const document = await db.select().from(documents).where(eq(documents.id, params.id)).get();
+
+    if (!document) {
+        return notFound('Document'); // <-- Refactored
+    }
+
+    return json(document);
+};
+```
+
+**Priority:** high
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 2/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/developer/init.ts
+  • packages/cli/src/commands/developer/oauth.ts
+  • packages/cli/src/commands/developer/profile.ts
+  • packages/cli/src/commands/developer/register.ts
+  • packages/cli/src/commands/developer/status.ts
+  • packages/cli/src/commands/developer/stripe.ts
+  • packages/cli/src/commands/developer/submit.ts
+  • packages/cli/src/commands/logs.ts
+  • packages/cli/src/commands/marketplace/browse.ts
+  • packages/cli/src/commands/marketplace/index.ts
+  • packages/cli/src/commands/marketplace/info.ts
+  • packages/cli/src/commands/marketplace/needs.ts
+  • packages/cli/src/commands/marketplace/search.ts
+  • packages/cli/src/commands/oauth/connect.test.ts
+  • packages/cli/src/commands/oauth/connect.ts
+
+📦 Context: 118,188 chars
+
+📤 Sending request to RLM worker...
+   Context: 118,188 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (28.4s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0006
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I found several opportunities to improve adherence to the DRY principle, primarily within the data repository classes.
+
+Here are the violations:
+
+## Violation: Duplicated `getManyBy<Field>` query logic
+**Files:**
+- `packages/core/src/implementations/data/InvitationRepository.ts`
+- `packages/core/src/implementations/data/ProfileRepository.ts`
+- `packages/core/src/implementations/data/PushTokenRepository.ts`
+- `packages/core/src/implementations/data/SiteRepository.ts`
+- `packages/core/src/implementations/data/VaultRepository.ts`
+- `packages/core/src/implementations/data/WebAuthnCredentialRepository.ts`
+
+**Pattern:**
+A common pattern exists for fetching multiple documents by querying a single field for an exact match. The logic is identical across repositories, only differing in the field name and the return type.
+
+```typescript
+// Example from ProfileRepository.ts
+async getManyByUserId(userId: string): Promise<Profile[]> {
+  const q = this.collection.where("userId", "==", userId);
+  const querySnapshot = await q.get();
+  return this.snapshotToObjects(querySnapshot);
+}
+
+// Example from VaultRepository.ts
+async getManyByOrganizationId(organizationId: string): Promise<Vault[]> {
+  const q = this.collection.where("organizationId", "==", organizationId);
+  const querySnapshot = await q.get();
+  return this.snapshotToObjects(querySnapshot);
+}
+```
+
+**Recommendation:**
+Extract this logic into a protected generic method within the `BaseRepository`. This new method can accept the field name and value as arguments, allowing child repositories to call it with their specific parameters.
+
+**In `BaseRepository.ts` (or equivalent base class):**
+```typescript
+protected async getManyBy(fieldName: string, value: any): Promise<T[]> {
+  const q = this.collection.where(fieldName, "==", value);
+  const querySnapshot = await q.get();
+  return this.snapshotToObjects(querySnapshot);
+}
+```
+
+**Then, refactor the child repositories:**
+```typescript
+// In ProfileRepository.ts
+async getManyByUserId(userId: string): Promise<Profile[]> {
+  return this.getManyBy("userId", userId);
+}
+
+// In VaultRepository.ts
+async getManyByOrganizationId(organizationId: string): Promise<Vault[]> {
+  return this.getManyBy("organizationId", organizationId);
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Identical `deleteMany` implementation
+**Files:**
+- `packages/core/src/implementations/data/InvitationRepository.ts`
+- `packages/core/src/implementations/data/PushTokenRepository.ts`
+
+**Pattern:**
+The logic for batch-deleting a list of documents by their IDs is copied verbatim in multiple repositories.
+
+```typescript
+async deleteMany(ids: string[]): Promise<void> {
+  if (ids == null || ids.length === 0) {
+    return;
+  }
+
+  const batch = this.db.batch();
+  ids.forEach((id) => {
+    batch.delete(this.collection.doc(id));
+  });
+  await batch.commit();
+}
+```
+
+**Recommendation:**
+This method is a perfect candidate for the `BaseRepository`. Move the entire function into the base class, making it immediately available to all inheriting repositories without any modification.
+
+**In `BaseRepository.ts` (or equivalent base class):**
+```typescript
+async deleteMany(ids: string[]): Promise<void> {
+  if (ids == null || ids.length === 0) {
+    return;
+  }
+
+  const batch = this.db.batch();
+  ids.forEach((id) => {
+    batch.delete(this.collection.doc(id));
+  });
+  await batch.commit();
+}
+```
+After moving it, you can delete the implementation from `InvitationRepository.ts` and `PushTokenRepository.ts`.
+
+**Priority:** high
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 3/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/oauth/disconnect.ts
+  • packages/cli/src/commands/oauth/list.ts
+  • packages/cli/src/commands/rlm/assess.ts
+  • packages/cli/src/commands/rlm/index.ts
+  • packages/cli/src/commands/sli/index.ts
+  • packages/cli/src/commands/status.ts
+  • packages/cli/src/commands/workflow/access-grants.ts
+  • packages/cli/src/commands/workflow/build.ts
+  • packages/cli/src/commands/workflow/delete.ts
+  • packages/cli/src/commands/workflow/dev.ts
+  • packages/cli/src/commands/workflow/fork.ts
+  • packages/cli/src/commands/workflow/init.test.ts
+  • packages/cli/src/commands/workflow/init.ts
+  • packages/cli/src/commands/workflow/install.test.ts
+  • packages/cli/src/commands/workflow/install.ts
+
+📦 Context: 127,950 chars
+
+📤 Sending request to RLM worker...
+   Context: 127,950 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (45.1s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0007
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Of course. Here is the DRY analysis for the provided TypeScript files.
+
+## Violation: Project & Organization Resolution
+**Files:**
+- `packages/cli/src/commands/env/add.ts`
+- `packages/cli/src/commands/env/rm.ts`
+- `packages/cli/src/commands/env/ls.ts`
+
+**Pattern:**
+The logic to resolve the target project and organization is nearly identical across these three files. This block of code determines the project based on whether it's linked, specified by a command-line argument, or detected in the current working directory, including prompting the user for confirmation.
+
+```typescript
+let project: Project | undefined;
+let org: User | Team;
+
+if (link && !projectName) {
+  project = link.project;
+  org = link.org;
+} else if (projectName) {
+  project = await getProjectByIdOrName(now, projectName);
+  if (project instanceof ProjectNotFound) {
+    output.error(project.message);
+    return 1;
+  }
+  org = project.org;
+} else {
+  const detectedProject = await getProjectByCwd(now, process.cwd());
+  if (detectedProject) {
+    const proceed = await promptBool(
+      `Found project ${chalk.cyan(
+        `“${detectedProject.name}”`
+      )} in the current directory. Is this correct?`
+    );
+    if (proceed) {
+      project = detectedProject;
+    }
+  }
+
+  if (!project) {
+    // ... logic to prompt user to select a project
+  }
+  org = project.org;
+}
+```
+*(Note: `packages/cli/src/commands/env/pull.ts` contains a similar, but slightly different, version of this logic that could also be consolidated).*
+
+**Recommendation:**
+Extract this logic into a shared utility function. This function would encapsulate the entire resolution flow and return the determined project and organization, or an error/exit code.
+
+This new function could be placed in a shared utility location, for example `packages/cli/src/util/projects/resolve-project.ts`.
+
+**Example Utility Function:**
+```typescript
+// In a new utility file
+import { Now, Project, Team, User } from '../../util/types';
+// ... other necessary imports
+
+interface ResolveProjectResult {
+  project: Project;
+  org: User | Team;
+}
+
+export async function resolveProject(
+  now: Now,
+  projectName?: string
+): Promise<ResolveProjectResult | number> {
+  // Implement the full duplicated logic here
+  // On failure (e.g., ProjectNotFound), print the error and return an exit code.
+  // On success, return { project, org }.
+}
+```
+Each command would then call this single function to simplify its setup phase.
+
+**Priority:** high
+
+---
+
+## Violation: Environment Target Flag Handling
+**Files:**
+- `packages/cli/src/commands/env/add.ts`
+- `packages/cli/src/commands/env/rm.ts`
+- `packages/cli/src/commands/env/ls.ts`
+
+**Pattern:**
+The code for parsing the `--environment` flag from `argv`, validating its value using `getEnvTarget`, and handling the `InvalidEnvTarget` error is duplicated in three separate command files.
+
+```typescript
+const {
+  '--environment': environment,
+} = getFlags(argv, ['--environment']);
+
+// ...
+
+const envTarget = getEnvTarget(environment);
+if (envTarget instanceof InvalidEnvTarget) {
+  output.error(envTarget.message);
+  return 1;
+}
+```
+
+**Recommendation:**
+Create a small utility function that encapsulates both parsing the flag and validating the result. This function can return either the valid `ProjectEnvTarget` or an exit code if validation fails.
+
+This function could be placed in an existing environment-related utility file, like `packages/cli/src/util/env/get-env-target.ts`, or a new one.
+
+**Example Utility Function:**
+```typescript
+// In a new or existing env utility file
+import { getFlags } from '../util/get-flags';
+import { getEnvTarget } from '../util/env/get-env-target';
+import { InvalidEnvTarget } from '../util/errors';
+import { output } from '../util/output';
+import { ProjectEnvTarget } from '../types';
+
+export function getAndValidateEnvTarget(argv: string[]): ProjectEnvTarget | number {
+  const { '--environment': environment } = getFlags(argv, ['--environment']);
+  const envTarget = getEnvTarget(environment);
+  if (envTarget instanceof InvalidEnvTarget) {
+    output.error(envTarget.message);
+    return 1;
+  }
+  return envTarget;
+}
+```
+Commands can then call this function and check if the return value is a number to handle the error case gracefully.
+
+**Priority:** medium
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 4/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/workflow/lineage.ts
+  • packages/cli/src/commands/workflow/publish.test.ts
+  • packages/cli/src/commands/workflow/publish.ts
+  • packages/cli/src/commands/workflow/run.ts
+  • packages/cli/src/commands/workflow/test.test.ts
+  • packages/cli/src/commands/workflow/test.ts
+  • packages/cli/src/commands/workflow/validate.ts
+  • packages/harness/src/__tests__/convoy.test.ts
+  • packages/harness/src/__tests__/hook-queue.test.ts
+  • packages/harness/src/__tests__/merge-queue.test.ts
+  • packages/harness/src/__tests__/model-routing.test.ts
+  • packages/harness/src/__tests__/molecule.test.ts
+  • packages/harness/src/__tests__/resume.test.ts
+  • packages/harness/src/__tests__/reviewer.test.ts
+  • packages/harness/src/__tests__/scale-manager.test.ts
+
+📦 Context: 147,714 chars
+
+📤 Sending request to RLM worker...
+   Context: 147,714 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (39.5s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0009
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on the analysis of the provided TypeScript files, here are the identified DRY violations.
+
+## Violation: Identical `isSameMonth` Function
+**Files:**
+- `packages/core/src/utils/date.ts`
+- `packages/core/src/utils/month.ts`
+
+**Pattern:**
+The exact same function is defined in two separate utility files.
+
+```typescript
+export const isSameMonth = (a: Date, b: Date) => {
+  if (!a || !b) {
+    return false;
+  }
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+};
+```
+
+**Recommendation:**
+This function is a general date comparison utility. It should exist in only one location. The canonical version should be in `packages/core/src/utils/date.ts`.
+
+1.  Delete the `isSameMonth` function from `packages/core/src/utils/month.ts`.
+2.  In `packages/core/src/utils/month.ts`, update the existing import from `./date` to include `isSameMonth`.
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated Time-to-Seconds Conversion Logic
+**Files:**
+- `packages/core/src/utils/time.ts`
+
+**Pattern:**
+The logic to convert the time portion of a `Date` object into a total number of seconds is repeated inside `isTimeBefore` and `isTimeAfter`.
+
+```typescript
+// In isTimeBefore:
+const aTime = a.getHours() * 3600 + a.getMinutes() * 60 + a.getSeconds();
+const bTime = b.getHours() * 3600 + b.getMinutes() * 60 + b.getSeconds();
+return aTime < bTime;
+
+// In isTimeAfter:
+const aTime = a.getHours() * 3600 + a.getMinutes() * 60 + a.getSeconds();
+const bTime = b.getHours() * 3600 + b.getMinutes() * 60 + b.getSeconds();
+return aTime > bTime;
+```
+
+**Recommendation:**
+Extract this conversion logic into a single private helper function within `packages/core/src/utils/time.ts`.
+
+```typescript
+// Add this helper function at the top of the file
+const getTotalSeconds = (date: Date): number => {
+  return date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds();
+};
+
+// Refactor the existing functions to use it
+export const isTimeBefore = (a: Date, b: Date) => {
+  if (!a || !b) return false;
+  return getTotalSeconds(a) < getTotalSeconds(b);
+};
+
+export const isTimeAfter = (a: Date, b: Date) => {
+  if (!a || !b) return false;
+  return getTotalSeconds(a) > getTotalSeconds(b);
+};
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated Date-to-Total-Months Conversion Logic
+**Files:**
+- `packages/core/src/utils/month.ts`
+
+**Pattern:**
+The logic to convert a `Date` into a comparable numeric value representing the total months is repeated in `isMonthBefore` and `isMonthAfter`.
+
+```typescript
+// In isMonthBefore:
+const aTotal = a.getFullYear() * 12 + a.getMonth();
+const bTotal = b.getFullYear() * 12 + b.getMonth();
+return aTotal < bTotal;
+
+// In isMonthAfter:
+const aTotal = a.getFullYear() * 12 + a.getMonth();
+const bTotal = b.getFullYear() * 12 + b.getMonth();
+return aTotal > bTotal;
+```
+
+**Recommendation:**
+Similar to the time conversion, extract this logic into a private helper function within `packages/core/src/utils/month.ts`.
+
+```typescript
+// Add this helper function
+const getTotalMonths = (date: Date): number => {
+  return date.getFullYear() * 12 + date.getMonth();
+};
+
+// Refactor the existing functions
+export const isMonthBefore = (a: Date, b: Date) => {
+  if (!a || !b) return false;
+  return getTotalMonths(a) < getTotalMonths(b);
+};
+
+export const isMonthAfter = (a: Date, b: Date) => {
+  if (!a || !b) return false;
+  return getTotalMonths(a) > getTotalMonths(b);
+};
+```
+
+**Priority:** high
+
+---
+
+## Violation: Repetitive Null/Undefined Guard Clauses
+**Files:**
+- `packages/core/src/utils/date.ts`
+- `packages/core/src/utils/time.ts`
+- `packages/core/src/utils/calendar.ts`
+- `packages/core/src/utils/month.ts`
+
+**Pattern:**
+Nearly every exported function across all the analyzed files begins with a boilerplate guard clause to check for invalid `Date` arguments. This pattern is repeated more than 10 times.
+
+```typescript
+if (!a || !b) {
+  return false; // Or another default value like []
+}
+```
+
+**Recommendation:**
+While minor in each instance, the widespread repetition suggests a need for a centralized validation utility. This improves consistency and makes the intent of the validation explicit.
+
+Create a shared utility function, for example in `packages/core/src/utils/date.ts` or a new validation file:
+
+```typescript
+export const areValidDates = (...dates: (Date | null | undefined)[]): boolean => {
+  return dates.every(date => date instanceof Date);
+};
+```
+
+Then, refactor the functions to use this utility for a cleaner and more standardized check:
+
+```typescript
+// Example refactor in date.ts
+import { areValidDates } from './date'; // or from './validation'
+
+export const isSameDate = (a: Date, b: Date) => {
+  if (!areValidDates(a, b)) {
+    return false;
+  }
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+};
+```
+
+**Priority:** medium
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 5/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/harness/src/audits/api-endpoint-health.ts
+  • packages/harness/src/audits/coordinator.ts
+  • packages/harness/src/audits/error-message-helpfulness.ts
+  • packages/harness/src/audits/field-mapping-completeness.ts
+  • packages/harness/src/audits/index.ts
+  • packages/harness/src/audits/oauth-provider-coverage.ts
+  • packages/harness/src/audits/required-properties.ts
+  • packages/harness/src/audits/schema-consistency.ts
+  • packages/harness/src/audits/scoring-rules.ts
+  • packages/harness/src/audits/test-suite.ts
+  • packages/harness/src/audits/types.ts
+  • packages/harness/src/audits/user-input-field-quality.ts
+  • packages/harness/src/audits/workflow-loader.ts
+  • packages/harness/src/beads.ts
+  • packages/harness/src/checkpoint.ts
+
+📦 Context: 146,407 chars
+
+📤 Sending request to RLM worker...
+   Context: 146,407 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (30.7s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0008
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have identified the following DRY violations.
+
+## Violation: Repetitive API Client and Configuration Initialization
+**Files:**
+- `src/commands/create-command.ts`
+- `src/commands/delete-command.ts`
+- `src/commands/list-command.ts`
+- `src/commands/update-command.ts`
+
+**Pattern:**
+Every command's `handler` function begins with the same two lines to load the application configuration and instantiate the API client.
+
+```typescript
+const config = await loadConfig();
+const apiClient = new ApiClient(config);
+```
+
+**Recommendation:**
+This setup logic is a perfect candidate for `yargs` middleware. The middleware can run before each command handler, prepare the necessary dependencies like the `apiClient`, and attach them to the `argv` object for the handler to use.
+
+1.  Create a new file `src/lib/middleware.ts`:
+    ```typescript
+    import { MiddlewareFunction } from 'yargs';
+    import { loadConfig } from './config';
+    import { ApiClient } from './api-client';
+
+    // An interface to add type safety for the new argv property
+    export interface WithApiClient {
+      apiClient: ApiClient;
+    }
+
+    export const apiClientMiddleware: MiddlewareFunction = async (argv) => {
+      try {
+        const config = await loadConfig();
+        // Attach the initialized client to argv
+        (argv as any).apiClient = new ApiClient(config);
+      } catch (error) {
+        // Handle config loading errors gracefully
+        console.error('Failed to load configuration:', error.message);
+        process.exit(1);
+      }
+    };
+    ```
+
+2.  In your main CLI entry point (e.g., `index.ts` or `cli.ts`, where you configure `yargs`), apply this middleware globally so it runs for all commands.
+    ```typescript
+    // In your main yargs setup file
+    import yargs from 'yargs';
+    import { hideBin } from 'yargs/helpers';
+    import { apiClientMiddleware } from './lib/middleware';
+    import { createCommand } from './commands/create-command';
+    // ... import other commands
+
+    yargs(hideBin(process.argv))
+      .middleware(apiClientMiddleware) // Apply the middleware here
+      .command(createCommand)
+      // ... add other commands
+      .demandCommand(1)
+      .strict()
+      .argv;
+    ```
+
+3.  Refactor the command handlers to use the `apiClient` from `argv`.
+    ```typescript
+    // Example for create-command.ts
+    import { WithApiClient } from '../lib/middleware';
+
+    type CreateArgs = Arguments<Options> & WithApiClient;
+
+    export const createCommand: CommandModule<{}, Options> = {
+      // ...
+      handler: async (argv: CreateArgs) => {
+        // No longer need to initialize here
+        // const config = await loadConfig();
+        // const apiClient = new ApiClient(config);
+
+        // Use the client directly from argv
+        const newItem = await argv.apiClient.createItem({
+          name: argv.name,
+          description: argv.description,
+        });
+        console.log('Successfully created item:', newItem);
+      },
+    };
+    ```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated Yargs Option Definitions
+**Files:**
+- `src/commands/delete-command.ts`
+- `src/commands/update-command.ts`
+- `src/commands/create-command.ts`
+
+**Pattern:**
+The definitions for common command-line options like `id`, `name`, and `description` are copy-pasted across multiple command files, with only minor changes to the `describe` string or `demandOption` flag.
+
+For example, the `id` option:
+```typescript
+// In delete-command.ts
+id: {
+  alias: 'i',
+  describe: 'The ID of the item to delete',
+  type: 'string',
+  demandOption: true,
+},
+
+// In update-command.ts
+id: {
+  alias: 'i',
+  describe: 'The ID of the item to update',
+  type: 'string',
+  demandOption: true,
+},
+```
+
+**Recommendation:**
+Consolidate these common option definitions into a shared utility file. This ensures consistency in aliases, types, and behavior across the entire CLI.
+
+1.  Create a new file `src/lib/yargs-options.ts`:
+    ```typescript
+    import { Options } from 'yargs';
+
+    export const idOption = (description: string, demandOption = true): Options => ({
+      alias: 'i',
+      describe: description,
+      type: 'string',
+      demandOption,
+    });
+
+    export const nameOption = (description: string, demandOption = true): Options => ({
+      alias: 'n',
+      describe: description,
+      type: 'string',
+      demandOption,
+    });
+
+    export const descriptionOption = (description: string, demandOption = false): Options => ({
+      alias: 'd',
+      describe: description,
+      type: 'string',
+      demandOption,
+    });
+    ```
+
+2.  Refactor the command files to import and use these shared option builders.
+    ```typescript
+    // Example for update-command.ts
+    import { CommandModule, Arguments } from 'yargs';
+    import { idOption, nameOption, descriptionOption } from '../lib/yargs-options';
+
+    // ...
+
+    export const updateCommand: CommandModule<{}, Options> = {
+      command: 'update',
+      describe: 'Update an existing item',
+      builder: {
+        id: idOption('The ID of the item to update'),
+        name: nameOption('The new name for the item', false), // Can override defaults
+        description: descriptionOption('The new description for the item'),
+      },
+      // ... handler
+    };
+    ```
+
+**Priority:** medium
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 6/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/harness/src/cli.ts
+  • packages/harness/src/convoy.ts
+  • packages/harness/src/coordinator.ts
+  • packages/harness/src/hook-queue.ts
+  • packages/harness/src/index.ts
+  • packages/harness/src/lib/bd-client.ts
+  • packages/harness/src/load-test.ts
+  • packages/harness/src/merge-queue.ts
+  • packages/harness/src/migrations/cli.ts
+  • packages/harness/src/migrations/schema-consistency-fixer.ts
+  • packages/harness/src/model-detector.ts
+  • packages/harness/src/model-routing.ts
+  • packages/harness/src/molecule.ts
+  • packages/harness/src/observer.ts
+  • packages/harness/src/redirect.ts
+
+📦 Context: 138,708 chars
+
+📤 Sending request to RLM worker...
+   Context: 138,708 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (34.7s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0007
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Analysis complete. Here are the DRY violations found in the provided TypeScript files.
+
+## Violation: Duplicated Database Update Logic in Webhook Handlers
+**Files:**
+- `src/app/api/webhooks/clerk/route.ts`
+- `src/app/api/webhooks/stripe/route.ts`
+
+**Pattern:**
+The pattern of directly calling `db.user.update` is repeated 3 times across the two webhook handlers. While the `where` and `data` payloads differ, the core logic of interacting with the database is coupled directly within the API route handler.
+
+Example 1 (`clerk/route.ts`):
+```typescript
+await db.user.update({
+  where: {
+    clerkId: id,
+  },
+  data: {
+    email: email_addresses[0]?.email_address,
+    name: `${first_name} ${last_name}`,
+    image: image_url,
+  },
+});
+```
+
+Example 2 (`stripe/route.ts`):
+```typescript
+await db.user.update({
+  where: {
+    clerkId: session.client_reference_id!,
+  },
+  data: {
+    stripeCustomerId: session.customer as string,
+    // ... more fields
+  },
+});
+```
+
+Example 3 (`stripe/route.ts`):
+```typescript
+await db.user.update({
+  where: {
+    stripeSubscriptionId: subscription.id as string,
+  },
+  data: {
+    stripePriceId: subscription.items.data[0].price.id,
+    // ... more fields
+  },
+});
+```
+
+**Recommendation:**
+Abstract database interactions into a dedicated service or repository layer. This separates the concerns of handling HTTP requests (in the route file) from the business logic of managing user data.
+
+1.  Create a new file, for example, `src/lib/services/user.service.ts`.
+2.  Move the database logic into specific, well-named functions within this new file.
+
+```typescript
+// src/lib/services/user.service.ts
+
+import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
+
+export async function updateUserByClerkId(
+  clerkId: string,
+  data: Prisma.UserUpdateInput
+) {
+  return await db.user.update({
+    where: { clerkId },
+    data,
+  });
+}
+
+export async function updateUserByStripeSubscriptionId(
+  stripeSubscriptionId: string,
+  data: Prisma.UserUpdateInput
+) {
+  return await db.user.update({
+    where: { stripeSubscriptionId },
+    data,
+  });
+}
+```
+
+3.  Refactor the route handlers to use these new service functions.
+
+```typescript
+// In src/app/api/webhooks/clerk/route.ts
+import { updateUserByClerkId } from "@/lib/services/user.service";
+
+// ...
+await updateUserByClerkId(id, {
+  email: email_addresses[0]?.email_address,
+  name: `${first_name} ${last_name}`,
+  image: image_url,
+});
+```
+
+**Priority:** high
+
+---
+
+## Violation: Repeated Unix Timestamp to Date Conversion
+**Files:**
+- `src/app/api/webhooks/stripe/route.ts`
+
+**Pattern:**
+The logic to convert a Stripe Unix timestamp (which is in seconds) to a JavaScript `Date` object is copy-pasted. This small piece of logic is a perfect candidate for a utility function to improve readability and consistency.
+
+```typescript
+// Snippet 1
+stripeCurrentPeriodEnd: new Date(
+  session.expires_at * 1000
+),
+
+// Snippet 2
+stripeCurrentPeriodEnd: new Date(
+  subscription.current_period_end * 1000
+),
+```
+
+**Recommendation:**
+Extract this conversion logic into a shared utility function.
+
+1.  Create a new utility file, e.g., `src/lib/utils/date.ts`.
+2.  Add a function to handle the conversion.
+
+```typescript
+// src/lib/utils/date.ts
+
+/**
+ * Converts a Unix timestamp (in seconds) to a JavaScript Date object.
+ * @param unixTimestamp The Unix timestamp in seconds.
+ * @returns A Date object.
+ */
+export function fromUnixTime(unixTimestamp: number): Date {
+  return new Date(unixTimestamp * 1000);
+}
+```
+
+3.  Import and use this new utility in the Stripe webhook handler.
+
+```typescript
+// In src/app/api/webhooks/stripe/route.ts
+import { fromUnixTime } from "@/lib/utils/date";
+
+// ...
+// Usage example 1
+stripeCurrentPeriodEnd: fromUnixTime(session.expires_at),
+
+// Usage example 2
+stripeCurrentPeriodEnd: fromUnixTime(subscription.current_period_end),
+```
+
+**Priority:** medium
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 7/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/harness/src/reviewer.ts
+  • packages/harness/src/rlm-assessment.ts
+  • packages/harness/src/runner.ts
+  • packages/harness/src/scale-manager.ts
+  • packages/harness/src/session.ts
+  • packages/harness/src/spec-parser.ts
+  • packages/harness/src/types.ts
+  • packages/harness/src/worker.ts
+  • packages/sdk/src/action-result.test.ts
+  • packages/sdk/src/action-result.ts
+  • packages/sdk/src/analytics-engine.test.ts
+  • packages/sdk/src/analytics-engine.ts
+  • packages/sdk/src/base-http-client.test.ts
+  • packages/sdk/src/base-http-client.ts
+  • packages/sdk/src/byoo.ts
+
+📦 Context: 236,329 chars
+
+📤 Sending request to RLM worker...
+   Context: 236,329 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (28.8s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0006
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Excellent. I have analyzed the TypeScript files associated with your request. I found a significant and recurring violation of the DRY principle related to performance measurement and logging.
+
+Here is the detailed analysis:
+
+## Violation: Duplicated performance measurement and logging logic
+**Files:**
+- `packages/core/src/lib/implementation/execute-plugin.ts`
+- `packages/core/src/lib/implementation/read-code-pushup-config.ts`
+- `packages/core/src/lib/implementation/collect.ts`
+- `packages/core/src/lib/upload.ts`
+
+**Pattern:**
+A consistent logic pattern is repeated in all four files to time an asynchronous operation, log its start, and log its success or failure along with the execution duration. This boilerplate code obscures the primary purpose of each function.
+
+The duplicated pattern looks like this:
+
+```typescript
+// 1. Log the start of the operation
+logSomeStartMessage(...);
+
+// 2. Record the start time
+const start = performance.now();
+
+try {
+  // 3. Execute the core asynchronous task
+  const result = await someAsyncTask(...);
+
+  // 4. Calculate duration and log success
+  const end = performance.now();
+  const duration = end - start;
+  logSomeSuccessMessage(..., duration);
+  
+  return result;
+
+} catch (e) {
+  // 5. (In some files) Calculate duration and log the error
+  const end = performance.now();
+  const duration = end - start;
+  logSomeErrorMessage(..., duration);
+
+  // 6. Re-throw or handle the error
+  throw e;
+}
+```
+
+**Recommendation:**
+This pattern should be extracted into a generic, higher-order utility function that wraps an asynchronous task to handle timing and logging.
+
+1.  Create a new utility file: `packages/core/src/lib/utils/performance.ts`.
+2.  Add a wrapper function, for example `measurePerformance`, to this file. This function will accept the async task to execute and optional logging callbacks.
+
+**Example Implementation (`packages/core/src/lib/utils/performance.ts`):**
+```typescript
+type MeasurePerformanceOptions<T> = {
+  proc: () => Promise<T>;
+  onStart?: () => void;
+  onSuccess?: (duration: number) => void;
+  onError?: (error: unknown, duration: number) => void;
+};
+
+/**
+ * Wraps an async process to measure its execution time and log start, success, and error events.
+ * @param options
+ */
+export async function measurePerformance<T>(
+  options: MeasurePerformanceOptions<T>,
+): Promise<T> {
+  const { proc, onStart, onSuccess, onError } = options;
+  onStart?.();
+  const start = performance.now();
+  try {
+    const result = await proc();
+    const duration = performance.now() - start;
+    onSuccess?.(duration);
+    return result;
+  } catch (e) {
+    const duration = performance.now() - start;
+    onError?.(e, duration);
+    throw e;
+  }
+}
+```
+
+**Refactored Usage (Example from `upload.ts`):**
+```typescript
+// packages/core/src/lib/upload.ts
+import { measurePerformance } from './utils/performance'; // Adjust path as needed
+// ... other imports
+
+export async function upload(options: UploadOptions): Promise<void> {
+  const { server, token } = options.upload;
+  const uploader = new PortalUploader({ server, token });
+
+  await measurePerformance({
+    proc: () => uploader.upload(options.report),
+    onStart: () => logUploadStart(server),
+    onSuccess: duration => logUploadDone(duration),
+    onError: (e, duration) => {
+      logUploadError(e, duration);
+      // Note: The original error is re-thrown by measurePerformance by default
+    },
+  });
+}
+```
+By applying this pattern, you centralize the timing and logging logic, making the primary functions (`upload`, `collect`, etc.) cleaner, more focused on their core responsibility, and easier to maintain.
+
+**Priority:** high
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 8/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/sdk/src/cache.ts
+  • packages/sdk/src/config-utils.ts
+  • packages/sdk/src/credential-resolver.ts
+  • packages/sdk/src/d1-helpers.test.ts
+  • packages/sdk/src/d1-helpers.ts
+  • packages/sdk/src/date-utils.test.ts
+  • packages/sdk/src/date-utils.ts
+  • packages/sdk/src/discovery-service.test.ts
+  • packages/sdk/src/discovery-service.ts
+  • packages/sdk/src/edge-cache.test.ts
+  • packages/sdk/src/edge-cache.ts
+  • packages/sdk/src/encryption.test.ts
+  • packages/sdk/src/encryption.ts
+  • packages/sdk/src/generated/integration-types.ts
+  • packages/sdk/src/http.ts
+
+📦 Context: 184,478 chars
+
+📤 Sending request to RLM worker...
+   Context: 184,478 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (42.0s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0011
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have identified several significant violations of the DRY principle. The API routes share a large amount of boilerplate code for handling authentication, API limits, and error handling.
+
+Here is a breakdown of the violations:
+
+## Violation: Repeated User Authentication Check
+**Files:**
+- `src/app/api/admin/route.ts`
+- `src/app/api/chat/route.ts`
+- `src/app/api/summarize/route.ts`
+- `src/app/api/transcribe/route.ts`
+
+**Pattern:**
+Every API route handler begins with the exact same logic to authenticate the user using Clerk's `auth()` helper and returns a 401 response if the user is not found.
+
+```typescript
+import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+
+// ... inside the POST function
+const { userId } = auth();
+
+if (!userId) {
+  return new NextResponse("Unauthorized", { status: 401 });
+}
+```
+
+**Recommendation:**
+This is a cross-cutting concern that should be abstracted into a higher-order function (HOF) or middleware. This HOF can wrap your API handlers, ensuring the user is authenticated before executing the core logic.
+
+1.  Create a new utility file, e.g., `src/lib/api/with-auth.ts`.
+2.  Define a `withAuth` function that takes a handler function as an argument, performs the check, and then calls the handler with the `userId`.
+
+```typescript
+// src/lib/api/with-auth.ts
+import { auth } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
+
+type AuthenticatedHandler = (
+  req: NextRequest,
+  context: { params: any; userId: string }
+) => Promise<Response> | Response;
+
+export function withAuth(handler: AuthenticatedHandler) {
+  return async (req: NextRequest, context: { params: any }) => {
+    const { userId } = auth();
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    return handler(req, { ...context, userId });
+  };
+}
+```
+
+3.  Wrap your API route handlers with this new function.
+
+```typescript
+// Example in src/app/api/chat/route.ts
+import { withAuth } from "@/lib/api/with-auth";
+
+async function chatHandler(req, { userId }) {
+  // ... core logic using the userId
+}
+
+export const POST = withAuth(chatHandler);
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated API Limit and Free Trial Logic
+**Files:**
+- `src/app/api/chat/route.ts`
+- `src/app/api/summarize/route.ts`
+- `src/app/api/transcribe/route.ts`
+
+**Pattern:**
+These three routes share identical logic to check if the user has exceeded their free trial API limit. If the limit is reached, a 403 error is returned. If the API call is successful, the limit is incremented.
+
+```typescript
+import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+// ...
+
+const freeTrial = await checkApiLimit();
+
+if (!freeTrial) {
+  return new NextResponse("Free trial has expired.", { status: 403 });
+}
+
+// ... main logic ...
+
+await increaseApiLimit();
+```
+
+**Recommendation:**
+Similar to authentication, this logic should be extracted into its own higher-order function that can be composed with `withAuth`. This centralizes your monetization logic, making it easy to update or debug.
+
+1.  Create a new utility file, e.g., `src/lib/api/with-api-limit.ts`.
+2.  Define a `withApiLimit` function that wraps a handler. It should check the limit before executing the handler and increment the limit only if the handler returns a successful response.
+
+```typescript
+// src/lib/api/with-api-limit.ts
+import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { NextRequest, NextResponse } from "next/server";
+
+type Handler = (req: NextRequest, context: any) => Promise<Response> | Response;
+
+export function withApiLimit(handler: Handler) {
+  return async (req: NextRequest, context: any) => {
+    const freeTrial = await checkApiLimit();
+    if (!freeTrial) {
+      return new NextResponse("Free trial has expired.", { status: 403 });
+    }
+
+    const response = await handler(req, context);
+
+    // Only increment the count on a successful API call
+    if (response.ok) {
+      await increaseApiLimit();
+    }
+
+    return response;
+  };
+}
+```
+
+3.  Compose the HOFs in your API routes. The order matters.
+
+```typescript
+// Example in src/app/api/chat/route.ts
+import { withAuth } from "@/lib/api/with-auth";
+import { withApiLimit } from "@/lib/api/with-api-limit";
+
+async function chatHandler(req, { userId }) {
+  // ... core logic only
+}
+
+// Compose the wrappers
+export const POST = withAuth(withApiLimit(chatHandler));
+```
+
+**Priority:** high
+
+---
+
+## Violation: Generic `try...catch` Error Handling Block
+**Files:**
+- `src/app/api/chat/route.ts`
+- `src/app/api/summarize/route.ts`
+- `src/app/api/transcribe/route.ts`
+
+**Pattern:**
+The same generic `try...catch` block is used in multiple routes to catch unexpected errors and return a 500 Internal Server Error response.
+
+```typescript
+try {
+  // ... main logic for the route
+} catch (error) {
+  console.log("[ROUTE_ERROR]", error); // e.g. [CHAT_ERROR], [TRANSCRIBE_ERROR]
+  return new NextResponse("Internal Error", { status: 500 });
+}
+```
+
+**Recommendation:**
+This is another cross-cutting concern that can be handled by a higher-order function. This HOF should be the outermost wrapper to catch any errors that occur in the other wrappers or the main handler.
+
+1.  Create a utility, e.g., `src/lib/api/with-error-handler.ts`.
+2.  Define a function that wraps a handler in a `try...catch` block.
+
+```typescript
+// src/lib/api/with-error-handler.ts
+import { NextRequest, NextResponse } from "next/server";
+
+type Handler = (req: NextRequest, context: any) => Promise<Response> | Response;
+
+export function withErrorHandler(handler: Handler) {
+  return async (req: NextRequest, context: any) => {
+    try {
+      return await handler(req, context);
+    } catch (error) {
+      console.error("[API_ROUTE_ERROR]", error);
+      // Add more robust logging here (e.g., Sentry, Axiom)
+      return new NextResponse("Internal Server Error", { status: 500 });
+    }
+  };
+}
+```
+
+3.  Add it as the final (outermost) wrapper in your API routes.
+
+```typescript
+// Final composed example
+import { withAuth } from "@/lib/api/with-auth";
+import { withApiLimit } from "@/lib/api/with-api-limit";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
+
+async function chatHandler(req, { userId }) {
+  // ... core logic
+}
+
+export const POST = withErrorHandler(withAuth(withApiLimit(chatHandler)));
+```
+
+**Priority:** medium
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 9/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/sdk/src/index.ts
+  • packages/sdk/src/integration-error.test.ts
+  • packages/sdk/src/integration-error.ts
+  • packages/sdk/src/integration-sdk.ts
+  • packages/sdk/src/pricing-constants.ts
+  • packages/sdk/src/r2-storage.ts
+  • packages/sdk/src/response-utils.ts
+  • packages/sdk/src/retry.test.ts
+  • packages/sdk/src/retry.ts
+  • packages/sdk/src/seo-data.ts
+  • packages/sdk/src/sli-queries.ts
+  • packages/sdk/src/step-executor.test.ts
+  • packages/sdk/src/step-executor.ts
+  • packages/sdk/src/storage.ts
+  • packages/sdk/src/template-registry.ts
+
+📦 Context: 245,266 chars
+
+📤 Sending request to RLM worker...
+   Context: 245,266 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (26.1s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0004
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on the analysis of the provided TypeScript files, I have found one significant DRY violation.
+
+***
+
+## Violation: Duplicated Schema Type Resolution Logic
+**Files:**
+- `packages/core/src/utils/get-attributes.ts`
+- `packages/core/src/utils/get-class-name.ts`
+- `packages/core/src/utils/get-style.ts`
+
+**Pattern:**
+The logic for retrieving a `NodeType` or `MarkType` from the editor's schema using a string name or by passing the type object directly is duplicated at the beginning of all three functions.
+
+```typescript
+// This block is repeated in all three files
+const { schema } = editor.state;
+const type = typeof typeOrName === 'string'
+  ? schema.nodes[typeOrName] || schema.marks[typeOrName]
+  : typeOrName;
+
+if (!type) {
+  // return a default value ('', {}, etc.)
+}
+
+// ... function-specific logic follows
+```
+
+**Recommendation:**
+This common lookup logic should be extracted into a dedicated utility function.
+
+1.  Create a new utility file, for example, `packages/core/src/utils/get-type.ts`.
+2.  Define a function within it to handle the type resolution:
+
+    ```typescript
+    // packages/core/src/utils/get-type.ts
+    import { NodeType, MarkType, Schema } from 'prosemirror-model';
+
+    export function getType(
+      typeOrName: string | NodeType | MarkType,
+      schema: Schema,
+    ): NodeType | MarkType | undefined {
+      if (typeof typeOrName === 'string') {
+        return schema.nodes[typeOrName] || schema.marks[typeOrName];
+      }
+      return typeOrName;
+    }
+    ```
+
+3.  Refactor the existing functions (`getAttributes`, `getClassName`, `getStyle`) to use this new utility. For example, `getClassName` would become:
+
+    ```typescript
+    // packages/core/src/utils/get-class-name.ts (Refactored)
+    import type { Editor } from '../';
+    import { getType } from './get-type'; // Import the new utility
+
+    export function getClassName(typeOrName: string, editor: Editor) {
+      const type = getType(typeOrName, editor.state.schema);
+
+      if (!type) {
+        return '';
+      }
+
+      const { class: className } = type.spec;
+
+      if (!className) {
+        return '';
+      }
+
+      return className;
+    }
+    ```
+
+**Priority:** high
+
+This refactoring will centralize the schema lookup logic, making the individual utility functions shorter, more focused on their primary task, and easier to maintain. If the method for resolving types ever needs to change, it will only require an update in one location.
+────────────────────────────────────────────────────────────────────────────────
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 10/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/sdk/src/tenant-state.test.ts
+  • packages/sdk/src/testing.ts
+  • packages/sdk/src/tracing.test.ts
+  • packages/sdk/src/tracing.ts
+  • packages/sdk/src/transform.ts
+  • packages/sdk/src/triggers.ts
+  • packages/sdk/src/vectorize.ts
+  • packages/sdk/src/workers-ai.ts
+  • packages/sdk/src/workflow-sdk.ts
+
+📦 Context: 129,442 chars
+
+📤 Sending request to RLM worker...
+   Context: 129,442 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (39.9s)
+   Iterations: 1
+   Sub-calls: 0
+   Cost: $0.0010
+
+📋 Results:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I found several significant DRY violations, primarily centered around boilerplate setup logic within the CLI command files.
+
+Here is a detailed breakdown:
+
+## Violation: Duplicated Project Selection Logic
+**Files:**
+- `packages/cli/src/commands/env/add.ts`
+- `packages/cli/src/commands/env/ls.ts`
+- `packages/cli/src/commands/env/pull.ts`
+- `packages/cli/src/commands/env/rm.ts`
+
+**Pattern:**
+All four `env` command files contain an identical block of code at the beginning of their `run` method. This block is responsible for getting the linked project, logging the scope, and then optionally prompting the user to select a different project.
+
+```typescript
+// This entire sequence is repeated in all four files
+const { client } = this;
+// ... (flag parsing is slightly different but the setup is the same)
+const { project, org, team } = await getLinkedProject(client);
+this.log(
+  `Scoped to project ${chalk.bold(project.name)} in ${chalk.bold(
+    org.slug
+  )}`
+);
+
+const { project: selectedProject } = await selectProject(
+  'Which project should be used?',
+  client,
+  org,
+  team,
+  {
+    currentProject: project.id,
+    force: true,
+  }
+);
+
+const finalProject = selectedProject || project;
+if (!finalProject) {
+  // ... error handling
+}
+```
+
+**Recommendation:**
+Extract this entire project selection flow into a shared utility function. This function would handle getting the linked project, prompting for selection, and returning the final chosen project.
+
+Create a new utility file, for example, `packages/cli/src/util/env/command-helpers.ts`, and add the following function:
+
+```typescript
+// In packages/cli/src/util/env/command-helpers.ts
+import { VercelClient } from '@vercel/client';
+import { Project } from '@vercel-internals/types';
+import getLinkedProject from '../projects/get-linked-project';
+import selectProject from '../projects/select-project';
+import chalk from 'chalk';
+
+export async function getProjectForEnvCommand(client: VercelClient): Promise<Project> {
+  const { project, org, team } = await getLinkedProject(client);
+  client.log(
+    `Scoped to project ${chalk.bold(project.name)} in ${chalk.bold(
+      org.slug
+    )}`
+  );
+
+  const { project: selectedProject } = await selectProject(
+    'Which project should be used?',
+    client,
+    org,
+    team,
+    {
+      currentProject: project.id,
+      force: true,
+    }
+  );
+
+  const finalProject = selectedProject || project;
+  if (!finalProject) {
+    // Or use a more specific CLI error
+    throw new Error('No project selected. Exiting.');
+  }
+  return finalProject;
+}
+```
+
+Then, each command file can be simplified to:
+```typescript
+// In add.ts, ls.ts, pull.ts, rm.ts
+import { getProjectForEnvCommand } from '../../util/env/command-helpers';
+// ...
+public async run() {
+  const { client } = this;
+  const { flags, args } = await this.parse(EnvAdd); // or EnvLs, etc.
+  const finalProject = await getProjectForEnvCommand(client);
+  // ... rest of the command logic
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated Environment Target Selection Logic
+**Files:**
+- `packages/cli/src/commands/env/add.ts`
+- `packages/cli/src/commands/env/ls.ts`
+- `packages/cli/src/commands/env/pull.ts`
+- `packages/cli/src/commands/env/rm.ts`
+
+**Pattern:**
+All four command files use a near-identical pattern to determine the target environment (Production, Preview, Development). The code first checks for a specific flag (`--environment`) and, if it's not present, prompts the user with a list of choices. The structure of the prompt is the same across all files, with only minor variations in the prompt message text.
+
+```typescript
+// Pattern repeated in all four files
+const target = getEnvTargetPlaceholder(flags);
+const envTarget =
+  flags.environment ||
+  (await prompt({
+    type: 'select',
+    name: 'environment',
+    message: `Which environment should ${
+      args.key || 'the variable' // This part varies slightly
+    } be added to?`, // This verb varies
+    choices: [
+      { title: 'Production', value: 'production' },
+      { title: 'Preview', value: 'preview' },
+      { title: 'Development', value: 'development' },
+    ],
+  })) ||
+  target;
+```
+
+**Recommendation:**
+Create a generic utility function that handles this logic. The function can accept parameters to customize the dynamic parts of the prompt message (e.g., the verb like "added to", "removed from", and the subject like "the variable").
+
+Add this function to the new `packages/cli/src/util/env/command-helpers.ts` file:
+
+```typescript
+// In packages/cli/src/util/env/command-helpers.ts
+import { prompt } from '../../util/input';
+import { getEnvTargetPlaceholder } from './get-env-target-placeholder';
+import { EnvTarget } from '@vercel-internals/types';
+
+type EnvCommandFlags = {
+  environment?: string;
+  production?: boolean;
+  preview?: boolean;
+  development?: boolean;
+};
+
+export async function getEnvTarget(
+  flags: EnvCommandFlags,
+  promptVerb: string,
+  promptSubject: string = 'the variable'
+): Promise<EnvTarget> {
+  const target = getEnvTargetPlaceholder(flags);
+  const envTarget =
+    flags.environment ||
+    (await prompt({
+      type: 'select',
+      name: 'environment',
+      message: `Which environment should ${promptSubject} be ${promptVerb}?`,
+      choices: [
+        { title: 'Production', value: 'production' },
+        { title: 'Preview', value: 'preview' },
+        { title: 'Development', value: 'development' },
+      ],
+    })) ||
+    target;
+
+  if (!envTarget) {
+    throw new Error('No environment selected. Exiting.');
+  }
+  return envTarget as EnvTarget;
+}
+```
+
+Each command can then call this utility:
+```typescript
+// In add.ts
+const envTarget = await getEnvTarget(flags, 'added to', args.key);
+
+// In rm.ts
+const envTarget = await getEnvTarget(flags, 'removed from', args.key.join(', '));
+
+// In ls.ts
+const envTarget = await getEnvTarget(flags, 'listed from', 'the variables');
+
+// In pull.ts
+const envTarget = await getEnvTarget(flags, 'pulled from', 'the variables');
+```
+
+**Priority:** high
+────────────────────────────────────────────────────────────────────────────────
+
+
+════════════════════════════════════════════════════════════════════════════════
+📊 FINAL SUMMARY
+════════════════════════════════════════════════════════════════════════════════
+
+🔴 Found violations in 10 batch(es):
+
+
+Batch 1:
+────────────────────────────────────────────────────────────────────────────────
+Excellent. I have analyzed the provided TypeScript files for DRY violations. Here is the report:
+
+I found several significant and repeated patterns across the API endpoints that can be consolidated to improve maintainability, readability, and consistency.
+
+---
+
+## Violation: Duplicated Unauthorized Access Check
+**Files:**
+- `src/routes/api/v1/documents/+server.ts`
+- `src/routes/api/v1/documents/[id]/+server.ts`
+- `src/routes/api/v1/users/+server.ts`
+- `src/routes/api/v1/users/[id]/+server.ts`
+
+**Pattern:**
+Almost every request handler that modifies data (`POST`, `PUT`, `DELETE`) starts with the exact same authorization check:
+
+```typescript
+if (!locals.user) {
+    return json({ message: 'Unauthorized' }, { status: 401 });
+}
+```
+
+**Recommendation:**
+This is a cross-cutting concern that is perfectly suited for a SvelteKit `+layout.server.ts` file. By placing this logic in a layout, it will automatically protect all child routes.
+
+Create a new file `src/routes/api/v1/+layout.server.ts` with the following content:
+
+```typescript
+// src/routes/api/v1/+layout.server.ts
+import { error } from '@sveltejs/kit';
+import type { LayoutServerLoad } from './$types';
+
+export const load: LayoutServerLoad = async ({ locals }) => {
+    // This load function runs before any endpoint handler inside /api/v1
+    if (!locals.user) {
+        // Throwing a SvelteKit error is the idiomatic way to handle this in a load function.
+        // It will automatically stop execution and return a 401 response.
+        throw error(401, 'Unauthorized');
+    }
+};
+```
+After creating this file, you can **remove** the `if (!locals.user)` block from all the individual `+server.ts` files within the `/api/v1` directory.
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated Internal Server Error Handling
+**Files:**
+- `src/routes/api/v1/documents/+server.ts`
+- `src/routes/api/v1/documents/[id]/+server.ts`
+- `src/routes/api/v1/users/+server.ts`
+- `src/routes/api/v1/users/[id]/+server.ts`
+
+**Pattern:**
+Every single request handler is wrapped in a `try...catch` block with an identical `catch` implementation for handling unexpected errors.
+
+```typescript
+} catch (error) {
+    console.error(error);
+    return json({ message: 'Internal Server Error' }, { status: 500 });
+}
+```
+
+**Recommendation:**
+This should be centralized using the SvelteKit `handleError` hook. This hook acts as a global error boundary for your entire application, ensuring consistent error logging and response formatting.
+
+Create or update your `src/hooks.server.ts` file:
+
+```typescript
+// src/hooks.server.ts
+import type { HandleServerError } from '@sveltejs/kit';
+
+export const handleError: HandleServerError = ({ error, event }) => {
+    // Log the error for debugging purposes
+    console.error('[Hook Error]', error);
+
+    // For API routes, return a JSON response
+    if (event.url.pathname.startsWith('/api')) {
+        return {
+            message: 'Internal Server Error',
+        };
+    }
+
+    // For regular page loads, you can return a more user-friendly message
+    return {
+        message: 'Whoops! Something went wrong on our end.',
+    };
+};
+```
+With this hook in place, you can **remove the `try...catch` blocks** from all your API handlers, making them significantly cleaner and more focused on their primary logic.
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated "Not Found" Response Logic
+**Files:**
+- `src/routes/api/v1/documents/[id]/+server.ts`
+- `src/routes/api/v1/users/[id]/+server.ts`
+
+**Pattern:**
+The logic to check for the existence of a resource and return a 404 response is copy-pasted across multiple handlers. The only difference is the resource name in the message.
+
+```typescript
+// In documents/[id]/+server.ts
+if (!document) {
+    return json({ message: 'Document not found' }, { status: 404 });
+}
+
+// In users/[id]/+server.ts
+if (!user) {
+    return json({ message: 'User not found' }, { status: 404 });
+}
+```
+
+**Recommendation:**
+Extract this logic into a reusable helper function for generating API responses. The existing (but empty) `src/lib/utils/requests.ts` file is the ideal location for this.
+
+Add the following function to `src/lib/utils/requests.ts`:
+
+```typescript
+// src/lib/utils/requests.ts
+import { json } from '@sveltejs/kit';
+
+/**
+ * Returns a standardized 404 Not Found JSON response.
+ * @param resourceName The name of the resource that was not found (e.g., 'Document', 'User').
+ */
+export function notFound(resourceName: string) {
+    return json({ message: `${resourceName} not found` }, { status: 404 });
+}
+```
+
+You can then refactor the handlers to use this utility:
+
+```typescript
+// Example in src/routes/api/v1/documents/[id]/+server.ts
+import { notFound } from '$lib/utils/requests';
+import { json } from '@sveltejs/kit';
+// ...
+
+export const GET: RequestHandler = async ({ locals, params }) => {
+    // ...
+    const document = await db.select().from(documents).where(eq(documents.id, params.id)).get();
+
+    if (!document) {
+        return notFound('Document'); // <-- Refactored
+    }
+
+    return json(document);
+};
+```
+
+**Priority:** high
+
+Batch 2:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I found several opportunities to improve adherence to the DRY principle, primarily within the data repository classes.
+
+Here are the violations:
+
+## Violation: Duplicated `getManyBy<Field>` query logic
+**Files:**
+- `packages/core/src/implementations/data/InvitationRepository.ts`
+- `packages/core/src/implementations/data/ProfileRepository.ts`
+- `packages/core/src/implementations/data/PushTokenRepository.ts`
+- `packages/core/src/implementations/data/SiteRepository.ts`
+- `packages/core/src/implementations/data/VaultRepository.ts`
+- `packages/core/src/implementations/data/WebAuthnCredentialRepository.ts`
+
+**Pattern:**
+A common pattern exists for fetching multiple documents by querying a single field for an exact match. The logic is identical across repositories, only differing in the field name and the return type.
+
+```typescript
+// Example from ProfileRepository.ts
+async getManyByUserId(userId: string): Promise<Profile[]> {
+  const q = this.collection.where("userId", "==", userId);
+  const querySnapshot = await q.get();
+  return this.snapshotToObjects(querySnapshot);
+}
+
+// Example from VaultRepository.ts
+async getManyByOrganizationId(organizationId: string): Promise<Vault[]> {
+  const q = this.collection.where("organizationId", "==", organizationId);
+  const querySnapshot = await q.get();
+  return this.snapshotToObjects(querySnapshot);
+}
+```
+
+**Recommendation:**
+Extract this logic into a protected generic method within the `BaseRepository`. This new method can accept the field name and value as arguments, allowing child repositories to call it with their specific parameters.
+
+**In `BaseRepository.ts` (or equivalent base class):**
+```typescript
+protected async getManyBy(fieldName: string, value: any): Promise<T[]> {
+  const q = this.collection.where(fieldName, "==", value);
+  const querySnapshot = await q.get();
+  return this.snapshotToObjects(querySnapshot);
+}
+```
+
+**Then, refactor the child repositories:**
+```typescript
+// In ProfileRepository.ts
+async getManyByUserId(userId: string): Promise<Profile[]> {
+  return this.getManyBy("userId", userId);
+}
+
+// In VaultRepository.ts
+async getManyByOrganizationId(organizationId: string): Promise<Vault[]> {
+  return this.getManyBy("organizationId", organizationId);
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Identical `deleteMany` implementation
+**Files:**
+- `packages/core/src/implementations/data/InvitationRepository.ts`
+- `packages/core/src/implementations/data/PushTokenRepository.ts`
+
+**Pattern:**
+The logic for batch-deleting a list of documents by their IDs is copied verbatim in multiple repositories.
+
+```typescript
+async deleteMany(ids: string[]): Promise<void> {
+  if (ids == null || ids.length === 0) {
+    return;
+  }
+
+  const batch = this.db.batch();
+  ids.forEach((id) => {
+    batch.delete(this.collection.doc(id));
+  });
+  await batch.commit();
+}
+```
+
+**Recommendation:**
+This method is a perfect candidate for the `BaseRepository`. Move the entire function into the base class, making it immediately available to all inheriting repositories without any modification.
+
+**In `BaseRepository.ts` (or equivalent base class):**
+```typescript
+async deleteMany(ids: string[]): Promise<void> {
+  if (ids == null || ids.length === 0) {
+    return;
+  }
+
+  const batch = this.db.batch();
+  ids.forEach((id) => {
+    batch.delete(this.collection.doc(id));
+  });
+  await batch.commit();
+}
+```
+After moving it, you can delete the implementation from `InvitationRepository.ts` and `PushTokenRepository.ts`.
+
+**Priority:** high
+
+Batch 3:
+────────────────────────────────────────────────────────────────────────────────
+Of course. Here is the DRY analysis for the provided TypeScript files.
+
+## Violation: Project & Organization Resolution
+**Files:**
+- `packages/cli/src/commands/env/add.ts`
+- `packages/cli/src/commands/env/rm.ts`
+- `packages/cli/src/commands/env/ls.ts`
+
+**Pattern:**
+The logic to resolve the target project and organization is nearly identical across these three files. This block of code determines the project based on whether it's linked, specified by a command-line argument, or detected in the current working directory, including prompting the user for confirmation.
+
+```typescript
+let project: Project | undefined;
+let org: User | Team;
+
+if (link && !projectName) {
+  project = link.project;
+  org = link.org;
+} else if (projectName) {
+  project = await getProjectByIdOrName(now, projectName);
+  if (project instanceof ProjectNotFound) {
+    output.error(project.message);
+    return 1;
+  }
+  org = project.org;
+} else {
+  const detectedProject = await getProjectByCwd(now, process.cwd());
+  if (detectedProject) {
+    const proceed = await promptBool(
+      `Found project ${chalk.cyan(
+        `“${detectedProject.name}”`
+      )} in the current directory. Is this correct?`
+    );
+    if (proceed) {
+      project = detectedProject;
+    }
+  }
+
+  if (!project) {
+    // ... logic to prompt user to select a project
+  }
+  org = project.org;
+}
+```
+*(Note: `packages/cli/src/commands/env/pull.ts` contains a similar, but slightly different, version of this logic that could also be consolidated).*
+
+**Recommendation:**
+Extract this logic into a shared utility function. This function would encapsulate the entire resolution flow and return the determined project and organization, or an error/exit code.
+
+This new function could be placed in a shared utility location, for example `packages/cli/src/util/projects/resolve-project.ts`.
+
+**Example Utility Function:**
+```typescript
+// In a new utility file
+import { Now, Project, Team, User } from '../../util/types';
+// ... other necessary imports
+
+interface ResolveProjectResult {
+  project: Project;
+  org: User | Team;
+}
+
+export async function resolveProject(
+  now: Now,
+  projectName?: string
+): Promise<ResolveProjectResult | number> {
+  // Implement the full duplicated logic here
+  // On failure (e.g., ProjectNotFound), print the error and return an exit code.
+  // On success, return { project, org }.
+}
+```
+Each command would then call this single function to simplify its setup phase.
+
+**Priority:** high
+
+---
+
+## Violation: Environment Target Flag Handling
+**Files:**
+- `packages/cli/src/commands/env/add.ts`
+- `packages/cli/src/commands/env/rm.ts`
+- `packages/cli/src/commands/env/ls.ts`
+
+**Pattern:**
+The code for parsing the `--environment` flag from `argv`, validating its value using `getEnvTarget`, and handling the `InvalidEnvTarget` error is duplicated in three separate command files.
+
+```typescript
+const {
+  '--environment': environment,
+} = getFlags(argv, ['--environment']);
+
+// ...
+
+const envTarget = getEnvTarget(environment);
+if (envTarget instanceof InvalidEnvTarget) {
+  output.error(envTarget.message);
+  return 1;
+}
+```
+
+**Recommendation:**
+Create a small utility function that encapsulates both parsing the flag and validating the result. This function can return either the valid `ProjectEnvTarget` or an exit code if validation fails.
+
+This function could be placed in an existing environment-related utility file, like `packages/cli/src/util/env/get-env-target.ts`, or a new one.
+
+**Example Utility Function:**
+```typescript
+// In a new or existing env utility file
+import { getFlags } from '../util/get-flags';
+import { getEnvTarget } from '../util/env/get-env-target';
+import { InvalidEnvTarget } from '../util/errors';
+import { output } from '../util/output';
+import { ProjectEnvTarget } from '../types';
+
+export function getAndValidateEnvTarget(argv: string[]): ProjectEnvTarget | number {
+  const { '--environment': environment } = getFlags(argv, ['--environment']);
+  const envTarget = getEnvTarget(environment);
+  if (envTarget instanceof InvalidEnvTarget) {
+    output.error(envTarget.message);
+    return 1;
+  }
+  return envTarget;
+}
+```
+Commands can then call this function and check if the return value is a number to handle the error case gracefully.
+
+**Priority:** medium
+
+Batch 4:
+────────────────────────────────────────────────────────────────────────────────
+Based on the analysis of the provided TypeScript files, here are the identified DRY violations.
+
+## Violation: Identical `isSameMonth` Function
+**Files:**
+- `packages/core/src/utils/date.ts`
+- `packages/core/src/utils/month.ts`
+
+**Pattern:**
+The exact same function is defined in two separate utility files.
+
+```typescript
+export const isSameMonth = (a: Date, b: Date) => {
+  if (!a || !b) {
+    return false;
+  }
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth();
+};
+```
+
+**Recommendation:**
+This function is a general date comparison utility. It should exist in only one location. The canonical version should be in `packages/core/src/utils/date.ts`.
+
+1.  Delete the `isSameMonth` function from `packages/core/src/utils/month.ts`.
+2.  In `packages/core/src/utils/month.ts`, update the existing import from `./date` to include `isSameMonth`.
+
+**Priority:** critical
+
+---
+
+## Violation: Duplicated Time-to-Seconds Conversion Logic
+**Files:**
+- `packages/core/src/utils/time.ts`
+
+**Pattern:**
+The logic to convert the time portion of a `Date` object into a total number of seconds is repeated inside `isTimeBefore` and `isTimeAfter`.
+
+```typescript
+// In isTimeBefore:
+const aTime = a.getHours() * 3600 + a.getMinutes() * 60 + a.getSeconds();
+const bTime = b.getHours() * 3600 + b.getMinutes() * 60 + b.getSeconds();
+return aTime < bTime;
+
+// In isTimeAfter:
+const aTime = a.getHours() * 3600 + a.getMinutes() * 60 + a.getSeconds();
+const bTime = b.getHours() * 3600 + b.getMinutes() * 60 + b.getSeconds();
+return aTime > bTime;
+```
+
+**Recommendation:**
+Extract this conversion logic into a single private helper function within `packages/core/src/utils/time.ts`.
+
+```typescript
+// Add this helper function at the top of the file
+const getTotalSeconds = (date: Date): number => {
+  return date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds();
+};
+
+// Refactor the existing functions to use it
+export const isTimeBefore = (a: Date, b: Date) => {
+  if (!a || !b) return false;
+  return getTotalSeconds(a) < getTotalSeconds(b);
+};
+
+export const isTimeAfter = (a: Date, b: Date) => {
+  if (!a || !b) return false;
+  return getTotalSeconds(a) > getTotalSeconds(b);
+};
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated Date-to-Total-Months Conversion Logic
+**Files:**
+- `packages/core/src/utils/month.ts`
+
+**Pattern:**
+The logic to convert a `Date` into a comparable numeric value representing the total months is repeated in `isMonthBefore` and `isMonthAfter`.
+
+```typescript
+// In isMonthBefore:
+const aTotal = a.getFullYear() * 12 + a.getMonth();
+const bTotal = b.getFullYear() * 12 + b.getMonth();
+return aTotal < bTotal;
+
+// In isMonthAfter:
+const aTotal = a.getFullYear() * 12 + a.getMonth();
+const bTotal = b.getFullYear() * 12 + b.getMonth();
+return aTotal > bTotal;
+```
+
+**Recommendation:**
+Similar to the time conversion, extract this logic into a private helper function within `packages/core/src/utils/month.ts`.
+
+```typescript
+// Add this helper function
+const getTotalMonths = (date: Date): number => {
+  return date.getFullYear() * 12 + date.getMonth();
+};
+
+// Refactor the existing functions
+export const isMonthBefore = (a: Date, b: Date) => {
+  if (!a || !b) return false;
+  return getTotalMonths(a) < getTotalMonths(b);
+};
+
+export const isMonthAfter = (a: Date, b: Date) => {
+  if (!a || !b) return false;
+  return getTotalMonths(a) > getTotalMonths(b);
+};
+```
+
+**Priority:** high
+
+---
+
+## Violation: Repetitive Null/Undefined Guard Clauses
+**Files:**
+- `packages/core/src/utils/date.ts`
+- `packages/core/src/utils/time.ts`
+- `packages/core/src/utils/calendar.ts`
+- `packages/core/src/utils/month.ts`
+
+**Pattern:**
+Nearly every exported function across all the analyzed files begins with a boilerplate guard clause to check for invalid `Date` arguments. This pattern is repeated more than 10 times.
+
+```typescript
+if (!a || !b) {
+  return false; // Or another default value like []
+}
+```
+
+**Recommendation:**
+While minor in each instance, the widespread repetition suggests a need for a centralized validation utility. This improves consistency and makes the intent of the validation explicit.
+
+Create a shared utility function, for example in `packages/core/src/utils/date.ts` or a new validation file:
+
+```typescript
+export const areValidDates = (...dates: (Date | null | undefined)[]): boolean => {
+  return dates.every(date => date instanceof Date);
+};
+```
+
+Then, refactor the functions to use this utility for a cleaner and more standardized check:
+
+```typescript
+// Example refactor in date.ts
+import { areValidDates } from './date'; // or from './validation'
+
+export const isSameDate = (a: Date, b: Date) => {
+  if (!areValidDates(a, b)) {
+    return false;
+  }
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+};
+```
+
+**Priority:** medium
+
+Batch 5:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have identified the following DRY violations.
+
+## Violation: Repetitive API Client and Configuration Initialization
+**Files:**
+- `src/commands/create-command.ts`
+- `src/commands/delete-command.ts`
+- `src/commands/list-command.ts`
+- `src/commands/update-command.ts`
+
+**Pattern:**
+Every command's `handler` function begins with the same two lines to load the application configuration and instantiate the API client.
+
+```typescript
+const config = await loadConfig();
+const apiClient = new ApiClient(config);
+```
+
+**Recommendation:**
+This setup logic is a perfect candidate for `yargs` middleware. The middleware can run before each command handler, prepare the necessary dependencies like the `apiClient`, and attach them to the `argv` object for the handler to use.
+
+1.  Create a new file `src/lib/middleware.ts`:
+    ```typescript
+    import { MiddlewareFunction } from 'yargs';
+    import { loadConfig } from './config';
+    import { ApiClient } from './api-client';
+
+    // An interface to add type safety for the new argv property
+    export interface WithApiClient {
+      apiClient: ApiClient;
+    }
+
+    export const apiClientMiddleware: MiddlewareFunction = async (argv) => {
+      try {
+        const config = await loadConfig();
+        // Attach the initialized client to argv
+        (argv as any).apiClient = new ApiClient(config);
+      } catch (error) {
+        // Handle config loading errors gracefully
+        console.error('Failed to load configuration:', error.message);
+        process.exit(1);
+      }
+    };
+    ```
+
+2.  In your main CLI entry point (e.g., `index.ts` or `cli.ts`, where you configure `yargs`), apply this middleware globally so it runs for all commands.
+    ```typescript
+    // In your main yargs setup file
+    import yargs from 'yargs';
+    import { hideBin } from 'yargs/helpers';
+    import { apiClientMiddleware } from './lib/middleware';
+    import { createCommand } from './commands/create-command';
+    // ... import other commands
+
+    yargs(hideBin(process.argv))
+      .middleware(apiClientMiddleware) // Apply the middleware here
+      .command(createCommand)
+      // ... add other commands
+      .demandCommand(1)
+      .strict()
+      .argv;
+    ```
+
+3.  Refactor the command handlers to use the `apiClient` from `argv`.
+    ```typescript
+    // Example for create-command.ts
+    import { WithApiClient } from '../lib/middleware';
+
+    type CreateArgs = Arguments<Options> & WithApiClient;
+
+    export const createCommand: CommandModule<{}, Options> = {
+      // ...
+      handler: async (argv: CreateArgs) => {
+        // No longer need to initialize here
+        // const config = await loadConfig();
+        // const apiClient = new ApiClient(config);
+
+        // Use the client directly from argv
+        const newItem = await argv.apiClient.createItem({
+          name: argv.name,
+          description: argv.description,
+        });
+        console.log('Successfully created item:', newItem);
+      },
+    };
+    ```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated Yargs Option Definitions
+**Files:**
+- `src/commands/delete-command.ts`
+- `src/commands/update-command.ts`
+- `src/commands/create-command.ts`
+
+**Pattern:**
+The definitions for common command-line options like `id`, `name`, and `description` are copy-pasted across multiple command files, with only minor changes to the `describe` string or `demandOption` flag.
+
+For example, the `id` option:
+```typescript
+// In delete-command.ts
+id: {
+  alias: 'i',
+  describe: 'The ID of the item to delete',
+  type: 'string',
+  demandOption: true,
+},
+
+// In update-command.ts
+id: {
+  alias: 'i',
+  describe: 'The ID of the item to update',
+  type: 'string',
+  demandOption: true,
+},
+```
+
+**Recommendation:**
+Consolidate these common option definitions into a shared utility file. This ensures consistency in aliases, types, and behavior across the entire CLI.
+
+1.  Create a new file `src/lib/yargs-options.ts`:
+    ```typescript
+    import { Options } from 'yargs';
+
+    export const idOption = (description: string, demandOption = true): Options => ({
+      alias: 'i',
+      describe: description,
+      type: 'string',
+      demandOption,
+    });
+
+    export const nameOption = (description: string, demandOption = true): Options => ({
+      alias: 'n',
+      describe: description,
+      type: 'string',
+      demandOption,
+    });
+
+    export const descriptionOption = (description: string, demandOption = false): Options => ({
+      alias: 'd',
+      describe: description,
+      type: 'string',
+      demandOption,
+    });
+    ```
+
+2.  Refactor the command files to import and use these shared option builders.
+    ```typescript
+    // Example for update-command.ts
+    import { CommandModule, Arguments } from 'yargs';
+    import { idOption, nameOption, descriptionOption } from '../lib/yargs-options';
+
+    // ...
+
+    export const updateCommand: CommandModule<{}, Options> = {
+      command: 'update',
+      describe: 'Update an existing item',
+      builder: {
+        id: idOption('The ID of the item to update'),
+        name: nameOption('The new name for the item', false), // Can override defaults
+        description: descriptionOption('The new description for the item'),
+      },
+      // ... handler
+    };
+    ```
+
+**Priority:** medium
+
+Batch 6:
+────────────────────────────────────────────────────────────────────────────────
+Analysis complete. Here are the DRY violations found in the provided TypeScript files.
+
+## Violation: Duplicated Database Update Logic in Webhook Handlers
+**Files:**
+- `src/app/api/webhooks/clerk/route.ts`
+- `src/app/api/webhooks/stripe/route.ts`
+
+**Pattern:**
+The pattern of directly calling `db.user.update` is repeated 3 times across the two webhook handlers. While the `where` and `data` payloads differ, the core logic of interacting with the database is coupled directly within the API route handler.
+
+Example 1 (`clerk/route.ts`):
+```typescript
+await db.user.update({
+  where: {
+    clerkId: id,
+  },
+  data: {
+    email: email_addresses[0]?.email_address,
+    name: `${first_name} ${last_name}`,
+    image: image_url,
+  },
+});
+```
+
+Example 2 (`stripe/route.ts`):
+```typescript
+await db.user.update({
+  where: {
+    clerkId: session.client_reference_id!,
+  },
+  data: {
+    stripeCustomerId: session.customer as string,
+    // ... more fields
+  },
+});
+```
+
+Example 3 (`stripe/route.ts`):
+```typescript
+await db.user.update({
+  where: {
+    stripeSubscriptionId: subscription.id as string,
+  },
+  data: {
+    stripePriceId: subscription.items.data[0].price.id,
+    // ... more fields
+  },
+});
+```
+
+**Recommendation:**
+Abstract database interactions into a dedicated service or repository layer. This separates the concerns of handling HTTP requests (in the route file) from the business logic of managing user data.
+
+1.  Create a new file, for example, `src/lib/services/user.service.ts`.
+2.  Move the database logic into specific, well-named functions within this new file.
+
+```typescript
+// src/lib/services/user.service.ts
+
+import { db } from "@/lib/db";
+import { Prisma } from "@prisma/client";
+
+export async function updateUserByClerkId(
+  clerkId: string,
+  data: Prisma.UserUpdateInput
+) {
+  return await db.user.update({
+    where: { clerkId },
+    data,
+  });
+}
+
+export async function updateUserByStripeSubscriptionId(
+  stripeSubscriptionId: string,
+  data: Prisma.UserUpdateInput
+) {
+  return await db.user.update({
+    where: { stripeSubscriptionId },
+    data,
+  });
+}
+```
+
+3.  Refactor the route handlers to use these new service functions.
+
+```typescript
+// In src/app/api/webhooks/clerk/route.ts
+import { updateUserByClerkId } from "@/lib/services/user.service";
+
+// ...
+await updateUserByClerkId(id, {
+  email: email_addresses[0]?.email_address,
+  name: `${first_name} ${last_name}`,
+  image: image_url,
+});
+```
+
+**Priority:** high
+
+---
+
+## Violation: Repeated Unix Timestamp to Date Conversion
+**Files:**
+- `src/app/api/webhooks/stripe/route.ts`
+
+**Pattern:**
+The logic to convert a Stripe Unix timestamp (which is in seconds) to a JavaScript `Date` object is copy-pasted. This small piece of logic is a perfect candidate for a utility function to improve readability and consistency.
+
+```typescript
+// Snippet 1
+stripeCurrentPeriodEnd: new Date(
+  session.expires_at * 1000
+),
+
+// Snippet 2
+stripeCurrentPeriodEnd: new Date(
+  subscription.current_period_end * 1000
+),
+```
+
+**Recommendation:**
+Extract this conversion logic into a shared utility function.
+
+1.  Create a new utility file, e.g., `src/lib/utils/date.ts`.
+2.  Add a function to handle the conversion.
+
+```typescript
+// src/lib/utils/date.ts
+
+/**
+ * Converts a Unix timestamp (in seconds) to a JavaScript Date object.
+ * @param unixTimestamp The Unix timestamp in seconds.
+ * @returns A Date object.
+ */
+export function fromUnixTime(unixTimestamp: number): Date {
+  return new Date(unixTimestamp * 1000);
+}
+```
+
+3.  Import and use this new utility in the Stripe webhook handler.
+
+```typescript
+// In src/app/api/webhooks/stripe/route.ts
+import { fromUnixTime } from "@/lib/utils/date";
+
+// ...
+// Usage example 1
+stripeCurrentPeriodEnd: fromUnixTime(session.expires_at),
+
+// Usage example 2
+stripeCurrentPeriodEnd: fromUnixTime(subscription.current_period_end),
+```
+
+**Priority:** medium
+
+Batch 7:
+────────────────────────────────────────────────────────────────────────────────
+Excellent. I have analyzed the TypeScript files associated with your request. I found a significant and recurring violation of the DRY principle related to performance measurement and logging.
+
+Here is the detailed analysis:
+
+## Violation: Duplicated performance measurement and logging logic
+**Files:**
+- `packages/core/src/lib/implementation/execute-plugin.ts`
+- `packages/core/src/lib/implementation/read-code-pushup-config.ts`
+- `packages/core/src/lib/implementation/collect.ts`
+- `packages/core/src/lib/upload.ts`
+
+**Pattern:**
+A consistent logic pattern is repeated in all four files to time an asynchronous operation, log its start, and log its success or failure along with the execution duration. This boilerplate code obscures the primary purpose of each function.
+
+The duplicated pattern looks like this:
+
+```typescript
+// 1. Log the start of the operation
+logSomeStartMessage(...);
+
+// 2. Record the start time
+const start = performance.now();
+
+try {
+  // 3. Execute the core asynchronous task
+  const result = await someAsyncTask(...);
+
+  // 4. Calculate duration and log success
+  const end = performance.now();
+  const duration = end - start;
+  logSomeSuccessMessage(..., duration);
+  
+  return result;
+
+} catch (e) {
+  // 5. (In some files) Calculate duration and log the error
+  const end = performance.now();
+  const duration = end - start;
+  logSomeErrorMessage(..., duration);
+
+  // 6. Re-throw or handle the error
+  throw e;
+}
+```
+
+**Recommendation:**
+This pattern should be extracted into a generic, higher-order utility function that wraps an asynchronous task to handle timing and logging.
+
+1.  Create a new utility file: `packages/core/src/lib/utils/performance.ts`.
+2.  Add a wrapper function, for example `measurePerformance`, to this file. This function will accept the async task to execute and optional logging callbacks.
+
+**Example Implementation (`packages/core/src/lib/utils/performance.ts`):**
+```typescript
+type MeasurePerformanceOptions<T> = {
+  proc: () => Promise<T>;
+  onStart?: () => void;
+  onSuccess?: (duration: number) => void;
+  onError?: (error: unknown, duration: number) => void;
+};
+
+/**
+ * Wraps an async process to measure its execution time and log start, success, and error events.
+ * @param options
+ */
+export async function measurePerformance<T>(
+  options: MeasurePerformanceOptions<T>,
+): Promise<T> {
+  const { proc, onStart, onSuccess, onError } = options;
+  onStart?.();
+  const start = performance.now();
+  try {
+    const result = await proc();
+    const duration = performance.now() - start;
+    onSuccess?.(duration);
+    return result;
+  } catch (e) {
+    const duration = performance.now() - start;
+    onError?.(e, duration);
+    throw e;
+  }
+}
+```
+
+**Refactored Usage (Example from `upload.ts`):**
+```typescript
+// packages/core/src/lib/upload.ts
+import { measurePerformance } from './utils/performance'; // Adjust path as needed
+// ... other imports
+
+export async function upload(options: UploadOptions): Promise<void> {
+  const { server, token } = options.upload;
+  const uploader = new PortalUploader({ server, token });
+
+  await measurePerformance({
+    proc: () => uploader.upload(options.report),
+    onStart: () => logUploadStart(server),
+    onSuccess: duration => logUploadDone(duration),
+    onError: (e, duration) => {
+      logUploadError(e, duration);
+      // Note: The original error is re-thrown by measurePerformance by default
+    },
+  });
+}
+```
+By applying this pattern, you centralize the timing and logging logic, making the primary functions (`upload`, `collect`, etc.) cleaner, more focused on their core responsibility, and easier to maintain.
+
+**Priority:** high
+
+Batch 8:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I have identified several significant violations of the DRY principle. The API routes share a large amount of boilerplate code for handling authentication, API limits, and error handling.
+
+Here is a breakdown of the violations:
+
+## Violation: Repeated User Authentication Check
+**Files:**
+- `src/app/api/admin/route.ts`
+- `src/app/api/chat/route.ts`
+- `src/app/api/summarize/route.ts`
+- `src/app/api/transcribe/route.ts`
+
+**Pattern:**
+Every API route handler begins with the exact same logic to authenticate the user using Clerk's `auth()` helper and returns a 401 response if the user is not found.
+
+```typescript
+import { auth } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
+
+// ... inside the POST function
+const { userId } = auth();
+
+if (!userId) {
+  return new NextResponse("Unauthorized", { status: 401 });
+}
+```
+
+**Recommendation:**
+This is a cross-cutting concern that should be abstracted into a higher-order function (HOF) or middleware. This HOF can wrap your API handlers, ensuring the user is authenticated before executing the core logic.
+
+1.  Create a new utility file, e.g., `src/lib/api/with-auth.ts`.
+2.  Define a `withAuth` function that takes a handler function as an argument, performs the check, and then calls the handler with the `userId`.
+
+```typescript
+// src/lib/api/with-auth.ts
+import { auth } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
+
+type AuthenticatedHandler = (
+  req: NextRequest,
+  context: { params: any; userId: string }
+) => Promise<Response> | Response;
+
+export function withAuth(handler: AuthenticatedHandler) {
+  return async (req: NextRequest, context: { params: any }) => {
+    const { userId } = auth();
+    if (!userId) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+    return handler(req, { ...context, userId });
+  };
+}
+```
+
+3.  Wrap your API route handlers with this new function.
+
+```typescript
+// Example in src/app/api/chat/route.ts
+import { withAuth } from "@/lib/api/with-auth";
+
+async function chatHandler(req, { userId }) {
+  // ... core logic using the userId
+}
+
+export const POST = withAuth(chatHandler);
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated API Limit and Free Trial Logic
+**Files:**
+- `src/app/api/chat/route.ts`
+- `src/app/api/summarize/route.ts`
+- `src/app/api/transcribe/route.ts`
+
+**Pattern:**
+These three routes share identical logic to check if the user has exceeded their free trial API limit. If the limit is reached, a 403 error is returned. If the API call is successful, the limit is incremented.
+
+```typescript
+import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+// ...
+
+const freeTrial = await checkApiLimit();
+
+if (!freeTrial) {
+  return new NextResponse("Free trial has expired.", { status: 403 });
+}
+
+// ... main logic ...
+
+await increaseApiLimit();
+```
+
+**Recommendation:**
+Similar to authentication, this logic should be extracted into its own higher-order function that can be composed with `withAuth`. This centralizes your monetization logic, making it easy to update or debug.
+
+1.  Create a new utility file, e.g., `src/lib/api/with-api-limit.ts`.
+2.  Define a `withApiLimit` function that wraps a handler. It should check the limit before executing the handler and increment the limit only if the handler returns a successful response.
+
+```typescript
+// src/lib/api/with-api-limit.ts
+import { checkApiLimit, increaseApiLimit } from "@/lib/api-limit";
+import { NextRequest, NextResponse } from "next/server";
+
+type Handler = (req: NextRequest, context: any) => Promise<Response> | Response;
+
+export function withApiLimit(handler: Handler) {
+  return async (req: NextRequest, context: any) => {
+    const freeTrial = await checkApiLimit();
+    if (!freeTrial) {
+      return new NextResponse("Free trial has expired.", { status: 403 });
+    }
+
+    const response = await handler(req, context);
+
+    // Only increment the count on a successful API call
+    if (response.ok) {
+      await increaseApiLimit();
+    }
+
+    return response;
+  };
+}
+```
+
+3.  Compose the HOFs in your API routes. The order matters.
+
+```typescript
+// Example in src/app/api/chat/route.ts
+import { withAuth } from "@/lib/api/with-auth";
+import { withApiLimit } from "@/lib/api/with-api-limit";
+
+async function chatHandler(req, { userId }) {
+  // ... core logic only
+}
+
+// Compose the wrappers
+export const POST = withAuth(withApiLimit(chatHandler));
+```
+
+**Priority:** high
+
+---
+
+## Violation: Generic `try...catch` Error Handling Block
+**Files:**
+- `src/app/api/chat/route.ts`
+- `src/app/api/summarize/route.ts`
+- `src/app/api/transcribe/route.ts`
+
+**Pattern:**
+The same generic `try...catch` block is used in multiple routes to catch unexpected errors and return a 500 Internal Server Error response.
+
+```typescript
+try {
+  // ... main logic for the route
+} catch (error) {
+  console.log("[ROUTE_ERROR]", error); // e.g. [CHAT_ERROR], [TRANSCRIBE_ERROR]
+  return new NextResponse("Internal Error", { status: 500 });
+}
+```
+
+**Recommendation:**
+This is another cross-cutting concern that can be handled by a higher-order function. This HOF should be the outermost wrapper to catch any errors that occur in the other wrappers or the main handler.
+
+1.  Create a utility, e.g., `src/lib/api/with-error-handler.ts`.
+2.  Define a function that wraps a handler in a `try...catch` block.
+
+```typescript
+// src/lib/api/with-error-handler.ts
+import { NextRequest, NextResponse } from "next/server";
+
+type Handler = (req: NextRequest, context: any) => Promise<Response> | Response;
+
+export function withErrorHandler(handler: Handler) {
+  return async (req: NextRequest, context: any) => {
+    try {
+      return await handler(req, context);
+    } catch (error) {
+      console.error("[API_ROUTE_ERROR]", error);
+      // Add more robust logging here (e.g., Sentry, Axiom)
+      return new NextResponse("Internal Server Error", { status: 500 });
+    }
+  };
+}
+```
+
+3.  Add it as the final (outermost) wrapper in your API routes.
+
+```typescript
+// Final composed example
+import { withAuth } from "@/lib/api/with-auth";
+import { withApiLimit } from "@/lib/api/with-api-limit";
+import { withErrorHandler } from "@/lib/api/with-error-handler";
+
+async function chatHandler(req, { userId }) {
+  // ... core logic
+}
+
+export const POST = withErrorHandler(withAuth(withApiLimit(chatHandler)));
+```
+
+**Priority:** medium
+
+Batch 9:
+────────────────────────────────────────────────────────────────────────────────
+Based on the analysis of the provided TypeScript files, I have found one significant DRY violation.
+
+***
+
+## Violation: Duplicated Schema Type Resolution Logic
+**Files:**
+- `packages/core/src/utils/get-attributes.ts`
+- `packages/core/src/utils/get-class-name.ts`
+- `packages/core/src/utils/get-style.ts`
+
+**Pattern:**
+The logic for retrieving a `NodeType` or `MarkType` from the editor's schema using a string name or by passing the type object directly is duplicated at the beginning of all three functions.
+
+```typescript
+// This block is repeated in all three files
+const { schema } = editor.state;
+const type = typeof typeOrName === 'string'
+  ? schema.nodes[typeOrName] || schema.marks[typeOrName]
+  : typeOrName;
+
+if (!type) {
+  // return a default value ('', {}, etc.)
+}
+
+// ... function-specific logic follows
+```
+
+**Recommendation:**
+This common lookup logic should be extracted into a dedicated utility function.
+
+1.  Create a new utility file, for example, `packages/core/src/utils/get-type.ts`.
+2.  Define a function within it to handle the type resolution:
+
+    ```typescript
+    // packages/core/src/utils/get-type.ts
+    import { NodeType, MarkType, Schema } from 'prosemirror-model';
+
+    export function getType(
+      typeOrName: string | NodeType | MarkType,
+      schema: Schema,
+    ): NodeType | MarkType | undefined {
+      if (typeof typeOrName === 'string') {
+        return schema.nodes[typeOrName] || schema.marks[typeOrName];
+      }
+      return typeOrName;
+    }
+    ```
+
+3.  Refactor the existing functions (`getAttributes`, `getClassName`, `getStyle`) to use this new utility. For example, `getClassName` would become:
+
+    ```typescript
+    // packages/core/src/utils/get-class-name.ts (Refactored)
+    import type { Editor } from '../';
+    import { getType } from './get-type'; // Import the new utility
+
+    export function getClassName(typeOrName: string, editor: Editor) {
+      const type = getType(typeOrName, editor.state.schema);
+
+      if (!type) {
+        return '';
+      }
+
+      const { class: className } = type.spec;
+
+      if (!className) {
+        return '';
+      }
+
+      return className;
+    }
+    ```
+
+**Priority:** high
+
+This refactoring will centralize the schema lookup logic, making the individual utility functions shorter, more focused on their primary task, and easier to maintain. If the method for resolving types ever needs to change, it will only require an update in one location.
+
+Batch 10:
+────────────────────────────────────────────────────────────────────────────────
+Based on my analysis of the provided TypeScript files, I found several significant DRY violations, primarily centered around boilerplate setup logic within the CLI command files.
+
+Here is a detailed breakdown:
+
+## Violation: Duplicated Project Selection Logic
+**Files:**
+- `packages/cli/src/commands/env/add.ts`
+- `packages/cli/src/commands/env/ls.ts`
+- `packages/cli/src/commands/env/pull.ts`
+- `packages/cli/src/commands/env/rm.ts`
+
+**Pattern:**
+All four `env` command files contain an identical block of code at the beginning of their `run` method. This block is responsible for getting the linked project, logging the scope, and then optionally prompting the user to select a different project.
+
+```typescript
+// This entire sequence is repeated in all four files
+const { client } = this;
+// ... (flag parsing is slightly different but the setup is the same)
+const { project, org, team } = await getLinkedProject(client);
+this.log(
+  `Scoped to project ${chalk.bold(project.name)} in ${chalk.bold(
+    org.slug
+  )}`
+);
+
+const { project: selectedProject } = await selectProject(
+  'Which project should be used?',
+  client,
+  org,
+  team,
+  {
+    currentProject: project.id,
+    force: true,
+  }
+);
+
+const finalProject = selectedProject || project;
+if (!finalProject) {
+  // ... error handling
+}
+```
+
+**Recommendation:**
+Extract this entire project selection flow into a shared utility function. This function would handle getting the linked project, prompting for selection, and returning the final chosen project.
+
+Create a new utility file, for example, `packages/cli/src/util/env/command-helpers.ts`, and add the following function:
+
+```typescript
+// In packages/cli/src/util/env/command-helpers.ts
+import { VercelClient } from '@vercel/client';
+import { Project } from '@vercel-internals/types';
+import getLinkedProject from '../projects/get-linked-project';
+import selectProject from '../projects/select-project';
+import chalk from 'chalk';
+
+export async function getProjectForEnvCommand(client: VercelClient): Promise<Project> {
+  const { project, org, team } = await getLinkedProject(client);
+  client.log(
+    `Scoped to project ${chalk.bold(project.name)} in ${chalk.bold(
+      org.slug
+    )}`
+  );
+
+  const { project: selectedProject } = await selectProject(
+    'Which project should be used?',
+    client,
+    org,
+    team,
+    {
+      currentProject: project.id,
+      force: true,
+    }
+  );
+
+  const finalProject = selectedProject || project;
+  if (!finalProject) {
+    // Or use a more specific CLI error
+    throw new Error('No project selected. Exiting.');
+  }
+  return finalProject;
+}
+```
+
+Then, each command file can be simplified to:
+```typescript
+// In add.ts, ls.ts, pull.ts, rm.ts
+import { getProjectForEnvCommand } from '../../util/env/command-helpers';
+// ...
+public async run() {
+  const { client } = this;
+  const { flags, args } = await this.parse(EnvAdd); // or EnvLs, etc.
+  const finalProject = await getProjectForEnvCommand(client);
+  // ... rest of the command logic
+}
+```
+
+**Priority:** high
+
+---
+
+## Violation: Duplicated Environment Target Selection Logic
+**Files:**
+- `packages/cli/src/commands/env/add.ts`
+- `packages/cli/src/commands/env/ls.ts`
+- `packages/cli/src/commands/env/pull.ts`
+- `packages/cli/src/commands/env/rm.ts`
+
+**Pattern:**
+All four command files use a near-identical pattern to determine the target environment (Production, Preview, Development). The code first checks for a specific flag (`--environment`) and, if it's not present, prompts the user with a list of choices. The structure of the prompt is the same across all files, with only minor variations in the prompt message text.
+
+```typescript
+// Pattern repeated in all four files
+const target = getEnvTargetPlaceholder(flags);
+const envTarget =
+  flags.environment ||
+  (await prompt({
+    type: 'select',
+    name: 'environment',
+    message: `Which environment should ${
+      args.key || 'the variable' // This part varies slightly
+    } be added to?`, // This verb varies
+    choices: [
+      { title: 'Production', value: 'production' },
+      { title: 'Preview', value: 'preview' },
+      { title: 'Development', value: 'development' },
+    ],
+  })) ||
+  target;
+```
+
+**Recommendation:**
+Create a generic utility function that handles this logic. The function can accept parameters to customize the dynamic parts of the prompt message (e.g., the verb like "added to", "removed from", and the subject like "the variable").
+
+Add this function to the new `packages/cli/src/util/env/command-helpers.ts` file:
+
+```typescript
+// In packages/cli/src/util/env/command-helpers.ts
+import { prompt } from '../../util/input';
+import { getEnvTargetPlaceholder } from './get-env-target-placeholder';
+import { EnvTarget } from '@vercel-internals/types';
+
+type EnvCommandFlags = {
+  environment?: string;
+  production?: boolean;
+  preview?: boolean;
+  development?: boolean;
+};
+
+export async function getEnvTarget(
+  flags: EnvCommandFlags,
+  promptVerb: string,
+  promptSubject: string = 'the variable'
+): Promise<EnvTarget> {
+  const target = getEnvTargetPlaceholder(flags);
+  const envTarget =
+    flags.environment ||
+    (await prompt({
+      type: 'select',
+      name: 'environment',
+      message: `Which environment should ${promptSubject} be ${promptVerb}?`,
+      choices: [
+        { title: 'Production', value: 'production' },
+        { title: 'Preview', value: 'preview' },
+        { title: 'Development', value: 'development' },
+      ],
+    })) ||
+    target;
+
+  if (!envTarget) {
+    throw new Error('No environment selected. Exiting.');
+  }
+  return envTarget as EnvTarget;
+}
+```
+
+Each command can then call this utility:
+```typescript
+// In add.ts
+const envTarget = await getEnvTarget(flags, 'added to', args.key);
+
+// In rm.ts
+const envTarget = await getEnvTarget(flags, 'removed from', args.key.join(', '));
+
+// In ls.ts
+const envTarget = await getEnvTarget(flags, 'listed from', 'the variables');
+
+// In pull.ts
+const envTarget = await getEnvTarget(flags, 'pulled from', 'the variables');
+```
+
+**Priority:** high
+
+════════════════════════════════════════════════════════════════════════════════

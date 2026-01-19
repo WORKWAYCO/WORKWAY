@@ -1,0 +1,451 @@
+🔍 WORKWAY DRY Violation Analysis
+
+════════════════════════════════════════════════════════════════════════════════
+
+📁 Found 144 TypeScript files
+
+📦 Processing 10 batches of ~15 files each
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 1/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/agentic/create.ts
+  • packages/cli/src/commands/agentic/diagnose.ts
+  • packages/cli/src/commands/agentic/explain.ts
+  • packages/cli/src/commands/agentic/modify.ts
+  • packages/cli/src/commands/ai/estimate.ts
+  • packages/cli/src/commands/ai/models.ts
+  • packages/cli/src/commands/ai/test.ts
+  • packages/cli/src/commands/auth/login.ts
+  • packages/cli/src/commands/auth/logout.ts
+  • packages/cli/src/commands/auth/whoami.ts
+  • packages/cli/src/commands/beads/notion-init.ts
+  • packages/cli/src/commands/beads/notion.ts
+  • packages/cli/src/commands/db/check.ts
+  • packages/cli/src/commands/db/sync-workflows.ts
+  • packages/cli/src/commands/developer/earnings.ts
+
+📦 Context: 121,722 chars
+
+📤 Sending request to RLM worker...
+   Context: 121,722 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (1.3s)
+   Iterations: 0
+   Sub-calls: 0
+   Cost: $0.0000
+
+⚠️  No answer returned
+   Error: Gemini API error: 404 - {
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 2/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/developer/init.ts
+  • packages/cli/src/commands/developer/oauth.ts
+  • packages/cli/src/commands/developer/profile.ts
+  • packages/cli/src/commands/developer/register.ts
+  • packages/cli/src/commands/developer/status.ts
+  • packages/cli/src/commands/developer/stripe.ts
+  • packages/cli/src/commands/developer/submit.ts
+  • packages/cli/src/commands/logs.ts
+  • packages/cli/src/commands/marketplace/browse.ts
+  • packages/cli/src/commands/marketplace/index.ts
+  • packages/cli/src/commands/marketplace/info.ts
+  • packages/cli/src/commands/marketplace/needs.ts
+  • packages/cli/src/commands/marketplace/search.ts
+  • packages/cli/src/commands/oauth/connect.test.ts
+  • packages/cli/src/commands/oauth/connect.ts
+
+📦 Context: 118,188 chars
+
+📤 Sending request to RLM worker...
+   Context: 118,188 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (1.0s)
+   Iterations: 0
+   Sub-calls: 0
+   Cost: $0.0000
+
+⚠️  No answer returned
+   Error: Gemini API error: 404 - {
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 3/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/oauth/disconnect.ts
+  • packages/cli/src/commands/oauth/list.ts
+  • packages/cli/src/commands/rlm/assess.ts
+  • packages/cli/src/commands/rlm/index.ts
+  • packages/cli/src/commands/sli/index.ts
+  • packages/cli/src/commands/status.ts
+  • packages/cli/src/commands/workflow/access-grants.ts
+  • packages/cli/src/commands/workflow/build.ts
+  • packages/cli/src/commands/workflow/delete.ts
+  • packages/cli/src/commands/workflow/dev.ts
+  • packages/cli/src/commands/workflow/fork.ts
+  • packages/cli/src/commands/workflow/init.test.ts
+  • packages/cli/src/commands/workflow/init.ts
+  • packages/cli/src/commands/workflow/install.test.ts
+  • packages/cli/src/commands/workflow/install.ts
+
+📦 Context: 127,950 chars
+
+📤 Sending request to RLM worker...
+   Context: 127,950 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (1.0s)
+   Iterations: 0
+   Sub-calls: 0
+   Cost: $0.0000
+
+⚠️  No answer returned
+   Error: Gemini API error: 404 - {
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 4/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/cli/src/commands/workflow/lineage.ts
+  • packages/cli/src/commands/workflow/publish.test.ts
+  • packages/cli/src/commands/workflow/publish.ts
+  • packages/cli/src/commands/workflow/run.ts
+  • packages/cli/src/commands/workflow/test.test.ts
+  • packages/cli/src/commands/workflow/test.ts
+  • packages/cli/src/commands/workflow/validate.ts
+  • packages/harness/src/__tests__/convoy.test.ts
+  • packages/harness/src/__tests__/hook-queue.test.ts
+  • packages/harness/src/__tests__/merge-queue.test.ts
+  • packages/harness/src/__tests__/model-routing.test.ts
+  • packages/harness/src/__tests__/molecule.test.ts
+  • packages/harness/src/__tests__/resume.test.ts
+  • packages/harness/src/__tests__/reviewer.test.ts
+  • packages/harness/src/__tests__/scale-manager.test.ts
+
+📦 Context: 147,714 chars
+
+📤 Sending request to RLM worker...
+   Context: 147,714 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (1.1s)
+   Iterations: 0
+   Sub-calls: 0
+   Cost: $0.0000
+
+⚠️  No answer returned
+   Error: Gemini API error: 404 - {
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 5/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/harness/src/audits/api-endpoint-health.ts
+  • packages/harness/src/audits/coordinator.ts
+  • packages/harness/src/audits/error-message-helpfulness.ts
+  • packages/harness/src/audits/field-mapping-completeness.ts
+  • packages/harness/src/audits/index.ts
+  • packages/harness/src/audits/oauth-provider-coverage.ts
+  • packages/harness/src/audits/required-properties.ts
+  • packages/harness/src/audits/schema-consistency.ts
+  • packages/harness/src/audits/scoring-rules.ts
+  • packages/harness/src/audits/test-suite.ts
+  • packages/harness/src/audits/types.ts
+  • packages/harness/src/audits/user-input-field-quality.ts
+  • packages/harness/src/audits/workflow-loader.ts
+  • packages/harness/src/beads.ts
+  • packages/harness/src/checkpoint.ts
+
+📦 Context: 146,407 chars
+
+📤 Sending request to RLM worker...
+   Context: 146,407 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (1.0s)
+   Iterations: 0
+   Sub-calls: 0
+   Cost: $0.0000
+
+⚠️  No answer returned
+   Error: Gemini API error: 404 - {
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 6/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/harness/src/cli.ts
+  • packages/harness/src/convoy.ts
+  • packages/harness/src/coordinator.ts
+  • packages/harness/src/hook-queue.ts
+  • packages/harness/src/index.ts
+  • packages/harness/src/lib/bd-client.ts
+  • packages/harness/src/load-test.ts
+  • packages/harness/src/merge-queue.ts
+  • packages/harness/src/migrations/cli.ts
+  • packages/harness/src/migrations/schema-consistency-fixer.ts
+  • packages/harness/src/model-detector.ts
+  • packages/harness/src/model-routing.ts
+  • packages/harness/src/molecule.ts
+  • packages/harness/src/observer.ts
+  • packages/harness/src/redirect.ts
+
+📦 Context: 138,708 chars
+
+📤 Sending request to RLM worker...
+   Context: 138,708 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (1.0s)
+   Iterations: 0
+   Sub-calls: 0
+   Cost: $0.0000
+
+⚠️  No answer returned
+   Error: Gemini API error: 404 - {
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 7/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/harness/src/reviewer.ts
+  • packages/harness/src/rlm-assessment.ts
+  • packages/harness/src/runner.ts
+  • packages/harness/src/scale-manager.ts
+  • packages/harness/src/session.ts
+  • packages/harness/src/spec-parser.ts
+  • packages/harness/src/types.ts
+  • packages/harness/src/worker.ts
+  • packages/sdk/src/action-result.test.ts
+  • packages/sdk/src/action-result.ts
+  • packages/sdk/src/analytics-engine.test.ts
+  • packages/sdk/src/analytics-engine.ts
+  • packages/sdk/src/base-http-client.test.ts
+  • packages/sdk/src/base-http-client.ts
+  • packages/sdk/src/byoo.ts
+
+📦 Context: 236,329 chars
+
+📤 Sending request to RLM worker...
+   Context: 236,329 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (0.9s)
+   Iterations: 0
+   Sub-calls: 0
+   Cost: $0.0000
+
+⚠️  No answer returned
+   Error: Gemini API error: 404 - {
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 8/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/sdk/src/cache.ts
+  • packages/sdk/src/config-utils.ts
+  • packages/sdk/src/credential-resolver.ts
+  • packages/sdk/src/d1-helpers.test.ts
+  • packages/sdk/src/d1-helpers.ts
+  • packages/sdk/src/date-utils.test.ts
+  • packages/sdk/src/date-utils.ts
+  • packages/sdk/src/discovery-service.test.ts
+  • packages/sdk/src/discovery-service.ts
+  • packages/sdk/src/edge-cache.test.ts
+  • packages/sdk/src/edge-cache.ts
+  • packages/sdk/src/encryption.test.ts
+  • packages/sdk/src/encryption.ts
+  • packages/sdk/src/generated/integration-types.ts
+  • packages/sdk/src/http.ts
+
+📦 Context: 184,478 chars
+
+📤 Sending request to RLM worker...
+   Context: 184,478 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (0.9s)
+   Iterations: 0
+   Sub-calls: 0
+   Cost: $0.0000
+
+⚠️  No answer returned
+   Error: Gemini API error: 404 - {
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 9/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/sdk/src/index.ts
+  • packages/sdk/src/integration-error.test.ts
+  • packages/sdk/src/integration-error.ts
+  • packages/sdk/src/integration-sdk.ts
+  • packages/sdk/src/pricing-constants.ts
+  • packages/sdk/src/r2-storage.ts
+  • packages/sdk/src/response-utils.ts
+  • packages/sdk/src/retry.test.ts
+  • packages/sdk/src/retry.ts
+  • packages/sdk/src/seo-data.ts
+  • packages/sdk/src/sli-queries.ts
+  • packages/sdk/src/step-executor.test.ts
+  • packages/sdk/src/step-executor.ts
+  • packages/sdk/src/storage.ts
+  • packages/sdk/src/template-registry.ts
+
+📦 Context: 245,266 chars
+
+📤 Sending request to RLM worker...
+   Context: 245,266 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (1.0s)
+   Iterations: 0
+   Sub-calls: 0
+   Cost: $0.0000
+
+⚠️  No answer returned
+   Error: Gemini API error: 404 - {
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+
+
+────────────────────────────────────────────────────────────────────────────────
+📊 Batch 10/10
+────────────────────────────────────────────────────────────────────────────────
+
+Files in this batch:
+  • packages/sdk/src/tenant-state.test.ts
+  • packages/sdk/src/testing.ts
+  • packages/sdk/src/tracing.test.ts
+  • packages/sdk/src/tracing.ts
+  • packages/sdk/src/transform.ts
+  • packages/sdk/src/triggers.ts
+  • packages/sdk/src/vectorize.ts
+  • packages/sdk/src/workers-ai.ts
+  • packages/sdk/src/workflow-sdk.ts
+
+📦 Context: 129,442 chars
+
+📤 Sending request to RLM worker...
+   Context: 129,442 chars
+   Query: 634 chars
+   Model: gemini-pro
+
+
+✅ Analysis complete (0.9s)
+   Iterations: 0
+   Sub-calls: 0
+   Cost: $0.0000
+
+⚠️  No answer returned
+   Error: Gemini API error: 404 - {
+  "error": {
+    "code": 404,
+    "message": "models/gemini-1.5-pro is not found for API version v1beta, or is not supported for generateContent. Call ListModels to see the list of available models and their supported methods.",
+    "status": "NOT_FOUND"
+  }
+}
+
+
+
+════════════════════════════════════════════════════════════════════════════════
+📊 FINAL SUMMARY
+════════════════════════════════════════════════════════════════════════════════
+
+✅ No significant DRY violations detected across all batches!
+
+════════════════════════════════════════════════════════════════════════════════
