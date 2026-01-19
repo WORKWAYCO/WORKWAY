@@ -1,6 +1,7 @@
 import { json, error } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
 import { paths } from "$lib/content/paths";
+import { createReadHelper } from "@workwayco/sdk";
 
 // Lesson title lookup from paths
 const LESSON_TITLES: Record<string, string> = {};
@@ -29,12 +30,15 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
     throw error(500, "Database not available");
   }
 
+  // Use eventual consistency for progress reads (dashboard/display data)
+  const read = createReadHelper(db, "eventual");
+
   try {
-    // Get learner
-    const learner = await db
-      .prepare("SELECT * FROM learners WHERE user_id = ?")
-      .bind(locals.user.id)
-      .first();
+    // Get learner (eventual consistency - display data)
+    const learner = await read.first<{ id: string }>(
+      "SELECT * FROM learners WHERE user_id = ?",
+      [locals.user.id]
+    );
 
     if (!learner) {
       // Return empty progress for new learners
@@ -58,20 +62,16 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
       });
     }
 
-    // Get path progress
-    const pathProgressRows = await db
-      .prepare("SELECT * FROM path_progress WHERE learner_id = ?")
-      .bind(learner.id)
-      .all();
+    // Get path progress (eventual consistency)
+    const pathProgressResults = await read.query<{
+      path_id: string;
+      status: string;
+      started_at: string | null;
+      completed_at: string | null;
+    }>("SELECT * FROM path_progress WHERE learner_id = ?", [learner.id]);
 
-    // Get lesson progress
-    const lessonProgressRows = await db
-      .prepare("SELECT * FROM lesson_progress WHERE learner_id = ?")
-      .bind(learner.id)
-      .all();
-
-    // Calculate stats
-    const lessonResults = lessonProgressRows.results as Array<{
+    // Get lesson progress (eventual consistency)
+    const lessonResults = await read.query<{
       lesson_id: string;
       path_id: string;
       status: string;
@@ -79,8 +79,9 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
       completed_at: string | null;
       started_at: string | null;
       visits: number;
-    }>;
+    }>("SELECT * FROM lesson_progress WHERE learner_id = ?", [learner.id]);
 
+    // Calculate stats
     const completedLessons = lessonResults.filter(
       (l) => l.status === "completed",
     );
@@ -94,12 +95,7 @@ export const GET: RequestHandler = async ({ locals, platform }) => {
       string,
       { status: string; startedAt: string | null; completedAt: string | null }
     >();
-    for (const p of pathProgressRows.results as Array<{
-      path_id: string;
-      status: string;
-      started_at: string | null;
-      completed_at: string | null;
-    }>) {
+    for (const p of pathProgressResults) {
       pathProgressMap.set(p.path_id, {
         status: p.status,
         startedAt: p.started_at,

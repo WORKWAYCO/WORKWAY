@@ -5,10 +5,11 @@
  * - JSON field serialization (D1 serializes objects as "[object Object]")
  * - Type-safe JSON column handling
  * - Schema validation helpers
+ * - Read replica support with consistency options
  *
  * @example
  * ```typescript
- * import { jsonField, parseJsonField } from '@workway/sdk'
+ * import { jsonField, parseJsonField, readQuery } from '@workway/sdk'
  *
  * // Insert with JSON field
  * await db.insert(workflowRuns).values({
@@ -19,8 +20,139 @@
  * // Read and parse JSON field
  * const run = await db.select().from(workflowRuns).where(eq(id, 'run_123'))
  * const data = parseJsonField(run.triggerData)
+ *
+ * // Read with eventual consistency (uses read replicas)
+ * const workflows = await readQuery(db, 'SELECT * FROM workflows WHERE status = ?', ['active'])
  * ```
  */
+
+// ============================================================================
+// D1 READ REPLICA SUPPORT
+// ============================================================================
+
+/**
+ * Consistency level for D1 queries
+ * - 'strong': Read from primary (guaranteed latest data)
+ * - 'eventual': Read from replica (may be slightly stale, better performance)
+ */
+export type D1Consistency = 'strong' | 'eventual';
+
+/**
+ * Options for read queries
+ */
+export interface ReadQueryOptions {
+	/** Consistency level - 'eventual' uses read replicas for better performance */
+	consistency?: D1Consistency;
+}
+
+/**
+ * Execute a read query with optional read replica support
+ *
+ * Use 'eventual' consistency for:
+ * - List/browse operations
+ * - Search results
+ * - Dashboard data
+ * - Analytics queries
+ *
+ * Use 'strong' consistency (default) for:
+ * - Auth checks
+ * - Payment verification
+ * - Data immediately after writes
+ *
+ * @example
+ * ```typescript
+ * // Read from replica (faster, may be slightly stale)
+ * const workflows = await readQuery<Workflow>(
+ *   db,
+ *   'SELECT * FROM workflows WHERE tenant_id = ?',
+ *   [tenantId],
+ *   { consistency: 'eventual' }
+ * );
+ *
+ * // Read from primary (guaranteed fresh)
+ * const user = await readQuery<User>(
+ *   db,
+ *   'SELECT * FROM users WHERE id = ?',
+ *   [userId]
+ *   // defaults to 'strong'
+ * );
+ * ```
+ */
+export async function readQuery<T = Record<string, unknown>>(
+	db: D1Database,
+	query: string,
+	params: unknown[] = [],
+	options: ReadQueryOptions = {}
+): Promise<T[]> {
+	const { consistency = 'strong' } = options;
+
+	const stmt = db.prepare(query);
+	const bound = params.length > 0 ? stmt.bind(...params) : stmt;
+
+	// D1 read replicas are enabled via the consistency option
+	const result = await bound.all<T>({
+		// @ts-expect-error - D1 types may not include consistency yet
+		consistency,
+	});
+
+	return result.results ?? [];
+}
+
+/**
+ * Execute a single-row read query with optional read replica support
+ *
+ * @example
+ * ```typescript
+ * const workflow = await readFirst<Workflow>(
+ *   db,
+ *   'SELECT * FROM workflows WHERE id = ?',
+ *   [workflowId],
+ *   { consistency: 'eventual' }
+ * );
+ * ```
+ */
+export async function readFirst<T = Record<string, unknown>>(
+	db: D1Database,
+	query: string,
+	params: unknown[] = [],
+	options: ReadQueryOptions = {}
+): Promise<T | null> {
+	const { consistency = 'strong' } = options;
+
+	const stmt = db.prepare(query);
+	const bound = params.length > 0 ? stmt.bind(...params) : stmt;
+
+	// @ts-expect-error - D1 types may not include consistency yet
+	const result = await bound.first<T>({ consistency });
+
+	return result ?? null;
+}
+
+/**
+ * Create a query helper with pre-configured consistency
+ *
+ * @example
+ * ```typescript
+ * // Create a helper for read-heavy operations
+ * const eventualRead = createReadHelper(db, 'eventual');
+ *
+ * // All queries use eventual consistency
+ * const workflows = await eventualRead.query('SELECT * FROM workflows');
+ * const workflow = await eventualRead.first('SELECT * FROM workflows WHERE id = ?', [id]);
+ * ```
+ */
+export function createReadHelper(db: D1Database, defaultConsistency: D1Consistency = 'eventual') {
+	return {
+		query: <T = Record<string, unknown>>(query: string, params: unknown[] = []) =>
+			readQuery<T>(db, query, params, { consistency: defaultConsistency }),
+		first: <T = Record<string, unknown>>(query: string, params: unknown[] = []) =>
+			readFirst<T>(db, query, params, { consistency: defaultConsistency }),
+	};
+}
+
+// ============================================================================
+// JSON FIELD HELPERS
+// ============================================================================
 
 /**
  * Serialize an object for D1 JSON columns

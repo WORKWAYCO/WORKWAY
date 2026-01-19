@@ -394,10 +394,18 @@ export {
 // ============================================================================
 
 export {
+	// Read replica support
+	readQuery,
+	readFirst,
+	createReadHelper,
+	type D1Consistency,
+	type ReadQueryOptions,
+	// JSON field helpers
 	jsonField,
 	parseJsonField,
 	isJsonObject,
 	safeJsonStringify,
+	// Schema checker
 	D1SchemaChecker,
 	createSchemaChecker,
 	type TableColumnInfo,

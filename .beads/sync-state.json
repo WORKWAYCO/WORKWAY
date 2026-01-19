@@ -1,7 +1,0 @@
-{
-  "last_failure": "2026-01-17T16:45:24.220908-06:00",
-  "failure_count": 1,
-  "backoff_until": "2026-01-17T16:45:54.220908-06:00",
-  "needs_manual_sync": false,
-  "failure_reason": "git pull failed in worktree: exit status 128\nFrom github-halfdozen:WORKWAYCO/WORKWAY\n * branch            beads-sync -\u003e FETCH_HEAD\nwarning: fetch updated the current branch head.\nfast-forwarding your working tree from\ncommit b54c389f95d1965957056323f38045639a4a927e.\nerror: Your local changes to the following files would be overwritten by merge:\n\t.beads/issues.jsonl\nPlease commit your changes or stash them before you merge.\nAborting\nfatal: Cannot fast-forward your working tree.\nAfter making sure that you saved anything precious from\n$ git diff b54c389f95d1965957056323f38045639a4a927e\noutput, run\n$ git reset --hard\nto recover.\n"
-}

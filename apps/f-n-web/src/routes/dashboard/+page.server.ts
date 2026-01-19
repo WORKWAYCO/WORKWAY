@@ -1,4 +1,5 @@
 import type { PageServerLoad } from './$types';
+import { createReadHelper } from '@workwayco/sdk';
 
 export const load: PageServerLoad = async ({ locals, platform }) => {
 	if (!platform?.env) {
@@ -12,54 +13,54 @@ export const load: PageServerLoad = async ({ locals, platform }) => {
 	const { DB } = platform.env;
 	const userId = locals.user!.id;
 
-	// Get connected accounts
-	const accounts = await DB.prepare(
-		'SELECT provider, workspace_name FROM connected_accounts WHERE user_id = ?'
-	)
-		.bind(userId)
-		.all<{ provider: string; workspace_name: string | null }>();
+	// Use eventual consistency for dashboard reads (faster, uses read replicas)
+	const read = createReadHelper(DB, 'eventual');
+
+	// Get connected accounts (eventual consistency - dashboard data)
+	const accounts = await read.query<{ provider: string; workspace_name: string | null }>(
+		'SELECT provider, workspace_name FROM connected_accounts WHERE user_id = ?',
+		[userId]
+	);
 
 	const connections = {
-		fireflies: accounts.results?.some((a) => a.provider === 'fireflies') || false,
-		notion: accounts.results?.some((a) => a.provider === 'notion') || false,
-		notionWorkspace: accounts.results?.find((a) => a.provider === 'notion')?.workspace_name
+		fireflies: accounts.some((a) => a.provider === 'fireflies'),
+		notion: accounts.some((a) => a.provider === 'notion'),
+		notionWorkspace: accounts.find((a) => a.provider === 'notion')?.workspace_name ?? null
 	};
 
-	// Get subscription
-	const subscription = await DB.prepare(
-		'SELECT tier, status, sync_count, current_period_end FROM subscriptions WHERE user_id = ?'
-	)
-		.bind(userId)
-		.first<{
-			tier: string;
-			status: string;
-			sync_count: number;
-			current_period_end: string | null;
-		}>();
+	// Get subscription (eventual consistency - display only)
+	const subscription = await read.first<{
+		tier: string;
+		status: string;
+		sync_count: number;
+		current_period_end: string | null;
+	}>(
+		'SELECT tier, status, sync_count, current_period_end FROM subscriptions WHERE user_id = ?',
+		[userId]
+	);
 
-	// Get recent sync jobs
-	const recentJobs = await DB.prepare(
+	// Get recent sync jobs (eventual consistency - list view)
+	const recentJobs = await read.query<{
+		id: string;
+		status: string;
+		progress: number;
+		total_transcripts: number;
+		database_name: string | null;
+		error_message: string | null;
+		created_at: string;
+		completed_at: string | null;
+	}>(
 		`SELECT id, status, progress, total_transcripts, database_name, error_message, created_at, completed_at
 		 FROM sync_jobs
 		 WHERE user_id = ?
 		 ORDER BY created_at DESC
-		 LIMIT 5`
-	)
-		.bind(userId)
-		.all<{
-			id: string;
-			status: string;
-			progress: number;
-			total_transcripts: number;
-			database_name: string | null;
-			error_message: string | null;
-			created_at: string;
-			completed_at: string | null;
-		}>();
+		 LIMIT 5`,
+		[userId]
+	);
 
 	return {
 		connections,
 		subscription: subscription || { tier: 'free', status: 'free', sync_count: 0 },
-		recentJobs: recentJobs.results || []
+		recentJobs
 	};
 };
