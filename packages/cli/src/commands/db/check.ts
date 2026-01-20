@@ -26,6 +26,7 @@ import { Logger } from '../../utils/logger.js';
 import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import { join } from 'path';
+import { findWranglerConfig, getDatabaseName } from '../../lib/wrangler.js';
 
 interface CheckOptions {
 	table?: string;
@@ -144,61 +145,6 @@ function getTableInfo(
 		return [];
 	} catch (error: any) {
 		Logger.debug(`Failed to get table info: ${error.message}`);
-		return null;
-	}
-}
-
-/**
- * Find wrangler config file
- */
-function findWranglerConfig(): string | null {
-	const candidates = [
-		'wrangler.jsonc',
-		'wrangler.json',
-		'wrangler.toml',
-		'../api/wrangler.jsonc',
-		'apps/api/wrangler.jsonc',
-	];
-
-	for (const candidate of candidates) {
-		if (existsSync(candidate)) {
-			return candidate;
-		}
-	}
-
-	return null;
-}
-
-/**
- * Extract database name from wrangler config
- */
-function getDatabaseName(configPath: string): string | null {
-	try {
-		const content = readFileSync(configPath, 'utf-8');
-
-		// Handle JSONC
-		if (configPath.endsWith('.jsonc') || configPath.endsWith('.json')) {
-			// Strip comments for parsing
-			const jsonContent = content
-				.replace(/\/\*[\s\S]*?\*\//g, '')
-				.replace(/\/\/.*/g, '');
-			const config = JSON.parse(jsonContent);
-
-			if (config.d1_databases && config.d1_databases[0]) {
-				return config.d1_databases[0].database_name;
-			}
-		}
-
-		// Handle TOML
-		if (configPath.endsWith('.toml')) {
-			const match = content.match(/database_name\s*=\s*"([^"]+)"/);
-			if (match) {
-				return match[1];
-			}
-		}
-
-		return null;
-	} catch {
 		return null;
 	}
 }

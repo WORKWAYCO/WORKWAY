@@ -3,6 +3,19 @@ name: integration-builder
 description: Builds WORKWAY integrations following the BaseAPIClient pattern. Use when creating new service integrations (Zoom, Slack, Gmail, etc.) or extending existing ones.
 tools: Read, Write, Edit, Grep, Glob, Bash
 model: sonnet
+hooks:
+  PostToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: command
+          command: "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/typescript-validator.ts\""
+          timeout: 30
+        - type: command
+          command: "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/integration-pattern.ts\""
+          timeout: 10
+        - type: command
+          command: "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/dry-violations.ts\""
+          timeout: 15
 ---
 
 # Integration Builder Agent

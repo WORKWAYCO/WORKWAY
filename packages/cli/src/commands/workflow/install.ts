@@ -20,6 +20,7 @@ import path from 'path';
 import { Logger } from '../../utils/logger.js';
 import { createAuthenticatedClient } from '../../utils/auth-client.js';
 import { gitignoreTemplate, workwayConfigTemplate } from '../../templates/workflow/basic.js';
+import { formatPrice } from '../../lib/format.js';
 
 interface InstallOptions {
 	/** Directory name override */
@@ -49,22 +50,6 @@ interface WorkflowDetails {
 	source?: string;
 	installCount?: number;
 	rating?: number;
-}
-
-/**
- * Format price display
- */
-function formatPrice(price: WorkflowDetails['price']): string {
-	switch (price.type) {
-		case 'free':
-			return 'Free';
-		case 'paid':
-			return `$${price.amount}/${price.currency === 'USD' ? 'mo' : price.currency}`;
-		case 'usage':
-			return 'Usage-based pricing';
-		default:
-			return 'Unknown';
-	}
 }
 
 /**

@@ -8,6 +8,7 @@
 import chalk from 'chalk';
 import inquirer from 'inquirer';
 import { Logger } from '../../utils/logger.js';
+import { padRight } from '../../lib/format.js';
 import { AI_MODELS } from './models.js';
 
 interface EstimateOptions {
@@ -158,6 +159,3 @@ export async function aiEstimateCommand(options: EstimateOptions = {}): Promise<
 	Logger.log('Learn more: https://developers.cloudflare.com/workers-ai/platform/pricing/');
 }
 
-function padRight(str: string, length: number): string {
-	return str.padEnd(length);
-}

@@ -14,6 +14,7 @@
 
 import inquirer from 'inquirer';
 import { Logger } from '../../utils/logger.js';
+import { formatPrice } from '../../lib/format.js';
 
 /**
  * Detailed workflow information
@@ -152,22 +153,6 @@ Features:
 	}
 
 	return null;
-}
-
-/**
- * Format price display
- */
-function formatPrice(price: WorkflowDetails['price']): string {
-	switch (price.type) {
-		case 'free':
-			return 'Free';
-		case 'paid':
-			return `$${price.amount}/${price.currency === 'USD' ? 'mo' : price.currency}`;
-		case 'usage':
-			return 'Usage-based pricing';
-		default:
-			return 'Unknown';
-	}
 }
 
 /**

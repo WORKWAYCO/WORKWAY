@@ -15,6 +15,7 @@
  */
 
 import { defineWorkflow, schedule } from '@workwayco/sdk';
+import { getProgressBar, getScoreEmoji } from '../_shared/utils.js';
 
 export default defineWorkflow({
 	name: 'Weekly Productivity Digest',
@@ -615,18 +616,7 @@ function buildSlackBlocks(
 	return blocks;
 }
 
-function getProgressBar(percentage: number): string {
-	const filled = Math.round(percentage / 10);
-	const empty = 10 - filled;
-	return '█'.repeat(filled) + '░'.repeat(empty);
-}
-
-function getScoreEmoji(score: number): string {
-	if (score >= 80) return '🌟';
-	if (score >= 60) return '✅';
-	if (score >= 40) return '📈';
-	return '💪';
-}
+// getProgressBar and getScoreEmoji are now imported from ../_shared/utils.js
 
 export const metadata = {
 	id: 'weekly-productivity-digest',

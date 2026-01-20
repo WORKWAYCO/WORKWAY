@@ -19,51 +19,24 @@
  */
 
 import { defineWorkflow, cron } from '@workwayco/sdk';
-
-// ============================================================================
-// CONSTANTS
-// ============================================================================
-
-/** Notion block character limit (2000 - 100 buffer) */
-const NOTION_BLOCK_CHAR_LIMIT = 1900;
-
-/** Notion API blocks per request limit */
-const NOTION_BLOCKS_PER_REQUEST = 100;
+import {
+	NOTION_BLOCK_CHAR_LIMIT,
+	NOTION_BLOCKS_PER_REQUEST,
+	type PlaylistSyncState,
+	type VideoData,
+	type TranscriptData,
+	getPollIntervalMs,
+	extractPlaylistId,
+	formatDuration,
+	findSplitPoint,
+	splitTextIntoBlocks,
+	checkVideoExistsInNotion,
+	appendBlocksInBatches,
+	createNotionVideoPage,
+} from './utils.js';
 
 /** State key prefix for KV storage */
 const STATE_KEY_PREFIX = 'youtube-playlist-sync:';
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-interface PlaylistSyncState {
-	playlistId: string;
-	lastChecked: string; // ISO timestamp
-	processedVideoIds: string[];
-	etag?: string; // YouTube API ETag for efficient polling
-}
-
-interface VideoData {
-	id: string;
-	title: string;
-	description: string;
-	publishedAt: string;
-	channelTitle: string;
-	thumbnailUrl?: string;
-	duration?: string;
-	viewCount?: number;
-}
-
-interface TranscriptData {
-	text: string;
-	segments: Array<{
-		text: string;
-		offset: number;
-		duration: number;
-	}>;
-	language?: string;
-}
 
 // ============================================================================
 // WORKFLOW DEFINITION
@@ -200,10 +173,11 @@ export default defineWorkflow({
 		timezone: 'UTC',
 	}),
 
-	async execute({ trigger, inputs, integrations, env }) {
+	async execute({ trigger, inputs, integrations, env, installationId, userId }) {
 		const {
 			playlist_id,
 			notion_database_id,
+			poll_frequency = 'hourly',
 			include_transcript = true,
 			transcript_language = 'en',
 			notion_title_property = 'Name',
@@ -221,29 +195,60 @@ export default defineWorkflow({
 			};
 		}
 
-		// Load state from KV - use playlist ID as instance identifier
-		const stateKey = `${STATE_KEY_PREFIX}${playlistId}`;
+		// Load state from KV - use installation ID + playlist ID for user isolation
+		// This ensures each user's sync state is independent
+		const instanceId = installationId || userId || 'default';
+		const stateKey = `${STATE_KEY_PREFIX}${instanceId}:${playlistId}`;
 		let state: PlaylistSyncState = (await env.KV?.get(stateKey, 'json')) || {
 			playlistId,
 			lastChecked: new Date(0).toISOString(),
 			processedVideoIds: [],
 		};
 
-		// Fetch playlist items from YouTube
-		const playlistResult = await integrations.youtube.getPlaylistItems({
-			playlistId,
-			maxResults: 50,
-		});
+		// Check poll frequency - skip if not enough time has passed
+		// The underlying cron runs hourly, but users can configure less frequent checks
+		const pollIntervalMs = getPollIntervalMs(poll_frequency);
+		const lastCheckedTime = new Date(state.lastChecked).getTime();
+		const timeSinceLastCheck = Date.now() - lastCheckedTime;
 
-		if (!playlistResult.success) {
+		if (timeSinceLastCheck < pollIntervalMs) {
 			return {
-				success: false,
-				error: `Failed to fetch playlist: ${playlistResult.error?.message}`,
+				success: true,
+				message: `Skipped - next check in ${Math.ceil((pollIntervalMs - timeSinceLastCheck) / 60000)} minutes`,
+				videosProcessed: 0,
+				skippedReason: 'poll_frequency',
 			};
 		}
 
+		// Fetch ALL playlist items with pagination
+		const allPlaylistItems: Array<{ videoId: string; title: string }> = [];
+		let nextPageToken: string | undefined;
+
+		do {
+			const playlistResult = await integrations.youtube.getPlaylistItems({
+				playlistId,
+				maxResults: 50,
+				pageToken: nextPageToken,
+			});
+
+			if (!playlistResult.success) {
+				return {
+					success: false,
+					error: `Failed to fetch playlist: ${playlistResult.error?.message}`,
+				};
+			}
+
+			allPlaylistItems.push(...playlistResult.data.items);
+			nextPageToken = playlistResult.data.nextPageToken;
+
+			// Safety limit: don't process more than 500 videos in one run
+			if (allPlaylistItems.length >= 500) {
+				break;
+			}
+		} while (nextPageToken);
+
 		// Find new videos (not in processedVideoIds)
-		const newVideos = playlistResult.data.items.filter(
+		const newVideos = allPlaylistItems.filter(
 			(item) => !state.processedVideoIds.includes(item.videoId)
 		);
 
@@ -271,7 +276,7 @@ export default defineWorkflow({
 		}
 
 		// Process each new video
-		const results: Array<{ videoId: string; notionUrl?: string; error?: string }> = [];
+		const results: Array<{ videoId: string; notionUrl?: string; error?: string; skipped?: boolean }> = [];
 
 		for (const video of videosResult.data) {
 			try {
@@ -289,7 +294,7 @@ export default defineWorkflow({
 					// Graceful degradation: continue without transcript if unavailable
 				}
 
-				// Create Notion page
+				// Create Notion page (includes duplicate check)
 				const notionPage = await createNotionVideoPage({
 					video: {
 						id: video.id,
@@ -312,13 +317,20 @@ export default defineWorkflow({
 					integrations,
 				});
 
-				// Mark as processed
+				// Mark as processed (even if skipped due to duplicate)
 				state.processedVideoIds.push(video.id);
 
-				results.push({
-					videoId: video.id,
-					notionUrl: notionPage?.url,
-				});
+				if (notionPage?.skipped) {
+					results.push({
+						videoId: video.id,
+						skipped: true,
+					});
+				} else {
+					results.push({
+						videoId: video.id,
+						notionUrl: notionPage?.url,
+					});
+				}
 			} catch (error) {
 				results.push({
 					videoId: video.id,
@@ -338,305 +350,23 @@ export default defineWorkflow({
 
 		await env.KV?.put(stateKey, JSON.stringify(state));
 
-		const successCount = results.filter((r) => !r.error).length;
+		const successCount = results.filter((r) => !r.error && !r.skipped).length;
+		const skippedCount = results.filter((r) => r.skipped).length;
 		const failCount = results.filter((r) => r.error).length;
+
+		let message = `Processed ${successCount} videos`;
+		if (skippedCount > 0) message += `, ${skippedCount} already existed`;
+		if (failCount > 0) message += `, ${failCount} failed`;
 
 		return {
 			success: true,
-			message: `Processed ${successCount} videos${failCount > 0 ? `, ${failCount} failed` : ''}`,
+			message,
 			videosProcessed: successCount,
+			videosSkipped: skippedCount,
 			videosFailed: failCount,
 			results,
 		};
 	},
 });
 
-// ============================================================================
-// HELPER FUNCTIONS
-// ============================================================================
-
-/**
- * Extract playlist ID from URL or return as-is if already an ID
- */
-function extractPlaylistId(urlOrId: string): string | null {
-	// Already a playlist ID (starts with PL, UU, LL, etc.)
-	if (/^(PL|UU|LL|FL|RD|OL)[a-zA-Z0-9_-]+$/.test(urlOrId)) {
-		return urlOrId;
-	}
-
-	// youtube.com/playlist?list=PLAYLIST_ID
-	const listMatch = urlOrId.match(/[?&]list=([a-zA-Z0-9_-]+)/);
-	if (listMatch) return listMatch[1];
-
-	return null;
-}
-
-/**
- * Create a Notion page for a YouTube video
- */
-async function createNotionVideoPage(params: {
-	video: VideoData;
-	transcript: TranscriptData | null;
-	databaseId: string;
-	propertyNames: {
-		title: string;
-		url: string;
-		channel: string;
-		date: string;
-	};
-	integrations: any;
-}): Promise<{ url: string } | null> {
-	const { video, transcript, databaseId, propertyNames, integrations } = params;
-
-	// Build page properties
-	const properties: Record<string, any> = {
-		[propertyNames.title]: {
-			title: [{ text: { content: video.title } }],
-		},
-		[propertyNames.url]: {
-			url: `https://www.youtube.com/watch?v=${video.id}`,
-		},
-		[propertyNames.channel]: {
-			rich_text: [{ text: { content: video.channelTitle } }],
-		},
-	};
-
-	// Add date if available
-	if (video.publishedAt) {
-		properties[propertyNames.date] = {
-			date: { start: video.publishedAt.split('T')[0] },
-		};
-	}
-
-	// Build page content blocks
-	const children: any[] = [];
-
-	// Video embed
-	children.push({
-		object: 'block',
-		type: 'video',
-		video: {
-			type: 'external',
-			external: { url: `https://www.youtube.com/watch?v=${video.id}` },
-		},
-	});
-
-	// Video info callout
-	const infoLines: string[] = [];
-	if (video.channelTitle) infoLines.push(`📺 Channel: ${video.channelTitle}`);
-	if (video.duration) infoLines.push(`⏱️ Duration: ${formatDuration(video.duration)}`);
-	if (video.viewCount) infoLines.push(`👁️ Views: ${video.viewCount.toLocaleString()}`);
-	if (video.publishedAt) infoLines.push(`📅 Published: ${video.publishedAt.split('T')[0]}`);
-
-	if (infoLines.length > 0) {
-		children.push({
-			object: 'block',
-			type: 'callout',
-			callout: {
-				icon: { emoji: '📹' },
-				rich_text: [{ text: { content: infoLines.join('\n') } }],
-			},
-		});
-	}
-
-	// Description
-	if (video.description) {
-		children.push({
-			object: 'block',
-			type: 'heading_2',
-			heading_2: { rich_text: [{ text: { content: 'Description' } }] },
-		});
-
-		const descriptionBlocks = splitTextIntoBlocks(video.description);
-		children.push(...descriptionBlocks);
-	}
-
-	// Transcript
-	if (transcript && transcript.text) {
-		children.push({
-			object: 'block',
-			type: 'divider',
-			divider: {},
-		});
-
-		children.push({
-			object: 'block',
-			type: 'heading_2',
-			heading_2: { rich_text: [{ text: { content: 'Transcript' } }] },
-		});
-
-		if (transcript.language) {
-			children.push({
-				object: 'block',
-				type: 'paragraph',
-				paragraph: {
-					rich_text: [
-						{
-							text: { content: `Language: ${transcript.language}` },
-							annotations: { italic: true, color: 'gray' },
-						},
-					],
-				},
-			});
-		}
-
-		const transcriptBlocks = splitTextIntoBlocks(transcript.text);
-		children.push(...transcriptBlocks);
-	}
-
-	// Create the page (Notion limits children to 100 blocks on create)
-	const initialChildren = children.slice(0, NOTION_BLOCKS_PER_REQUEST);
-	const remainingChildren = children.slice(NOTION_BLOCKS_PER_REQUEST);
-
-	const createResult = await integrations.notion.createPage({
-		parentDatabaseId: databaseId,
-		properties,
-		children: initialChildren,
-	});
-
-	if (!createResult.success) {
-		throw new Error(`Failed to create Notion page: ${createResult.error?.message}`);
-	}
-
-	const pageId = createResult.data.id;
-	const pageUrl = createResult.data.url;
-
-	// Append remaining blocks in batches
-	if (remainingChildren.length > 0) {
-		await appendBlocksInBatches(pageId, remainingChildren, integrations);
-	}
-
-	return { url: pageUrl };
-}
-
-/**
- * Split text into Notion paragraph blocks respecting character limit
- */
-function splitTextIntoBlocks(text: string): any[] {
-	const blocks: any[] = [];
-
-	// Split by paragraphs (double newlines)
-	const paragraphs = text.split(/\n\n+/);
-
-	for (const para of paragraphs) {
-		if (!para.trim()) continue;
-
-		const trimmed = para.trim();
-
-		// If paragraph fits in one block, add it
-		if (trimmed.length <= NOTION_BLOCK_CHAR_LIMIT) {
-			blocks.push({
-				object: 'block',
-				type: 'paragraph',
-				paragraph: { rich_text: [{ text: { content: trimmed } }] },
-			});
-			continue;
-		}
-
-		// Split long paragraphs by sentences or words
-		let remaining = trimmed;
-		while (remaining.length > 0) {
-			let chunk: string;
-
-			if (remaining.length <= NOTION_BLOCK_CHAR_LIMIT) {
-				chunk = remaining;
-				remaining = '';
-			} else {
-				// Try to split at sentence boundary
-				const cutPoint = findSplitPoint(remaining, NOTION_BLOCK_CHAR_LIMIT);
-				chunk = remaining.slice(0, cutPoint).trim();
-				remaining = remaining.slice(cutPoint).trim();
-			}
-
-			if (chunk) {
-				blocks.push({
-					object: 'block',
-					type: 'paragraph',
-					paragraph: { rich_text: [{ text: { content: chunk } }] },
-				});
-			}
-		}
-	}
-
-	return blocks.length > 0
-		? blocks
-		: [
-				{
-					object: 'block',
-					type: 'paragraph',
-					paragraph: { rich_text: [{ text: { content: '' } }] },
-				},
-		  ];
-}
-
-/**
- * Find a good split point (sentence or word boundary) within maxLength
- */
-function findSplitPoint(text: string, maxLength: number): number {
-	// Try to split at sentence boundary
-	const sentenceEnd = text.slice(0, maxLength).lastIndexOf('. ');
-	if (sentenceEnd > maxLength * 0.5) {
-		return sentenceEnd + 2; // Include the period and space
-	}
-
-	// Fall back to word boundary
-	const wordEnd = text.slice(0, maxLength).lastIndexOf(' ');
-	if (wordEnd > maxLength * 0.5) {
-		return wordEnd + 1;
-	}
-
-	// Last resort: hard cut
-	return maxLength;
-}
-
-/**
- * Append blocks to a Notion page in batches
- */
-async function appendBlocksInBatches(
-	pageId: string,
-	blocks: any[],
-	integrations: any
-): Promise<void> {
-	for (let i = 0; i < blocks.length; i += NOTION_BLOCKS_PER_REQUEST) {
-		const batch = blocks.slice(i, i + NOTION_BLOCKS_PER_REQUEST);
-
-		// Use the Notion API to append blocks
-		// Note: This requires the appendBlockChildren method on the integration
-		const response = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
-			method: 'PATCH',
-			headers: {
-				Authorization: `Bearer ${integrations.notion.accessToken}`,
-				'Notion-Version': '2022-06-28',
-				'Content-Type': 'application/json',
-			},
-			body: JSON.stringify({ children: batch }),
-		});
-
-		if (!response.ok) {
-			const error = await response.json().catch(() => ({}));
-			console.error(`Failed to append blocks (batch ${Math.floor(i / NOTION_BLOCKS_PER_REQUEST) + 1}):`, error);
-		}
-
-		// Rate limiting - small delay between batches
-		if (i + NOTION_BLOCKS_PER_REQUEST < blocks.length) {
-			await new Promise((r) => setTimeout(r, 350));
-		}
-	}
-}
-
-/**
- * Format ISO 8601 duration to human-readable string
- */
-function formatDuration(duration: string): string {
-	const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-	if (!match) return duration;
-
-	const hours = parseInt(match[1] || '0', 10);
-	const minutes = parseInt(match[2] || '0', 10);
-	const seconds = parseInt(match[3] || '0', 10);
-
-	if (hours > 0) {
-		return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-	}
-	return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-}
+// Helper functions are now imported from ./utils.js

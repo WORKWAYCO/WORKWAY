@@ -54,6 +54,13 @@
  */
 
 import { defineWorkflow, cron, webhook } from '@workwayco/sdk';
+import {
+	delay,
+	columnLetterToIndex,
+	columnIndexToLetter,
+	simpleHash,
+	rowToObject,
+} from '../_shared/utils.js';
 
 // ============================================================================
 // CONSTANTS
@@ -968,62 +975,8 @@ function getColumnIndex(column: string, headers: string[]): number {
 	return headers.findIndex((h) => h.toLowerCase() === column.toLowerCase());
 }
 
-/**
- * Convert column letter (A, B, AA) to index (0, 1, 26)
- */
-function columnLetterToIndex(letter: string): number {
-	const upper = letter.toUpperCase();
-	let index = 0;
-	for (let i = 0; i < upper.length; i++) {
-		index = index * 26 + (upper.charCodeAt(i) - 64);
-	}
-	return index - 1;
-}
-
-/**
- * Convert column index to letter
- */
-function columnIndexToLetter(index: number): string {
-	let letter = '';
-	let temp = index + 1;
-	while (temp > 0) {
-		const mod = (temp - 1) % 26;
-		letter = String.fromCharCode(65 + mod) + letter;
-		temp = Math.floor((temp - mod) / 26);
-	}
-	return letter;
-}
-
-/**
- * Simple hash function for change detection
- */
-function simpleHash(str: string): string {
-	let hash = 0;
-	for (let i = 0; i < str.length; i++) {
-		const char = str.charCodeAt(i);
-		hash = (hash << 5) - hash + char;
-		hash = hash & hash;
-	}
-	return hash.toString(16);
-}
-
-/**
- * Convert row array to object with headers as keys
- */
-function rowToObject(row: string[], headers: string[]): Record<string, string> {
-	const obj: Record<string, string> = {};
-	for (let i = 0; i < headers.length && i < row.length; i++) {
-		obj[headers[i]] = row[i];
-	}
-	return obj;
-}
-
-/**
- * Delay helper for rate limiting
- */
-function delay(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+// Sheet utilities (columnLetterToIndex, columnIndexToLetter, simpleHash, rowToObject, delay)
+// are now imported from ../_shared/utils.js
 
 /**
  * Get a single row from Google Sheets

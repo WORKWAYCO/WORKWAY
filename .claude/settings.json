@@ -11,6 +11,60 @@
     "deny": [],
     "ask": []
   },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/dangerous-command-blocker.ts\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/typescript-validator.ts\"",
+            "timeout": 30
+          },
+          {
+            "type": "command",
+            "command": "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/dry-violations.ts\"",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bd prime 2>/dev/null || true",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "prompt",
+            "prompt": "You are validating that Claude has completed all work properly before stopping. Review the conversation and check:\n\n1. Were all requested tasks completed?\n2. Are there any TODO comments or incomplete implementations?\n3. Were tests run for changed code?\n4. Is there uncommitted or unpushed work?\n5. Are there any open issues that should be closed?\n\nContext: $ARGUMENTS\n\nReturn {\"ok\": true} if work is complete, or {\"ok\": false, \"reason\": \"Incomplete: [what's missing]\"} if not.",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  },
   "mcpServers": {
     "cloudflare": {
       "command": "npx",

@@ -14,6 +14,7 @@
  */
 
 import { defineWorkflow, schedule } from '@workwayco/sdk';
+import { columnLetterToIndex, simpleHash } from '../_shared/utils.js';
 
 export default defineWorkflow({
 	name: 'Spreadsheet Sync Pipeline',
@@ -313,26 +314,8 @@ interface SyncState {
 
 // =============================================================================
 // HELPER FUNCTIONS
+// columnLetterToIndex and simpleHash are now imported from ../_shared/utils.js
 // =============================================================================
-
-function columnLetterToIndex(letter: string): number {
-	const upper = letter.toUpperCase();
-	let index = 0;
-	for (let i = 0; i < upper.length; i++) {
-		index = index * 26 + (upper.charCodeAt(i) - 64);
-	}
-	return index - 1;
-}
-
-function simpleHash(str: string): string {
-	let hash = 0;
-	for (let i = 0; i < str.length; i++) {
-		const char = str.charCodeAt(i);
-		hash = ((hash << 5) - hash) + char;
-		hash = hash & hash;
-	}
-	return hash.toString(16);
-}
 
 async function detectAnomalies(ai: any, headers: string[], rows: any[][]): Promise<string[]> {
 	try {

@@ -14,6 +14,7 @@
 
 import { defineWorkflow, cron, webhook } from '@workwayco/sdk';
 import { AIModels } from '@workwayco/sdk';
+import { analyzeMeeting, splitTranscriptIntoBlocks } from './utils.js';
 
 // Schema for AI meeting analysis
 const MeetingAnalysisSchema = {
@@ -497,57 +498,7 @@ async function processClip(params: ProcessClipParams) {
 	};
 }
 
-async function analyzeMeeting(
-	transcript: string,
-	topic: string,
-	depth: string,
-	integrations: any,
-	env: any
-) {
-	const depthInstructions: Record<string, string> = {
-		brief: 'Keep summary to 2-3 sentences. List only the most critical items.',
-		standard: 'Provide thorough summary in 4-6 sentences. Include all notable items.',
-		detailed: 'Comprehensive analysis with full context. Include all items discussed.',
-	};
-
-	try {
-		const result = await integrations.ai.generateText({
-			model: AIModels.LLAMA_3_8B,
-			system: `You are a meeting analyst. Analyze the transcript and extract structured insights.
-
-${depthInstructions[depth] || depthInstructions.standard}
-
-Return ONLY valid JSON in this format:
-{
-  "summary": "Brief summary of the meeting",
-  "decisions": ["Decision 1", "Decision 2"],
-  "actionItems": [
-    {"task": "Task description", "assignee": "Person name or null"},
-    {"task": "Another task", "assignee": null}
-  ],
-  "followUps": ["Follow-up item 1", "Follow-up item 2"],
-  "keyTopics": ["Topic 1", "Topic 2"],
-  "sentiment": "positive" | "neutral" | "concerned"
-}`,
-			prompt: `Meeting: ${topic}\n\nTranscript:\n${transcript.slice(0, 8000)}`,
-			temperature: 0.3,
-			max_tokens: 1000,
-		});
-
-		const responseText = result.data?.response || '{}';
-
-		// Parse JSON from response
-		const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-		if (jsonMatch) {
-			return JSON.parse(jsonMatch[0]);
-		}
-
-		return null;
-	} catch (error) {
-		console.error('AI analysis failed:', error);
-		return null;
-	}
-}
+// analyzeMeeting is now imported from ./utils.js
 
 async function checkExistingPage(
 	notion: any,
@@ -758,46 +709,7 @@ async function createNotionMeetingPage(params: CreateNotionPageParams) {
 	}
 }
 
-function splitTranscriptIntoBlocks(transcript: string): any[] {
-	const blocks: any[] = [];
-	const maxChars = 1900; // Notion limit is 2000, leave buffer
-
-	// Split by paragraphs or speaker changes
-	const segments = transcript.split(/\n\n|\n(?=[A-Z][a-z]+:)/);
-
-	let currentBlock = '';
-
-	for (const segment of segments) {
-		if (currentBlock.length + segment.length + 1 > maxChars) {
-			if (currentBlock) {
-				blocks.push({
-					object: 'block',
-					type: 'paragraph',
-					paragraph: { rich_text: [{ text: { content: currentBlock } }] },
-				});
-			}
-			currentBlock = segment;
-		} else {
-			currentBlock = currentBlock ? `${currentBlock}\n${segment}` : segment;
-		}
-	}
-
-	if (currentBlock) {
-		blocks.push({
-			object: 'block',
-			type: 'paragraph',
-			paragraph: { rich_text: [{ text: { content: currentBlock } }] },
-		});
-	}
-
-	return blocks.length > 0 ? blocks : [
-		{
-			object: 'block',
-			type: 'paragraph',
-			paragraph: { rich_text: [{ text: { content: 'No transcript available' } }] },
-		},
-	];
-}
+// splitTranscriptIntoBlocks is now imported from ./utils.js
 
 interface PostSlackSummaryParams {
 	channel: string;

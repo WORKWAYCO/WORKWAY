@@ -605,6 +605,120 @@ export class Notion extends BaseAPIClient {
 		}
 	}
 
+	/**
+	 * Append children blocks to a page or block
+	 *
+	 * Use this to add content to an existing page after creation.
+	 * Respects Notion's 100-block limit per request.
+	 *
+	 * @returns ActionResult with appended blocks
+	 */
+	async appendBlockChildren(options: {
+		blockId: string;
+		children: NotionBlock[];
+	}): Promise<ActionResult<NotionBlock[]>> {
+		const { blockId, children } = options;
+
+		if (!blockId) {
+			return ActionResult.error('Block ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'notion',
+				action: 'append-block-children',
+			});
+		}
+
+		if (!children || children.length === 0) {
+			return ActionResult.error('Children blocks are required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'notion',
+				action: 'append-block-children',
+			});
+		}
+
+		try {
+			const response = await this.patch(
+				`/blocks/${blockId}/children`,
+				{ children },
+				this.notionHeaders
+			);
+			await assertResponseOk(response, { integration: 'notion', action: 'append-block-children' });
+
+			const data = (await response.json()) as {
+				object: 'list';
+				results: NotionBlock[];
+			};
+
+			return createActionResult({
+				data: data.results,
+				integration: 'notion',
+				action: 'append-block-children',
+				schema: 'notion.block-list.v1',
+				capabilities: this.getCapabilities(),
+			});
+		} catch (error) {
+			return handleError(error, 'append-block-children');
+		}
+	}
+
+	/**
+	 * Append blocks to a page in batches
+	 *
+	 * Automatically splits large block arrays into batches of 100 (Notion's limit).
+	 * Includes rate limiting between batches.
+	 *
+	 * @param pageId - The page ID to append blocks to
+	 * @param blocks - Array of blocks to append
+	 * @param batchSize - Max blocks per request (default: 100)
+	 * @param delayMs - Delay between batches in ms (default: 350)
+	 */
+	async appendBlocksInBatches(
+		pageId: string,
+		blocks: NotionBlock[],
+		batchSize: number = 100,
+		delayMs: number = 350
+	): Promise<ActionResult<{ totalAppended: number; batches: number }>> {
+		if (!pageId) {
+			return ActionResult.error('Page ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'notion',
+				action: 'append-blocks-in-batches',
+			});
+		}
+
+		let totalAppended = 0;
+		let batches = 0;
+
+		for (let i = 0; i < blocks.length; i += batchSize) {
+			const batch = blocks.slice(i, i + batchSize);
+
+			const result = await this.appendBlockChildren({
+				blockId: pageId,
+				children: batch,
+			});
+
+			if (!result.success) {
+				return ActionResult.error(
+					`Failed to append batch ${batches + 1}: ${result.error?.message}`,
+					ErrorCode.EXTERNAL_SERVICE_ERROR,
+					{ integration: 'notion', action: 'append-blocks-in-batches' }
+				);
+			}
+
+			totalAppended += batch.length;
+			batches++;
+
+			// Rate limiting between batches
+			if (i + batchSize < blocks.length) {
+				await new Promise((r) => setTimeout(r, delayMs));
+			}
+		}
+
+		return createActionResult({
+			data: { totalAppended, batches },
+			integration: 'notion',
+			action: 'append-blocks-in-batches',
+			schema: 'notion.batch-result.v1',
+			capabilities: this.getCapabilities(),
+		});
+	}
+
 	// ==========================================================================
 	// TASK-SPECIFIC ACTIONS (for StandardTask support)
 	// ==========================================================================

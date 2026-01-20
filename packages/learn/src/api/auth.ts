@@ -4,23 +4,12 @@
  * Handles authentication with the Identity Worker at id.createsomething.space
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { existsSync, readFileSync, writeFileSync, unlinkSync } from 'node:fs';
 import type { Credentials, User, AuthResult } from '../types/index.js';
+import { ensureConfigDir, getConfigPath } from '../lib/config.js';
 
 const IDENTITY_WORKER = 'https://id.createsomething.space';
-const CONFIG_DIR = join(homedir(), '.workway');
-const CREDENTIALS_FILE = join(CONFIG_DIR, 'learn-credentials.json');
-
-/**
- * Ensure config directory exists
- */
-function ensureConfigDir(): void {
-	if (!existsSync(CONFIG_DIR)) {
-		mkdirSync(CONFIG_DIR, { recursive: true });
-	}
-}
+const CREDENTIALS_FILE = getConfigPath('learn-credentials.json');
 
 /**
  * Load credentials from disk

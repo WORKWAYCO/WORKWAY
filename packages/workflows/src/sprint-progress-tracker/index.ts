@@ -14,6 +14,7 @@
  */
 
 import { defineWorkflow, schedule } from '@workwayco/sdk';
+import { getProgressBar } from '../_shared/utils.js';
 
 export default defineWorkflow({
 	name: 'Sprint Progress Tracker',
@@ -438,11 +439,7 @@ function buildSlackBlocks(
 	return blocks;
 }
 
-function getProgressBar(percentage: number): string {
-	const filled = Math.round(percentage / 10);
-	const empty = 10 - filled;
-	return '█'.repeat(filled) + '░'.repeat(empty);
-}
+// getProgressBar is now imported from ../_shared/utils.js
 
 function getDaysRemaining(endDate: string): string {
 	const end = new Date(endDate);

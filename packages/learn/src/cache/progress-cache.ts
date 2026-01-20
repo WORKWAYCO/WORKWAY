@@ -4,23 +4,12 @@
  * Queues progress updates for offline sync.
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import type { PendingCompletion } from '../types/index.js';
 import { getClient } from '../api/client.js';
+import { ensureConfigDir, getConfigPath } from '../lib/config.js';
 
-const CONFIG_DIR = join(homedir(), '.workway');
-const QUEUE_FILE = join(CONFIG_DIR, 'learn-offline-queue.json');
-
-/**
- * Ensure config directory exists
- */
-function ensureConfigDir(): void {
-	if (!existsSync(CONFIG_DIR)) {
-		mkdirSync(CONFIG_DIR, { recursive: true });
-	}
-}
+const QUEUE_FILE = getConfigPath('learn-offline-queue.json');
 
 /**
  * Load pending completions from disk

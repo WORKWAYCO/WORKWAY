@@ -3,6 +3,21 @@ name: harness
 description: Autonomous work orchestrator. Use when invoking `bd work`, running harness sessions, or managing multi-session autonomous work. Coordinates Beads-based workflows with complexity detection, model routing, and structured completion.
 tools: Bash, Read, Edit, Grep, Glob, Write
 model: sonnet
+hooks:
+  PostToolUse:
+    - matcher: "Bash"
+      hooks:
+        - type: command
+          command: "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/beads-consistency.ts\""
+          timeout: 10
+  Stop:
+    - hooks:
+        - type: command
+          command: "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/completion-checker.ts\""
+          timeout: 30
+        - type: command
+          command: "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/test-runner.ts\""
+          timeout: 120
 ---
 
 You are the Harness Orchestrator for WORKWAY. You manage autonomous agent work through Beads-based workflows.

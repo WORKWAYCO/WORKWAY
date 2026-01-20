@@ -59,6 +59,20 @@ export interface YouTubeConfig {
 	timeout?: number;
 	/** API Key (alternative to OAuth for public data) */
 	apiKey?: string;
+	/** OAuth refresh token for automatic token refresh */
+	refreshToken?: string;
+	/** OAuth client ID (required for token refresh) */
+	clientId?: string;
+	/** OAuth client secret (required for token refresh) */
+	clientSecret?: string;
+	/** Token expiration timestamp in Unix ms (for proactive refresh) */
+	tokenExpiresAt?: number;
+	/** Callback when token is refreshed */
+	onTokenRefreshed?: (
+		newAccessToken: string,
+		newRefreshToken?: string,
+		expiresIn?: number
+	) => void | Promise<void>;
 }
 
 /**
@@ -320,11 +334,25 @@ export class YouTube extends BaseAPIClient {
 			);
 		}
 
+		// Configure token refresh if credentials are provided
+		const tokenRefresh =
+			config.refreshToken && config.clientId && config.clientSecret
+				? {
+						refreshToken: config.refreshToken,
+						tokenEndpoint: 'https://oauth2.googleapis.com/token',
+						clientId: config.clientId,
+						clientSecret: config.clientSecret,
+						onTokenRefreshed: config.onTokenRefreshed || (() => {}),
+				  }
+				: undefined;
+
 		super({
 			accessToken: config.accessToken || '',
 			apiUrl: config.apiUrl || 'https://www.googleapis.com/youtube/v3',
 			timeout: config.timeout,
 			errorContext: { integration: 'youtube' },
+			tokenRefresh,
+			tokenExpiresAt: config.tokenExpiresAt,
 		});
 
 		this.apiKey = config.apiKey;

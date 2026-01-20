@@ -3,6 +3,21 @@ name: canon-reviewer
 description: Hermeneutic reviewer using the Subtractive Triad (DRY → Rams → Heidegger). Use proactively after significant code changes to ensure alignment with Zuhandenheit and "Weniger, aber besser" principles.
 tools: Read, Grep, Glob
 model: sonnet
+hooks:
+  Stop:
+    - hooks:
+        - type: prompt
+          prompt: |
+            You are validating a canon review. Check the conversation for:
+            1. Did the review cover all three passes (DRY, Rams, Heidegger)?
+            2. Were scores assigned for each pass (1-5)?
+            3. Were specific recommendations provided?
+            4. If any score was ≤2, were blocking issues identified?
+            
+            Context: $ARGUMENTS
+            
+            Return {"ok": true} if the review is complete, or {"ok": false, "reason": "Missing: [what's missing]"} if incomplete.
+          timeout: 30
 ---
 
 # Hermeneutic Reviewer Agent

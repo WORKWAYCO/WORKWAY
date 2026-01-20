@@ -24,6 +24,7 @@ import { Logger } from '../../utils/logger.js';
 import { execSync } from 'child_process';
 import { existsSync, readFileSync } from 'fs';
 import path from 'path';
+import { findWranglerConfig, getDatabaseName } from '../../lib/wrangler.js';
 
 interface SyncOptions {
 	dryRun?: boolean;
@@ -435,58 +436,6 @@ const WORKFLOW_REGISTRY: WorkflowMetadata[] = [
 		category: 'construction',
 	},
 ];
-
-/**
- * Find wrangler config file
- */
-function findWranglerConfig(): string | null {
-	const candidates = [
-		'wrangler.jsonc',
-		'wrangler.json',
-		'wrangler.toml',
-		'../workway-platform/apps/api/wrangler.jsonc',
-		'../../workway-platform/apps/api/wrangler.jsonc',
-	];
-
-	for (const candidate of candidates) {
-		if (existsSync(candidate)) {
-			return candidate;
-		}
-	}
-
-	return null;
-}
-
-/**
- * Get database name from wrangler config
- */
-function getDatabaseName(configPath: string): string | null {
-	try {
-		const content = readFileSync(configPath, 'utf-8');
-
-		if (configPath.endsWith('.jsonc') || configPath.endsWith('.json')) {
-			const jsonContent = content
-				.replace(/\/\*[\s\S]*?\*\//g, '')
-				.replace(/\/\/.*/g, '');
-			const config = JSON.parse(jsonContent);
-
-			if (config.d1_databases && config.d1_databases[0]) {
-				return config.d1_databases[0].database_name;
-			}
-		}
-
-		if (configPath.endsWith('.toml')) {
-			const match = content.match(/database_name\s*=\s*"([^"]+)"/);
-			if (match) {
-				return match[1];
-			}
-		}
-
-		return null;
-	} catch {
-		return null;
-	}
-}
 
 /**
  * Get existing workflows from D1

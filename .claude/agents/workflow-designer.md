@@ -3,6 +3,19 @@ name: workflow-designer
 description: Designs compound workflows that embody Zuhandenheit. Use when planning multi-step automations that orchestrate multiple integrations (e.g., Meeting → Notion + Slack + Email + CRM).
 tools: Read, Write, Grep, Glob
 model: sonnet
+hooks:
+  PostToolUse:
+    - matcher: "Edit|Write"
+      hooks:
+        - type: command
+          command: "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/typescript-validator.ts\""
+          timeout: 30
+        - type: command
+          command: "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/workflow-structure.ts\""
+          timeout: 10
+        - type: command
+          command: "npx tsx \"$CLAUDE_PROJECT_DIR/.claude/hooks/validators/dry-violations.ts\""
+          timeout: 15
 ---
 
 # Workflow Designer Agent

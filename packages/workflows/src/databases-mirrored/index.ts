@@ -59,6 +59,7 @@
  */
 
 import { defineWorkflow, webhook } from '@workwayco/sdk';
+import { delay } from '../_shared/utils.js';
 
 // ============================================================================
 // CONSTANTS
@@ -830,12 +831,7 @@ async function fetchWithToken(
 	return fetch(url, options);
 }
 
-/**
- * Delay helper for rate limiting
- */
-function delay(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+// delay is now imported from ../_shared/utils.js
 
 // ============================================================================
 // METADATA

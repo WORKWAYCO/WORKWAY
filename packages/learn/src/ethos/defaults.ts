@@ -4,22 +4,11 @@
  * Persistent storage of personal workflow principles in ~/.workway/learn-ethos.json
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createDefaultEthos, type WorkflowEthos, type WorkflowPrinciple } from './schema.js';
+import { ensureConfigDir, getConfigPath } from '../lib/config.js';
 
-const CONFIG_DIR = join(homedir(), '.workway');
-const ETHOS_FILE = join(CONFIG_DIR, 'learn-ethos.json');
-
-/**
- * Ensure config directory exists
- */
-function ensureConfigDir(): void {
-	if (!existsSync(CONFIG_DIR)) {
-		mkdirSync(CONFIG_DIR, { recursive: true });
-	}
-}
+const ETHOS_FILE = getConfigPath('learn-ethos.json');
 
 /**
  * Load ethos from disk

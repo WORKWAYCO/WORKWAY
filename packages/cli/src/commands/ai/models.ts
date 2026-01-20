@@ -7,6 +7,7 @@
 
 import chalk from 'chalk';
 import { Logger } from '../../utils/logger.js';
+import { padRight } from '../../lib/format.js';
 
 /**
  * Cloudflare Workers AI Model Catalog
@@ -348,10 +349,6 @@ export async function aiModelsCommand(options: ModelsOptions = {}): Promise<void
 	Logger.log('Usage in workflow:');
 	Logger.code(`import { AIModels } from '@workway/sdk/workers-ai';
 const result = await ai.generateText({ model: AIModels.LLAMA_3_8B, prompt });`);
-}
-
-function padRight(str: string, length: number): string {
-	return str.padEnd(length);
 }
 
 export { AI_MODELS };
