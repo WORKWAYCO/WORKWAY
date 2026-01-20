@@ -375,13 +375,7 @@ export type BeadsStatus =
 	| 'verified'
 	| 'closed';
 
-/**
- * Beads sync configuration
- */
-export interface BeadsNotionConfig {
-	databaseId: string;
-	lastSyncAt?: string;
-}
+// BeadsNotionConfig removed - verified dead code (0 uses)
 
 /**
  * Beads sync result

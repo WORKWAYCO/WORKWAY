@@ -5,6 +5,7 @@
  */
 
 import type { Diagnosis } from './diagnose';
+import { parseRepo } from './utils.js';
 
 export interface FixInput {
   diagnosis: Diagnosis;
@@ -114,13 +115,7 @@ const GITHUB_HEADERS = (token: string) => ({
   'User-Agent': 'WORKWAY-Repair-Agent/1.0',
 });
 
-function parseRepo(repo: string): [string, string] {
-  const mapping: Record<string, [string, string]> = {
-    'workway-platform': ['WORKWAYCO', 'workway-platform'],
-    Cloudflare: ['WORKWAYCO', 'WORKWAY'],  // Cloudflare is inside WORKWAY repo
-  };
-  return mapping[repo] || ['WORKWAYCO', repo];
-}
+// parseRepo is now imported from ./utils.js
 
 async function fetchFiles(
   filePaths: string[],

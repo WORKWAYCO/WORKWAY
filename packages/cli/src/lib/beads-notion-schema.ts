@@ -162,9 +162,4 @@ export function extractBeadsIdFromPage(page: any): string | null {
 	return beadsIdProp.rich_text[0].plain_text;
 }
 
-/**
- * Extract updated timestamp from Notion page
- */
-export function extractNotionUpdatedAt(page: any): string | null {
-	return page.last_edited_time || null;
-}
+// extractNotionUpdatedAt removed - verified dead code (0 uses)

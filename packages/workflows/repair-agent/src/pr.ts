@@ -7,6 +7,7 @@
 import type { Diagnosis } from './diagnose';
 import type { Fix } from './fix';
 import type { TestResult } from './test';
+import { parseRepo } from './utils.js';
 
 export interface PRInput {
   diagnosis: Diagnosis;
@@ -124,15 +125,7 @@ ${diagnosis.suggested_approach}
   };
 }
 
-function parseRepo(repo: string): [string, string] {
-  // Map repo name to GitHub owner/repo
-  const mapping: Record<string, [string, string]> = {
-    'workway-platform': ['WORKWAYCO', 'workway-platform'],
-    Cloudflare: ['WORKWAYCO', 'WORKWAY'],  // Cloudflare is inside WORKWAY repo
-  };
-
-  return mapping[repo] || ['WORKWAYCO', repo];
-}
+// parseRepo is now imported from ./utils.js
 
 function formatTestResults(results: TestResult): string {
   const lines: string[] = [
