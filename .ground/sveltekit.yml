@@ -1,0 +1,32 @@
+# SvelteKit Framework Patterns
+# These are architectural conventions loaded by SvelteKit runtime, not dead code
+#
+# Usage: extends: [.ground/sveltekit.yml]
+
+version: "1"
+
+ignore:
+  paths:
+    # Entry points (loaded by SvelteKit runtime at startup)
+    - "**/hooks.server.ts"    # Server hooks - runs on every request
+    - "**/hooks.client.ts"    # Client hooks - runs on hydration
+    - "**/hooks.ts"           # Universal hooks (deprecated but still supported)
+    - "**/src/app.html"       # HTML template - referenced by build
+    - "**/src/app.d.ts"       # TypeScript declarations
+
+    # Route files (called by SvelteKit router)
+    - "**/+page.svelte"       # Page components
+    - "**/+page.ts"           # Page load functions (universal)
+    - "**/+page.server.ts"    # Page load functions (server-only)
+    - "**/+layout.svelte"     # Layout components
+    - "**/+layout.ts"         # Layout load functions
+    - "**/+layout.server.ts"  # Layout load functions (server-only)
+    - "**/+server.ts"         # API routes
+    - "**/+error.svelte"      # Error boundaries
+
+    # Static assets (referenced in HTML/CSS, not imports)
+    - "**/static/**"
+
+    # SvelteKit generated files
+    - "**/.svelte-kit/**"
+    - "**/svelte.config.js"   # Build configuration

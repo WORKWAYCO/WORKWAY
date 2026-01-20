@@ -1,8 +1,17 @@
 # Ground Configuration for WORKWAY Cloudflare Monorepo
 # https://github.com/create-something/ground
+#
+# Framework patterns are in .ground/*.yml for reusability
+
+extends:
+  - .ground/common.yml
+  - .ground/sveltekit.yml
+  - .ground/cloudflare-workers.yml
 
 ignore:
-  # Structural patterns - these are intentionally similar across integrations
+  # ==========================================================================
+  # PROJECT-SPECIFIC: Structural patterns across integrations
+  # ==========================================================================
   functions:
     - getCapabilities      # Required interface method (13 integrations)
     - constructor          # Class initialization boilerplate
@@ -12,36 +21,31 @@ ignore:
     - parseWebhookUnsafe   # Webhook parsing (different event types per integration)
     - queryTasks           # Task query pattern (different response types)
 
-  # Future APIs - documented but not yet consumed
+  # ==========================================================================
+  # PROJECT-SPECIFIC: Exports for future use or external consumption
+  # ==========================================================================
   exports:
     - generateSecureToken        # Security utility for future use
-    - WorkflowDefinitionMinimal  # Type used by getWorkflowId (tool doesn't trace type usage)
+    - WorkflowDefinitionMinimal  # Type used by getWorkflowId
 
-  # Files to skip entirely
+  # ==========================================================================
+  # PROJECT-SPECIFIC: Additional paths beyond framework patterns
+  # ==========================================================================
   paths:
-    - "**/*.test.ts"             # Test files often duplicate for isolation
-    - "**/*.spec.ts"
-    - "**/fixtures/**"
     - "**/seo-data.ts"           # Future feature - SEO/AEO configuration
     - "**/pricing-constants.ts"  # Future feature - pricing tiers
-    - "**/_template/**"          # Integration template (intentionally generic)
-    - "**/vitest.config.ts"      # Tooling config - entry point for vitest
-    - "**/tsup.config.ts"        # Tooling config - entry point for tsup
-    - "**/scripts/**"            # Standalone scripts - not imported
     - "**/openapi/generate.ts"   # OpenAPI generator script
     - "**/validate-svg.js"       # Asset validation script
 
-  # Intentional duplicate pairs (different semantic purposes)
+  # ==========================================================================
+  # PROJECT-SPECIFIC: Intentional duplicate pairs
+  # ==========================================================================
   duplicate_pairs:
-    # HubSpot search actions - different CRM objects
+    # HubSpot search actions - different CRM objects, same pattern
     - ["packages/integrations/src/hubspot/actions/search-contacts.ts",
        "packages/integrations/src/hubspot/actions/search-deals.ts"]
-
-thresholds:
-  duplicate_similarity: 85    # 85% similar = flag as duplicate
-  min_function_lines: 5       # Ignore trivial functions < 5 lines
 
 report:
   format: markdown
   include_suggestions: true
-  group_by: package           # Group findings by package
+  group_by: package

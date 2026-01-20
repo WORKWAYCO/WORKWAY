@@ -1,0 +1,19 @@
+# TanStack Router (React) Patterns
+# File-based routing conventions
+#
+# Usage: extends: [.ground/tanstack-router.yml]
+
+version: "1"
+
+ignore:
+  paths:
+    # Route files (registered by TanStack Router file-based routing)
+    - "**/routes/**/*.tsx"    # All route components
+    - "**/routes/**/*.ts"     # Route loaders/actions
+
+    # TanStack Router generated files
+    - "**/routeTree.gen.ts"   # Generated route tree
+    - "**/__root.tsx"         # Root route
+
+    # Common patterns in routes
+    - "**/routes/**/lazy.tsx" # Lazy-loaded route components

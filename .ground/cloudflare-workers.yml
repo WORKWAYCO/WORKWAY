@@ -1,0 +1,35 @@
+# Cloudflare Workers Patterns
+# Workers-specific entry points and configurations
+#
+# Usage: extends: [.ground/cloudflare-workers.yml]
+
+version: "1"
+
+ignore:
+  paths:
+    # Worker entry points (referenced in wrangler.toml)
+    - "**/src/index.ts"       # Main entry point
+    - "**/worker.ts"          # Alternative entry point naming
+
+    # Configuration files (not imported, consumed by wrangler)
+    - "**/wrangler.toml"
+    - "**/wrangler.json"
+    - "**/wrangler.jsonc"
+    - "**/worker-configuration.d.ts"  # Generated types
+
+    # Durable Objects (referenced in wrangler.toml bindings)
+    # These are entry points even if not directly imported
+    - "**/durable-objects/**"
+
+    # Migrations (consumed by D1, not imported)
+    - "**/migrations/**/*.sql"
+
+  # Node.js APIs polyfilled by Workers nodejs_compat flag
+  # Add these when wrangler.toml has: compatibility_flags = ["nodejs_compat"]
+  node_apis:
+    - Buffer.from
+    - Buffer.alloc
+    - Buffer.concat
+    - crypto.createHash
+    - crypto.createHmac
+    - util.promisify

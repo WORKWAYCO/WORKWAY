@@ -1,0 +1,31 @@
+# Common Development Patterns
+# Shared across all frameworks - tests, tooling, scripts
+#
+# Usage: extends: [.ground/common.yml]
+
+version: "1"
+
+ignore:
+  paths:
+    # Test files (loaded by test runner, not imported)
+    - "**/*.test.ts"
+    - "**/*.test.tsx"
+    - "**/*.spec.ts"
+    - "**/*.spec.tsx"
+    - "**/fixtures/**"
+    - "**/test-*.ts"
+
+    # Build tooling (entry points for build tools)
+    - "**/vitest.config.ts"
+    - "**/vite.config.ts"
+    - "**/tsup.config.ts"
+
+    # Standalone scripts (run directly, not imported)
+    - "**/scripts/**"
+
+    # Package templates
+    - "**/_template/**"
+
+thresholds:
+  duplicate_similarity: 85
+  min_function_lines: 5
