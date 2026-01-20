@@ -1,14 +1,17 @@
 name: Deploy learn-web
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'apps/learn-web/**'
-      - 'packages/workers/design-tokens/**'
-      - '.github/workflows/deploy-learn-web.yml'
+  # Manual trigger only - requires CLOUDFLARE_API_TOKEN with Pages permissions
   workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - preview
 
 jobs:
   deploy:
