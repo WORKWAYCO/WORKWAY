@@ -1,0 +1,40 @@
+# Ground Configuration for WORKWAY Cloudflare Monorepo
+# https://github.com/create-something/ground
+
+ignore:
+  # Structural patterns - these are intentionally similar across integrations
+  functions:
+    - getCapabilities      # Required interface method (13 integrations)
+    - constructor          # Class initialization boilerplate
+    - initialize           # Integration setup pattern
+    - setWeights           # Router/Priority - different types, similar structure
+
+  # Future APIs - documented but not yet consumed
+  exports:
+    - generateSecureToken  # Security utility for future use
+    - retryWithBackoff     # Retry utility for future use
+    - WorkflowDefinitionMinimal  # Type for future use
+
+  # Files to skip entirely
+  paths:
+    - "**/*.test.ts"
+    - "**/*.spec.ts"
+    - "**/fixtures/**"
+    - "**/seo-data.ts"           # Future feature - SEO/AEO configuration
+    - "**/pricing-constants.ts"  # Future feature - pricing tiers
+    - "**/_template/**"          # Integration template (intentionally generic)
+
+  # Intentional duplicate pairs (different semantic purposes)
+  duplicate_pairs:
+    # HubSpot search actions - different CRM objects
+    - ["packages/integrations/src/hubspot/actions/search-contacts.ts",
+       "packages/integrations/src/hubspot/actions/search-deals.ts"]
+
+thresholds:
+  duplicate_similarity: 85    # 85% similar = flag as duplicate
+  min_function_lines: 5       # Ignore trivial functions < 5 lines
+
+report:
+  format: markdown
+  include_suggestions: true
+  group_by: package           # Group findings by package
