@@ -11,9 +11,8 @@ ignore:
 
   # Future APIs - documented but not yet consumed
   exports:
-    - generateSecureToken  # Security utility for future use
-    - retryWithBackoff     # Retry utility for future use
-    - WorkflowDefinitionMinimal  # Type for future use
+    - generateSecureToken        # Security utility for future use
+    - WorkflowDefinitionMinimal  # Type used by getWorkflowId (tool doesn't trace type usage)
 
   # Files to skip entirely
   paths:

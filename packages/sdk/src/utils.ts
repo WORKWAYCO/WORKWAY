@@ -47,37 +47,6 @@ export function generateId(prefix?: string): string {
 	return prefix ? `${prefix}_${timestamp}_${random}` : `${timestamp}${random}`;
 }
 
-/**
- * Retry a function with exponential backoff
- *
- * @param fn - Function to retry
- * @param maxRetries - Maximum number of retry attempts
- * @param baseDelay - Base delay in milliseconds (doubles each retry)
- * @returns Result of the function
- */
-export async function retryWithBackoff<T>(
-	fn: () => Promise<T>,
-	maxRetries: number = 3,
-	baseDelay: number = 1000
-): Promise<T> {
-	let lastError: Error | undefined;
-	
-	for (let attempt = 0; attempt <= maxRetries; attempt++) {
-		try {
-			return await fn();
-		} catch (error) {
-			lastError = error instanceof Error ? error : new Error(String(error));
-			
-			if (attempt < maxRetries) {
-				const delayMs = baseDelay * Math.pow(2, attempt);
-				await sleep(delayMs);
-			}
-		}
-	}
-	
-	throw lastError;
-}
-
 // ============================================================================
 // WORKFLOW UTILITIES
 // ============================================================================
