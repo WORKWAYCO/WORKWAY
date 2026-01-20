@@ -6,6 +6,7 @@
  */
 
 import { ErrorCode } from './integration-error.js';
+import { sleep } from './utils.js';
 
 // ============================================================================
 // TYPES
@@ -292,8 +293,6 @@ async function request<T>(
 	throw lastError || new Error('Request failed');
 }
 
-function sleep(ms: number): Promise<void> {
-	return new Promise(resolve => setTimeout(resolve, ms));
-}
+// sleep is now imported from ./utils.js
 
 export default http;

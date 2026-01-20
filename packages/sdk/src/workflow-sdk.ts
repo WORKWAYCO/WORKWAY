@@ -53,6 +53,7 @@
 
 import type { ZodSchema } from 'zod';
 import type { Trigger } from './triggers';
+import { getWorkflowId as getWorkflowIdUtil } from './utils.js';
 
 // ============================================================================
 // WORKFLOW METADATA
@@ -807,20 +808,9 @@ export interface WorkflowResult {
 /**
  * Get workflow ID from a WorkflowDefinition
  * Handles both shorthand (pathway.primaryPair.workflowId) and metadata patterns
+ * Re-exported from utils.js for backward compatibility
  */
-export function getWorkflowId(workflow: WorkflowDefinition): string {
-	// Try metadata first (legacy pattern)
-	if (workflow.metadata?.id) {
-		return workflow.metadata.id;
-	}
-	// Try pathway (Heideggerian discovery pattern)
-	if (workflow.pathway?.primaryPair?.workflowId) {
-		return workflow.pathway.primaryPair.workflowId;
-	}
-	// Fallback: derive from name
-	const name = workflow.metadata?.name || workflow.name || 'unknown';
-	return name.toLowerCase().replace(/\s+/g, '-');
-}
+export const getWorkflowId = getWorkflowIdUtil;
 
 /**
  * Get workflow name from a WorkflowDefinition

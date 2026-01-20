@@ -28,27 +28,13 @@ import {
 	classifyBreakdown,
 } from './workflow-sdk';
 
+import { getWorkflowId } from './utils.js';
+
 // ============================================================================
 // WORKFLOW ACCESSORS (Handle both shorthand and metadata patterns)
 // ============================================================================
 
-/**
- * Get workflow ID from a WorkflowDefinition
- * Handles both shorthand (at root) and metadata patterns
- */
-function getWorkflowId(workflow: WorkflowDefinition): string {
-	// Try metadata first (legacy pattern)
-	if (workflow.metadata?.id) {
-		return workflow.metadata.id;
-	}
-	// Try pathway (Heideggerian discovery pattern)
-	if (workflow.pathway?.primaryPair?.workflowId) {
-		return workflow.pathway.primaryPair.workflowId;
-	}
-	// Fallback: derive from name
-	const name = workflow.metadata?.name || workflow.name || 'unknown';
-	return name.toLowerCase().replace(/\s+/g, '-');
-}
+// getWorkflowId is now imported from ./utils.js
 
 /**
  * Get workflow pathway metadata

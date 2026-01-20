@@ -42,6 +42,7 @@ import {
 	validateAccessToken,
 	createErrorHandler,
 	assertResponseOk,
+	secureCompare,
 } from '../core/index.js';
 
 // ============================================================================
@@ -874,7 +875,7 @@ export class Typeform extends BaseAPIClient {
 			);
 
 			// 4. Compare signatures (constant time)
-			if (!this.secureCompare(providedSignature, expectedSignature)) {
+			if (!secureCompare(providedSignature, expectedSignature)) {
 				return ActionResult.error(
 					'Invalid webhook signature',
 					ErrorCode.AUTH_INVALID,
@@ -1049,20 +1050,7 @@ export class Typeform extends BaseAPIClient {
 		return btoa(binary);
 	}
 
-	/**
-	 * Constant-time string comparison to prevent timing attacks
-	 */
-	private secureCompare(a: string, b: string): boolean {
-		if (a.length !== b.length) {
-			return false;
-		}
-
-		let result = 0;
-		for (let i = 0; i < a.length; i++) {
-			result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-		}
-		return result === 0;
-	}
+	// secureCompare is now imported from ../core/security.js
 
 	/**
 	 * Get capabilities for Typeform actions

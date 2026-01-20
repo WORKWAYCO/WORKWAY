@@ -12,3 +12,9 @@ export {
 	assertResponseOk,
 	validateAccessToken,
 } from './error-handler.js';
+
+export {
+	secureCompare,
+	verifyHmacSignature,
+	generateSecureToken,
+} from './security.js';

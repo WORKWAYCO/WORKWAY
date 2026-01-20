@@ -18,6 +18,8 @@
  *   body: JSON.stringify({ data: 'value' }),
  * }, { maxAttempts: 3 });
  * ```
+
+import { sleep } from './utils.js';
  */
 
 // ============================================================================
@@ -173,12 +175,7 @@ function calculateDelay(
 	return Math.max(0, Math.round(delay));
 }
 
-/**
- * Sleep for specified milliseconds
- */
-function sleep(ms: number): Promise<void> {
-	return new Promise((resolve) => setTimeout(resolve, ms));
-}
+// sleep is now imported from ./utils.js
 
 /**
  * Wrap any async function with retry logic
