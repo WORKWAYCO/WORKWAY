@@ -13,6 +13,7 @@ import type {
   Outcome,
   OutcomeType,
 } from './types.js';
+import { generateId } from './utils.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Storage Interface
@@ -174,7 +175,7 @@ export class Tracker {
   async createProject(input: CreateProjectInput): Promise<Project> {
     const now = new Date().toISOString();
     const project: Project = {
-      id: input.id || this.generateId('proj'),
+      id: input.id || generateId('proj'),
       name: input.name,
       description: input.description,
       status: 'active',
@@ -218,7 +219,7 @@ export class Tracker {
   async createIssue(input: CreateIssueInput): Promise<CoordinatedIssue> {
     const now = new Date().toISOString();
     const issue: CoordinatedIssue = {
-      id: input.id || this.generateId('issue'),
+      id: input.id || generateId('issue'),
       projectId: input.projectId || null,
       title: input.title,
       status: 'open',
@@ -528,11 +529,7 @@ export class Tracker {
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────
 
-  private generateId(prefix: string): string {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 8);
-    return `${prefix}_${timestamp}_${random}`;
-  }
+  // generateId is now imported from ./utils.js
 
   /**
    * When an any_of dependency completes successfully,

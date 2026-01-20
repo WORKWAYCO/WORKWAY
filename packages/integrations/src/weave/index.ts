@@ -44,6 +44,7 @@ import {
 	buildQueryString,
 	createErrorHandler,
 	assertResponseOk,
+	verifyHmacSignature,
 } from '../core/index.js';
 
 // ============================================================================
@@ -834,20 +835,9 @@ export class Weave extends BaseAPIClient {
 		secret: string
 	): Promise<ActionResult<{ valid: boolean; event: WVWebhookEvent | null }>> {
 		try {
-			const encoder = new TextEncoder();
-			const key = await crypto.subtle.importKey(
-				'raw',
-				encoder.encode(secret),
-				{ name: 'HMAC', hash: 'SHA-256' },
-				false,
-				['sign']
-			);
-			const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-			const computedSignature = Array.from(new Uint8Array(signatureBuffer))
-				.map(b => b.toString(16).padStart(2, '0'))
-				.join('');
+			const isValid = await verifyHmacSignature(payload, signature, secret);
 
-			if (computedSignature !== signature) {
+			if (!isValid) {
 				return createActionResult({
 					data: { valid: false, event: null },
 					integration: 'weave',

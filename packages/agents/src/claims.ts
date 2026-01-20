@@ -6,6 +6,7 @@
  */
 
 import type { Agent, Claim } from './types.js';
+import { generateId } from './utils.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Constants
@@ -132,7 +133,7 @@ export class ClaimsManager {
   async registerAgent(input: RegisterAgentInput): Promise<Agent> {
     const now = new Date().toISOString();
     const agent: Agent = {
-      id: input.id || this.generateId('agent'),
+      id: input.id || generateId('agent'),
       name: input.name,
       capabilities: input.capabilities,
       maxConcurrent: input.maxConcurrent ?? 1,
@@ -274,7 +275,7 @@ export class ClaimsManager {
     // Create the claim
     const now = new Date();
     const claim: Claim = {
-      id: this.generateId('claim'),
+      id: generateId('claim'),
       issueId,
       agentId,
       claimedAt: now.toISOString(),
@@ -466,9 +467,5 @@ export class ClaimsManager {
   // Private Helpers
   // ─────────────────────────────────────────────────────────────────────────
 
-  private generateId(prefix: string): string {
-    const timestamp = Date.now().toString(36);
-    const random = Math.random().toString(36).substring(2, 8);
-    return `${prefix}_${timestamp}_${random}`;
-  }
+  // generateId is now imported from ./utils.js
 }
