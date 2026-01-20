@@ -18,9 +18,9 @@
  *   body: JSON.stringify({ data: 'value' }),
  * }, { maxAttempts: 3 });
  * ```
+ */
 
 import { sleep } from './utils.js';
- */
 
 // ============================================================================
 // TYPES

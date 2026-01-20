@@ -313,8 +313,8 @@ export { SLI_QUERIES } from './sli-queries';
 export type {
 	UploadOptions,
 	UploadResult,
-	ListOptions,
-	ListResult,
+	ListOptions as R2ListOptions,
+	ListResult as R2ListResult,
 	DownloadResult,
 } from './r2-storage';
 export {

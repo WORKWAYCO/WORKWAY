@@ -332,7 +332,7 @@ export class R2Storage {
  * ```
  */
 export async function backupD1ToR2(
-	db: D1Database,
+	_db: D1Database,
 	backups: R2Bucket,
 	dbName: string
 ): Promise<string> {

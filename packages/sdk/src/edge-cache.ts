@@ -56,16 +56,32 @@ export interface EdgeCacheMetadata {
  * This provides CDN-level caching without external dependencies.
  */
 export class EdgeCache {
-	private cache: Cache;
+	private cache!: Cache; // Lazy initialized via getCache()
 	private namespace: string;
+	private _cacheInitialized = false;
 
 	/**
 	 * Create an edge cache instance
 	 * @param namespace - Namespace for cache keys (e.g., 'workflow-metadata')
 	 */
 	constructor(namespace: string = 'default') {
-		this.cache = caches.default;
 		this.namespace = namespace;
+		// Lazy initialization - only access caches when actually used
+		// This allows the SDK to be imported in Node.js without errors
+	}
+
+	/**
+	 * Get the cache instance (lazy initialization for Workers runtime)
+	 */
+	private getCache(): Cache {
+		if (!this._cacheInitialized) {
+			if (typeof caches === 'undefined') {
+				throw new Error('EdgeCache requires Cloudflare Workers runtime (caches API not available)');
+			}
+			this.cache = caches.default;
+			this._cacheInitialized = true;
+		}
+		return this.cache;
 	}
 
 	/**
@@ -89,7 +105,7 @@ export class EdgeCache {
 	 */
 	async get<T>(key: string): Promise<T | null> {
 		const cacheKey = this.getCacheKey(key);
-		const response = await this.cache.match(cacheKey);
+		const response = await this.getCache().match(cacheKey);
 
 		if (!response) {
 			return null;
@@ -138,7 +154,7 @@ export class EdgeCache {
 			},
 		});
 
-		await this.cache.put(cacheKey, response);
+		await this.getCache().put(cacheKey, response);
 	}
 
 	/**
@@ -152,7 +168,7 @@ export class EdgeCache {
 	 */
 	async invalidate(key: string): Promise<boolean> {
 		const cacheKey = this.getCacheKey(key);
-		return this.cache.delete(cacheKey);
+		return this.getCache().delete(cacheKey);
 	}
 
 	/**
@@ -197,7 +213,7 @@ export class EdgeCache {
 	 */
 	async has(key: string): Promise<boolean> {
 		const cacheKey = this.getCacheKey(key);
-		const response = await this.cache.match(cacheKey);
+		const response = await this.getCache().match(cacheKey);
 		return response !== undefined;
 	}
 
@@ -206,7 +222,7 @@ export class EdgeCache {
 	 */
 	async getMetadata(key: string): Promise<EdgeCacheMetadata | null> {
 		const cacheKey = this.getCacheKey(key);
-		const response = await this.cache.match(cacheKey);
+		const response = await this.getCache().match(cacheKey);
 
 		if (!response) {
 			return null;

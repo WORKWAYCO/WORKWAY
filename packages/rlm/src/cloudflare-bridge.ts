@@ -75,22 +75,34 @@ export async function runCloudflareRLM(
 	});
 
 	if (!response.ok) {
-		const error = await response.json().catch(() => ({ error: 'Unknown error' }));
+		const error = await response.json().catch(() => ({ error: 'Unknown error' })) as { error?: string };
 		throw new Error(`Cloudflare RLM failed: ${error.error || response.statusText}`);
 	}
 
-	const result = await response.json();
+	const result = await response.json() as {
+		success?: boolean;
+		answer?: string;
+		iterations?: Array<{ inputTokens: number; outputTokens: number }>;
+		subCalls?: number;
+		costUsd?: number;
+		error?: string;
+	};
 
 	// Convert to standard RLMResult format
 	return {
-		success: result.success,
-		answer: result.answer,
+		success: result.success ?? false,
+		answer: result.answer ?? '',
 		iterations: result.iterations?.length || 0,
 		subCalls: result.subCalls || 0,
-		totalInputTokens: result.iterations?.reduce((sum: number, iter: any) => sum + iter.inputTokens, 0) || 0,
-		totalOutputTokens: result.iterations?.reduce((sum: number, iter: any) => sum + iter.outputTokens, 0) || 0,
+		totalInputTokens: result.iterations?.reduce((sum: number, iter) => sum + iter.inputTokens, 0) || 0,
+		totalOutputTokens: result.iterations?.reduce((sum: number, iter) => sum + iter.outputTokens, 0) || 0,
 		costUsd: result.costUsd || 0,
-		trajectory: result.iterations || [],
+		trajectory: result.iterations?.map((iter, i) => ({
+			iteration: i + 1,
+			type: 'execution',
+			inputTokens: iter.inputTokens,
+			outputTokens: iter.outputTokens,
+		})) || [],
 		error: result.error || null,
 	};
 }
@@ -103,7 +115,7 @@ export async function checkCloudflareRLM(workerUrl?: string): Promise<boolean> {
 
 	try {
 		const response = await fetch(`${url}/health`);
-		const data = await response.json();
+		const data = await response.json() as { status?: string };
 		return data.status === 'ok';
 	} catch {
 		return false;

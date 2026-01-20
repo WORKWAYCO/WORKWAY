@@ -5,7 +5,21 @@
  */
 
 import { Logger } from '../../utils/logger.js';
-import { assessWorkers, formatAssessmentResult } from '@workwayco/harness';
+
+// Dynamic import to make harness optional
+let assessWorkers: any;
+let formatAssessmentResult: any;
+
+async function loadHarness() {
+	try {
+		const harness = await import('@workwayco/harness');
+		assessWorkers = harness.assessWorkers;
+		formatAssessmentResult = harness.formatAssessmentResult;
+		return true;
+	} catch {
+		return false;
+	}
+}
 
 export interface RLMAssessOptions {
 	workers?: string;
@@ -24,6 +38,14 @@ export interface RLMAssessOptions {
  */
 export async function rlmAssessCommand(options: RLMAssessOptions): Promise<void> {
 	try {
+		// Load harness module (optional dependency)
+		const harnessLoaded = await loadHarness();
+		if (!harnessLoaded) {
+			Logger.error('RLM assessment requires @workwayco/harness package');
+			Logger.log('Install with: pnpm add @workwayco/harness');
+			process.exit(1);
+		}
+
 		// Parse worker IDs
 		let workerIds: string[] = [];
 

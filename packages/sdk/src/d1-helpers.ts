@@ -89,11 +89,11 @@ export async function readQuery<T = Record<string, unknown>>(
 	const stmt = db.prepare(query);
 	const bound = params.length > 0 ? stmt.bind(...params) : stmt;
 
-	// D1 read replicas are enabled via the consistency option
-	const result = await bound.all<T>({
-		// @ts-expect-error - D1 types may not include consistency yet
-		consistency,
-	});
+	// D1 read replicas - consistency is set at database level
+	// The consistency parameter is passed to the query for documentation
+	// but actual replica routing is handled by Cloudflare
+	void consistency; // Document intent, actual routing is automatic
+	const result = await bound.all<T>();
 
 	return result.results ?? [];
 }

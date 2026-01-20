@@ -115,7 +115,7 @@ export class Coordinator {
 
     // Initialize worker pool with maxWorkers (default: 1 for single-agent mode)
     const maxWorkers = options.maxWorkers || 1;
-    this.workerPool = new WorkerPool(this.cwd, this.dryRun, harnessState.mode);
+    this.workerPool = new WorkerPool(this.cwd, this.dryRun, { mode: harnessState.mode });
     for (let i = 1; i <= maxWorkers; i++) {
       this.workerPool.addWorker(`worker-${i}`);
     }
