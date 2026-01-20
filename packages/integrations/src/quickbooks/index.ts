@@ -46,6 +46,7 @@ import {
 	validateAccessToken,
 	createErrorHandler,
 	assertResponseOk,
+	verifyHmacSignature,
 } from '../core/index.js';
 
 // ============================================================================
@@ -995,19 +996,9 @@ export class QuickBooks extends BaseAPIClient {
 		webhookVerifierToken: string
 	): Promise<ActionResult<{ valid: boolean; events: QBWebhookEvent[] }>> {
 		try {
-			// Compute HMAC-SHA256
-			const encoder = new TextEncoder();
-			const key = await crypto.subtle.importKey(
-				'raw',
-				encoder.encode(webhookVerifierToken),
-				{ name: 'HMAC', hash: 'SHA-256' },
-				false,
-				['sign']
-			);
-			const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-			const computedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
+			const isValid = await verifyHmacSignature(payload, signature, webhookVerifierToken, { encoding: 'base64' });
 
-			if (computedSignature !== signature) {
+			if (!isValid) {
 				return createActionResult({
 					data: { valid: false, events: [] },
 					integration: 'quickbooks',

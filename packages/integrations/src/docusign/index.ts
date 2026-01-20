@@ -47,6 +47,7 @@ import {
 	validateAccessToken,
 	createErrorHandler,
 	assertResponseOk,
+	verifyHmacSignature,
 } from '../core/index.js';
 
 // ============================================================================
@@ -758,7 +759,7 @@ export class DocuSign extends BaseAPIClient {
 			await assertResponseOk(response, { integration: 'docusign', action: 'download-document' });
 
 			const arrayBuffer = await response.arrayBuffer();
-			const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+			const base64 = btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(arrayBuffer))));
 			const contentType = response.headers.get('content-type') || 'application/pdf';
 
 			return createActionResult({
@@ -896,19 +897,9 @@ export class DocuSign extends BaseAPIClient {
 		hmacKey: string
 	): Promise<ActionResult<{ valid: boolean; event: DSWebhookEvent | null }>> {
 		try {
-			// Compute HMAC-SHA256
-			const encoder = new TextEncoder();
-			const key = await crypto.subtle.importKey(
-				'raw',
-				encoder.encode(hmacKey),
-				{ name: 'HMAC', hash: 'SHA-256' },
-				false,
-				['sign']
-			);
-			const signatureBuffer = await crypto.subtle.sign('HMAC', key, encoder.encode(payload));
-			const computedSignature = btoa(String.fromCharCode(...new Uint8Array(signatureBuffer)));
+			const isValid = await verifyHmacSignature(payload, signature, hmacKey, { encoding: 'base64' });
 
-			if (computedSignature !== signature) {
+			if (!isValid) {
 				return createActionResult({
 					data: { valid: false, event: null },
 					integration: 'docusign',

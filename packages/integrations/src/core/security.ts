@@ -33,22 +33,33 @@ export function secureCompare(a: string, b: string): boolean {
 }
 
 /**
- * Verify HMAC-SHA256 webhook signature
+ * Verify HMAC webhook signature
  *
  * Common pattern for webhook verification across integrations.
  *
  * @param payload - Raw webhook payload (string or buffer)
  * @param signature - Signature from webhook header
  * @param secret - Webhook secret for HMAC computation
- * @param algorithm - Hash algorithm (default: SHA-256)
+ * @param options - Optional configuration
+ * @param options.algorithm - Hash algorithm (default: SHA-256)
+ * @param options.encoding - Signature encoding format (default: hex)
  * @returns true if signature is valid
  *
  * @example
  * ```typescript
+ * // Hex encoding (default - used by most webhooks)
  * const isValid = await verifyHmacSignature(
  *   request.body,
  *   request.headers['x-signature'],
  *   webhookSecret
+ * );
+ *
+ * // Base64 encoding (used by DocuSign, QuickBooks)
+ * const isValid = await verifyHmacSignature(
+ *   request.body,
+ *   request.headers['x-signature'],
+ *   webhookSecret,
+ *   { encoding: 'base64' }
  * );
  * ```
  */
@@ -56,8 +67,10 @@ export async function verifyHmacSignature(
 	payload: string | ArrayBuffer,
 	signature: string,
 	secret: string,
-	algorithm: 'SHA-256' | 'SHA-1' = 'SHA-256'
+	options: { algorithm?: 'SHA-256' | 'SHA-1'; encoding?: 'hex' | 'base64' } = {}
 ): Promise<boolean> {
+	const { algorithm = 'SHA-256', encoding = 'hex' } = options;
+	
 	try {
 		const encoder = new TextEncoder();
 		const key = await crypto.subtle.importKey(
@@ -73,11 +86,16 @@ export async function verifyHmacSignature(
 			: payload;
 
 		const signatureBuffer = await crypto.subtle.sign('HMAC', key, payloadBuffer);
-		const expectedSignature = Array.from(new Uint8Array(signatureBuffer))
-			.map(b => b.toString(16).padStart(2, '0'))
-			.join('');
+		const bytes = new Uint8Array(signatureBuffer);
+		
+		const expectedSignature = encoding === 'base64'
+			? btoa(String.fromCharCode.apply(null, Array.from(bytes)))
+			: Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
 
-		return secureCompare(signature.toLowerCase(), expectedSignature.toLowerCase());
+		// Use case-insensitive compare for hex, exact for base64
+		return encoding === 'hex'
+			? secureCompare(signature.toLowerCase(), expectedSignature.toLowerCase())
+			: secureCompare(signature, expectedSignature);
 	} catch {
 		return false;
 	}
