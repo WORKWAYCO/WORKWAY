@@ -9,6 +9,7 @@
 
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
+import { bufferToHex, hexToBuffer } from '@workwayco/sdk/encryption';
 
 const IDENTITY_WORKER = 'https://id.createsomething.space';
 
@@ -159,16 +160,4 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
 	return derivedHash === storedHash;
 }
 
-function hexToBuffer(hex: string): ArrayBuffer {
-	const bytes = new Uint8Array(hex.length / 2);
-	for (let i = 0; i < hex.length; i += 2) {
-		bytes[i / 2] = parseInt(hex.substr(i, 2), 16);
-	}
-	return bytes.buffer;
-}
-
-function bufferToHex(buffer: Uint8Array): string {
-	return Array.from(buffer)
-		.map((b) => b.toString(16).padStart(2, '0'))
-		.join('');
-}
+// bufferToHex, hexToBuffer imported from @workwayco/sdk/encryption

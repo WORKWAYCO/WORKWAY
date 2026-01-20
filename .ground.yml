@@ -8,6 +8,9 @@ ignore:
     - constructor          # Class initialization boilerplate
     - initialize           # Integration setup pattern
     - setWeights           # Router/Priority - different types, similar structure
+    - verifyWebhook        # Webhook verification (different event types per integration)
+    - parseWebhookUnsafe   # Webhook parsing (different event types per integration)
+    - queryTasks           # Task query pattern (different response types)
 
   # Future APIs - documented but not yet consumed
   exports:
@@ -16,12 +19,17 @@ ignore:
 
   # Files to skip entirely
   paths:
-    - "**/*.test.ts"
+    - "**/*.test.ts"             # Test files often duplicate for isolation
     - "**/*.spec.ts"
     - "**/fixtures/**"
     - "**/seo-data.ts"           # Future feature - SEO/AEO configuration
     - "**/pricing-constants.ts"  # Future feature - pricing tiers
     - "**/_template/**"          # Integration template (intentionally generic)
+    - "**/vitest.config.ts"      # Tooling config - entry point for vitest
+    - "**/tsup.config.ts"        # Tooling config - entry point for tsup
+    - "**/scripts/**"            # Standalone scripts - not imported
+    - "**/openapi/generate.ts"   # OpenAPI generator script
+    - "**/validate-svg.js"       # Asset validation script
 
   # Intentional duplicate pairs (different semantic purposes)
   duplicate_pairs:

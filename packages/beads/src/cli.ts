@@ -23,6 +23,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { BeadsStore } from './store.js';
 import type { IssueType, Priority, DependencyType, Issue } from './types.js';
+import { priorityColor, statusColor, formatIssue, ensureInitialized as ensureInit } from './format-utils.js';
 
 const program = new Command();
 const store = new BeadsStore();
@@ -31,52 +32,8 @@ const store = new BeadsStore();
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function priorityColor(priority: Priority): string {
-  const colors: Record<Priority, (s: string) => string> = {
-    0: chalk.red.bold,    // P0 - Drop everything
-    1: chalk.red,         // P1 - This week
-    2: chalk.yellow,      // P2 - This month
-    3: chalk.blue,        // P3 - Someday
-    4: chalk.gray,        // P4 - Maybe never
-  };
-  return colors[priority](`P${priority}`);
-}
-
-function statusColor(status: string): string {
-  const colors: Record<string, (s: string) => string> = {
-    open: chalk.green,
-    in_progress: chalk.yellow,
-    closed: chalk.gray,
-  };
-  return (colors[status] || chalk.white)(status);
-}
-
-function formatIssue(issue: Issue, verbose = false): string {
-  const lines: string[] = [];
-  const p = priorityColor(issue.priority);
-  const s = statusColor(issue.status);
-
-  lines.push(`${chalk.cyan(issue.id)} ${p} ${s} ${issue.title}`);
-
-  if (verbose) {
-    if (issue.description) {
-      lines.push(chalk.gray(`  ${issue.description.slice(0, 100)}${issue.description.length > 100 ? '...' : ''}`));
-    }
-    if (issue.labels.length > 0) {
-      lines.push(chalk.gray(`  Labels: ${issue.labels.join(', ')}`));
-    }
-    lines.push(chalk.gray(`  Created: ${issue.created_at}`));
-  }
-
-  return lines.join('\n');
-}
-
 async function ensureInitialized(): Promise<void> {
-  const initialized = await store.isInitialized();
-  if (!initialized) {
-    console.error(chalk.red('Error: .beads not initialized. Run `bd init` first.'));
-    process.exit(1);
-  }
+  return ensureInit(store);
 }
 
 function parsePriority(value: string): Priority {

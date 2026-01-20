@@ -67,21 +67,7 @@ export function getPollIntervalMs(frequency: string): number {
 	}
 }
 
-/**
- * Extract playlist ID from URL or return as-is if already an ID
- */
-export function extractPlaylistId(urlOrId: string): string | null {
-	// Already a playlist ID (starts with PL, UU, LL, etc.)
-	if (/^(PL|UU|LL|FL|RD|OL)[a-zA-Z0-9_-]+$/.test(urlOrId)) {
-		return urlOrId;
-	}
-
-	// youtube.com/playlist?list=PLAYLIST_ID
-	const listMatch = urlOrId.match(/[?&]list=([a-zA-Z0-9_-]+)/);
-	if (listMatch) return listMatch[1];
-
-	return null;
-}
+// extractPlaylistId is now imported from @workwayco/integrations
 
 /**
  * Format ISO 8601 duration to human-readable string

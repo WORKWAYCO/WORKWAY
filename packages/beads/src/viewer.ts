@@ -16,6 +16,7 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { BeadsStore } from './store.js';
 import type { Issue, Priority, RobotPriorityOutput, RobotInsightsOutput } from './types.js';
+import { priorityColor, statusColor, formatIssue, ensureInitialized as ensureInit } from './format-utils.js';
 
 const program = new Command();
 const store = new BeadsStore();
@@ -24,38 +25,8 @@ const store = new BeadsStore();
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-function priorityColor(priority: Priority): string {
-  const colors: Record<Priority, (s: string) => string> = {
-    0: chalk.red.bold,
-    1: chalk.red,
-    2: chalk.yellow,
-    3: chalk.blue,
-    4: chalk.gray,
-  };
-  return colors[priority](`P${priority}`);
-}
-
-function statusColor(status: string): string {
-  const colors: Record<string, (s: string) => string> = {
-    open: chalk.green,
-    in_progress: chalk.yellow,
-    closed: chalk.gray,
-  };
-  return (colors[status] || chalk.white)(status);
-}
-
-function formatIssue(issue: Issue): string {
-  const p = priorityColor(issue.priority);
-  const s = statusColor(issue.status);
-  return `${chalk.cyan(issue.id)} ${p} ${s} ${issue.title}`;
-}
-
 async function ensureInitialized(): Promise<void> {
-  const initialized = await store.isInitialized();
-  if (!initialized) {
-    console.error(chalk.red('Error: .beads not initialized. Run `bd init` first.'));
-    process.exit(1);
-  }
+  return ensureInit(store);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

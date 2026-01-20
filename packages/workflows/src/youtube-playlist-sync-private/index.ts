@@ -49,6 +49,7 @@
  */
 
 import { defineWorkflow, cron } from '@workwayco/sdk';
+import { extractPlaylistId } from '@workwayco/integrations';
 import {
 	NOTION_BLOCK_CHAR_LIMIT,
 	NOTION_BLOCKS_PER_REQUEST,
@@ -56,7 +57,6 @@ import {
 	type VideoData,
 	type TranscriptData,
 	getPollIntervalMs,
-	extractPlaylistId,
 	formatDuration,
 	splitTextIntoBlocks,
 	checkVideoExistsInNotion,
