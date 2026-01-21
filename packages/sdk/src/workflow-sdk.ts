@@ -1257,6 +1257,34 @@ export interface PathwayMetadata {
 		/** Is the trigger automatic (webhook) or manual? */
 		automaticTrigger: boolean;
 	};
+
+	/**
+	 * Walkthrough voiceover script for the workflow landing page
+	 * 
+	 * Contains scenes with titles and voiceover text in "Nicely Said" style.
+	 * Used to generate audio walkthroughs and display transcripts.
+	 * 
+	 * @example
+	 * ```typescript
+	 * walkthrough: {
+	 *   scenes: [
+	 *     { title: 'The Problem', text: "You're watching a video..." },
+	 *     { title: 'What It Does', text: "This workflow turns..." },
+	 *     { title: 'The Setup', text: "Setup takes two minutes..." },
+	 *     { title: 'Close', text: "The tool disappears..." }
+	 *   ]
+	 * }
+	 * ```
+	 */
+	walkthrough?: {
+		/** Array of scenes for the voiceover */
+		scenes: Array<{
+			/** Scene title (e.g., "The Problem", "What It Does", "The Setup") */
+			title: string;
+			/** Voiceover text with optional SSML break tags */
+			text: string;
+		}>;
+	};
 }
 
 // ============================================================================

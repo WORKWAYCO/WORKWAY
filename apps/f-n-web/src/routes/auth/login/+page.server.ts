@@ -9,7 +9,7 @@
 
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { bufferToHex, hexToBuffer } from '@workwayco/sdk/encryption';
+import { bufferToHex, hexToBuffer } from '@workwayco/sdk';
 
 const IDENTITY_WORKER = 'https://id.createsomething.space';
 
@@ -160,4 +160,4 @@ async function verifyPassword(password: string, hash: string): Promise<boolean> 
 	return derivedHash === storedHash;
 }
 
-// bufferToHex, hexToBuffer imported from @workwayco/sdk/encryption
+// bufferToHex, hexToBuffer imported from @workwayco/sdk

@@ -43,8 +43,8 @@ const STATE_KEY_PREFIX = 'youtube-playlist-sync:';
 // ============================================================================
 
 export default defineWorkflow({
-	name: 'YouTube Playlist Sync',
-	description: 'Sync YouTube playlist videos to Notion with transcripts',
+	name: 'YouTube to Notion',
+	description: 'Your YouTube research, documented automatically. Add a video to your playlist—the title, description, and full transcript appear in Notion.',
 	version: '1.0.0',
 
 	// Pathway metadata for discovery
@@ -52,17 +52,17 @@ export default defineWorkflow({
 		outcomeFrame: 'content_research',
 
 		outcomeStatement: {
-			suggestion: 'Want YouTube videos documented in Notion automatically?',
+			suggestion: 'Watch videos for research? Let them document themselves.',
 			explanation:
-				"When you add videos to a YouTube playlist, we'll create Notion pages with video details and full transcripts.",
-			outcome: 'YouTube research in Notion',
+				'Add videos to a YouTube playlist. WORKWAY creates Notion pages with the video, transcript, and all the details—ready for your notes.',
+			outcome: 'Research that captures itself',
 		},
 
 		primaryPair: {
 			from: 'youtube',
 			to: 'notion',
 			workflowId: 'youtube-playlist-sync',
-			outcome: 'YouTube videos that document themselves',
+			outcome: 'Videos that document themselves',
 		},
 
 		discoveryMoments: [
@@ -87,6 +87,31 @@ export default defineWorkflow({
 			worksOutOfBox: true,
 			gracefulDegradation: true, // Works without transcript if unavailable
 			automaticTrigger: true, // Cron-triggered
+		},
+
+		walkthrough: {
+			scenes: [
+				{
+					title: 'The Problem',
+					text: "You're watching a video that explains exactly what you need. The perfect tutorial, the right interview, the answer you've been looking for. You think, 'I should save this.' Maybe you'll remember to come back to it. Except you won't. The video disappears into your watch history. The insight vanishes into your memory. Later, when you actually need it, you're scrolling, searching, trying to remember which video it was.",
+				},
+				{
+					title: 'What YouTube to Notion Does',
+					text: "This workflow turns your YouTube playlist into a research library. You add a video to your playlist. That's it. Three things happen automatically. First, the video appears in your Notion database. Title, channel, thumbnail—all captured. Second, the description is added. Links, timestamps, everything the creator included. Third, the full transcript gets pulled. Every word, searchable, ready for your notes. You didn't copy and paste. You didn't switch tabs. You didn't forget. The workflow captured it.",
+				},
+				{
+					title: 'How It Looks',
+					text: "Your Notion database fills up as you research. Each video is a page. The video embedded at the top, so you can rewatch without leaving Notion. Below that, the details. Channel name, duration, view count, publish date. And then the transcript. Searchable. Highlightable. Ready for the notes only you can add. The capture happened automatically. The thinking is still yours.",
+				},
+				{
+					title: 'The Setup',
+					text: "Setup takes two minutes. Connect your YouTube account. This gives the workflow permission to see your playlists. Then connect Notion. Pick the database where you want videos captured. If you don't have one, you can create it in seconds. Choose a playlist to watch. Any playlist works—a new one for research, or one you already use. That's it. Every video you add gets documented.",
+				},
+				{
+					title: 'Close',
+					text: "YouTube to Notion doesn't change how you watch videos. It captures what you watch. Add to playlist, documented in Notion, transcript included. The tool disappears. And your research builds itself.",
+				},
+			],
 		},
 	},
 

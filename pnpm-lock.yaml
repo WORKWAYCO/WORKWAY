@@ -8,6 +8,9 @@ importers:
 
   apps/f-n-web:
     dependencies:
+      '@workwayco/sdk':
+        specifier: workspace:*
+        version: link:../../packages/sdk
       clsx:
         specifier: ^2.1.0
         version: 2.1.1
