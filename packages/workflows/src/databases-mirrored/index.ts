@@ -3,6 +3,7 @@
  *
  * Keep two Notion databases in sync across workspaces.
  * Your items appear in their database. Their updates appear in yours.
+ * Changes sync every five seconds. Last edit wins.
  *
  * ## Design Philosophy (Heideggerian)
  *
@@ -15,8 +16,9 @@
  * Agency Notion                              Client Notion
  * (Base Database)                            (Mirror Database)
  *       │                                           │
- *       │ ←── Webhook: page.created ──→            │
- *       │ ←── Webhook: page.properties.updated ──→ │
+ *       │ ←────── SyncScheduler DO (5s) ──────→    │
+ *       │      Content-based comparison            │
+ *       │      Last-write-wins resolution          │
  *       │                                           │
  *       ▼                                           ▼
  * ┌─────────────────────────────────────────────────────────────┐
@@ -24,7 +26,7 @@
  * │  ┌─────────────────────────────────────────────────────────┐ │
  * │  │ State Store (KV)                                        │ │
  * │  │ - pageId → { basePageId, mirrorPageId, lastSync }       │ │
- * │  │ - syncLock: { pageId → timestamp } (loop prevention)    │ │
+ * │  │ - propertyMappings: auto-discovered by name             │ │
  * │  └─────────────────────────────────────────────────────────┘ │
  * └─────────────────────────────────────────────────────────────┘
  * ```
@@ -34,28 +36,31 @@
  * 1. **Initial Sync** (triggered on client_connected)
  *    - Copy all pages from base database to mirror
  *    - Store page ID mappings in state
+ *    - Activate 5-second SyncScheduler
  *
- * 2. **Base → Mirror** (webhook on base database)
- *    - Page created: Create in mirror, store mapping
- *    - Page updated: Update mirror, check loop prevention
+ * 2. **Bidirectional Sync** (every 5 seconds via SyncScheduler DO)
+ *    - Compare content (not timestamps—Notion updates those on view)
+ *    - When content differs: last_edited_time determines winner
+ *    - Newer page's values sync to older page
+ *    - New pages in either database sync to the other
  *
- * 3. **Mirror → Base** (webhook on mirror database)
- *    - Page updated: Update base, check loop prevention
- *    - (No create - client can't create, only update)
+ * ## Conflict Resolution: Last-Write-Wins
+ *
+ * When base and mirror have different values:
+ * - Compare last_edited_time on both pages
+ * - More recently edited page wins
+ * - Winner's values sync to loser
+ * - No ping-pong, no overwrites
  *
  * ## Property Auto-Mapping
  *
  * Properties sync automatically when names match:
  * - "Status" in base ↔ "Status" in mirror ✓
  * - "Priority" in base, no match in mirror → skipped
- *
- * ## Loop Prevention
- *
- * When we update a page, we mark it in state with a timestamp.
- * If a webhook fires for that page within 5 seconds, we skip it.
- * This prevents: base→mirror→base→mirror→... infinite loops.
+ * - Supports: checkbox, text, select, date, number, url, email
  *
  * @public Marketplace workflow
+ * @version 1.1.0
  */
 
 import { defineWorkflow, webhook } from '@workwayco/sdk';
@@ -132,24 +137,24 @@ interface SyncResult {
 export default defineWorkflow({
 	name: 'Share a Notion Database',
 	description:
-		'Keep two Notion databases in sync across workspaces. Your items appear in their database. Their updates appear in yours.',
-	version: '1.0.0',
+		'Collaborate on a Notion database without sharing your workspace. Send a link, they connect Notion, everything syncs every five seconds. Their updates appear in yours. Yours appear in theirs. Last edit wins.',
+	version: '1.1.0',
 
 	pathway: {
 		outcomeFrame: 'when_collaborating',
 
 		outcomeStatement: {
-			suggestion: 'Want to share a Notion database with a client without giving them workspace access?',
+			suggestion: 'Need to share a database with someone outside your workspace?',
 			explanation:
-				'Pick a database. Send them a link. They connect their Notion and pick their database. Everything syncs automatically.',
-			outcome: 'Notion databases that stay in sync across workspaces',
+				'Pick a database. Send a link. They connect their Notion and choose where items should appear. Changes sync every five seconds, both ways. Last edit wins.',
+			outcome: 'A shared database without sharing your workspace',
 		},
 
 		primaryPair: {
 			from: 'notion',
 			to: 'notion',
 			workflowId: 'databases-mirrored',
-			outcome: 'Shared Notion database',
+			outcome: 'Databases that stay in sync',
 		},
 
 		discoveryMoments: [
@@ -172,6 +177,31 @@ export default defineWorkflow({
 			worksOutOfBox: true,
 			gracefulDegradation: true,
 			automaticTrigger: true,
+		},
+
+		walkthrough: {
+			scenes: [
+				{
+					title: 'The Problem',
+					text: "You're working with a client. They need to see the project status. Update deliverables. Check what's done. But your Notion workspace is yours. You can't just add them to it. Too much access. Too many other things they shouldn't see. So you end up with workarounds. Duplicating databases. Copying and pasting updates. Hoping nothing gets out of sync. It's not collaboration. It's busywork.",
+				},
+				{
+					title: 'What Share a Notion Database Does',
+					text: "This workflow creates a bridge between two Notion workspaces. You pick a database. Send a link. That's it. They click the link, connect their Notion, and choose a database in their workspace. From that moment, everything syncs. In both directions. When you add a task, it appears in their database. When they check a box, you see it in yours. When they create something new, it shows up on your side too. Two workspaces. One shared database. No manual copying. No drift.",
+				},
+				{
+					title: 'How It Works',
+					text: "The sync runs every five seconds. Near real-time. Properties match by name. If your database has 'Status' and theirs has 'Status,' those stay in sync. Checkboxes, text, dates, selects—all of it. If they rename something or you add a new column, no problem. Only matching properties sync. Everything else stays separate. And when you both make changes? The most recent edit wins. No conflicts. No overwrites. Just the freshest version, always.",
+				},
+				{
+					title: 'The Setup',
+					text: "Setup takes two minutes. Connect your Notion. Pick the database you want to share. WORKWAY generates a link. Send it to your client—email, Slack, however you communicate. They click it. Connect their Notion. Pick their database. The initial sync runs automatically. Five-second sync activates immediately. That's it. You're connected.",
+				},
+				{
+					title: 'Close',
+					text: "Share a Notion Database doesn't change how you work in Notion. It extends where your work can go. Your workspace stays yours. Their workspace stays theirs. One database, shared between them. Changes in five seconds. Last edit wins. The sync disappears. And collaboration just works.",
+				},
+			],
 		},
 	},
 
