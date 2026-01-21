@@ -8,6 +8,12 @@ compatibility_flags = ["nodejs_compat"]
 [triggers]
 crons = ["0 * * * *"]
 
+# D1 Database binding (for bulk sync)
+[[d1_databases]]
+binding = "DB"
+database_name = "f-n-production"
+database_id = "4ef3e141-920c-48c9-9f72-17e93b6c8c91"
+
 # Environment variables
 [vars]
 FN_URL = "https://fn.workway.co"

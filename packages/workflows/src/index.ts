@@ -119,6 +119,24 @@ export { default as constructionProjectDigest } from './construction-project-dig
 export { default as youtubePlaylistSync } from './youtube-playlist-sync/index.js';
 export { default as youtubePlaylistSyncPrivate } from './youtube-playlist-sync-private/index.js';
 
+// Fireflies → Notion (Private - hosted at fn.workway.co)
+// Note: This is a standalone app, not a defineWorkflow() export
+// Analytics available at fn.workway.co/api/analytics
+export const firefliesNotionSync = {
+	id: 'fireflies-notion-sync',
+	name: 'Fireflies → Notion Sync',
+	description: 'Meeting transcripts that document themselves',
+	visibility: 'private' as const,
+	externalApp: true,
+	appUrl: 'https://fn.workway.co',
+	analyticsUrl: 'https://fn.workway.co/api/analytics',
+	accessGrants: [
+		{ type: 'email' as const, value: 'vivviv@gmail.com' },
+		{ type: 'email' as const, value: 'joel@blondish.world' },
+		{ type: 'email_domain' as const, value: 'halfdozen.co' },
+	],
+};
+
 // Data Sync (Private - BYOO)
 export { default as sheetsNotionBidirectional } from './sheets-notion-bidirectional/index.js';
 
@@ -474,6 +492,17 @@ export const integrationPairs = {
 		outcomeFrame: 'after_appointments',
 	},
 
+	// Fireflies Meeting Transcripts (Private - fn.workway.co)
+	'fireflies:notion': {
+		workflowId: 'fireflies-notion-sync',
+		outcome: 'Meeting transcripts that document themselves',
+		outcomeFrame: 'after_meetings',
+		experimental: false,
+		externalApp: true,
+		appUrl: 'https://fn.workway.co',
+		analyticsUrl: 'https://fn.workway.co/api/analytics',
+	},
+
 	// YouTube & Content Research
 	'youtube:notion': {
 		workflowId: 'youtube-playlist-sync',
@@ -775,6 +804,14 @@ export const workflows = {
 	// YouTube & Content
 	'youtube-playlist-sync': { id: 'youtube-playlist-sync', outcomeFrame: 'content_research' },
 	'youtube-playlist-sync-private': { id: 'youtube-playlist-sync-private', outcomeFrame: 'content_research', experimental: true },
+	// Fireflies → Notion (External App)
+	'fireflies-notion-sync': { 
+		id: 'fireflies-notion-sync', 
+		outcomeFrame: 'after_meetings', 
+		externalApp: true,
+		appUrl: 'https://fn.workway.co',
+		analyticsUrl: 'https://fn.workway.co/api/analytics',
+	},
 	// AI Intake
 	'conversational-intake-agent': { id: 'conversational-intake-agent', outcomeFrame: 'when_users_describe_needs' },
 	// Newsletter (Internal)
