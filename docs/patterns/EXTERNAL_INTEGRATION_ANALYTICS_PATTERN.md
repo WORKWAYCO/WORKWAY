@@ -1,146 +1,137 @@
-# Pattern: External Integration Analytics
+# How to Surface Analytics from External Apps
 
-**Pattern ID:** `external-integration-analytics`
-**Category:** Platform Integration
-**Status:** Production
+**Pattern ID:** `external-integration-analytics`  
+**Status:** Production  
 **Date:** January 21, 2026
 
 ---
 
-## Context
+## The situation
 
-WORKWAY has "internal" workflows (SDK-based, executed via Durable Objects) and "external" integrations (standalone apps like `fn.workway.co`) that provide value but live outside the core platform.
+You've built something useful outside the main platform. Maybe it's a standalone app, a quick prototype that stuck, or a tool that grew its own legs. Now users want to see how it's doing—right alongside everything else in their dashboard.
 
-The challenge: **How do we surface analytics from external integrations into the WORKWAY dashboard without duplicating code or data?**
+The question: **How do you show analytics from external apps without copying code or duplicating data?**
 
-## Problem
+## What we were up against
 
-When external apps exist alongside the core platform:
-- **Siloed analytics** - Users can't see external app metrics in WORKWAY dashboard
-- **Admin blind spots** - Team admins can't monitor their users' external integrations
-- **Code duplication** - Temptation to rebuild analytics in two places
-- **Infrastructure mismatch** - External app (Pages) lacks features the platform needs (cron)
+When external apps live next to your main platform, a few problems pop up:
 
-## Solution: Sidecar Worker + Analytics API
+- **Users can't see the full picture.** Their metrics are split across different dashboards.
+- **Admins are flying blind.** They manage a team but can't see how the team's tools are performing.
+- **You're tempted to rebuild.** It feels easier to rewrite analytics in two places—but that's a maintenance headache waiting to happen.
+- **The infrastructure doesn't match.** Your external app (maybe on Cloudflare Pages) lacks features the platform needs, like scheduled jobs.
 
-### Architecture
+## What we did instead
+
+We added a lightweight helper—a "sidecar" Worker—that fills in the gaps and exposes the data that already exists.
+
+### Here's how it fits together
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
 │                      WORKWAY DASHBOARD                              │
-│                    (workway-platform/apps/web)                      │
+│                    Asks: "How's this workflow doing?"               │
 ├─────────────────────────────────────────────────────────────────────┤
 │                              │                                      │
 │                     GET /analytics?email=                           │
 │                              │                                      │
 │                              ▼                                      │
-│  ┌───────────────────────────────────────────────────────────┐      │
-│  │              SIDECAR WORKER (fn-cron)                     │      │
-│  │                                                           │      │
-│  │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐   │      │
-│  │   │   Cron      │    │  Analytics  │    │  Bulk Ops   │   │      │
-│  │   │  Trigger    │    │    API      │    │   (admin)   │   │      │
-│  │   └─────────────┘    └─────────────┘    └─────────────┘   │      │
-│  │          │                  │                  │          │      │
-│  │          ▼                  ▼                  ▼          │      │
-│  │   ┌─────────────────────────────────────────────────┐     │      │
-│  │   │                D1 DATABASE                       │     │      │
-│  │   │    sync_jobs │ synced_transcripts │ users        │     │      │
-│  │   └─────────────────────────────────────────────────┘     │      │
-│  └───────────────────────────────────────────────────────────┘      │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │              SIDECAR WORKER                                   │  │
+│  │              The helpful middleman                            │  │
+│  │                                                               │  │
+│  │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐       │  │
+│  │   │   Cron      │    │  Analytics  │    │   Admin     │       │  │
+│  │   │  Trigger    │    │    API      │    │    Tools    │       │  │
+│  │   └─────────────┘    └─────────────┘    └─────────────┘       │  │
+│  │          │                  │                  │              │  │
+│  │          └──────────────────┼──────────────────┘              │  │
+│  │                             ▼                                 │  │
+│  │   ┌─────────────────────────────────────────────────────┐     │  │
+│  │   │                SHARED DATABASE                       │     │  │
+│  │   │    The source of truth—no duplication needed         │     │  │
+│  │   └─────────────────────────────────────────────────────┘     │  │
+│  └───────────────────────────────────────────────────────────────┘  │
 │                              │                                      │
-│               POST /api/cron/auto-sync                              │
+│               Triggers the external app hourly                      │
 │                              │                                      │
 │                              ▼                                      │
-│  ┌───────────────────────────────────────────────────────────┐      │
-│  │              EXTERNAL APP (fn.workway.co)                 │      │
-│  │              Cloudflare Pages - No native cron            │      │
-│  │                                                           │      │
-│  │   ┌─────────────┐    ┌─────────────┐    ┌─────────────┐   │      │
-│  │   │   User UI   │    │  Auto-Sync  │    │   Manual    │   │      │
-│  │   │  Dashboard  │    │   Endpoint  │    │    Sync     │   │      │
-│  │   └─────────────┘    └─────────────┘    └─────────────┘   │      │
-│  └───────────────────────────────────────────────────────────┘      │
+│  ┌───────────────────────────────────────────────────────────────┐  │
+│  │              EXTERNAL APP                                     │  │
+│  │              Does the real work—syncing, processing, etc.     │  │
+│  └───────────────────────────────────────────────────────────────┘  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```
 
-### Key Principles
+## Four ideas that made this work
 
-#### 1. Sidecar Worker for Missing Infrastructure
+### 1. Add what's missing without rebuilding
 
-Cloudflare Pages doesn't support cron triggers. Instead of migrating the entire app, create a lightweight Worker that provides the missing capability:
+Cloudflare Pages doesn't run scheduled jobs. Instead of migrating the whole app, we made a tiny Worker that does one thing: wake up the app every hour.
 
 ```typescript
-// packages/workers/fn-cron/src/index.ts
-
+// A sidecar that fills in the gaps
 export default {
-  // Hourly cron trigger
-  async scheduled(event: ScheduledController, env: Env, ctx: ExecutionContext) {
-    await fetch(`${env.FN_URL}/api/cron/auto-sync`, {
+  async scheduled(event, env) {
+    // Every hour, give the app a nudge
+    await fetch(`${env.APP_URL}/api/cron/auto-sync`, {
       method: 'POST',
-      headers: { 'Authorization': `Bearer ${env.CRON_SECRET}` },
+      headers: { 'Authorization': `Bearer ${env.SECRET}` },
     });
-  },
-
-  // Additional endpoints: analytics, bulk-ops, admin functions
-  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    // ...
   }
 };
 ```
 
-**Why a sidecar?**
-- Pages app stays focused on user experience
-- Worker adds platform-level capabilities
-- Shared D1 database = no data duplication
-- Can evolve independently
+Why bother with a sidecar?
 
-#### 2. DRY Analytics: Query Existing Data
+- The main app stays focused on what users see
+- The Worker handles platform-level stuff
+- They share the same database—no extra work
+- Each can change without breaking the other
 
-The external app already stores execution data (sync_jobs, synced_transcripts). The analytics API simply queries and formats it:
+### 2. Query what's already there
+
+The external app already tracks every sync job. We just needed to ask the database nicely:
 
 ```typescript
-// DON'T duplicate tracking logic
-// DO query existing tables
-
-async function getAnalytics(email: string, env: Env): Promise<Response> {
-  // Find user
+async function getAnalytics(email: string, env: Env) {
+  // Find the user
   const user = await env.DB.prepare(
     'SELECT id FROM users WHERE email = ?'
   ).bind(email).first();
 
-  // Query existing sync_jobs table
+  // Get their recent sync jobs—the data is already there
   const jobs = await env.DB.prepare(`
     SELECT status, progress, started_at, completed_at
     FROM sync_jobs WHERE user_id = ?
     ORDER BY created_at DESC LIMIT 50
   `).bind(user.id).all();
 
-  // Compute stats from existing data
-  const successfulRuns = jobs.results.filter(j => j.status === 'completed').length;
+  // Calculate what matters
+  const successful = jobs.results.filter(j => j.status === 'completed').length;
+  const total = jobs.results.length;
   
   return Response.json({
     workflow: { id: 'fireflies-notion-sync', name: 'Fireflies → Notion Sync' },
     stats: {
-      totalRuns: jobs.results.length,
-      successfulRuns,
-      successRate: Math.round((successfulRuns / jobs.results.length) * 100),
+      totalRuns: total,
+      successfulRuns: successful,
+      successRate: Math.round((successful / total) * 100),
     },
-    executions: jobs.results,
   });
 }
 ```
 
-**Key insight:** The external app's database IS the source of truth. Analytics are just a different view of the same data.
+The key insight: your database is already keeping score. Analytics are just a different view.
 
-#### 3. Admin Team Analytics Pattern
+### 3. Give admins the full picture
 
-Admins need to see metrics for all users they manage. This is a common B2B pattern:
+When someone manages a team, they want to see how everyone's doing—not just their own stats. We handle this with a simple config:
 
 ```typescript
-// Admin configuration - easily extensible
-const ADMIN_CONFIGS: AdminConfig[] = [
+// Easy to add new teams
+const ADMIN_CONFIGS = [
   {
     email: 'admin@company.com',
     teamName: 'Engineering',
@@ -148,188 +139,105 @@ const ADMIN_CONFIGS: AdminConfig[] = [
   },
 ];
 
-async function getAdminAnalytics(adminEmail: string, config: AdminConfig, env: Env) {
-  const teamUsers = [];
-  let totalTeamSynced = 0;
-  let totalTeamRuns = 0;
-
-  // Aggregate metrics for each managed user
+async function getAdminAnalytics(adminEmail, config, env) {
+  const teamStats = [];
+  
+  // Gather each team member's numbers
   for (const userEmail of config.managedUsers) {
-    const userStats = await getUserStats(userEmail, env);
-    teamUsers.push(userStats);
-    totalTeamSynced += userStats.totalSynced;
-    totalTeamRuns += userStats.stats.totalRuns;
+    const stats = await getUserStats(userEmail, env);
+    teamStats.push(stats);
   }
 
+  // Roll it up into a team view
   return Response.json({
     admin: { email: adminEmail, teamName: config.teamName },
-    teamStats: {
-      totalUsers: teamUsers.length,
-      totalTranscriptsSynced: totalTeamSynced,
-      totalRuns: totalTeamRuns,
-      // ... aggregated stats
-    },
-    users: teamUsers, // Individual breakdowns
+    teamStats: summarize(teamStats),
+    users: teamStats, // Individual breakdowns too
   });
 }
 ```
 
-**Pattern benefits:**
-- Zero-config for regular users (just their own data)
-- Admin users automatically get team view
-- Config-driven: add new admins without code changes
+What this gets you:
 
-#### 4. Register in Workflow Registry
+- Regular users see only their own data
+- Admins automatically see their whole team
+- Adding a new admin is one line of config
 
-The external app appears in WORKWAY's workflow catalog:
+### 4. Make it discoverable
+
+Once your external app has an analytics endpoint, register it in the workflow catalog:
 
 ```typescript
-// packages/workflows/src/index.ts
-
-export const integrationPairs: Record<string, IntegrationPairConfig> = {
-  // ... internal workflows ...
-
-  // External integration with analytics pointer
+// Now it shows up in the marketplace
+export const integrationPairs = {
   'fireflies:notion': {
     workflowId: 'fireflies-notion-sync',
     outcome: 'Fireflies meetings that document themselves in Notion',
-    outcomeFrame: 'after_meetings',
-    experimental: true,
-    requiresCustomInfrastructure: true,
-    analyticsUrl: 'https://fn-cron.half-dozen.workers.dev/analytics',
-    dashboardUrl: 'https://fn.workway.co/dashboard',
+    analyticsUrl: 'https://your-sidecar.workers.dev/analytics',
+    dashboardUrl: 'https://your-external-app.com/dashboard',
   },
 };
 ```
 
-**Why this matters:**
-- External apps show up in WORKWAY marketplace
-- Dashboard can fetch analytics from `analyticsUrl`
-- Users see unified view of all their workflows
+This way, external apps appear right alongside native workflows. Users get one place to see everything.
 
-## Implementation: Fireflies → Notion
-
-### Components
-
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| External App | `apps/f-n-web/` | User UI, manual sync, settings |
-| Sidecar Worker | `packages/workers/fn-cron/` | Cron trigger, analytics API, admin ops |
-| Workflow Registry | `packages/workflows/src/index.ts` | Catalog entry |
-| D1 Database | `f-n-production` | Shared data layer |
-
-### Database Schema (leveraged for analytics)
-
-```sql
--- sync_jobs: Track every execution
-CREATE TABLE sync_jobs (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL,
-  status TEXT NOT NULL,        -- 'pending', 'running', 'completed', 'failed'
-  trigger_type TEXT,           -- 'manual', 'auto', 'bulk'
-  progress INTEGER DEFAULT 0,  -- transcripts synced
-  total_transcripts INTEGER,
-  error_message TEXT,
-  started_at TEXT,
-  completed_at TEXT,
-  created_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-
--- synced_transcripts: Deduplication + count
-CREATE TABLE synced_transcripts (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL,
-  fireflies_transcript_id TEXT NOT NULL,
-  notion_page_id TEXT,
-  synced_at TEXT DEFAULT CURRENT_TIMESTAMP
-);
-```
-
-### Analytics Response Format
+## What the response looks like
 
 ```json
 {
   "workflow": {
     "id": "fireflies-notion-sync",
-    "name": "Fireflies → Notion Sync",
-    "description": "Automatically sync Fireflies meeting transcripts to Notion"
+    "name": "Fireflies → Notion Sync"
   },
   "user": {
     "email": "user@example.com",
     "autoSyncEnabled": true,
-    "lastAutoSyncAt": "2026-01-20T15:01:34Z",
     "totalSynced": 34
   },
   "stats": {
     "totalRuns": 5,
     "successfulRuns": 4,
-    "failedRuns": 1,
-    "successRate": 80,
-    "avgExecutionTimeMs": 12500,
-    "lastRunAt": "2026-01-20T15:01:02Z"
-  },
-  "executions": [
-    {
-      "id": "job_abc123",
-      "status": "completed",
-      "triggerType": "auto",
-      "transcriptsSynced": 3,
-      "startedAt": "2026-01-20T15:00:00Z",
-      "completedAt": "2026-01-20T15:01:34Z"
-    }
-  ]
+    "successRate": 80
+  }
 }
 ```
 
-## Results
+## When this approach makes sense
 
-| Metric | Before | After | Improvement |
-|--------|--------|-------|-------------|
-| Dashboard visibility | None | Full analytics | ∞ |
-| Code duplication | Risk | Zero | DRY maintained |
-| Admin visibility | None | Team-wide | B2B ready |
-| Infrastructure added | Pages limitation | Cron + API | Capability gap filled |
+**Use it when:**
 
-## Pattern Applicability
+- You have an external app with its own database
+- Users want to see those metrics in a central dashboard
+- Admins need visibility into their team's usage
+- Your app host is missing a feature (like cron)
 
-**Use this pattern when:**
-- External app exists with its own database
-- Need to surface analytics in central dashboard
-- Admin users need team-level visibility
-- Platform feature (cron) is missing from external app host
+**Skip it when:**
 
-**Don't use when:**
-- App can be fully integrated into core platform
-- No analytics data exists to surface
-- Single-user product (no admin pattern needed)
+- The app could just live inside the main platform
+- There's no analytics data to surface
+- It's a single-user tool (no admin pattern needed)
 
-## Learnings
+## What we learned
 
-1. **Sidecar > Migration**: Adding a Worker to provide missing capabilities is faster and safer than migrating an entire app.
+1. **A sidecar beats a migration.** Adding a small helper is faster and safer than moving an entire app.
 
-2. **Database is the API**: When the external app already tracks execution data, analytics are just SQL queries. Don't rebuild tracking.
+2. **Your database already knows.** If you're tracking execution data, analytics are just SQL queries. Don't rebuild tracking.
 
-3. **Admin config, not admin code**: Store admin relationships in a config array, not code branches. Easy to extend.
+3. **Configure admins, don't code them.** Store team relationships in a config array. Adding a new admin shouldn't require a code change.
 
-4. **Registry enables discovery**: Adding external apps to the workflow registry makes them first-class citizens in the dashboard.
+4. **Registry makes discovery.** Once an external app is in the catalog, it's a first-class citizen.
 
-## Files Reference
+## Where things live
 
 ```
 Cloudflare/
-├── apps/f-n-web/           # External app (Cloudflare Pages)
-│   └── src/
-│       └── routes/api/
-│           └── cron/auto-sync/+server.ts
-├── packages/workers/fn-cron/  # Sidecar worker
-│   ├── src/index.ts        # Cron + analytics + admin endpoints
-│   └── wrangler.toml       # D1 binding + cron schedule
+├── apps/your-external-app/     # The external app (Cloudflare Pages)
+├── packages/workers/sidecar/   # The helper Worker
+│   └── src/index.ts            # Cron + analytics + admin endpoints
 └── packages/workflows/
-    └── src/index.ts        # integrationPairs registry
+    └── src/index.ts            # The catalog entry
 ```
 
 ---
 
-*Pattern documented as part of WORKWAY platform integration work.*
-*Experiment: Surfacing fn.workway.co analytics into WORKWAY dashboard.*
-*Date: January 21, 2026*
+*This pattern came out of integrating fn.workway.co analytics into the WORKWAY dashboard—without duplicating any code.*
