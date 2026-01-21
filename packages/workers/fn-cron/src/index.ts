@@ -733,6 +733,47 @@ async function appendNotionBlocks(token: string, pageId: string, blocks: unknown
 
 // === Property & Block Building ===
 
+/** Notion's 2000 char limit with safety margin */
+const NOTION_TEXT_LIMIT = 1900;
+
+/**
+ * Split text into chunks of ≤NOTION_TEXT_LIMIT chars at word boundaries
+ */
+function chunkTextForNotion(text: string): string[] {
+	if (text.length <= NOTION_TEXT_LIMIT) {
+		return [text];
+	}
+
+	const chunks: string[] = [];
+	const words = text.split(' ');
+	let currentChunk = '';
+
+	for (const word of words) {
+		if (currentChunk.length + word.length + 1 > NOTION_TEXT_LIMIT) {
+			if (currentChunk) {
+				chunks.push(currentChunk);
+			}
+			// If single word is too long, split it
+			if (word.length > NOTION_TEXT_LIMIT) {
+				for (let i = 0; i < word.length; i += NOTION_TEXT_LIMIT) {
+					chunks.push(word.slice(i, i + NOTION_TEXT_LIMIT));
+				}
+				currentChunk = '';
+			} else {
+				currentChunk = word;
+			}
+		} else {
+			currentChunk = currentChunk ? `${currentChunk} ${word}` : word;
+		}
+	}
+
+	if (currentChunk) {
+		chunks.push(currentChunk);
+	}
+
+	return chunks;
+}
+
 function buildNotionProperties(
 	transcript: FirefliesTranscript,
 	titlePropertyName: string,
@@ -822,41 +863,51 @@ function formatTranscriptBlocks(transcript: FirefliesTranscript): unknown[] {
 		let currentSpeaker = '';
 		let currentText: string[] = [];
 
+		const flushSpeakerBlock = () => {
+			if (currentText.length === 0) return;
+			
+			const fullText = currentText.join(' ');
+			const chunks = chunkTextForNotion(fullText);
+			
+			// First block has speaker name
+			const richText: Array<{ text: { content: string }; annotations?: { bold: boolean } }> = [
+				{ text: { content: `${currentSpeaker}: ` }, annotations: { bold: true } },
+			];
+			
+			// Add first chunk
+			richText.push({ text: { content: chunks[0] } });
+			
+			blocks.push({
+				object: 'block',
+				type: 'paragraph',
+				paragraph: { rich_text: richText }
+			});
+			
+			// Add remaining chunks as continuation paragraphs
+			for (let i = 1; i < chunks.length; i++) {
+				blocks.push({
+					object: 'block',
+					type: 'paragraph',
+					paragraph: {
+						rich_text: [{ text: { content: chunks[i] } }]
+					}
+				});
+			}
+		};
+
 		for (const sentence of transcript.sentences) {
 			const speaker = sentence.speaker_name || 'Unknown';
 			
 			if (speaker !== currentSpeaker) {
-				if (currentText.length > 0) {
-					blocks.push({
-						object: 'block',
-						type: 'paragraph',
-						paragraph: {
-							rich_text: [
-								{ text: { content: `**${currentSpeaker}**: ` }, annotations: { bold: true } },
-								{ text: { content: currentText.join(' ') } }
-							]
-						}
-					});
-				}
+				flushSpeakerBlock();
 				currentSpeaker = speaker;
 				currentText = [];
 			}
 			currentText.push(sentence.text);
 		}
 
-		// Add remaining text
-		if (currentText.length > 0) {
-			blocks.push({
-				object: 'block',
-				type: 'paragraph',
-				paragraph: {
-					rich_text: [
-						{ text: { content: `**${currentSpeaker}**: ` }, annotations: { bold: true } },
-						{ text: { content: currentText.join(' ') } }
-					]
-				}
-			});
-		}
+		// Flush remaining text
+		flushSpeakerBlock();
 	}
 
 	return blocks;

@@ -114,6 +114,46 @@ function truncateForNotion(text: string): string {
 	return text.length > NOTION_TEXT_LIMIT ? text.slice(0, NOTION_TEXT_LIMIT) + '...' : text;
 }
 
+/**
+ * Split text into chunks of ≤NOTION_TEXT_LIMIT chars at word boundaries
+ * Returns array of chunks that can each be a separate rich_text element
+ */
+function chunkTextForNotion(text: string): string[] {
+	if (text.length <= NOTION_TEXT_LIMIT) {
+		return [text];
+	}
+
+	const chunks: string[] = [];
+	const words = text.split(' ');
+	let currentChunk = '';
+
+	for (const word of words) {
+		// If adding this word would exceed limit
+		if (currentChunk.length + word.length + 1 > NOTION_TEXT_LIMIT) {
+			if (currentChunk) {
+				chunks.push(currentChunk);
+			}
+			// If single word is too long, split it
+			if (word.length > NOTION_TEXT_LIMIT) {
+				for (let i = 0; i < word.length; i += NOTION_TEXT_LIMIT) {
+					chunks.push(word.slice(i, i + NOTION_TEXT_LIMIT));
+				}
+				currentChunk = '';
+			} else {
+				currentChunk = word;
+			}
+		} else {
+			currentChunk = currentChunk ? `${currentChunk} ${word}` : word;
+		}
+	}
+
+	if (currentChunk) {
+		chunks.push(currentChunk);
+	}
+
+	return chunks;
+}
+
 /** Check if text contains markdown-style bullets */
 function hasMarkdownBullets(text: string): boolean {
 	return text.split('\n').some(line => line.trim().startsWith('- '));
@@ -128,7 +168,9 @@ function parseMarkdownBullets(text: string): string[] {
 		.map(line => line.slice(2).trim()); // Remove "- " prefix
 }
 
-/** Convert markdown bold **text** to Notion rich_text with bold annotation */
+/** Convert markdown bold **text** to Notion rich_text with bold annotation
+ *  Each rich_text element is chunked to ≤NOTION_TEXT_LIMIT chars
+ */
 function parseMarkdownBold(text: string): Array<{ type: string; text: { content: string }; annotations?: { bold: boolean } }> {
 	const parts: Array<{ type: string; text: { content: string }; annotations?: { bold: boolean } }> = [];
 	const regex = /\*\*([^*]+)\*\*/g;
@@ -136,33 +178,43 @@ function parseMarkdownBold(text: string): Array<{ type: string; text: { content:
 	let match;
 
 	while ((match = regex.exec(text)) !== null) {
-		// Add text before the bold
+		// Add text before the bold (chunked)
 		if (match.index > lastIndex) {
+			const beforeText = text.slice(lastIndex, match.index);
+			for (const chunk of chunkTextForNotion(beforeText)) {
+				parts.push({
+					type: 'text',
+					text: { content: chunk }
+				});
+			}
+		}
+		// Add the bold text (chunked)
+		for (const chunk of chunkTextForNotion(match[1])) {
 			parts.push({
 				type: 'text',
-				text: { content: text.slice(lastIndex, match.index) }
+				text: { content: chunk },
+				annotations: { bold: true }
 			});
 		}
-		// Add the bold text
-		parts.push({
-			type: 'text',
-			text: { content: match[1] },
-			annotations: { bold: true }
-		});
 		lastIndex = regex.lastIndex;
 	}
 
-	// Add remaining text
+	// Add remaining text (chunked)
 	if (lastIndex < text.length) {
-		parts.push({
-			type: 'text',
-			text: { content: text.slice(lastIndex) }
-		});
+		const remaining = text.slice(lastIndex);
+		for (const chunk of chunkTextForNotion(remaining)) {
+			parts.push({
+				type: 'text',
+				text: { content: chunk }
+			});
+		}
 	}
 
-	// If no bold found, return simple text
+	// If no parts created, return chunked simple text
 	if (parts.length === 0) {
-		parts.push({ type: 'text', text: { content: text } });
+		for (const chunk of chunkTextForNotion(text)) {
+			parts.push({ type: 'text', text: { content: chunk } });
+		}
 	}
 
 	return parts;
