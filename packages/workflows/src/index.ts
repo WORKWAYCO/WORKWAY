@@ -143,6 +143,9 @@ export { default as sheetsNotionBidirectional } from './sheets-notion-bidirectio
 // Notion Database Sharing (Agency → Client)
 export { default as databasesMirrored } from './databases-mirrored/index.js';
 
+// WORKWAY Catalog Sync
+export { default as catalogToNotion } from './catalog-to-notion/index.js';
+
 // Newsletter (Internal - WORKWAY Dogfooding)
 export { default as newsletterAutopilot } from './newsletter-autopilot/index.js';
 
@@ -237,6 +240,13 @@ export const integrationPairs = {
 		workflowId: 'databases-mirrored',
 		outcome: 'Notion databases that stay in sync across workspaces',
 		outcomeFrame: 'when_collaborating',
+	},
+
+	// WORKWAY Catalog Sync (Marketplace → Notion)
+	'workway:notion': {
+		workflowId: 'catalog-to-notion',
+		outcome: 'Workflow marketplace that stays synced to your Notion',
+		outcomeFrame: 'when_data_changes',
 	},
 
 	// Payments
@@ -818,6 +828,8 @@ export const workflows = {
 	'newsletter-autopilot': { id: 'newsletter-autopilot', outcomeFrame: 'biweekly_automatically', internal: true },
 	// Notion Database Sharing
 	'databases-mirrored': { id: 'databases-mirrored', outcomeFrame: 'when_collaborating' },
+	// WORKWAY Catalog Sync
+	'catalog-to-notion': { id: 'catalog-to-notion', outcomeFrame: 'when_data_changes' },
 } as const;
 
 export type WorkflowId = keyof typeof workflows;
