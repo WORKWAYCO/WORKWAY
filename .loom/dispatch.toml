@@ -1,0 +1,27 @@
+# Loom Dispatch Configuration
+# Defines which agents are available and how to route tasks
+
+[agents.claude]
+path = "claude"
+max_concurrent = 5
+cost_per_1k = 0.015
+
+[agents.cursor]
+path = "cursor"
+max_concurrent = 2
+cost_per_1k = 0.020
+
+[agents.codex]
+path = "codex"
+max_concurrent = 3
+cost_per_1k = 0.008
+
+[agents.gemini]
+path = "gemini"
+max_concurrent = 3
+cost_per_1k = 0.001
+
+[routing]
+default = "claude"
+# Route by task labels:
+# labels = { ui = "cursor", api = "codex", planning = "claude" }

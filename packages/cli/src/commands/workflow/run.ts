@@ -103,7 +103,7 @@ run();
 		const runnerPath = path.join(process.cwd(), '.workway-runner.mjs');
 		await fs.writeFile(runnerPath, runnerScript);
 
-		const spinner = Logger.spinner('Executing workflow...');
+		const spinner = Logger.spinner('Starting engine...');
 
 		try {
 			// Execute with tsx/node
@@ -116,7 +116,7 @@ run();
 			displayExecutionResults(result);
 
 		} catch (error: any) {
-			spinner.fail('Workflow execution failed');
+			spinner.fail('Engine stalled');
 			Logger.blank();
 			Logger.error(error.message);
 			process.exit(1);

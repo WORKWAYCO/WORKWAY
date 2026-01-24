@@ -11,6 +11,7 @@ import { Logger } from '../../utils/logger.js';
 import { createAuthenticatedClient } from '../../utils/auth-client.js';
 import { WORKFLOW_CATEGORIES } from '../../constants.js';
 import { validateWorkflowProject, getWorkflowPath } from '../../utils/workflow-validation.js';
+import { DEFAULT_PRICING, formatCents, getPriceForTier, type ComplexityTier } from '../../pricing-constants.js';
 
 interface PublishOptions {
 	draft?: boolean;
@@ -132,8 +133,8 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 		Logger.blank();
 		Logger.section('Workflow Complexity');
 		Logger.log('Complexity tier determines usage pricing after trial:');
-		Logger.listItem('Light: 5¢ per execution (simple workflows, 1-3 API calls, <5s)');
-		Logger.listItem('Heavy: 25¢ per execution (AI processing, 4+ API calls, complex logic)');
+		Logger.listItem(`Light: ${formatCents(DEFAULT_PRICING.light)} per execution (simple workflows, 1-3 API calls, <5s)`);
+		Logger.listItem(`Heavy: ${formatCents(DEFAULT_PRICING.heavy)} per execution (AI processing, 4+ API calls, complex logic)`);
 		Logger.blank();
 
 		const complexityAnswer = await inquirer.prompt([
@@ -143,11 +144,11 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 				message: 'Complexity tier:',
 				choices: [
 					{
-						name: 'Light (5¢/run after trial) - Simple integrations, data syncs',
+						name: `Light (${formatCents(DEFAULT_PRICING.light)}/run after trial) - Simple integrations, data syncs`,
 						value: 'light',
 					},
 					{
-						name: 'Heavy (25¢/run after trial) - AI-powered, multi-step automations',
+						name: `Heavy (${formatCents(DEFAULT_PRICING.heavy)}/run after trial) - AI-powered, multi-step automations`,
 						value: 'heavy',
 					},
 				],
@@ -156,7 +157,7 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 		]);
 
 		// Confirm pricing details
-		const usagePricePerRun = complexityAnswer.complexityTier === 'heavy' ? 25 : 5;
+		const usagePricePerRun = getPriceForTier(complexityAnswer.complexityTier as ComplexityTier);
 
 		Logger.blank();
 		Logger.section('Pricing Summary');
@@ -165,8 +166,8 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 		} else {
 			Logger.listItem('Upfront: Free');
 		}
-		Logger.listItem('Trial: 20 free executions');
-		Logger.listItem(`After trial: ${usagePricePerRun}¢ per execution`);
+		Logger.listItem(`Trial: ${DEFAULT_PRICING.freeTrialRuns} free executions`);
+		Logger.listItem(`After trial: ${formatCents(usagePricePerRun)} per execution`);
 		Logger.blank();
 
 		const confirmAnswer = await inquirer.prompt([

@@ -1,0 +1,9 @@
+/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/rust-validator/target/debug/deps/wasm_bindgen_futures-fc39f5e2fd29e987.d: /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/lib.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/queue.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/task/singlethread.rs
+
+/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/rust-validator/target/debug/deps/libwasm_bindgen_futures-fc39f5e2fd29e987.rlib: /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/lib.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/queue.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/task/singlethread.rs
+
+/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/rust-validator/target/debug/deps/libwasm_bindgen_futures-fc39f5e2fd29e987.rmeta: /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/lib.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/queue.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/task/singlethread.rs
+
+/Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/lib.rs:
+/Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/queue.rs:
+/Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/wasm-bindgen-futures-0.4.58/src/task/singlethread.rs:

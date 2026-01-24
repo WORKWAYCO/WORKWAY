@@ -63,8 +63,9 @@ export const workflowDefinition = defineWorkflow({
   ],
 
   pricing: {
-    tier: 'light' | 'heavy',  // 5¢ or 25¢ per execution
-    freeExecutions: 20,        // Trial period
+    tier: 'light' | 'heavy',     // Default pricing tiers
+    pricePerExecution?: number,  // Optional: custom price in cents (overrides tier)
+    freeExecutions: 20,          // Trial period
   },
 });
 ```
@@ -93,10 +94,15 @@ Don't build single-step workflows. Ask:
 
 ## Pricing Guidelines
 
-| Tier | Price | Use When |
-|------|-------|----------|
-| Light (5¢) | Simple transformations, single API call | Data sync, notifications |
-| Heavy (25¢) | AI processing, multiple APIs, browser automation | Meeting intelligence, AI extraction |
+Pricing is flexible. Default tiers are available, but workflows can define custom `pricePerExecution` in cents.
+
+| Tier | Default Price | Use When |
+|------|---------------|----------|
+| Light | 5¢ | Simple transformations, single API call (data sync, notifications) |
+| Heavy | 25¢ | AI processing, multiple APIs, browser automation |
+| Custom | 1¢ - $1.00 | Workflows can set `pricePerExecution` for Workers AI or discounted pricing |
+
+**Note**: Enterprise and Partner customers may have negotiated rates. The platform's `getPricePerExecution()` resolver handles all pricing logic.
 
 ## Example: Meeting Intelligence
 

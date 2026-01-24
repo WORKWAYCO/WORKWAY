@@ -1,0 +1,12 @@
+/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/gastown-coordinator/target/debug/deps/thiserror-e4977b699a132a48.d: /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/lib.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/aserror.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/display.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/var.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/private.rs /Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/gastown-coordinator/target/debug/build/thiserror-3a73cca1b1369c1f/out/private.rs
+
+/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/gastown-coordinator/target/debug/deps/libthiserror-e4977b699a132a48.rmeta: /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/lib.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/aserror.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/display.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/var.rs /Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/private.rs /Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/gastown-coordinator/target/debug/build/thiserror-3a73cca1b1369c1f/out/private.rs
+
+/Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/lib.rs:
+/Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/aserror.rs:
+/Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/display.rs:
+/Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/var.rs:
+/Users/micahjohnson/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/thiserror-2.0.18/src/private.rs:
+/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/gastown-coordinator/target/debug/build/thiserror-3a73cca1b1369c1f/out/private.rs:
+
+# env-dep:OUT_DIR=/Users/micahjohnson/Documents/Github/WORKWAY/Cloudflare/packages/gastown-coordinator/target/debug/build/thiserror-3a73cca1b1369c1f/out

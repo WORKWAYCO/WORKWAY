@@ -56,6 +56,27 @@ When a professional uses a WORKWAY workflow, they don't think "The webhook trigg
 
 This is the difference between a tool that works _for_ you versus a tool that demands your attention.
 
+### The Vehicle Analogy
+
+The same principle applies to well-engineered vehicles. When you drive a Porsche 930, you think about your destination—not the turbocharger, the transmission, or the engine timing. The vehicle recedes; the journey remains.
+
+WORKWAY workflows are assembled from Cloudflare parts: Workers (the engine), Durable Objects (the transmission), D1 (the fuel tank). When working correctly, you don't think about any of them. You think about the outcome.
+
+### Workflow Anatomy
+
+Here's how the parts map:
+
+| Vehicle Part | Cloudflare Product | Function |
+|--------------|-------------------|----------|
+| **Engine** | Workers | Where execution happens |
+| **Transmission** | Durable Objects | State coordination |
+| **Fuel Tank** | D1 | Data persistence |
+| **Turbocharger** | Workers AI | Intelligence boost |
+| **Ignition** | Triggers | What starts the engine |
+| **Dashboard** | Analytics | What you see |
+
+When you deploy a workflow, these parts are assembled across 300+ cities. The infrastructure recedes; the outcome remains.
+
 ## Two Ways to Describe a Workflow
 
 | Wrong (Mechanism-Focused)                                    | Right (Outcome-Focused)                       |

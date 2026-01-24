@@ -82,10 +82,12 @@ function validateWorkflowStructure(filePath: string): ValidationResult {
 		}
 	}
 
-	// Check 3: Has pricing tier
-	if (!content.includes('pricing:') && !content.includes('tier:')) {
+	// Check 3: Has pricing configuration
+	// Note: Pricing is flexible - workflows can define custom pricePerExecution
+	// Default tiers: 'light' (standard) or 'heavy' (advanced)
+	if (!content.includes('pricing:') && !content.includes('tier:') && !content.includes('pricePerExecution')) {
 		warnings.push(
-			`Workflow should specify pricing tier ('light' = 5¢, 'heavy' = 25¢)`
+			`Workflow should specify pricing (pricePerExecution or tier: 'light'/'heavy')`
 		);
 	}
 

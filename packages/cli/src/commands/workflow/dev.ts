@@ -1,8 +1,8 @@
 /**
- * Workflow Dev Command
+ * Workflow Dev Command - Test Track
  *
- * Starts a development server with hot reload for workflow development
- * Watches for file changes and re-executes the workflow
+ * Local development environment with hot reload.
+ * Test your engine before it hits the road.
  */
 
 import fs from 'fs-extra';
@@ -23,7 +23,7 @@ let currentProcess: ChildProcess | null = null;
 
 export async function workflowDevCommand(options: DevOptions): Promise<void> {
 	try {
-		Logger.header('Development Server');
+		Logger.header('Test Track');
 
 		// Validate workflow project (DRY: shared utility)
 		await validateWorkflowProject();
@@ -108,7 +108,7 @@ async function runWorkflow(
 	mockMode: boolean,
 	oauthTokens: Record<string, any>
 ): Promise<void> {
-	Logger.log('🔄 Running workflow...');
+	Logger.log('🔄 Starting engine...');
 	Logger.blank();
 
 	const startTime = Date.now();
@@ -221,7 +221,7 @@ run();
  */
 function cleanup(): void {
 	Logger.blank();
-	Logger.log('🛑 Shutting down development server...');
+	Logger.log('🛑 Engine off. Leaving test track...');
 
 	if (watcher) {
 		watcher.close();

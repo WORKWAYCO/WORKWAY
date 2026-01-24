@@ -1,0 +1,54 @@
+[package]
+name = "gastown-coordinator"
+version = "0.1.0"
+authors = ["WORKWAY <dev@workway.co>"]
+edition = "2021"
+description = "High-performance Gastown coordinator for WORKWAY harness (Rust port)"
+repository = "https://github.com/workwayco/workway"
+license = "Apache-2.0"
+
+# NOTE: This crate is a placeholder for future Rust port.
+# See RUST_PORT_PLAN.md in packages/harness for implementation details.
+# Port when profiling shows TypeScript coordinator bottlenecks.
+
+[[bin]]
+name = "gastown-coordinator"
+path = "src/main.rs"
+
+[lib]
+name = "gastown"
+path = "src/lib.rs"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1.43", features = ["full"] }
+
+# SQLite with connection pooling
+rusqlite = { version = "0.33", features = ["bundled"] }
+
+# JSON handling
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+# Error handling
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Logging
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# CLI
+clap = { version = "4.5", features = ["derive"] }
+
+[dev-dependencies]
+tempfile = "3.17"
+
+# Benchmarks will be added when implementation is complete
+# [[bench]]
+# name = "coordinator_bench"
+# harness = false
+
+[profile.release]
+opt-level = 3
+lto = true

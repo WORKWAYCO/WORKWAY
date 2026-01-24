@@ -1,8 +1,8 @@
 /**
  * Workflow Build Command
  *
- * Builds workflow for production deployment
- * Bundles TypeScript, validates configuration, and prepares for publishing
+ * Assembles workflow parts for production deployment.
+ * The chassis (TypeScript) + engine (Workers) + integrations = ready to ship.
  */
 
 import fs from 'fs-extra';
@@ -21,7 +21,7 @@ interface BuildOptions {
 
 export async function workflowBuildCommand(options: BuildOptions): Promise<void> {
 	try {
-		Logger.header('Build Workflow');
+		Logger.header('Assemble Workflow');
 
 		// Validate workflow project (DRY: shared utility)
 		await validateWorkflowProject();
@@ -92,9 +92,9 @@ export async function workflowBuildCommand(options: BuildOptions): Promise<void>
 			if (validationResult.metadata?.trigger) {
 				Logger.listItem(`Trigger: ${validationResult.metadata.trigger}`);
 			}
-			if (validationResult.metadata?.hasAI) {
-				Logger.listItem(`AI Enabled: Yes (Workers AI)`);
-			}
+		if (validationResult.metadata?.hasAI) {
+			Logger.listItem(`Turbo: Workers AI enabled`);
+		}
 			Logger.blank();
 		} catch (error: any) {
 			spinner1.fail('Validation failed');
@@ -113,10 +113,10 @@ export async function workflowBuildCommand(options: BuildOptions): Promise<void>
 		}
 
 		// Step 3: Bundle with esbuild
-		const spinner3 = Logger.spinner('Bundling workflow...');
+		const spinner3 = Logger.spinner('Assembling parts...');
 		try {
 			await bundleWorkflow(workflowPath, absoluteOutDir, minify, sourcemap);
-			spinner3.succeed('Workflow bundled');
+			spinner3.succeed('Parts assembled');
 		} catch (error: any) {
 			spinner3.fail('Bundle failed');
 			Logger.error(error.message);
@@ -143,16 +143,16 @@ export async function workflowBuildCommand(options: BuildOptions): Promise<void>
 		}
 
 		Logger.blank();
-		Logger.success('Build complete! 🎉');
+		Logger.success('Assembly complete! 🎉');
 		Logger.blank();
 		Logger.section('Output');
-		Logger.listItem(`${outDir}/workflow.js - Main workflow bundle`);
+		Logger.listItem(`${outDir}/workflow.js - Engine bundle`);
 		if (sourcemap) {
-			Logger.listItem(`${outDir}/workflow.js.map - Source map`);
+			Logger.listItem(`${outDir}/workflow.js.map - Diagnostic map`);
 		}
-		Logger.listItem(`${outDir}/manifest.json - Workflow manifest`);
+		Logger.listItem(`${outDir}/manifest.json - Parts manifest`);
 		Logger.blank();
-		Logger.log('📦 Ready for publishing with: workway workflow publish');
+		Logger.log('📦 Ready to ship with: workway workflow publish');
 
 	} catch (error: any) {
 		Logger.error(error.message);

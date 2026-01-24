@@ -120,6 +120,21 @@ export {
 } from './scale-manager.js';
 export type { ScaleMetrics } from './scale-manager.js';
 
+// Performance Profiling (determines Rust port necessity)
+export {
+  Profiler,
+  runProfileSession,
+  DEFAULT_PROFILE_CONFIG,
+} from './profiler.js';
+export type {
+  ProfileConfig,
+  ProfileMetrics,
+  ProfileReport,
+  ProfileSummary,
+  Bottleneck,
+  RustRecommendation,
+} from './profiler.js';
+
 // Model Routing (Cost Optimization)
 export {
   getModelFromConfig,

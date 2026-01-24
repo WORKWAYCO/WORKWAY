@@ -1,0 +1,42 @@
+# Loom Configuration
+# This file configures Loom for this repository.
+# All settings are optional - sensible defaults are used.
+
+# Repository identifier (used in unified multi-repo views)
+# repo-id = "myproject"
+
+# Human-readable repository name
+# repo-name = "My Project"
+
+# Issue ID prefix (default: "lm")
+# issue-prefix = "lm"
+
+# Multi-repo configuration
+# Allows seeing tasks from multiple repositories in one view
+# while routing writes to the correct repository.
+[repos]
+primary = "."
+# additional = [
+#     "~/Documents/Github/other-project",
+#     "~/work/another-repo"
+# ]
+
+# Agent mapping for backfill
+# Maps git author names/emails to Loom agent IDs
+[agents]
+# "Your Name" = "human"
+# "claude@anthropic.com" = "claude-code"
+
+# Backfill configuration
+[backfill]
+# Custom issue patterns (regex) for this repo
+# issue-patterns = ["MYPROJ-[0-9]+"]
+# Path to Beads directory (relative to repo root)
+# beads-path = ".beads"
+
+# Sync configuration
+[sync]
+# Git branch for loom sync commits
+# sync-branch = "loom-sync"
+# Auto-sync on task completion
+# auto-sync = false

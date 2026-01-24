@@ -66,7 +66,7 @@ const program = new Command();
 
 program
 	.name('workway')
-	.description('WORKWAY CLI - Build, test, and publish workflows and integrations')
+	.description('WORKWAY CLI - Build, test, and publish workflows')
 	.version('0.3.5');
 
 // ============================================================================
@@ -103,7 +103,7 @@ workflowCommand
 
 workflowCommand
 	.command('test')
-	.description('Test workflow execution')
+	.description('Test drive your workflow')
 	.option('--mock', 'Use mocked integrations')
 	.option('--live', 'Use live OAuth connections')
 	.option('--data <file>', 'Path to test data file')
@@ -120,7 +120,7 @@ workflowCommand
 
 workflowCommand
 	.command('dev')
-	.description('Start development server with hot reload')
+	.description('Start the test track (dev server with hot reload)')
 	.option('--port <port>', 'Port number')
 	.option('--mock', 'Use mock mode')
 	.option('--no-mock', 'Use live OAuth connections')
@@ -128,7 +128,7 @@ workflowCommand
 
 workflowCommand
 	.command('build')
-	.description('Build workflow for production')
+	.description('Assemble workflow for production')
 	.option('--out-dir <dir>', 'Output directory')
 	.option('--minify', 'Minify output')
 	.option('--no-minify', 'Disable minification')
@@ -146,6 +146,11 @@ workflowCommand
 	.description('Validate workflow schema without building')
 	.option('--strict', 'Treat warnings as errors')
 	.option('--json', 'Output as JSON (for CI/CD)')
+	.option('--benchmark', 'Show timing information for validator performance')
+	.option('--iterations <n>', 'Number of iterations for benchmarking', (v) => parseInt(v, 10))
+	.option('--wasm', 'Force WASM validator (default: auto-detect)')
+	.option('--no-wasm', 'Force TypeScript validator')
+	.option('--compare-validators', 'Compare WASM vs TypeScript performance')
 	.action(async (file: string, options: any) => {
 		try {
 			await workflowValidateCommand(file, options);
@@ -367,12 +372,12 @@ oauthCommand
 
 program
 	.command('status')
-	.description('Show developer dashboard and status')
+	.description('Show your dashboard')
 	.action(handleCommand(statusCommand));
 
 program
 	.command('logs')
-	.description('View production workflow execution logs')
+	.description('View trip log (production runs)')
 	.option('--workflow <id>', 'Filter by workflow ID')
 	.option('--limit <n>', 'Number of logs to show', '20')
 	.option('--follow', 'Follow logs in real-time')

@@ -12,7 +12,7 @@ By the end of this lesson, you will be able to:
 
 ---
 
-A workflow without a trigger is just code. Triggers define when your workflow springs into action.
+A workflow without a trigger is just code. Triggers are the ignition system—they define when your workflow engine starts.
 
 ## Step-by-Step: Add a Trigger to Your Workflow
 
@@ -102,12 +102,12 @@ curl http://localhost:8787/execute \
 
 ## Trigger Types
 
-| Type     | When It Fires                        |
-| -------- | ------------------------------------ |
-| Webhook  | External service sends HTTP request  |
-| Schedule | Scheduled time (daily, hourly, etc.) |
-| Manual   | User clicks "Run" or API call        |
-| Poll     | Periodic API checks                  |
+| Type     | When It Fires                        | Vehicle Analogy |
+| -------- | ------------------------------------ | --------------- |
+| Webhook  | External service sends HTTP request  | Keyless ignition—starts when the right signal arrives |
+| Schedule | Scheduled time (daily, hourly, etc.) | Remote start—engine warms before you arrive |
+| Manual   | User clicks "Run" or API call        | Turn the key yourself |
+| Poll     | Periodic API checks                  | Fuel gauge check—regular look at external state |
 
 ### Choosing the Right Trigger
 

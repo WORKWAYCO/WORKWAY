@@ -3,10 +3,102 @@
  *
  * Validates workflow definitions against the WORKWAY schema.
  * Catches errors before deployment to prevent broken workflows.
+ *
+ * Performance: All regex patterns are compiled once at module load time
+ * to avoid repeated compilation during validation.
+ *
+ * Benchmarking: Set WORKWAY_BENCHMARK=1 to see timing information.
  */
 
 import fs from 'fs-extra';
 import path from 'path';
+import { createEnvBenchmark, type Benchmark } from './benchmark.js';
+
+// ============================================================================
+// CACHED REGEX PATTERNS (compiled once at module load)
+// ============================================================================
+
+/**
+ * Pre-compiled patterns for common validation checks.
+ * Creating RegExp objects is expensive - compile once, use many times.
+ */
+const PATTERNS = {
+	// Import checks
+	sdkImport: /@workway\/sdk/,
+	aiUsage: /createAIClient|AIModels|env\.AI|workers-ai/,
+	workersAIImport: /@workway\/sdk\/workers-ai/,
+
+	// Workflow definition
+	defineWorkflow: /defineWorkflow\s*\(/,
+	exportDefault: /export\s+default/,
+	workflowName: /name:\s*['"`]([^'"`]+)['"`]/,
+	workflowType: /type:\s*['"`](integration|ai-enhanced|ai-native)['"`]/,
+
+	// Execute function
+	hasExecute: /execute\s*[:(]|async\s+execute/,
+	hasRun: /run\s*[:(]|async\s+run/,
+	executeBody: /execute\s*\([^)]*\)\s*{([^}]+(?:{[^}]*}[^}]*)*)}/s,
+
+	// Integrations
+	integrationsBlock: /integrations:\s*\[([\s\S]*?)\]/,
+	serviceNames: /service:\s*['"`]([^'"`]+)['"`]/g,
+	shorthandIntegrations: /['"`]([a-z-]+)['"`]/g,
+
+	// Trigger
+	hasTrigger: /trigger:\s*/,
+	triggerType: /trigger:\s*(webhook|schedule|manual|poll)\s*\(/,
+	triggerObjectType: /trigger:\s*{\s*type:\s*['"`]([^'"`]+)['"`]/,
+	webhookConfig: /webhook\s*\(\s*{([^}]+)}/,
+	scheduleExpr: /schedule\s*\(\s*['"`]([^'"`]+)['"`]/,
+
+	// Pricing
+	hasPricing: /pricing:\s*{/,
+	pricingModel: /model:\s*['"`](subscription|usage|one-time)['"`]/,
+	pricingPrice: /price:\s*(\d+(?:\.\d+)?)/,
+	hasExecutions: /executions:\s*(\d+|'unlimited')/,
+
+	// AI usage
+	externalAI: /claude|gpt-4|openai|anthropic|gemini/i,
+	envAccess: /env\s*[,})]|context\.env|{ env }/,
+
+	// Common mistakes
+	consoleStatements: /console\.(log|error|warn)/g,
+	awaitInForLoop: /for\s*\([^)]+\)\s*{[^}]*await[^}]*}/s,
+	awaitInWhileLoop: /while\s*\([^)]+\)\s*{[^}]*await[^}]*}/s,
+	emptyCatch: /catch\s*\([^)]*\)\s*{\s*}/s,
+
+	// Cron validation helpers
+	cronStepWildcard: /^\*\/\d+$/,
+	cronRangeList: /^\d+(-\d+)?(,\d+(-\d+)?)*$/,
+} as const;
+
+/**
+ * Pre-compiled secret detection patterns
+ */
+const SECRET_PATTERNS = [
+	/api[_-]?key\s*[:=]\s*['"`][^'"`]{20,}['"`]/i,
+	/secret\s*[:=]\s*['"`][^'"`]{20,}['"`]/i,
+	/password\s*[:=]\s*['"`][^'"`]+['"`]/i,
+	/token\s*[:=]\s*['"`][^'"`]{20,}['"`]/i,
+] as const;
+
+/**
+ * Pre-compiled cron field validation patterns
+ */
+const CRON_PATTERNS = [
+	/^(\*|[0-9]|[1-5][0-9])(\/(0|[1-9][0-9]?))?$|^\*\/[0-9]+$/,  // minute
+	/^(\*|[0-9]|1[0-9]|2[0-3])(\/(0|[1-9][0-9]?))?$|^\*\/[0-9]+$/, // hour
+	/^(\*|[1-9]|[12][0-9]|3[01])(\/(0|[1-9][0-9]?))?$|^\*\/[0-9]+$/, // day
+	/^(\*|[1-9]|1[0-2])(\/(0|[1-9][0-9]?))?$|^\*\/[0-9]+$/, // month
+	/^(\*|[0-6])(\/(0|[1-9][0-9]?))?$|^\*\/[0-9]+$/, // weekday
+] as const;
+
+/**
+ * Pre-compiled import patterns for blocked modules and packages.
+ * Map from module/package name to compiled regex.
+ */
+const BLOCKED_MODULE_PATTERNS: Map<string, RegExp> = new Map();
+const BLOCKED_PACKAGE_PATTERNS: Map<string, RegExp> = new Map();
 
 // ============================================================================
 // TYPES
@@ -17,6 +109,11 @@ export interface ValidationResult {
 	errors: ValidationError[];
 	warnings: ValidationWarning[];
 	metadata?: WorkflowMetadata;
+	/** Benchmark timing data (only present when WORKWAY_BENCHMARK=1) */
+	benchmark?: {
+		totalMs: number;
+		phases: Record<string, number>;
+	};
 }
 
 export interface ValidationError {
@@ -83,17 +180,22 @@ const KNOWN_INTEGRATIONS = [
 
 /**
  * Validate a workflow file
+ *
+ * Set WORKWAY_BENCHMARK=1 to see timing information for each validation phase.
  */
 export async function validateWorkflowFile(workflowPath: string): Promise<ValidationResult> {
+	const bench = createEnvBenchmark();
 	const errors: ValidationError[] = [];
 	const warnings: ValidationWarning[] = [];
 	const metadata: WorkflowMetadata = {};
 
 	// Read file content
+	bench.start('file-read');
 	let content: string;
 	try {
 		content = await fs.readFile(workflowPath, 'utf-8');
 	} catch (error) {
+		bench.end('file-read');
 		return {
 			valid: false,
 			errors: [{
@@ -104,37 +206,66 @@ export async function validateWorkflowFile(workflowPath: string): Promise<Valida
 			warnings: [],
 		};
 	}
+	bench.end('file-read');
 
 	// Check for required imports
-	validateImports(content, errors, warnings, metadata);
+	bench.time('validate-imports', () => {
+		validateImports(content, errors, warnings, metadata);
+	});
 
 	// Check for workflow definition
-	validateWorkflowDefinition(content, errors, warnings, metadata);
+	bench.time('validate-definition', () => {
+		validateWorkflowDefinition(content, errors, warnings, metadata);
+	});
 
 	// Check for execute function
-	validateExecuteFunction(content, errors, warnings);
+	bench.time('validate-execute', () => {
+		validateExecuteFunction(content, errors, warnings);
+	});
 
 	// Validate integrations
-	validateIntegrations(content, errors, warnings, metadata);
+	bench.time('validate-integrations', () => {
+		validateIntegrations(content, errors, warnings, metadata);
+	});
 
 	// Validate trigger
-	validateTrigger(content, errors, warnings, metadata);
+	bench.time('validate-trigger', () => {
+		validateTrigger(content, errors, warnings, metadata);
+	});
 
 	// Validate pricing
-	validatePricing(content, errors, warnings, metadata);
+	bench.time('validate-pricing', () => {
+		validatePricing(content, errors, warnings, metadata);
+	});
 
 	// Check for AI usage
-	validateAIUsage(content, errors, warnings, metadata);
+	bench.time('validate-ai', () => {
+		validateAIUsage(content, errors, warnings, metadata);
+	});
 
 	// Check for common mistakes
-	validateCommonMistakes(content, errors, warnings);
+	bench.time('validate-mistakes', () => {
+		validateCommonMistakes(content, errors, warnings);
+	});
 
-	return {
+	// Build result with optional benchmark data
+	const result: ValidationResult = {
 		valid: errors.length === 0,
 		errors,
 		warnings,
 		metadata,
 	};
+
+	// Include benchmark data if enabled
+	const report = bench.getReport();
+	if (report.totalDuration > 0 && Object.keys(report.summary).length > 0) {
+		result.benchmark = {
+			totalMs: report.totalDuration,
+			phases: report.summary,
+		};
+	}
+
+	return result;
 }
 
 /**
@@ -182,8 +313,54 @@ const BLOCKED_NPM_PACKAGES = [
 	'redis',         // Use KV instead
 ];
 
+// Initialize cached patterns for blocked modules/packages at module load
+for (const mod of BLOCKED_NODE_MODULES) {
+	BLOCKED_MODULE_PATTERNS.set(
+		mod,
+		new RegExp(`(import\\s+.*from\\s+['"\`]${mod}['"\`])|(require\\s*\\(\\s*['"\`]${mod}['"\`]\\s*\\))`, 'g')
+	);
+}
+
+for (const pkg of BLOCKED_NPM_PACKAGES) {
+	BLOCKED_PACKAGE_PATTERNS.set(
+		pkg,
+		new RegExp(`(import\\s+.*from\\s+['"\`]${pkg}['"\`])|(require\\s*\\(\\s*['"\`]${pkg}['"\`]\\s*\\))`, 'g')
+	);
+}
+
 /**
- * Validate imports
+ * Suggestions for blocked Node.js modules
+ */
+const NODE_MODULE_SUGGESTIONS: Record<string, string> = {
+	'fs': 'Cloudflare Workers have no filesystem. Store data in KV or R2.',
+	'path': 'Use string manipulation or URL API instead.',
+	'child_process': 'Workers cannot spawn processes. Use external services.',
+	'crypto': 'Use Web Crypto API: crypto.subtle.digest(), crypto.randomUUID()',
+	'http': 'Use native fetch() instead.',
+	'https': 'Use native fetch() instead.',
+	'buffer': 'Use ArrayBuffer/Uint8Array instead.',
+	'stream': 'Use Web Streams API (ReadableStream, WritableStream).',
+};
+
+/**
+ * Suggestions for blocked npm packages
+ */
+const NPM_PACKAGE_SUGGESTIONS: Record<string, string> = {
+	'axios': 'Use native fetch() - it works identically in Workers.',
+	'request': 'Use native fetch() - request is deprecated anyway.',
+	'node-fetch': 'Native fetch() is available - no polyfill needed.',
+	'express': 'Workers use event-driven model, not HTTP servers.',
+	'bcrypt': 'Use bcryptjs (pure JS) or Web Crypto API.',
+	'sharp': 'Use Cloudflare Images for image processing.',
+	'puppeteer': 'Use an external browser service or Cloudflare Browser Rendering.',
+	'mongoose': 'Use Cloudflare D1 (SQLite) or external API.',
+	'pg': 'Use Cloudflare D1 or Hyperdrive for PostgreSQL.',
+	'mysql': 'Use Cloudflare D1 or Hyperdrive.',
+	'redis': 'Use Cloudflare KV for key-value storage.',
+};
+
+/**
+ * Validate imports - uses pre-compiled patterns for performance
  */
 function validateImports(
 	content: string,
@@ -191,9 +368,8 @@ function validateImports(
 	warnings: ValidationWarning[],
 	metadata: WorkflowMetadata
 ): void {
-	// Check for SDK import
-	const hasSDKImport = /@workway\/sdk/.test(content);
-	if (!hasSDKImport) {
+	// Check for SDK import (using cached pattern)
+	if (!PATTERNS.sdkImport.test(content)) {
 		errors.push({
 			type: 'error',
 			code: 'MISSING_SDK_IMPORT',
@@ -202,9 +378,9 @@ function validateImports(
 		});
 	}
 
-	// Check for Workers AI import if using AI
-	const hasAIUsage = /createAIClient|AIModels|env\.AI|workers-ai/.test(content);
-	const hasWorkersAIImport = /@workway\/sdk\/workers-ai/.test(content);
+	// Check for Workers AI import if using AI (using cached patterns)
+	const hasAIUsage = PATTERNS.aiUsage.test(content);
+	const hasWorkersAIImport = PATTERNS.workersAIImport.test(content);
 
 	if (hasAIUsage && !hasWorkersAIImport) {
 		warnings.push({
@@ -217,61 +393,43 @@ function validateImports(
 
 	metadata.hasAI = hasAIUsage;
 
-	// Check for Node.js stdlib imports (BLOCKED in Workers)
+	// Check for Node.js stdlib imports (using pre-compiled patterns)
 	for (const mod of BLOCKED_NODE_MODULES) {
-		// Match: import x from 'fs', import { x } from 'fs', require('fs')
-		const importPattern = new RegExp(`(import\\s+.*from\\s+['"\`]${mod}['"\`])|(require\\s*\\(\\s*['"\`]${mod}['"\`]\\s*\\))`, 'g');
-		if (importPattern.test(content)) {
-			const suggestions: Record<string, string> = {
-				'fs': 'Cloudflare Workers have no filesystem. Store data in KV or R2.',
-				'path': 'Use string manipulation or URL API instead.',
-				'child_process': 'Workers cannot spawn processes. Use external services.',
-				'crypto': 'Use Web Crypto API: crypto.subtle.digest(), crypto.randomUUID()',
-				'http': 'Use native fetch() instead.',
-				'https': 'Use native fetch() instead.',
-				'buffer': 'Use ArrayBuffer/Uint8Array instead.',
-				'stream': 'Use Web Streams API (ReadableStream, WritableStream).',
-			};
-
-			errors.push({
-				type: 'error',
-				code: 'BLOCKED_NODE_MODULE',
-				message: `Node.js module '${mod}' is not available in Cloudflare Workers`,
-				suggestion: suggestions[mod] || 'See docs/WORKERS_RUNTIME_GUIDE.md for alternatives.',
-			});
+		const pattern = BLOCKED_MODULE_PATTERNS.get(mod);
+		if (pattern) {
+			// Reset lastIndex for global patterns before testing
+			pattern.lastIndex = 0;
+			if (pattern.test(content)) {
+				errors.push({
+					type: 'error',
+					code: 'BLOCKED_NODE_MODULE',
+					message: `Node.js module '${mod}' is not available in Cloudflare Workers`,
+					suggestion: NODE_MODULE_SUGGESTIONS[mod] || 'See docs/WORKERS_RUNTIME_GUIDE.md for alternatives.',
+				});
+			}
 		}
 	}
 
-	// Check for npm packages known to not work
+	// Check for npm packages known to not work (using pre-compiled patterns)
 	for (const pkg of BLOCKED_NPM_PACKAGES) {
-		const importPattern = new RegExp(`(import\\s+.*from\\s+['"\`]${pkg}['"\`])|(require\\s*\\(\\s*['"\`]${pkg}['"\`]\\s*\\))`, 'g');
-		if (importPattern.test(content)) {
-			const suggestions: Record<string, string> = {
-				'axios': 'Use native fetch() - it works identically in Workers.',
-				'request': 'Use native fetch() - request is deprecated anyway.',
-				'node-fetch': 'Native fetch() is available - no polyfill needed.',
-				'express': 'Workers use event-driven model, not HTTP servers.',
-				'bcrypt': 'Use bcryptjs (pure JS) or Web Crypto API.',
-				'sharp': 'Use Cloudflare Images for image processing.',
-				'puppeteer': 'Use an external browser service or Cloudflare Browser Rendering.',
-				'mongoose': 'Use Cloudflare D1 (SQLite) or external API.',
-				'pg': 'Use Cloudflare D1 or Hyperdrive for PostgreSQL.',
-				'mysql': 'Use Cloudflare D1 or Hyperdrive.',
-				'redis': 'Use Cloudflare KV for key-value storage.',
-			};
-
-			warnings.push({
-				type: 'warning',
-				code: 'INCOMPATIBLE_NPM_PACKAGE',
-				message: `npm package '${pkg}' is incompatible with Cloudflare Workers`,
-				suggestion: suggestions[pkg] || 'See docs/WORKERS_RUNTIME_GUIDE.md for alternatives.',
-			});
+		const pattern = BLOCKED_PACKAGE_PATTERNS.get(pkg);
+		if (pattern) {
+			// Reset lastIndex for global patterns before testing
+			pattern.lastIndex = 0;
+			if (pattern.test(content)) {
+				warnings.push({
+					type: 'warning',
+					code: 'INCOMPATIBLE_NPM_PACKAGE',
+					message: `npm package '${pkg}' is incompatible with Cloudflare Workers`,
+					suggestion: NPM_PACKAGE_SUGGESTIONS[pkg] || 'See docs/WORKERS_RUNTIME_GUIDE.md for alternatives.',
+				});
+			}
 		}
 	}
 }
 
 /**
- * Validate workflow definition structure
+ * Validate workflow definition structure - uses pre-compiled patterns
  */
 function validateWorkflowDefinition(
 	content: string,
@@ -279,9 +437,9 @@ function validateWorkflowDefinition(
 	warnings: ValidationWarning[],
 	metadata: WorkflowMetadata
 ): void {
-	// Check for defineWorkflow or export default
-	const hasDefineWorkflow = /defineWorkflow\s*\(/.test(content);
-	const hasExportDefault = /export\s+default/.test(content);
+	// Check for defineWorkflow or export default (using cached patterns)
+	const hasDefineWorkflow = PATTERNS.defineWorkflow.test(content);
+	const hasExportDefault = PATTERNS.exportDefault.test(content);
 
 	if (!hasDefineWorkflow && !hasExportDefault) {
 		errors.push({
@@ -292,8 +450,8 @@ function validateWorkflowDefinition(
 		});
 	}
 
-	// Extract workflow name
-	const nameMatch = content.match(/name:\s*['"`]([^'"`]+)['"`]/);
+	// Extract workflow name (using cached pattern)
+	const nameMatch = content.match(PATTERNS.workflowName);
 	if (nameMatch) {
 		metadata.name = nameMatch[1];
 	} else {
@@ -305,24 +463,24 @@ function validateWorkflowDefinition(
 		});
 	}
 
-	// Extract workflow type
-	const typeMatch = content.match(/type:\s*['"`](integration|ai-enhanced|ai-native)['"`]/);
+	// Extract workflow type (using cached pattern)
+	const typeMatch = content.match(PATTERNS.workflowType);
 	if (typeMatch) {
 		metadata.type = typeMatch[1];
 	}
 }
 
 /**
- * Validate execute function
+ * Validate execute function - uses pre-compiled patterns
  */
 function validateExecuteFunction(
 	content: string,
 	errors: ValidationError[],
 	warnings: ValidationWarning[]
 ): void {
-	// Check for execute function
-	const hasExecute = /execute\s*[:(]|async\s+execute/.test(content);
-	const hasRun = /run\s*[:(]|async\s+run/.test(content);
+	// Check for execute function (using cached patterns)
+	const hasExecute = PATTERNS.hasExecute.test(content);
+	const hasRun = PATTERNS.hasRun.test(content);
 
 	if (!hasExecute && !hasRun) {
 		errors.push({
@@ -333,8 +491,8 @@ function validateExecuteFunction(
 		});
 	}
 
-	// Check for return statement in execute
-	const executeMatch = content.match(/execute\s*\([^)]*\)\s*{([^}]+(?:{[^}]*}[^}]*)*)}/s);
+	// Check for return statement in execute (using cached pattern)
+	const executeMatch = content.match(PATTERNS.executeBody);
 	if (executeMatch) {
 		const executeBody = executeMatch[1];
 		if (!executeBody.includes('return')) {
@@ -349,7 +507,7 @@ function validateExecuteFunction(
 }
 
 /**
- * Validate integrations
+ * Validate integrations - uses pre-compiled patterns
  */
 function validateIntegrations(
 	content: string,
@@ -357,8 +515,8 @@ function validateIntegrations(
 	warnings: ValidationWarning[],
 	metadata: WorkflowMetadata
 ): void {
-	// Extract integrations array
-	const integrationsMatch = content.match(/integrations:\s*\[([\s\S]*?)\]/);
+	// Extract integrations array (using cached pattern)
+	const integrationsMatch = content.match(PATTERNS.integrationsBlock);
 	if (!integrationsMatch) {
 		return; // No integrations defined (might be valid for some workflows)
 	}
@@ -366,14 +524,16 @@ function validateIntegrations(
 	const integrationsBlock = integrationsMatch[1];
 	const integrations: string[] = [];
 
-	// Extract service names
-	const serviceMatches = integrationsBlock.matchAll(/service:\s*['"`]([^'"`]+)['"`]/g);
+	// Extract service names (using cached pattern - create fresh instance for matchAll)
+	const servicePattern = new RegExp(PATTERNS.serviceNames.source, 'g');
+	const serviceMatches = integrationsBlock.matchAll(servicePattern);
 	for (const match of serviceMatches) {
 		integrations.push(match[1].toLowerCase());
 	}
 
-	// Also check for shorthand: ['gmail', 'slack']
-	const shorthandMatches = integrationsBlock.matchAll(/['"`]([a-z-]+)['"`]/g);
+	// Also check for shorthand: ['gmail', 'slack'] (using cached pattern)
+	const shorthandPattern = new RegExp(PATTERNS.shorthandIntegrations.source, 'g');
+	const shorthandMatches = integrationsBlock.matchAll(shorthandPattern);
 	for (const match of shorthandMatches) {
 		const name = match[1].toLowerCase();
 		if (KNOWN_INTEGRATIONS.includes(name) && !integrations.includes(name)) {
@@ -407,7 +567,7 @@ function validateIntegrations(
 }
 
 /**
- * Validate trigger configuration
+ * Validate trigger configuration - uses pre-compiled patterns
  */
 function validateTrigger(
 	content: string,
@@ -415,9 +575,8 @@ function validateTrigger(
 	warnings: ValidationWarning[],
 	metadata: WorkflowMetadata
 ): void {
-	// Check for trigger definition
-	const hasTrigger = /trigger:\s*/.test(content);
-	if (!hasTrigger) {
+	// Check for trigger definition (using cached pattern)
+	if (!PATTERNS.hasTrigger.test(content)) {
 		errors.push({
 			type: 'error',
 			code: 'MISSING_TRIGGER',
@@ -427,21 +586,21 @@ function validateTrigger(
 		return;
 	}
 
-	// Extract trigger type
-	const triggerMatch = content.match(/trigger:\s*(webhook|schedule|manual|poll)\s*\(/);
+	// Extract trigger type (using cached patterns)
+	const triggerMatch = content.match(PATTERNS.triggerType);
 	if (triggerMatch) {
 		metadata.trigger = triggerMatch[1];
 	} else {
 		// Check for object-style trigger
-		const triggerTypeMatch = content.match(/trigger:\s*{\s*type:\s*['"`]([^'"`]+)['"`]/);
+		const triggerTypeMatch = content.match(PATTERNS.triggerObjectType);
 		if (triggerTypeMatch) {
 			metadata.trigger = triggerTypeMatch[1];
 		}
 	}
 
-	// Validate webhook trigger
+	// Validate webhook trigger (using cached pattern)
 	if (content.includes('webhook(')) {
-		const webhookMatch = content.match(/webhook\s*\(\s*{([^}]+)}/);
+		const webhookMatch = content.match(PATTERNS.webhookConfig);
 		if (webhookMatch) {
 			const webhookConfig = webhookMatch[1];
 			if (!webhookConfig.includes('service') && !webhookConfig.includes('event')) {
@@ -455,9 +614,9 @@ function validateTrigger(
 		}
 	}
 
-	// Validate schedule trigger
+	// Validate schedule trigger (using cached pattern)
 	if (content.includes('schedule(')) {
-		const scheduleMatch = content.match(/schedule\s*\(\s*['"`]([^'"`]+)['"`]/);
+		const scheduleMatch = content.match(PATTERNS.scheduleExpr);
 		if (scheduleMatch) {
 			const cronExpr = scheduleMatch[1];
 			if (!isValidCron(cronExpr)) {
@@ -473,7 +632,7 @@ function validateTrigger(
 }
 
 /**
- * Validate pricing configuration
+ * Validate pricing configuration - uses pre-compiled patterns
  */
 function validatePricing(
 	content: string,
@@ -481,8 +640,8 @@ function validatePricing(
 	warnings: ValidationWarning[],
 	metadata: WorkflowMetadata
 ): void {
-	const hasPricing = /pricing:\s*{/.test(content);
-	if (!hasPricing) {
+	// Using cached pattern
+	if (!PATTERNS.hasPricing.test(content)) {
 		warnings.push({
 			type: 'warning',
 			code: 'MISSING_PRICING',
@@ -492,23 +651,22 @@ function validatePricing(
 		return;
 	}
 
-	// Extract pricing model
-	const modelMatch = content.match(/model:\s*['"`](subscription|usage|one-time)['"`]/);
+	// Extract pricing model (using cached pattern)
+	const modelMatch = content.match(PATTERNS.pricingModel);
 	if (modelMatch) {
 		metadata.pricing = { model: modelMatch[1] };
 	}
 
-	// Extract price
-	const priceMatch = content.match(/price:\s*(\d+(?:\.\d+)?)/);
+	// Extract price (using cached pattern)
+	const priceMatch = content.match(PATTERNS.pricingPrice);
 	if (priceMatch) {
 		metadata.pricing = metadata.pricing || {};
 		metadata.pricing.price = parseFloat(priceMatch[1]);
 	}
 
-	// Validate subscription pricing has executions
+	// Validate subscription pricing has executions (using cached pattern)
 	if (modelMatch?.[1] === 'subscription') {
-		const hasExecutions = /executions:\s*(\d+|'unlimited')/.test(content);
-		if (!hasExecutions) {
+		if (!PATTERNS.hasExecutions.test(content)) {
 			warnings.push({
 				type: 'warning',
 				code: 'MISSING_EXECUTIONS',
@@ -520,7 +678,7 @@ function validatePricing(
 }
 
 /**
- * Validate AI usage
+ * Validate AI usage - uses pre-compiled patterns
  */
 function validateAIUsage(
 	content: string,
@@ -528,9 +686,8 @@ function validateAIUsage(
 	warnings: ValidationWarning[],
 	metadata: WorkflowMetadata
 ): void {
-	// Check for external AI providers (not allowed)
-	const hasExternalAI = /claude|gpt-4|openai|anthropic|gemini/i.test(content);
-	if (hasExternalAI) {
+	// Check for external AI providers (using cached pattern)
+	if (PATTERNS.externalAI.test(content)) {
 		warnings.push({
 			type: 'warning',
 			code: 'EXTERNAL_AI_DETECTED',
@@ -539,10 +696,9 @@ function validateAIUsage(
 		});
 	}
 
-	// Check for proper AI client usage
+	// Check for proper AI client usage (using cached pattern)
 	if (metadata.hasAI) {
-		const hasEnvAccess = /env\s*[,})]|context\.env|{ env }/.test(content);
-		if (!hasEnvAccess) {
+		if (!PATTERNS.envAccess.test(content)) {
 			warnings.push({
 				type: 'warning',
 				code: 'MISSING_ENV_ACCESS',
@@ -554,15 +710,16 @@ function validateAIUsage(
 }
 
 /**
- * Validate common mistakes
+ * Validate common mistakes - uses pre-compiled patterns
  */
 function validateCommonMistakes(
 	content: string,
 	errors: ValidationError[],
 	warnings: ValidationWarning[]
 ): void {
-	// Check for console.log (should use logging service)
-	const consoleMatches = content.match(/console\.(log|error|warn)/g);
+	// Check for console.log (using cached pattern - create fresh for matchAll)
+	const consolePattern = new RegExp(PATTERNS.consoleStatements.source, 'g');
+	const consoleMatches = content.match(consolePattern);
 	if (consoleMatches && consoleMatches.length > 3) {
 		warnings.push({
 			type: 'warning',
@@ -572,15 +729,8 @@ function validateCommonMistakes(
 		});
 	}
 
-	// Check for hardcoded secrets
-	const secretPatterns = [
-		/api[_-]?key\s*[:=]\s*['"`][^'"`]{20,}['"`]/i,
-		/secret\s*[:=]\s*['"`][^'"`]{20,}['"`]/i,
-		/password\s*[:=]\s*['"`][^'"`]+['"`]/i,
-		/token\s*[:=]\s*['"`][^'"`]{20,}['"`]/i,
-	];
-
-	for (const pattern of secretPatterns) {
+	// Check for hardcoded secrets (using pre-compiled patterns)
+	for (const pattern of SECRET_PATTERNS) {
 		if (pattern.test(content)) {
 			errors.push({
 				type: 'error',
@@ -592,9 +742,9 @@ function validateCommonMistakes(
 		}
 	}
 
-	// Check for await inside loops (potential performance issue)
-	const awaitInLoop = /for\s*\([^)]+\)\s*{[^}]*await[^}]*}/s.test(content) ||
-		/while\s*\([^)]+\)\s*{[^}]*await[^}]*}/s.test(content);
+	// Check for await inside loops (using cached patterns)
+	const awaitInLoop = PATTERNS.awaitInForLoop.test(content) ||
+		PATTERNS.awaitInWhileLoop.test(content);
 	if (awaitInLoop) {
 		warnings.push({
 			type: 'warning',
@@ -604,8 +754,8 @@ function validateCommonMistakes(
 		});
 	}
 
-	// Check for empty catch blocks
-	if (/catch\s*\([^)]*\)\s*{\s*}/s.test(content)) {
+	// Check for empty catch blocks (using cached pattern)
+	if (PATTERNS.emptyCatch.test(content)) {
 		warnings.push({
 			type: 'warning',
 			code: 'EMPTY_CATCH',
@@ -616,27 +766,19 @@ function validateCommonMistakes(
 }
 
 /**
- * Validate cron expression
+ * Validate cron expression - uses pre-compiled patterns
  */
 function isValidCron(expr: string): boolean {
 	const parts = expr.trim().split(/\s+/);
 	if (parts.length !== 5) return false;
 
-	const patterns = [
-		/^(\*|[0-9]|[1-5][0-9])(\/(0|[1-9][0-9]?))?$|^\*\/[0-9]+$/,  // minute
-		/^(\*|[0-9]|1[0-9]|2[0-3])(\/(0|[1-9][0-9]?))?$|^\*\/[0-9]+$/, // hour
-		/^(\*|[1-9]|[12][0-9]|3[01])(\/(0|[1-9][0-9]?))?$|^\*\/[0-9]+$/, // day
-		/^(\*|[1-9]|1[0-2])(\/(0|[1-9][0-9]?))?$|^\*\/[0-9]+$/, // month
-		/^(\*|[0-6])(\/(0|[1-9][0-9]?))?$|^\*\/[0-9]+$/, // weekday
-	];
-
 	for (let i = 0; i < 5; i++) {
-		// Allow wildcards and ranges
+		// Allow wildcards and ranges (using cached patterns)
 		const part = parts[i];
 		if (part === '*') continue;
-		if (/^\*\/\d+$/.test(part)) continue;
-		if (/^\d+(-\d+)?(,\d+(-\d+)?)*$/.test(part)) continue;
-		if (!patterns[i].test(part)) return false;
+		if (PATTERNS.cronStepWildcard.test(part)) continue;
+		if (PATTERNS.cronRangeList.test(part)) continue;
+		if (!CRON_PATTERNS[i].test(part)) return false;
 	}
 
 	return true;
@@ -662,5 +804,65 @@ export function formatValidationResults(result: ValidationResult): string[] {
 		}
 	}
 
+	// Include benchmark data if present
+	if (result.benchmark) {
+		lines.push('');
+		lines.push(`[BENCHMARK] Total: ${result.benchmark.totalMs.toFixed(2)}ms`);
+
+		// Sort phases by duration
+		const sortedPhases = Object.entries(result.benchmark.phases)
+			.sort((a, b) => b[1] - a[1]);
+
+		for (const [phase, duration] of sortedPhases) {
+			const pct = ((duration / result.benchmark.totalMs) * 100).toFixed(1);
+			lines.push(`            ${phase}: ${duration.toFixed(2)}ms (${pct}%)`);
+		}
+	}
+
 	return lines;
+}
+
+/**
+ * Run a batch validation benchmark on multiple files
+ * Useful for measuring overall validator performance.
+ */
+export async function benchmarkValidation(
+	workflowPaths: string[],
+	iterations = 1
+): Promise<{
+	totalFiles: number;
+	totalIterations: number;
+	totalMs: number;
+	avgPerFile: number;
+	avgPerIteration: number;
+	results: Array<{ path: string; ms: number; valid: boolean }>;
+}> {
+	const start = performance.now();
+	const results: Array<{ path: string; ms: number; valid: boolean }> = [];
+
+	for (let i = 0; i < iterations; i++) {
+		for (const workflowPath of workflowPaths) {
+			const fileStart = performance.now();
+			const result = await validateWorkflowFile(workflowPath);
+			const fileEnd = performance.now();
+
+			results.push({
+				path: workflowPath,
+				ms: fileEnd - fileStart,
+				valid: result.valid,
+			});
+		}
+	}
+
+	const end = performance.now();
+	const totalMs = end - start;
+
+	return {
+		totalFiles: workflowPaths.length,
+		totalIterations: iterations,
+		totalMs,
+		avgPerFile: totalMs / (workflowPaths.length * iterations),
+		avgPerIteration: totalMs / iterations,
+		results,
+	};
 }

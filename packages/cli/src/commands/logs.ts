@@ -1,8 +1,8 @@
 /**
- * Logs Command
+ * Logs Command - Trip Log
  *
- * View production workflow execution logs
- * Provides real observability into deployed workflows
+ * View production runs. Each execution is a trip—
+ * see where it went, how long it took, what happened.
  */
 
 import { Logger } from '../utils/logger.js';
@@ -18,7 +18,7 @@ interface LogsOptions {
 
 export async function logsCommand(options: LogsOptions): Promise<void> {
 	try {
-		Logger.header('Production Logs');
+		Logger.header('Trip Log');
 
 		// Get authenticated client (DRY: shared utility)
 		const { apiClient: client } = await createAuthenticatedClient({
@@ -39,7 +39,7 @@ export async function logsCommand(options: LogsOptions): Promise<void> {
 		Logger.listItem(`Limit: ${limit}`);
 		Logger.blank();
 
-		const spinner = Logger.spinner('Loading execution logs...');
+		const spinner = Logger.spinner('Loading trip log...');
 
 		try {
 			// Get workflow runs from API
@@ -53,12 +53,12 @@ export async function logsCommand(options: LogsOptions): Promise<void> {
 			Logger.blank();
 
 			// Display logs
-			Logger.section('Recent Executions');
+			Logger.section('Recent Trips');
 
 			if (logs.length === 0) {
-				Logger.log('  No execution logs found');
+				Logger.log('  No trips recorded yet');
 				Logger.log('');
-				Logger.log('Workflow executions will appear here after they run in production');
+				Logger.log('Trips appear here after workflows run in production');
 			} else {
 				for (const log of logs) {
 					displayRunLog(log);

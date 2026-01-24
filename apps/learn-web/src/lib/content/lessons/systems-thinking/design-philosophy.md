@@ -224,7 +224,11 @@ Target: **One decision, maybe two.**
 
 ## Weniger, aber besser (Less, but better)
 
-Dieter Rams designed products at Braun that worked for decades. His 10 principles apply directly to workflow design:
+Dieter Rams designed products at Braun. Ferdinand Porsche designed vehicles. Both asked the same question: *what can be removed?*
+
+Porsche said: "I couldn't find the sports car of my dreams, so I built it myself." Then he removed everything that didn't serve performance. The Porsche 930 added a turbocharger to the 911 without changing what it was—more power, same essence. The whale tail spoiler was functional, not decorative. That's *weniger, aber besser* applied to metal.
+
+Rams' 10 principles apply directly to workflow design:
 
 ### 1. Good Design is Innovative
 
@@ -311,6 +315,8 @@ if (!results.success) {
 ```
 
 ### 6. Good Design is Honest
+
+A Porsche 930 doesn't pretend to be a minivan. It does one thing exceptionally well.
 
 No fake promises in your workflow descriptions:
 

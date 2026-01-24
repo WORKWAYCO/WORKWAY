@@ -241,7 +241,7 @@ $ claude "why did the last 3 runs fail?"
 
 ## Honest Limitations (Don't Hide These)
 
-1. **Smaller integration library than Zapier**: We have 40+ integrations. Zapier has 5000+. We'll never catch up—and that's okay. We focus on **developer-centric** integrations (GitHub, Linear, Notion), not every SaaS tool ever made.
+1. **Smaller integration library than Zapier**: We have 30+ integrations (26 OAuth providers, 20 SDK clients). Zapier has 5000+. We'll never catch up—and that's okay. We focus on **developer-centric** integrations (GitHub, Linear, Notion), not every SaaS tool ever made.
 
 2. **Steeper learning curve**: If you don't know TypeScript, WORKWAY isn't for you. We won't dumb down the product to serve non-developers.
 

@@ -67,7 +67,9 @@ See [ARCHITECTURE.md](docs/ARCHITECTURE.md) for full details.
 ## 💰 Business Model
 
 - **Developers**: Keep 100% of upfront fees you charge
-- **Platform**: 5¢ per light workflow, 25¢ per heavy workflow execution
+- **Platform**: Default 5¢ (standard) / 25¢ (advanced) per execution
+- **Flexible Pricing**: Workflows can set custom `pricePerExecution` for Workers AI overhead or strategic discounts
+- **Enterprise**: Negotiated rates (3¢ standard, 15¢ advanced) with contract-level overrides
 - **Free Trials**: 20 free runs per workflow for customers
 
 ## 📖 Documentation

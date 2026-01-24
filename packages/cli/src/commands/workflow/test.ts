@@ -1,8 +1,8 @@
 /**
- * Workflow Test Command
+ * Workflow Test Command - Test Drive
  *
- * Tests workflow execution with mock or live data.
- * Live mode executes real API calls using stored OAuth tokens.
+ * Take your workflow for a spin before shipping.
+ * Mock mode: simulated road. Live mode: real traffic.
  */
 
 import fs from 'fs-extra';
@@ -23,7 +23,7 @@ export async function workflowTestCommand(options: TestOptions): Promise<void> {
 		// Determine test mode
 		const mode = options.live ? 'live' : 'mock';
 
-		Logger.header(`Test Workflow (${mode} mode)`);
+		Logger.header(`Test Drive (${mode} mode)`);
 
 		// Validate workflow project (DRY: shared utility)
 		await validateWorkflowProject();
@@ -52,13 +52,13 @@ export async function workflowTestCommand(options: TestOptions): Promise<void> {
 		Logger.blank();
 
 		// Show spinner
-		const spinner = Logger.spinner('Running workflow...');
+		const spinner = Logger.spinner('Starting engine...');
 
 		try {
 			// Execute workflow test
 			const result = await executeWorkflowTest(workflowPath, testData, mode);
 
-			spinner.succeed('Workflow execution complete');
+			spinner.succeed('Test drive complete');
 			Logger.blank();
 
 			// Display results
@@ -66,14 +66,14 @@ export async function workflowTestCommand(options: TestOptions): Promise<void> {
 
 			if (result.success) {
 				Logger.blank();
-				Logger.success('Workflow test passed!');
+				Logger.success('Test drive passed!');
 			} else {
 				Logger.blank();
-				Logger.error('Workflow test failed');
+				Logger.error('Test drive failed');
 				process.exit(1);
 			}
 		} catch (error: any) {
-			spinner.fail('Workflow execution failed');
+			spinner.fail('Engine stalled');
 			Logger.blank();
 			Logger.error('Error: ' + error.message);
 

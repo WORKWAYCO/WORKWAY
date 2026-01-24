@@ -1,8 +1,8 @@
 /**
- * Status Command
+ * Status Command - Dashboard
  *
- * Developer dashboard showing position in the marketplace
- * The "hermeneutic clearing" - understanding your position in the system
+ * Your instrument panel: workflows, earnings, connections.
+ * Everything you need to see at a glance.
  */
 
 import { Logger } from '../utils/logger.js';
@@ -11,7 +11,7 @@ import { createAuthenticatedClient } from '../utils/auth-client.js';
 
 export async function statusCommand(): Promise<void> {
 	try {
-		Logger.header('WORKWAY Status');
+		Logger.header('Dashboard');
 
 		// Get authenticated client (DRY: shared utility)
 		const { apiClient: client, config } = await createAuthenticatedClient({
@@ -19,13 +19,13 @@ export async function statusCommand(): Promise<void> {
 			hint: 'Login with: workway login',
 		});
 
-		const spinner = Logger.spinner('Loading developer status...');
+		const spinner = Logger.spinner('Loading dashboard...');
 
 		try {
 			// Get developer profile
 			const profile = await client.getDeveloperProfile();
 
-			spinner.succeed('Status loaded');
+			spinner.succeed('Dashboard ready');
 			Logger.blank();
 
 			// Developer Info

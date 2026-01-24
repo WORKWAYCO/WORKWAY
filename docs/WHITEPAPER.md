@@ -17,7 +17,7 @@ WORKWAY is TypeScript-native workflow automation infrastructure built on Cloudfl
 - **Public Marketplace (P1)**: Two-sided marketplace where developers sell pre-built workflows
 - **Worker Hire (P2)**: Connect businesses with experts to build custom workflows
 
-**Traction**: Built by 2 founders + AI agents in 6 months. Dog-fooding the platform to run our own company. 40+ integrations, TypeScript SDK, Claude Code CLI integration, marketplace with expert hiring.
+**Traction**: Built by 2 founders + AI agents in 6 months. Dog-fooding the platform to run our own company. 30+ integrations (26 OAuth providers, 20 SDK clients), TypeScript SDK, Claude Code CLI integration, marketplace with expert hiring.
 
 **Vision**: A giant business with no employees. We're building WORKWAY to prove that AI-native companies can operate at scale with minimal headcount—and selling that capability to every developer team.
 
@@ -138,7 +138,7 @@ export default defineWorkflow({
 
 #### 3. Built-In Integrations Layer
 
-40+ integrations covering developer tools:
+30+ integrations covering developer tools:
 - **Meetings**: Zoom, Google Meet, Calendly
 - **Productivity**: Notion, Airtable, Google Sheets
 - **Communication**: Slack, Discord, Email (SendGrid, Resend)
@@ -536,7 +536,7 @@ $ claude "add error handling to zoom-to-notion workflow"
 4. **Community building** → Discord, GitHub Discussions, X/Twitter
 
 **Metrics** (current):
-- 40+ integrations built
+- 30+ integrations built (26 OAuth providers, 20 SDK clients)
 - SDK published to npm (`@workwayco/sdk`)
 - CLI tool (`@workwayco/cli`) with Claude Code integration
 - Marketplace with 8 initial workflows
@@ -661,7 +661,7 @@ $ claude "add error handling to zoom-to-notion workflow"
 
 ### Months 1-6 (Completed)
 
-- [x] TypeScript SDK with 40+ integrations
+- [x] TypeScript SDK with 30+ integrations
 - [x] Cloudflare Workers deployment infrastructure
 - [x] Web dashboard (user auth, teams, workflow creation)
 - [x] Marketplace (browse, install, fork workflows)
