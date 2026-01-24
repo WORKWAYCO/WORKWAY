@@ -42,6 +42,7 @@ This is the foundational mapping. Use it consistently across all content:
 | **Drivetrain** | Workflows (CF product) | Durable execution, connects engine to wheels | "Durable Workflows keep everything moving" |
 | **Dashboard** | Analytics / Logs | What the driver sees - observability | "Check your dashboard for metrics" |
 | **Ignition** | Triggers | What starts the engine | "Webhooks turn the ignition" |
+| **Cockpit** | Glass UI | The entire control interface | "Everything angled toward the work" |
 
 ---
 
@@ -50,6 +51,7 @@ This is the foundational mapping. Use it consistently across all content:
 | Automotive | WORKWAY Concept | Usage Example |
 |------------|-----------------|---------------|
 | Vehicle | Complete workflow | "Your workflow is a vehicle for outcomes" |
+| Cockpit | Glass UI / Interface | "The cockpit: everything angled toward the driver" |
 | Assembly line | `workway deploy` | "Deploy takes your parts through assembly" |
 | Test track | `workway dev` | "Test track mode: local development" |
 | ECU (Engine Control Unit) | `configSchema` | "Configure the ECU for your environment" |
@@ -65,11 +67,13 @@ This is the foundational mapping. Use it consistently across all content:
 
 ## Connection to Existing Philosophy
 
-### Zuhandenheit Through the Windshield
+### Zuhandenheit in the Cockpit
 
 > When you drive a well-engineered car, you think about where you're going—not how the transmission shifts. That's Zuhandenheit. The parts recede; the journey remains.
 
-The windshield is the ultimate Zuhandenheit artifact: you see *through* it, not *at* it. Our glass design system embodies this—transparency that enables focus.
+The cockpit is where this philosophy becomes physical. Not the windshield—that's passive glass you look through. The **cockpit** is the entire interface where the driver controls the machine: instrument cluster, controls, everything angled toward the work.
+
+Our glass UI aesthetic embodies this: minimal, driver-focused, transparency that enables focus. Like the 930's driver-centric layout where even the center console tilts toward you. The glass effect (blur, transparency, refraction) isn't decoration—it's the cockpit's design philosophy. Everything serves the driver's attention.
 
 ### Weniger, aber besser: The Porsche Principle
 
