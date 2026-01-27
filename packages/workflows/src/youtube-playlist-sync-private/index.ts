@@ -2,14 +2,21 @@
  * YouTube Playlist to Notion Sync - Private (Half Dozen Internal)
  *
  * Organization-specific workflow for @halfdozen.co team.
- * Syncs YouTube playlist videos to the team's Notion database with transcripts.
+ * Syncs PUBLIC YouTube playlist videos to Notion with transcripts.
  *
  * ## Architecture
  *
- * - Video source: YouTube Data API v3 (via BYOO OAuth)
- * - Transcript source: youtube-transcript (scraping public captions)
- * - Storage: Half Dozen's central Notion database
- * - Auth: BYOO (Bring Your Own OAuth) - organization's Google Cloud app
+ * - Video source: YouTube page scraping (no OAuth required)
+ * - Transcript source: YouTube timedtext API scraping
+ * - Storage: User's Notion database
+ * - Auth: Only Notion OAuth required
+ *
+ * ## Why Scraping?
+ *
+ * Public playlists don't require authentication to read. By scraping:
+ * - No YouTube OAuth setup needed (simpler for users)
+ * - No Google app verification required
+ * - Works with any public playlist URL
  *
  * ## Capabilities
  *
@@ -19,21 +26,6 @@
  * - Notion Integration: Creates rich pages with embedded video + transcript
  * - Deduplication: Tracks processed videos by ID in KV storage
  *
- * ## vs. youtube-playlist-sync (Public)
- *
- * | Feature | Private | Public |
- * |---------|---------|--------|
- * | OAuth | BYOO (org app) | WORKWAY verified app |
- * | Database | Team-configurable | User-configurable |
- * | Verification | Not required | Google verification required |
- * | Access | @halfdozen.co only | Anyone |
- *
- * ## Why BYOO?
- *
- * YouTube OAuth scopes require Google app verification for public apps.
- * Using BYOO with the organization's own Google Cloud app allows
- * unverified apps for internal organizational use.
- *
  * ## Notion Schema (Videos Database)
  *
  * Required properties:
@@ -41,10 +33,8 @@
  * - URL (url): YouTube video URL
  * - Channel (rich_text): Channel name
  * - Published (date): Video publish date
- * - Video ID (rich_text): YouTube video ID for deduplication
  *
  * @see /packages/workflows/src/youtube-playlist-sync - Public version
- * @see /packages/workflows/src/private-emails-documented - Pattern reference
  * @private For @halfdozen.co team only
  */
 
@@ -62,6 +52,10 @@ import {
 	checkVideoExistsInNotion,
 	appendBlocksInBatches,
 	createNotionVideoPage,
+	// YouTube Data API functions (uses API key, no user OAuth required)
+	fetchPlaylistItems,
+	fetchVideoDetails,
+	fetchTranscript,
 } from '../youtube-playlist-sync/utils.js';
 
 // ============================================================================
@@ -227,8 +221,8 @@ export default defineWorkflow({
 		description: 'Internal workflow - no usage fees',
 	},
 
+	// Only Notion OAuth required - YouTube uses public playlist scraping
 	integrations: [
-		{ service: 'youtube', scopes: ['youtube.readonly'] },
 		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
 	],
 
@@ -297,14 +291,6 @@ export default defineWorkflow({
 			default: 'Published',
 			description: 'Notion database property for publish date',
 		},
-
-		// BYOO connection ID (for Half Dozen's YouTube OAuth)
-		youtube_connection_id: {
-			type: 'text',
-			label: 'YouTube Connection ID',
-			required: true,
-			description: 'Your BYOO YouTube connection ID (from setup)',
-		},
 	},
 
 	// Cron trigger - polls playlist for new videos
@@ -327,15 +313,19 @@ export default defineWorkflow({
 			notion_url_property = 'URL',
 			notion_channel_property = 'Channel',
 			notion_date_property = 'Published',
-			youtube_connection_id,
 		} = inputs;
 
 		// Track execution start
 		const apiSecret = env.WORKFLOW_API_SECRET || '';
 		const connectionUrl = 'https://api.workway.co';
+		const trackingId = installationId || userId || 'default';
 
-		if (youtube_connection_id && apiSecret) {
-			await trackExecution(youtube_connection_id, apiSecret, connectionUrl, {
+		// YouTube API key for public data access (no user OAuth required)
+		// Private workflow - key is embedded for Half Dozen internal use
+		const youtubeApiKey = env.YOUTUBE_API_KEY || 'AIzaSyCMRwFVImHJykVaFqeR4PnYE2R2T3_kvaM';
+
+		if (trackingId && apiSecret) {
+			await trackExecution(trackingId, apiSecret, connectionUrl, {
 				status: 'running',
 				startedAt,
 			});
@@ -350,7 +340,7 @@ export default defineWorkflow({
 
 			// Load state from KV - use installation ID + playlist ID for user isolation
 			// This ensures each user's sync state is independent
-			const instanceId = installationId || userId || youtube_connection_id || 'default';
+			const instanceId = trackingId;
 			const stateKey = `${STATE_KEY_PREFIX}${instanceId}:${playlistId}`;
 			let state: PlaylistSyncState = (await env.KV?.get(stateKey, 'json')) || {
 				playlistId,
@@ -367,8 +357,8 @@ export default defineWorkflow({
 			if (timeSinceLastCheck < pollIntervalMs) {
 				const executionTimeMs = Date.now() - startTime;
 
-				if (youtube_connection_id && apiSecret) {
-					await trackExecution(youtube_connection_id, apiSecret, connectionUrl, {
+				if (trackingId && apiSecret) {
+					await trackExecution(trackingId, apiSecret, connectionUrl, {
 						status: 'success',
 						videosSynced: 0,
 						resultSummary: `Skipped - next check in ${Math.ceil((pollIntervalMs - timeSinceLastCheck) / 60000)} minutes`,
@@ -386,29 +376,14 @@ export default defineWorkflow({
 				};
 			}
 
-			// Fetch ALL playlist items with pagination
-			const allPlaylistItems: Array<{ videoId: string; title: string }> = [];
-			let nextPageToken: string | undefined;
+			// Fetch playlist items via YouTube Data API (no user OAuth required)
+			const playlistResult = await fetchPlaylistItems(playlistId, youtubeApiKey);
 
-			do {
-				const playlistResult = await integrations.youtube.getPlaylistItems({
-					playlistId,
-					maxResults: 50,
-					pageToken: nextPageToken,
-				});
+			if (!playlistResult.success || !playlistResult.items) {
+				throw new Error(`Failed to fetch playlist: ${playlistResult.error}`);
+			}
 
-				if (!playlistResult.success) {
-					throw new Error(`Failed to fetch playlist: ${playlistResult.error?.message}`);
-				}
-
-				allPlaylistItems.push(...playlistResult.data.items);
-				nextPageToken = playlistResult.data.nextPageToken;
-
-				// Safety limit: don't process more than 500 videos in one run
-				if (allPlaylistItems.length >= 500) {
-					break;
-				}
-			} while (nextPageToken);
+			const allPlaylistItems = playlistResult.items;
 
 			// Find new videos (not in processedVideoIds)
 			const newVideos = allPlaylistItems.filter(
@@ -422,8 +397,8 @@ export default defineWorkflow({
 
 				const executionTimeMs = Date.now() - startTime;
 
-				if (youtube_connection_id && apiSecret) {
-					await trackExecution(youtube_connection_id, apiSecret, connectionUrl, {
+				if (trackingId && apiSecret) {
+					await trackExecution(trackingId, apiSecret, connectionUrl, {
 						status: 'success',
 						videosSynced: 0,
 						resultSummary: 'No new videos found',
@@ -440,28 +415,28 @@ export default defineWorkflow({
 				};
 			}
 
-			// Get full video details for new videos
-			const videoIds = newVideos.map((v: any) => v.videoId);
-			const videosResult = await integrations.youtube.getVideos({ videoIds });
-
-			if (!videosResult.success) {
-				throw new Error(`Failed to fetch video details: ${videosResult.error?.message}`);
-			}
-
-			// Process each new video
+			// Process each new video (fetch details via scraping)
 			const results: Array<{ videoId: string; notionUrl?: string; error?: string; skipped?: boolean }> = [];
 
-			for (const video of videosResult.data) {
+			for (const item of newVideos) {
 				try {
-					// Fetch transcript if enabled
+					// Fetch video details via YouTube Data API
+					const videoResult = await fetchVideoDetails(item.videoId, youtubeApiKey);
+					if (!videoResult.success || !videoResult.data) {
+						results.push({
+							videoId: item.videoId,
+							error: videoResult.error || 'Failed to fetch video details',
+						});
+						continue;
+					}
+
+					const video = videoResult.data;
+
+					// Fetch transcript if enabled (via scraping)
 					let transcript: TranscriptData | null = null;
 					if (include_transcript) {
-						const transcriptResult = await integrations.youtube.getTranscript({
-							videoId: video.id,
-							language: transcript_language,
-						});
-
-						if (transcriptResult.success) {
+						const transcriptResult = await fetchTranscript(video.id, transcript_language);
+						if (transcriptResult.success && transcriptResult.data) {
 							transcript = transcriptResult.data;
 						}
 						// Graceful degradation: continue without transcript if unavailable
@@ -475,7 +450,7 @@ export default defineWorkflow({
 							description: video.description,
 							publishedAt: video.publishedAt,
 							channelTitle: video.channelTitle,
-							thumbnailUrl: video.thumbnails?.high?.url,
+							thumbnailUrl: video.thumbnailUrl,
 							duration: video.duration,
 							viewCount: video.viewCount,
 						},
@@ -533,8 +508,8 @@ export default defineWorkflow({
 			if (failCount > 0) message += `, ${failCount} failed`;
 
 			// Track successful execution
-			if (youtube_connection_id && apiSecret) {
-				await trackExecution(youtube_connection_id, apiSecret, connectionUrl, {
+			if (trackingId && apiSecret) {
+				await trackExecution(trackingId, apiSecret, connectionUrl, {
 					status: 'success',
 					videosSynced: successCount,
 					resultSummary: message,
@@ -557,8 +532,8 @@ export default defineWorkflow({
 			const errorMessage = error instanceof Error ? error.message : 'Unknown error';
 
 			// Track failed execution
-			if (youtube_connection_id && apiSecret) {
-				await trackExecution(youtube_connection_id, apiSecret, connectionUrl, {
+			if (trackingId && apiSecret) {
+				await trackExecution(trackingId, apiSecret, connectionUrl, {
 					status: 'failed',
 					errorMessage,
 					startedAt,
@@ -574,9 +549,8 @@ export default defineWorkflow({
 		}
 	},
 
-	onError: async ({ error, inputs }) => {
-		const connectionId = inputs.youtube_connection_id || 'unknown';
-		console.error(`YouTube Playlist Sync failed for connection ${connectionId}:`, error);
+	onError: async ({ error }) => {
+		console.error('YouTube Playlist Sync failed:', error);
 	},
 });
 
@@ -596,29 +570,11 @@ export const metadata = {
 	visibility: 'private' as const,
 	accessGrants: [{ type: 'email_domain' as const, value: 'halfdozen.co' }],
 
-	// BYOO configuration - links to Half Dozen developer profile
-	// This enables credential resolution from developer_oauth_apps table
-	developerId: 'dev_halfdozen',
-	byooProvider: 'youtube',
+	// Simplified: No BYOO needed - uses scraping for public playlists
+	// Only Notion OAuth required
 
-	// Honest flags (matches private-emails-documented pattern)
-	experimental: true,
-	requiresCustomInfrastructure: true,
-	canonicalAlternative: 'youtube-playlist-sync', // Public version
-
-	// Why this exists
-	workaroundReason: 'YouTube OAuth scopes require Google app verification for public apps',
-	infrastructureRequired: ['BYOO Google OAuth app for YouTube'],
-
-	// Upgrade path (when Google verification completes)
-	upgradeTarget: 'youtube-playlist-sync',
-	upgradeCondition: 'When WORKWAY YouTube OAuth app is verified',
-
-	// Analytics URL - unified at workway.co/workflows
+	// Analytics URL
 	analyticsUrl: 'https://workway.co/workflows/private/youtube-playlist-sync-private/analytics',
-
-	// Setup URL - BYOO connection setup
-	setupUrl: 'https://api.workway.co/oauth/youtube/authorize',
 
 	stats: { rating: 0, users: 0, reviews: 0 },
 };

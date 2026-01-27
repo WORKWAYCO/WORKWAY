@@ -3,6 +3,12 @@
  *
  * Common functions used by both public and private workflow versions.
  * Extracted to reduce duplication and improve maintainability.
+ *
+ * ## Scraping vs API
+ *
+ * For public playlists, this module provides scraping functions that work
+ * without OAuth. This is simpler for users (no YouTube connection required)
+ * and works reliably for public content.
  */
 
 // ============================================================================
@@ -46,6 +52,355 @@ export interface PlaylistSyncState {
 	processedVideoIds: string[];
 	etag?: string; // YouTube API ETag for efficient polling
 }
+
+/** Playlist item from scraping */
+export interface ScrapedPlaylistItem {
+	videoId: string;
+	title: string;
+}
+
+/** Result from playlist scraping */
+export interface ScrapePlaylistResult {
+	success: boolean;
+	items?: ScrapedPlaylistItem[];
+	error?: string;
+}
+
+/** Result from video scraping */
+export interface ScrapeVideoResult {
+	success: boolean;
+	data?: VideoData;
+	error?: string;
+}
+
+/** Result from transcript scraping */
+export interface ScrapeTranscriptResult {
+	success: boolean;
+	data?: TranscriptData;
+	error?: string;
+}
+
+// ============================================================================
+// YOUTUBE DATA API (Public Data with API Key - No OAuth Required)
+// ============================================================================
+
+const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
+
+/**
+ * Fetch playlist items using YouTube Data API
+ *
+ * Uses API key authentication for public playlist data.
+ * No user OAuth required.
+ */
+export async function fetchPlaylistItems(
+	playlistId: string,
+	apiKey: string
+): Promise<ScrapePlaylistResult> {
+	try {
+		const items: ScrapedPlaylistItem[] = [];
+		let nextPageToken: string | undefined;
+
+		// Paginate through all playlist items
+		do {
+			const params = new URLSearchParams({
+				part: 'snippet,contentDetails',
+				playlistId,
+				maxResults: '50',
+				key: apiKey,
+			});
+			if (nextPageToken) {
+				params.set('pageToken', nextPageToken);
+			}
+
+			const response = await fetch(`${YOUTUBE_API_BASE}/playlistItems?${params}`);
+
+			if (!response.ok) {
+				const error = await response.json().catch(() => ({}));
+				return {
+					success: false,
+					error: `YouTube API error: ${error?.error?.message || response.status}`,
+				};
+			}
+
+			const data = (await response.json()) as {
+				items?: Array<{
+					contentDetails?: { videoId?: string };
+					snippet?: { title?: string };
+				}>;
+				nextPageToken?: string;
+			};
+
+			for (const item of data.items || []) {
+				if (item.contentDetails?.videoId) {
+					items.push({
+						videoId: item.contentDetails.videoId,
+						title: item.snippet?.title || 'Untitled',
+					});
+				}
+			}
+
+			nextPageToken = data.nextPageToken;
+
+			// Safety limit
+			if (items.length >= 500) break;
+		} while (nextPageToken);
+
+		return { success: true, items };
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : 'Unknown error fetching playlist',
+		};
+	}
+}
+
+/**
+ * Fetch video details using YouTube Data API
+ *
+ * Uses API key authentication for public video data.
+ * No user OAuth required.
+ */
+export async function fetchVideoDetails(
+	videoId: string,
+	apiKey: string
+): Promise<ScrapeVideoResult> {
+	try {
+		const params = new URLSearchParams({
+			part: 'snippet,contentDetails,statistics',
+			id: videoId,
+			key: apiKey,
+		});
+
+		const response = await fetch(`${YOUTUBE_API_BASE}/videos?${params}`);
+
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({}));
+			return {
+				success: false,
+				error: `YouTube API error: ${error?.error?.message || response.status}`,
+			};
+		}
+
+		const data = (await response.json()) as {
+			items?: Array<{
+				id: string;
+				snippet?: {
+					title?: string;
+					description?: string;
+					publishedAt?: string;
+					channelTitle?: string;
+					thumbnails?: { high?: { url?: string } };
+				};
+				contentDetails?: { duration?: string };
+				statistics?: { viewCount?: string };
+			}>;
+		};
+
+		const video = data.items?.[0];
+		if (!video) {
+			return { success: false, error: 'Video not found' };
+		}
+
+		return {
+			success: true,
+			data: {
+				id: video.id,
+				title: video.snippet?.title || 'Untitled',
+				description: video.snippet?.description || '',
+				publishedAt: video.snippet?.publishedAt || new Date().toISOString(),
+				channelTitle: video.snippet?.channelTitle || 'Unknown',
+				thumbnailUrl: video.snippet?.thumbnails?.high?.url,
+				duration: video.contentDetails?.duration,
+				viewCount: parseInt(video.statistics?.viewCount || '0', 10),
+			},
+		};
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : 'Unknown error fetching video',
+		};
+	}
+}
+
+/**
+ * Fetch transcript from a public YouTube video
+ *
+ * Uses the Android player endpoint to get caption track URLs, then fetches
+ * the captions from the timedtext API. This approach is more reliable than
+ * the WEB client or Innertube transcript endpoints.
+ */
+export async function fetchTranscript(
+	videoId: string,
+	language: string = 'en'
+): Promise<ScrapeTranscriptResult> {
+	const ANDROID_USER_AGENT = 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip';
+	const ANDROID_API_KEY = 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w';
+
+	try {
+		// Use Android player endpoint to get caption tracks
+		const playerRequestBody = {
+			context: {
+				client: {
+					hl: language,
+					gl: 'US',
+					clientName: 'ANDROID',
+					clientVersion: '19.09.37',
+					androidSdkVersion: 30,
+					userAgent: ANDROID_USER_AGENT,
+				},
+			},
+			videoId,
+		};
+
+		const playerResponse = await fetch(
+			`https://www.youtube.com/youtubei/v1/player?key=${ANDROID_API_KEY}&prettyPrint=false`,
+			{
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'User-Agent': ANDROID_USER_AGENT,
+				},
+				body: JSON.stringify(playerRequestBody),
+			}
+		);
+
+		if (!playerResponse.ok) {
+			return { success: false, error: `Player API error: ${playerResponse.status}` };
+		}
+
+		const playerData = (await playerResponse.json()) as {
+			captions?: {
+				playerCaptionsTracklistRenderer?: {
+					captionTracks?: Array<{
+						baseUrl?: string;
+						name?: { simpleText?: string };
+						languageCode?: string;
+						kind?: string;
+					}>;
+				};
+			};
+		};
+
+		// Get caption tracks
+		const captionTracks = playerData?.captions?.playerCaptionsTracklistRenderer?.captionTracks;
+
+		if (!Array.isArray(captionTracks) || captionTracks.length === 0) {
+			return { success: false, error: 'No captions available for this video' };
+		}
+
+		// Find the best matching caption track
+		// Priority: exact language match (non-auto) > language prefix match > auto-generated > first
+		let selectedTrack = captionTracks.find((t) => t.languageCode === language && !t.kind);
+		if (!selectedTrack) {
+			selectedTrack = captionTracks.find(
+				(t) => t.languageCode?.startsWith(language.split('-')[0]) && !t.kind
+			);
+		}
+		if (!selectedTrack) {
+			selectedTrack = captionTracks.find(
+				(t) => t.languageCode === language || t.languageCode?.startsWith(language.split('-')[0])
+			);
+		}
+		if (!selectedTrack) {
+			selectedTrack = captionTracks[0];
+		}
+
+		const baseUrl = selectedTrack?.baseUrl;
+		if (!baseUrl) {
+			return { success: false, error: 'No caption URL found' };
+		}
+
+		// Fetch the captions (default XML format)
+		const captionResponse = await fetch(baseUrl, {
+			headers: {
+				'User-Agent': ANDROID_USER_AGENT,
+			},
+		});
+
+		if (!captionResponse.ok) {
+			return { success: false, error: `Caption fetch error: ${captionResponse.status}` };
+		}
+
+		const captionXml = await captionResponse.text();
+
+		if (!captionXml || captionXml.length === 0) {
+			return { success: false, error: 'Empty caption response' };
+		}
+
+		// Parse the XML caption format
+		const segments: TranscriptData['segments'] = [];
+		const textParts: string[] = [];
+
+		// Extract <p> elements with timing and text
+		// Format: <p t="320" d="14260" w="1">text or <s> segments</p>
+		const paragraphRegex = /<p\s+t="(\d+)"(?:\s+d="(\d+)")?[^>]*>([^<]*(?:<s[^>]*>[^<]*<\/s>)*[^<]*)<\/p>/g;
+		let match;
+
+		while ((match = paragraphRegex.exec(captionXml)) !== null) {
+			const startMs = parseInt(match[1], 10);
+			const durationMs = parseInt(match[2] || '0', 10);
+			let content = match[3];
+
+			// Extract text from <s> segments if present, otherwise use raw content
+			const segmentTexts: string[] = [];
+			const segmentRegex = /<s[^>]*>([^<]*)<\/s>/g;
+			let segMatch;
+
+			while ((segMatch = segmentRegex.exec(content)) !== null) {
+				segmentTexts.push(segMatch[1]);
+			}
+
+			// If no <s> segments, use the content directly (remove any remaining tags)
+			let text =
+				segmentTexts.length > 0 ? segmentTexts.join('') : content.replace(/<[^>]+>/g, '');
+
+			// Decode HTML entities
+			text = text
+				.replace(/&#39;/g, "'")
+				.replace(/&quot;/g, '"')
+				.replace(/&amp;/g, '&')
+				.replace(/&lt;/g, '<')
+				.replace(/&gt;/g, '>')
+				.trim();
+
+			if (text) {
+				segments.push({
+					text,
+					offset: startMs,
+					duration: durationMs,
+				});
+				textParts.push(text);
+			}
+		}
+
+		if (segments.length === 0) {
+			return { success: false, error: 'Could not parse transcript from response' };
+		}
+
+		// Get actual language from selected track
+		const actualLanguage =
+			selectedTrack?.name?.simpleText || selectedTrack?.languageCode || language;
+
+		return {
+			success: true,
+			data: {
+				text: textParts.join(' '),
+				segments,
+				language: actualLanguage,
+			},
+		};
+	} catch (error) {
+		return {
+			success: false,
+			error: error instanceof Error ? error.message : 'Unknown error fetching transcript',
+		};
+	}
+}
+
+// Legacy aliases for backward compatibility
+export const scrapePlaylistItems = fetchPlaylistItems;
+export const scrapeVideoDetails = fetchVideoDetails;
+export const scrapeTranscript = fetchTranscript;
 
 // ============================================================================
 // HELPER FUNCTIONS
