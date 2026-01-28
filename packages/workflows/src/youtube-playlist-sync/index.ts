@@ -1,21 +1,32 @@
 /**
  * YouTube Playlist to Notion Sync Workflow
  *
- * Monitors YouTube playlists and syncs video metadata + transcripts to Notion.
+ * Monitors PUBLIC YouTube playlists and syncs video metadata + transcripts to Notion.
  * When a user adds a video to a playlist, the video details are added to a
  * Notion database and the transcript is added to the page content.
  *
  * ZUHANDENHEIT: The tool recedes, the outcome remains.
  * User thinks: "My YouTube research is automatically documented"
  *
- * Integrations: YouTube, Notion
+ * ## Simplified Architecture (v2)
+ *
+ * - NO YouTube OAuth required - works with public playlists only
+ * - Video data: YouTube Data API with server-side API key
+ * - Transcripts: Android client + timedtext API (no auth needed)
+ * - Only Notion OAuth required for writing pages
+ *
+ * This makes setup much simpler - users just need to:
+ * 1. Connect Notion
+ * 2. Paste a public playlist URL
+ * 3. Done!
+ *
  * Trigger: Polling cron (configurable: 15min/hourly/daily)
  *
  * ## Technical Constraints
  * - Notion: 2000 chars per block (we use 1900 buffer)
  * - Notion: 100 blocks per API call (batched appends)
- * - YouTube: 10,000 API units/day quota
- * - YouTube: No official transcript API (uses youtube-transcript scraping)
+ * - YouTube Data API: Public data only (no private playlists)
+ * - Transcripts: Only available if video has captions enabled
  */
 
 import { defineWorkflow, cron } from '@workwayco/sdk';
@@ -33,6 +44,10 @@ import {
 	checkVideoExistsInNotion,
 	appendBlocksInBatches,
 	createNotionVideoPage,
+	// YouTube Data API functions (uses API key, no user OAuth required)
+	fetchPlaylistItems,
+	fetchVideoDetails,
+	fetchTranscript,
 } from './utils.js';
 
 /** State key prefix for KV storage */
@@ -54,7 +69,7 @@ export default defineWorkflow({
 		outcomeStatement: {
 			suggestion: 'Watch videos for research? Let them document themselves.',
 			explanation:
-				'Add videos to a YouTube playlist. WORKWAY creates Notion pages with the video, transcript, and all the details—ready for your notes.',
+				'Paste a public YouTube playlist URL. WORKWAY creates Notion pages with each video, transcript, and all the details—ready for your notes. No YouTube login required.',
 			outcome: 'Research that captures itself',
 		},
 
@@ -68,7 +83,7 @@ export default defineWorkflow({
 		discoveryMoments: [
 			{
 				trigger: 'integration_connected',
-				integrations: ['youtube', 'notion'],
+				integrations: ['notion'],
 				workflowId: 'youtube-playlist-sync',
 				priority: 90,
 			},
@@ -105,7 +120,7 @@ export default defineWorkflow({
 				},
 				{
 					title: 'The Setup',
-					text: "Setup takes two minutes. Connect your YouTube account. This gives the workflow permission to see your playlists. Then connect Notion. Pick the database where you want videos captured. If you don't have one, you can create it in seconds. Choose a playlist to watch. Any playlist works—a new one for research, or one you already use. That's it. Every video you add gets documented.",
+					text: "Setup takes one minute. Connect Notion and pick a database where you want videos captured. If you don't have one, you can create it in seconds. Paste any public YouTube playlist URL. That's it—no YouTube login required. Every video you add to that playlist gets documented automatically.",
 				},
 				{
 					title: 'Close',
@@ -122,8 +137,8 @@ export default defineWorkflow({
 		description: 'Per video synced to Notion',
 	},
 
+	// Only Notion OAuth required - YouTube uses public API (no user auth needed)
 	integrations: [
-		{ service: 'youtube', scopes: ['youtube.readonly'] },
 		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
 	],
 
@@ -131,9 +146,9 @@ export default defineWorkflow({
 		// Core configuration
 		playlist_id: {
 			type: 'text',
-			label: 'YouTube Playlist ID',
+			label: 'YouTube Playlist URL',
 			required: true,
-			description: 'The playlist to monitor (e.g., PLxxx or full URL)',
+			description: 'Any public YouTube playlist URL (e.g., https://youtube.com/playlist?list=PLxxx)',
 		},
 		notion_database_id: {
 			type: 'text',
@@ -211,12 +226,15 @@ export default defineWorkflow({
 			notion_date_property = 'Published',
 		} = inputs;
 
+		// YouTube API key for public data access (no user OAuth required)
+		const youtubeApiKey = env.YOUTUBE_API_KEY || 'AIzaSyCMRwFVImHJykVaFqeR4PnYE2R2T3_kvaM';
+
 		// Extract playlist ID from URL if needed
 		const playlistId = extractPlaylistId(playlist_id);
 		if (!playlistId) {
 			return {
 				success: false,
-				error: 'Invalid playlist ID or URL',
+				error: 'Invalid playlist ID or URL. Please provide a valid public YouTube playlist URL.',
 			};
 		}
 
@@ -245,32 +263,17 @@ export default defineWorkflow({
 			};
 		}
 
-		// Fetch ALL playlist items with pagination
-		const allPlaylistItems: Array<{ videoId: string; title: string }> = [];
-		let nextPageToken: string | undefined;
+		// Fetch playlist items via YouTube Data API (no user OAuth required)
+		const playlistResult = await fetchPlaylistItems(playlistId, youtubeApiKey);
 
-		do {
-			const playlistResult = await integrations.youtube.getPlaylistItems({
-				playlistId,
-				maxResults: 50,
-				pageToken: nextPageToken,
-			});
+		if (!playlistResult.success || !playlistResult.items) {
+			return {
+				success: false,
+				error: `Failed to fetch playlist: ${playlistResult.error}. Make sure the playlist is public.`,
+			};
+		}
 
-			if (!playlistResult.success) {
-				return {
-					success: false,
-					error: `Failed to fetch playlist: ${playlistResult.error?.message}`,
-				};
-			}
-
-			allPlaylistItems.push(...playlistResult.data.items);
-			nextPageToken = playlistResult.data.nextPageToken;
-
-			// Safety limit: don't process more than 500 videos in one run
-			if (allPlaylistItems.length >= 500) {
-				break;
-			}
-		} while (nextPageToken);
+		const allPlaylistItems = playlistResult.items;
 
 		// Find new videos (not in processedVideoIds)
 		const newVideos = allPlaylistItems.filter(
@@ -289,31 +292,28 @@ export default defineWorkflow({
 			};
 		}
 
-		// Get full video details for new videos
-		const videoIds = newVideos.map((v) => v.videoId);
-		const videosResult = await integrations.youtube.getVideos({ videoIds });
-
-		if (!videosResult.success) {
-			return {
-				success: false,
-				error: `Failed to fetch video details: ${videosResult.error?.message}`,
-			};
-		}
-
 		// Process each new video
 		const results: Array<{ videoId: string; notionUrl?: string; error?: string; skipped?: boolean }> = [];
 
-		for (const video of videosResult.data) {
+		for (const item of newVideos) {
 			try {
-				// Fetch transcript if enabled
+				// Fetch video details via YouTube Data API
+				const videoResult = await fetchVideoDetails(item.videoId, youtubeApiKey);
+				if (!videoResult.success || !videoResult.data) {
+					results.push({
+						videoId: item.videoId,
+						error: videoResult.error || 'Failed to fetch video details',
+					});
+					continue;
+				}
+
+				const video = videoResult.data;
+
+				// Fetch transcript if enabled (via Android client + timedtext API)
 				let transcript: TranscriptData | null = null;
 				if (include_transcript) {
-					const transcriptResult = await integrations.youtube.getTranscript({
-						videoId: video.id,
-						language: transcript_language,
-					});
-
-					if (transcriptResult.success) {
+					const transcriptResult = await fetchTranscript(video.id, transcript_language);
+					if (transcriptResult.success && transcriptResult.data) {
 						transcript = transcriptResult.data;
 					}
 					// Graceful degradation: continue without transcript if unavailable
@@ -327,7 +327,7 @@ export default defineWorkflow({
 						description: video.description,
 						publishedAt: video.publishedAt,
 						channelTitle: video.channelTitle,
-						thumbnailUrl: video.thumbnails?.high?.url,
+						thumbnailUrl: video.thumbnailUrl,
 						duration: video.duration,
 						viewCount: video.viewCount,
 					},
@@ -358,7 +358,7 @@ export default defineWorkflow({
 				}
 			} catch (error) {
 				results.push({
-					videoId: video.id,
+					videoId: item.videoId,
 					error: error instanceof Error ? error.message : 'Unknown error',
 				});
 				// Continue processing other videos
