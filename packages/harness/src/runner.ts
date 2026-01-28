@@ -37,6 +37,7 @@ import {
   getIssue,
   getHarnessCheckpoints,
 } from './beads.js';
+import { parseIssueList } from './lib/utils/parseIssueList.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers (defined first for use by other sections)
@@ -398,14 +399,6 @@ async function loadCheckpointContext(harnessId: string, cwd: string): Promise<Ch
   const sessionMatch = checkpointIssue.title.match(/Checkpoint #(\d+)/);
   const gitCommitMatch = description.match(/Git Commit:\s*(\S+)/);
   const redirectMatch = description.match(/## Redirect Notes\n(.+?)(?:\n##|$)/s);
-
-  const parseIssueList = (text: string | undefined): string[] => {
-    if (!text) return [];
-    return text.split('\n')
-      .map(line => line.trim())
-      .filter(line => line.startsWith('-'))
-      .map(line => line.slice(2).trim());
-  };
 
   return {
     id: checkpointIssue.id,

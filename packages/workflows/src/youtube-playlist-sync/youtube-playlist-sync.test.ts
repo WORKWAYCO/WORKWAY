@@ -3,29 +3,22 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import {
+	getPollIntervalMs,
+	formatDuration,
+	findSplitPoint,
+	splitTextIntoBlocks,
+	NOTION_BLOCK_CHAR_LIMIT,
+} from './utils';
+import { createMockNotion } from '../lib/utils/createMockNotion';
+import { extractPlaylistId } from '@workwayco/sdk';
 
 // ============================================================================
 // HELPER FUNCTION TESTS
 // ============================================================================
 
-// Import helper functions for testing
-// Note: In production, these would be extracted to a shared module
-
 describe('Helper Functions', () => {
 	describe('extractPlaylistId', () => {
-		// Inline the function for testing
-		function extractPlaylistId(urlOrId: string): string | null {
-			// Already a playlist ID (starts with PL, UU, LL, etc.)
-			if (/^(PL|UU|LL|FL|RD|OL)[a-zA-Z0-9_-]+$/.test(urlOrId)) {
-				return urlOrId;
-			}
-
-			// youtube.com/playlist?list=PLAYLIST_ID
-			const listMatch = urlOrId.match(/[?&]list=([a-zA-Z0-9_-]+)/);
-			if (listMatch) return listMatch[1];
-
-			return null;
-		}
 
 		it('should extract from youtube.com/playlist URL', () => {
 			expect(extractPlaylistId('https://www.youtube.com/playlist?list=PLxxx123')).toBe('PLxxx123');
@@ -55,20 +48,6 @@ describe('Helper Functions', () => {
 	});
 
 	describe('getPollIntervalMs', () => {
-		// Inline the function for testing
-		function getPollIntervalMs(frequency: string): number {
-			switch (frequency) {
-				case '15min':
-					return 15 * 60 * 1000;
-				case 'hourly':
-					return 60 * 60 * 1000;
-				case 'daily':
-					return 24 * 60 * 60 * 1000;
-				default:
-					return 60 * 60 * 1000;
-			}
-		}
-
 		it('should return 15 minutes for "15min"', () => {
 			expect(getPollIntervalMs('15min')).toBe(15 * 60 * 1000);
 		});
@@ -88,75 +67,6 @@ describe('Helper Functions', () => {
 	});
 
 	describe('splitTextIntoBlocks', () => {
-		const NOTION_BLOCK_CHAR_LIMIT = 1900;
-
-		// Inline the function for testing
-		function findSplitPoint(text: string, maxLength: number): number {
-			const sentenceEnd = text.slice(0, maxLength).lastIndexOf('. ');
-			if (sentenceEnd > maxLength * 0.5) {
-				return sentenceEnd + 2;
-			}
-
-			const wordEnd = text.slice(0, maxLength).lastIndexOf(' ');
-			if (wordEnd > maxLength * 0.5) {
-				return wordEnd + 1;
-			}
-
-			return maxLength;
-		}
-
-		function splitTextIntoBlocks(text: string): any[] {
-			const blocks: any[] = [];
-			const paragraphs = text.split(/\n\n+/);
-
-			for (const para of paragraphs) {
-				if (!para.trim()) continue;
-
-				const trimmed = para.trim();
-
-				if (trimmed.length <= NOTION_BLOCK_CHAR_LIMIT) {
-					blocks.push({
-						object: 'block',
-						type: 'paragraph',
-						paragraph: { rich_text: [{ text: { content: trimmed } }] },
-					});
-					continue;
-				}
-
-				let remaining = trimmed;
-				while (remaining.length > 0) {
-					let chunk: string;
-
-					if (remaining.length <= NOTION_BLOCK_CHAR_LIMIT) {
-						chunk = remaining;
-						remaining = '';
-					} else {
-						const cutPoint = findSplitPoint(remaining, NOTION_BLOCK_CHAR_LIMIT);
-						chunk = remaining.slice(0, cutPoint).trim();
-						remaining = remaining.slice(cutPoint).trim();
-					}
-
-					if (chunk) {
-						blocks.push({
-							object: 'block',
-							type: 'paragraph',
-							paragraph: { rich_text: [{ text: { content: chunk } }] },
-						});
-					}
-				}
-			}
-
-			return blocks.length > 0
-				? blocks
-				: [
-						{
-							object: 'block',
-							type: 'paragraph',
-							paragraph: { rich_text: [{ text: { content: '' } }] },
-						},
-				  ];
-		}
-
 		it('should create a single block for short text', () => {
 			const result = splitTextIntoBlocks('Hello, world!');
 			expect(result).toHaveLength(1);
@@ -184,21 +94,6 @@ describe('Helper Functions', () => {
 	});
 
 	describe('formatDuration', () => {
-		// Inline the function for testing
-		function formatDuration(duration: string): string {
-			const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
-			if (!match) return duration;
-
-			const hours = parseInt(match[1] || '0', 10);
-			const minutes = parseInt(match[2] || '0', 10);
-			const seconds = parseInt(match[3] || '0', 10);
-
-			if (hours > 0) {
-				return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-			}
-			return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-		}
-
 		it('should format hours, minutes, and seconds', () => {
 			expect(formatDuration('PT1H2M10S')).toBe('1:02:10');
 		});
@@ -451,12 +346,6 @@ describe('Integration Mocks', () => {
 	});
 
 	describe('Notion Integration', () => {
-		const createMockNotion = () => ({
-			createPage: vi.fn(),
-			queryDatabase: vi.fn(),
-			appendBlocksInBatches: vi.fn(),
-		});
-
 		it('should handle page creation', async () => {
 			const notion = createMockNotion();
 			notion.createPage.mockResolvedValueOnce({

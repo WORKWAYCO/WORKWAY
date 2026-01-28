@@ -94,3 +94,35 @@ export function getWorkflowId(workflow: WorkflowDefinitionMinimal): string {
 	const name = workflow.metadata?.name || workflow.name || 'unknown';
 	return name.toLowerCase().replace(/\s+/g, '-');
 }
+
+// ============================================================================
+// YOUTUBE UTILITIES
+// ============================================================================
+
+/**
+ * Extract playlist ID from various YouTube URL formats or return the ID if already valid
+ *
+ * @param urlOrId - YouTube playlist URL or playlist ID
+ * @returns Playlist ID or null if invalid
+ *
+ * @example
+ * ```typescript
+ * extractPlaylistId('https://www.youtube.com/playlist?list=PLxxx123');  // 'PLxxx123'
+ * extractPlaylistId('https://www.youtube.com/watch?v=abc&list=PLxxx123'); // 'PLxxx123'
+ * extractPlaylistId('PLxxx123');  // 'PLxxx123' (already an ID)
+ * extractPlaylistId('UUxxx123');  // 'UUxxx123' (uploads playlist)
+ * extractPlaylistId('invalid');   // null
+ * ```
+ */
+export function extractPlaylistId(urlOrId: string): string | null {
+	// Already a playlist ID (starts with PL, UU, LL, FL, RD, OL)
+	if (/^(PL|UU|LL|FL|RD|OL)[a-zA-Z0-9_-]+$/.test(urlOrId)) {
+		return urlOrId;
+	}
+
+	// youtube.com/playlist?list=PLAYLIST_ID
+	const listMatch = urlOrId.match(/[?&]list=([a-zA-Z0-9_-]+)/);
+	if (listMatch) return listMatch[1];
+
+	return null;
+}

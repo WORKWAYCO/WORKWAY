@@ -193,6 +193,16 @@ export {
 // UTILITY MODULE EXPORTS
 // ============================================================================
 
+// Shared utilities
+export {
+	sleep,
+	delay,
+	generateId,
+	getWorkflowId as getWorkflowIdFromDefinition,
+	extractPlaylistId,
+	type WorkflowDefinitionMinimal,
+} from './utils';
+
 // HTTP client
 export { http, HttpError, type HttpOptions, type HttpRequestOptions, type HttpResponse } from './http';
 
@@ -434,6 +444,58 @@ export {
 	isValidDate,
 	type DurationUnit,
 } from './date-utils';
+
+// ============================================================================
+// VERSION UTILITIES
+// ============================================================================
+
+export type {
+	ParsedVersion,
+	BumpType,
+	VersionState,
+	WorkflowVersion,
+} from './version-utils';
+
+export {
+	// Parsing
+	parseVersion,
+	formatVersion,
+	// Comparison
+	compareVersions,
+	isNewerVersion,
+	isOlderVersion,
+	isSameVersion,
+	// Bumping
+	bumpVersion,
+	getNextVersion,
+	// Display
+	formatVersionDisplay,
+	formatVersionFull,
+	// Validation
+	isValidVersion,
+	normalizeVersion,
+} from './version-utils';
+
+// ============================================================================
+// BREAKING CHANGE DETECTION
+// ============================================================================
+
+export type {
+	ChangeType,
+	ChangeSeverity,
+	DetectedChange,
+	BreakingChangeResult,
+	ConfigFieldSchema,
+	WorkflowDefinitionForComparison,
+} from './breaking-change-detector';
+
+export {
+	detectBreakingChanges,
+	isBreakingChange,
+	getMigrationHints,
+	formatChangesForDisplay,
+	createBreakingChangeSummary,
+} from './breaking-change-detector';
 
 // ============================================================================
 // TEMPLATE REGISTRY (Marketplace Templates)

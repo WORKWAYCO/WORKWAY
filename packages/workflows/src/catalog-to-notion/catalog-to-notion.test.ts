@@ -3,6 +3,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { createMockNotion } from '../lib/utils/createMockNotion';
 
 // ============================================================================
 // HELPER FUNCTION TESTS
@@ -537,12 +538,6 @@ describe('Page Content Building', () => {
 
 describe('Integration Mocks', () => {
 	describe('Notion Integration', () => {
-		const createMockNotion = () => ({
-			createPage: vi.fn(),
-			updatePage: vi.fn(),
-			queryDatabase: vi.fn(),
-		});
-
 		it('should handle page creation', async () => {
 			const notion = createMockNotion();
 			notion.createPage.mockResolvedValueOnce({

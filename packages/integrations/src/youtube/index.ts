@@ -899,22 +899,5 @@ export function extractVideoId(urlOrId: string): string | null {
 	return null;
 }
 
-/**
- * Extract playlist ID from various YouTube URL formats
- *
- * @example
- * extractPlaylistId('https://www.youtube.com/playlist?list=PLxxx') // 'PLxxx'
- * extractPlaylistId('PLxxx') // 'PLxxx'
- */
-export function extractPlaylistId(urlOrId: string): string | null {
-	// Already a playlist ID (starts with PL, UU, LL, etc.)
-	if (/^(PL|UU|LL|FL|RD|OL)[a-zA-Z0-9_-]+$/.test(urlOrId)) {
-		return urlOrId;
-	}
-
-	// youtube.com/playlist?list=PLAYLIST_ID
-	const listMatch = urlOrId.match(/[?&]list=([a-zA-Z0-9_-]+)/);
-	if (listMatch) return listMatch[1];
-
-	return null;
-}
+// Re-export extractPlaylistId from SDK utils (DRY consolidation)
+export { extractPlaylistId } from '@workwayco/sdk';

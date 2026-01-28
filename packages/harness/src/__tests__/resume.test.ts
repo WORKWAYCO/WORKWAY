@@ -6,6 +6,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { parseIssueList } from '../lib/utils/parseIssueList.js';
 
 describe('Harness Resume - Parsing Logic', () => {
   it('should parse spec file from harness description', () => {
@@ -69,14 +70,6 @@ describe('Harness Resume - Parsing Logic', () => {
 
     const completedMatch = description.match(/## Completed\n((?:- .+\n?)+)/);
     const inProgressMatch = description.match(/## In Progress\n((?:- .+\n?)+)/);
-
-    const parseIssueList = (text: string | undefined): string[] => {
-      if (!text) return [];
-      return text.split('\n')
-        .map(line => line.trim())
-        .filter(line => line.startsWith('-'))
-        .map(line => line.slice(2).trim());
-    };
 
     expect(completedMatch).toBeTruthy();
     expect(parseIssueList(completedMatch![1])).toEqual(['task-1', 'task-2']);
