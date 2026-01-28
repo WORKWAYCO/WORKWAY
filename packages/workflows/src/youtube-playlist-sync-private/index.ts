@@ -481,7 +481,7 @@ export default defineWorkflow({
 					}
 				} catch (error) {
 					results.push({
-						videoId: video.id,
+						videoId: item.videoId,
 						error: error instanceof Error ? error.message : 'Unknown error',
 					});
 					// Continue processing other videos
