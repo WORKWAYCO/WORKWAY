@@ -1,6 +1,6 @@
 {
   "name": "@workwayco/cli",
-  "version": "0.3.5",
+  "version": "0.3.7",
   "description": "WORKWAY CLI - Build, test, and publish workflows and integrations",
   "type": "module",
   "main": "dist/index.js",
@@ -52,5 +52,18 @@
     "type": "git",
     "url": "https://github.com/workwayco/workway.git",
     "directory": "packages/cli"
-  }
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "prepublishOnly": "npm run build",
+  "keywords": [
+    "workway",
+    "cli",
+    "workflow",
+    "automation",
+    "cloudflare",
+    "workers"
+  ]
 }
