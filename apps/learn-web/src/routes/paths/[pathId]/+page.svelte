@@ -181,7 +181,7 @@
 				{@const isCompleted = completedLessons.includes(lesson.id)}
 				<a
 					href="/paths/{path.id}/{lesson.id}"
-					class="flex items-center gap-md p-md card hover:border-[var(--color-border-strong)] transition-colors"
+					class="flex items-center gap-md p-md card-glass"
 				>
 					<div class="flex-shrink-0">
 						{#if isCompleted}
@@ -207,7 +207,7 @@
 
 						{#if lesson.templateWorkflow}
 							<div
-								class="px-xs py-xs text-xs bg-[var(--color-bg-elevated)] rounded-[var(--radius-sm)] flex items-center gap-xs"
+								class="px-xs py-xs text-xs bg-[rgba(255,255,255,0.08)] border border-[rgba(255,255,255,0.12)] backdrop-blur-sm rounded-[var(--radius-sm)] flex items-center gap-xs"
 								title="Includes template workflow"
 							>
 								<ExternalLink size={16} />

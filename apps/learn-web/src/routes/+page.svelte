@@ -181,7 +181,7 @@
 			{#if data.progress.nextLesson}
 				<a
 					href="/paths/{data.progress.nextLesson.pathId}/{data.progress.nextLesson.lessonId}"
-					class="card block mb-lg border-[var(--color-border-emphasis)] hover:border-[var(--color-fg-primary)]"
+					class="card-glass-elevated block mb-lg"
 				>
 					<div class="flex items-center justify-between">
 						<div>
@@ -201,17 +201,17 @@
 				<h2 class="text-lg font-semibold mb-md">Your Paths</h2>
 				<div class="grid md:grid-cols-2 gap-md">
 					{#each data.progress.pathsWithProgress as path}
-						<a href="/paths/{path.id}" class="card block">
+						<a href="/paths/{path.id}" class="card-glass block">
 							<div class="flex items-center gap-md mb-md">
-								<div class="text-2xl">
+								<div class="icon-container">
 									{#if path.icon === 'terminal'}
-										<Terminal size={24} />
+										<Terminal size={20} />
 									{:else if path.icon === 'workflow'}
-										<Workflow size={24} />
+										<Workflow size={20} />
 									{:else if path.icon === 'code'}
-										<Brain size={24} />
+										<Brain size={20} />
 									{:else if path.icon === 'brain'}
-										<Zap size={24} />
+										<Zap size={20} />
 									{/if}
 								</div>
 								<div class="flex-1">
@@ -236,12 +236,12 @@
 			{#if data.progress.recentActivity && data.progress.recentActivity.length > 0}
 				<div>
 					<h2 class="text-lg font-semibold mb-md">Recent Activity</h2>
-					<div class="card">
+					<div class="card-glass">
 						{#each data.progress.recentActivity.slice(0, 5) as activity, i}
 							<div
 								class="flex items-center justify-between py-sm"
 								class:border-t={i > 0}
-								class:border-[var(--color-border-default)]={i > 0}
+								class:border-[rgba(255,255,255,0.1)]={i > 0}
 							>
 								<div class="flex items-center gap-sm">
 									<div class="w-6 h-6 flex items-center justify-center text-[var(--color-success)]">
@@ -281,10 +281,8 @@
 		<!-- Features -->
 		<section class="grid md:grid-cols-2 gap-md mb-section">
 			{#each features as feature}
-				<div class="card">
-					<div
-						class="w-10 h-10 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] flex items-center justify-center mb-md"
-					>
+				<div class="card-feature">
+					<div class="icon-container">
 						<feature.icon size={20} class="text-[var(--color-fg-primary)]" />
 					</div>
 					<h3 class="text-lg font-medium mb-xs">{feature.title}</h3>
@@ -302,8 +300,8 @@
 
 			<div class="grid md:grid-cols-3 gap-md mb-lg">
 				{#each journeySteps as step}
-					<div class="card text-center relative">
-						<div class="w-12 h-12 rounded-full bg-[var(--color-bg-elevated)] border border-[var(--color-border-default)] flex items-center justify-center mx-auto mb-md">
+					<div class="card-glass text-center relative">
+						<div class="w-12 h-12 rounded-full bg-[rgba(255,255,255,0.06)] border border-[rgba(255,255,255,0.15)] backdrop-blur-sm flex items-center justify-center mx-auto mb-md">
 							<span class="text-xl font-bold text-[var(--color-fg-primary)]">{step.step}</span>
 						</div>
 						<h3 class="text-lg font-semibold mb-xs">{step.title}</h3>
@@ -313,7 +311,7 @@
 			</div>
 
 			<!-- Waitlist CTA -->
-			<div class="card bg-[var(--color-bg-elevated)] border-[var(--color-border-emphasis)] text-center max-w-xl mx-auto">
+			<div class="card-glass-elevated text-center max-w-xl mx-auto">
 				<div class="flex items-center justify-center gap-xs mb-md">
 					<Users size={20} class="text-[var(--color-fg-secondary)]" />
 					<span class="text-sm text-[var(--color-fg-muted)]">10 developers per cohort</span>

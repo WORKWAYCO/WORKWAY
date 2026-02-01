@@ -194,11 +194,11 @@
 			{@const Icon = iconMap[path.icon] || BookOpen}
 			<a
 				href="/paths/{path.id}"
-				class="block card hover:border-[var(--color-border-strong)] transition-colors"
+				class="block card-glass"
 			>
 				<div class="flex items-start gap-md">
 					<div
-						class="w-14 h-14 rounded-[var(--radius-md)] bg-[var(--color-bg-elevated)] flex items-center justify-center flex-shrink-0"
+						class="icon-container !w-14 !h-14 flex-shrink-0"
 					>
 						<Icon size={24} class="text-[var(--color-fg-primary)]" />
 					</div>

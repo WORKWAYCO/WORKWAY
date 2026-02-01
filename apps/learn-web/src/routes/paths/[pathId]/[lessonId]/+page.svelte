@@ -352,14 +352,14 @@
 			<!-- Praxis section - hands-on challenge to take to Claude Code -->
 			{#if lesson.praxis || lesson.templateWorkflow}
 				<section class="mb-xl">
-					<div class="card border-[var(--color-border-emphasis)]">
+					<div class="card-glass-elevated">
 						<h2 class="text-lg font-medium mb-md">
 							<span class="text-[var(--color-fg-primary)]">Praxis</span>
 							<span class="text-[var(--color-fg-muted)]">— Try it with Claude Code</span>
 						</h2>
 
 						{#if lesson.praxis}
-							<div class="bg-[var(--color-bg-elevated)] border-l-2 border-[var(--color-border-emphasis)] pl-md py-sm mb-md">
+							<div class="bg-[rgba(255,255,255,0.04)] border-l-2 border-[rgba(255,255,255,0.25)] pl-md py-sm mb-md backdrop-blur-sm">
 								<p class="text-[var(--color-fg-primary)] font-mono text-sm">{lesson.praxis}</p>
 							</div>
 							<p class="text-sm text-[var(--color-fg-muted)]">

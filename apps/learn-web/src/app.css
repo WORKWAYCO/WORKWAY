@@ -140,7 +140,7 @@ pre,
 }
 
 /* ==========================================================================
-   Button patterns - WORKWAY Canonical (square corners per design system)
+   Button patterns - WORKWAY Canonical (rounded corners matching workway-platform)
    ========================================================================== */
 
 .button-primary {
@@ -153,18 +153,23 @@ pre,
   background-color: var(--color-fg-primary);
   color: var(--color-bg-pure);
   font-weight: var(--font-semibold);
-  border-radius: var(--radius-none);
+  border-radius: var(--radius-lg);
   border: none;
   cursor: pointer;
   transition:
     background-color var(--duration-hover) var(--ease-standard),
-    color var(--duration-hover) var(--ease-standard);
+    color var(--duration-hover) var(--ease-standard),
+    transform var(--duration-hover) var(--ease-standard);
   text-decoration: none;
 }
 
 .button-primary:hover {
   background-color: var(--color-fg-secondary);
   opacity: 1;
+}
+
+.button-primary:active {
+  transform: scale(0.98);
 }
 
 .button-secondary {
@@ -178,12 +183,13 @@ pre,
   border: 1px solid var(--color-border-emphasis);
   color: var(--color-fg-primary);
   font-weight: var(--font-semibold);
-  border-radius: var(--radius-none);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   transition:
     background-color var(--duration-hover) var(--ease-standard),
     border-color var(--duration-hover) var(--ease-standard),
-    color var(--duration-hover) var(--ease-standard);
+    color var(--duration-hover) var(--ease-standard),
+    transform var(--duration-hover) var(--ease-standard);
   text-decoration: none;
 }
 
@@ -191,6 +197,10 @@ pre,
   background-color: var(--color-focus);
   border-color: var(--color-border-strong);
   opacity: 1;
+}
+
+.button-secondary:active {
+  transform: scale(0.98);
 }
 
 .button-ghost {
@@ -205,18 +215,23 @@ pre,
   color: var(--color-fg-primary);
   font-weight: var(--font-medium);
   font-size: var(--text-sm);
-  border-radius: var(--radius-none);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   transition:
     background-color var(--duration-hover) var(--ease-standard),
     border-color var(--duration-hover) var(--ease-standard),
-    color var(--duration-hover) var(--ease-standard);
+    color var(--duration-hover) var(--ease-standard),
+    transform var(--duration-hover) var(--ease-standard);
   text-decoration: none;
 }
 
 .button-ghost:hover {
   background-color: var(--color-bg-surface);
   border-color: var(--color-border-strong);
+}
+
+.button-ghost:active {
+  transform: scale(0.98);
 }
 
 .button-ghost.active,
@@ -227,14 +242,14 @@ pre,
 }
 
 /* ==========================================================================
-   Form Inputs - WORKWAY Canonical (square corners per design system)
+   Form Inputs - WORKWAY Canonical (rounded corners matching workway-platform)
    ========================================================================== */
 
 .input {
   width: 100%;
   background-color: var(--color-bg-pure);
   border: 1px solid var(--color-border-default);
-  border-radius: var(--radius-none);
+  border-radius: var(--radius-md);
   padding: var(--input-padding-y) var(--input-padding-x);
   font-size: var(--text-sm);
   color: var(--color-fg-primary);
@@ -255,7 +270,7 @@ pre,
 }
 
 /* ==========================================================================
-   Cards - Canonical hover pattern
+   Cards - Standard and Glass variants
    ========================================================================== */
 
 .card {
@@ -265,23 +280,116 @@ pre,
   padding: var(--space-md);
   transition:
     border-color var(--duration-hover) var(--ease-standard),
-    transform var(--duration-hover) var(--ease-standard);
+    transform var(--duration-hover) var(--ease-standard),
+    box-shadow var(--duration-hover) var(--ease-standard);
 }
 
 .card:hover {
   border-color: var(--color-border-strong);
-  transform: translateX(var(--translate-micro));
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Glass Card - Frosted glass effect with blur and saturation */
+.card-glass {
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(48px) saturate(130%);
+  -webkit-backdrop-filter: blur(48px) saturate(130%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  transition:
+    border-color var(--duration-standard) var(--ease-standard),
+    transform var(--duration-standard) var(--ease-standard),
+    box-shadow var(--duration-standard) var(--ease-standard),
+    background var(--duration-standard) var(--ease-standard);
+}
+
+.card-glass:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.72);
+}
+
+/* Elevated Glass Card - For hero sections and prominent elements */
+.card-glass-elevated {
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(64px) saturate(140%);
+  -webkit-backdrop-filter: blur(64px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+  transition:
+    border-color var(--duration-standard) var(--ease-standard),
+    transform var(--duration-standard) var(--ease-standard),
+    box-shadow var(--duration-standard) var(--ease-standard);
+}
+
+.card-glass-elevated:hover {
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: translateY(-4px);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
+}
+
+/* Feature Card - Glass effect for feature grids */
+.card-feature {
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(32px) saturate(120%);
+  -webkit-backdrop-filter: blur(32px) saturate(120%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  transition:
+    border-color var(--duration-standard) var(--ease-standard),
+    transform var(--duration-standard) var(--ease-standard),
+    box-shadow var(--duration-standard) var(--ease-standard),
+    background var(--duration-standard) var(--ease-standard);
+}
+
+.card-feature:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* Icon container - Standalone glass effect */
+.icon-container {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transition: 
+    background var(--duration-hover) var(--ease-standard),
+    border-color var(--duration-hover) var(--ease-standard);
+}
+
+/* Icon container inside feature cards - adds margin */
+.card-feature .icon-container {
+  margin-bottom: var(--space-md);
+}
+
+.card-feature:hover .icon-container,
+.card-glass:hover .icon-container {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 /* ==========================================================================
-   Focus states - App-specific override for square corners
-   (CDN provides default focus-visible, this enforces WORKWAY square corner standard)
+   Focus states - Rounded outline matching element shapes
    ========================================================================== */
 
 *:focus-visible {
   outline: 2px solid var(--color-focus);
   outline-offset: var(--outline-offset);
-  border-radius: var(--radius-none);
 }
 
 /* ==========================================================================
@@ -691,7 +799,7 @@ pre,
 }
 
 /* ==========================================================================
-   Sticky Sidebar - Curriculum navigation
+   Sticky Sidebar - Curriculum navigation with glass effect
    ========================================================================== */
 
 .sidebar-sticky {
@@ -701,9 +809,11 @@ pre,
   max-height: calc(100vh - var(--sticky-top, 5.5rem) - 2rem);
   overflow-y: auto;
   padding: var(--space-md, 1rem);
-  background: var(--color-bg-elevated, #0a0a0a);
-  border: 1px solid var(--color-border-default, rgba(255, 255, 255, 0.1));
-  border-radius: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(48px) saturate(130%);
+  -webkit-backdrop-filter: blur(48px) saturate(130%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-lg);
 }
 
 @media (max-width: 1023px) {
