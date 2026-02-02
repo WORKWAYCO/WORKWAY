@@ -6,7 +6,7 @@
 
 Automated meeting documentation for Zoom users. Runs daily or on webhook to:
 1. Sync Zoom meetings and clips to Notion
-2. Extract transcripts (with speaker attribution via browser scraper)
+2. Extract transcripts (OAuth API only - no scraping)
 3. AI-analyze meetings for action items, decisions, and key topics
 4. Post summaries to Slack
 5. Optionally update CRM (HubSpot)
@@ -16,8 +16,26 @@ Automated meeting documentation for Zoom users. Runs daily or on webhook to:
 **"Zoom meetings that write their own notes"**
 
 - Daily sync at 7 AM UTC (or webhook-triggered)
-- Full transcript with speaker names
+- Transcript via Zoom OAuth API (when available)
 - AI-extracted action items and decisions
+
+## ⚠️ API-Only Architecture (Important Limitation)
+
+**This workflow uses Zoom's OAuth API exclusively** (no browser scraping).
+
+**Transcript Availability**: ~70% of meetings
+- ✅ Cloud recordings with transcript enabled
+- ✅ Meetings where host enabled transcript
+- ❌ Instant meetings (no transcript generated)
+- ❌ Meetings where transcript disabled
+- ❌ Zoom Clips (OAuth API does not provide clip transcripts)
+
+**What This Means**:
+- Simpler setup (no custom infrastructure)
+- More reliable (no browser automation)
+- But ~30% of meetings may not have transcripts available
+
+**When transcript unavailable**: Notion page created with meeting metadata (title, date, participants) but no transcript content.
 
 ## Workflow Phases
 
@@ -27,19 +45,19 @@ Automated meeting documentation for Zoom users. Runs daily or on webhook to:
 └────────┬────────┘
          ▼
 ┌─────────────────┐
-│  2. FETCH       │ Get meetings/clips from Zoom API
+│  2. FETCH       │ Get meetings/clips from Zoom OAuth API
 └────────┬────────┘
          ▼
 ┌─────────────────┐
-│  3. TRANSCRIPT  │ OAuth transcript → Browser scraper (speaker names)
-└────────┬────────┘
+│  3. TRANSCRIPT  │ OAuth API transcript (if available)
+└────────┬────────┘  Note: ~70% availability
          ▼
 ┌─────────────────┐
 │  4. ANALYZE     │ Workers AI: summary, action items, decisions
 └────────┬────────┘
          ▼
 ┌─────────────────┐
-│  5. STORE       │ Create Notion page with full context
+│  5. STORE       │ Create Notion page with metadata + transcript
 └────────┬────────┘
          ▼
 ┌─────────────────┐
@@ -72,15 +90,22 @@ Operations:
 - Append transcript blocks (chunked at 1900 chars)
 ```
 
-### Browser Scraper (Speaker Attribution)
+### Transcript Extraction (API-Only)
 
 ```
-URL: inputs.browserScraperUrl (default: https://zoom-scraper.half-dozen.workers.dev)
+Source: Zoom OAuth API only (no browser scraping)
 
-Purpose: Zoom OAuth transcripts lack speaker names. Browser scraper
-extracts speaker-attributed transcript from Zoom UI.
+Availability: ~70% of meetings
+- ✅ Transcripts available: Cloud recordings with transcript enabled
+- ❌ Transcripts unavailable: Instant meetings, clips, transcript disabled
 
-Fallback: If scraper fails, uses OAuth transcript (no speaker names)
+Speaker Attribution: Depends on Zoom's processing
+- Some transcripts include speaker names
+- Others are plain text without attribution
+- Quality varies based on Zoom's audio processing
+
+Graceful Degradation: When transcript unavailable, page created with
+meeting metadata (title, date, participants, recording URL) but no content.
 ```
 
 ### AI Analysis (Workers AI)
@@ -116,12 +141,13 @@ When `update_c_r_m: true`:
 | `slack_channel` | text | Yes | Slack channel for summaries |
 | `sync_mode` | select | No | `meetings_only`, `clips_only`, or `both` (default: both) |
 | `lookback_days` | number | No | Days to sync (default: 1) |
-| `transcript_mode` | select | No | `oauth_only`, `prefer_speakers`, `always_browser` |
-| `browser_scraper_url` | text | No | Custom scraper URL |
+| `transcript_mode` | select | No | `oauth_only` (only option - API-only architecture) |
 | `enable_a_i` | boolean | No | Enable AI analysis (default: true) |
 | `analysis_depth` | select | No | `brief`, `standard`, `detailed` |
 | `post_to_slack` | boolean | No | Post Slack summary (default: true) |
 | `update_c_r_m` | boolean | No | Update HubSpot (default: false) |
+
+**Note**: Removed `browser_scraper_url` - workflow is now API-only (no scraping infrastructure required).
 
 ## Notion Page Schema
 
@@ -163,25 +189,33 @@ When modifying this workflow:
 ## Dependencies
 
 - `@workwayco/sdk`: Workflow definition, cron/webhook triggers, AI
-- Zoom OAuth: Meeting and recording data
+- Zoom OAuth: Meeting, recording, and transcript data (API-only)
 - Notion OAuth: Page creation
 - Slack OAuth: Message posting (optional)
 - HubSpot OAuth: CRM updates (optional)
-- Browser scraper: Speaker-attributed transcripts (optional)
+
+**Removed**: Browser scraper infrastructure (no longer needed with API-only approach)
 
 ## Testing
 
 Manual trigger:
 1. Ensure Zoom, Notion, and Slack OAuth connected
-2. Have a recent Zoom meeting with recording
+2. Have a recent Zoom cloud recording with transcript enabled
 3. Run workflow manually via WORKWAY dashboard
-4. Verify Notion page created with transcript
-5. Verify Slack message posted with summary
+4. Verify Notion page created
+5. **Expected**: ~70% of meetings will have transcript content
+6. **Expected**: ~30% will have metadata only (no transcript)
+7. Verify Slack message posted with summary
 
 Webhook test:
-1. Start a Zoom meeting and record
-2. End meeting and wait for webhook
+1. Start a Zoom meeting, enable cloud recording with transcript
+2. End meeting and wait for webhook (may take 5-10 minutes for processing)
 3. Verify real-time sync to Notion
+
+**Note on Transcript Testing**:
+- Instant meetings typically don't generate transcripts
+- Scheduled meetings with recording enabled are most reliable
+- Check Zoom account settings: Recording → Cloud Recording → Audio Transcript (enabled)
 
 ## Related Files
 
