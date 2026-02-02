@@ -321,23 +321,6 @@ export default defineWorkflow({
 		const trackingId = installationId || userId || 'default';
 
 		// YouTube API key for public data access (no user OAuth required)
-		const youtubeApiKey = env.YOUTUBE_API_KEY;
-
-		if (!youtubeApiKey) {
-			const error = 'YOUTUBE_API_KEY environment variable not configured';
-			if (trackingId && apiSecret) {
-				await trackExecution(trackingId, apiSecret, connectionUrl, {
-					status: 'error',
-					error,
-					completedAt: new Date().toISOString(),
-				});
-			}
-			return {
-				success: false,
-				error,
-				videosSynced: 0,
-			};
-		}
 
 		if (trackingId && apiSecret) {
 			await trackExecution(trackingId, apiSecret, connectionUrl, {
@@ -392,7 +375,7 @@ export default defineWorkflow({
 			}
 
 			// Fetch playlist items via YouTube Data API (no user OAuth required)
-			const playlistResult = await fetchPlaylistItems(playlistId, youtubeApiKey);
+			const playlistResult = await fetchPlaylistItems(playlistId);
 
 			if (!playlistResult.success || !playlistResult.items) {
 				throw new Error(`Failed to fetch playlist: ${playlistResult.error}`);
@@ -436,7 +419,7 @@ export default defineWorkflow({
 			for (const item of newVideos) {
 				try {
 					// Fetch video details via YouTube Data API
-					const videoResult = await fetchVideoDetails(item.videoId, youtubeApiKey);
+					const videoResult = await fetchVideoDetails(item.videoId);
 					if (!videoResult.success || !videoResult.data) {
 						results.push({
 							videoId: item.videoId,

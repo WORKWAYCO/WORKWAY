@@ -81,69 +81,102 @@ export interface ScrapeTranscriptResult {
 }
 
 // ============================================================================
-// YOUTUBE DATA API (Public Data with API Key - No OAuth Required)
+// INNERTUBE API (Android Client - No API Key Required)
 // ============================================================================
 
-const YOUTUBE_API_BASE = 'https://www.googleapis.com/youtube/v3';
+const INNERTUBE_BASE = 'https://www.youtube.com/youtubei/v1';
+const ANDROID_USER_AGENT = 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip';
+const ANDROID_API_KEY = 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w';
 
 /**
- * Fetch playlist items using YouTube Data API
- *
- * Uses API key authentication for public playlist data.
- * No user OAuth required.
+ * Create InnerTube Android client context
  */
-export async function fetchPlaylistItems(
-	playlistId: string,
-	apiKey: string
-): Promise<ScrapePlaylistResult> {
+function createAndroidContext(language: string = 'en') {
+	return {
+		client: {
+			hl: language,
+			gl: 'US',
+			clientName: 'ANDROID',
+			clientVersion: '19.09.37',
+			androidSdkVersion: 30,
+			userAgent: ANDROID_USER_AGENT,
+		},
+	};
+}
+
+/**
+ * Fetch playlist items using InnerTube browse endpoint
+ *
+ * Uses Android client (no API key required from user).
+ * Works for public playlists.
+ */
+export async function fetchPlaylistItems(playlistId: string): Promise<ScrapePlaylistResult> {
 	try {
 		const items: ScrapedPlaylistItem[] = [];
-		let nextPageToken: string | undefined;
+		let continuationToken: string | undefined;
 
-		// Paginate through all playlist items
+		// Paginate through playlist
 		do {
-			const params = new URLSearchParams({
-				part: 'snippet,contentDetails',
-				playlistId,
-				maxResults: '50',
-				key: apiKey,
-			});
-			if (nextPageToken) {
-				params.set('pageToken', nextPageToken);
+			const requestBody: any = {
+				context: createAndroidContext(),
+				browseId: `VL${playlistId}`,
+			};
+
+			if (continuationToken) {
+				requestBody.continuation = continuationToken;
 			}
 
-			const response = await fetch(`${YOUTUBE_API_BASE}/playlistItems?${params}`);
+			const response = await fetch(`${INNERTUBE_BASE}/browse?key=${ANDROID_API_KEY}&prettyPrint=false`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'User-Agent': ANDROID_USER_AGENT,
+				},
+				body: JSON.stringify(requestBody),
+			});
 
 			if (!response.ok) {
-				const error = await response.json().catch(() => ({}));
 				return {
 					success: false,
-					error: `YouTube API error: ${error?.error?.message || response.status}`,
+					error: `InnerTube browse error: ${response.status}`,
 				};
 			}
 
-			const data = (await response.json()) as {
-				items?: Array<{
-					contentDetails?: { videoId?: string };
-					snippet?: { title?: string };
-				}>;
-				nextPageToken?: string;
-			};
+			const data = await response.json();
 
-			for (const item of data.items || []) {
-				if (item.contentDetails?.videoId) {
+			// Navigate through InnerTube response structure
+			const contents =
+				data?.contents?.twoColumnBrowseResultsRenderer?.tabs?.[0]?.tabRenderer?.content
+					?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents?.[0]
+					?.playlistVideoListRenderer?.contents ||
+				data?.onResponseReceivedActions?.[0]?.appendContinuationItemsAction?.continuationItems;
+
+			if (!Array.isArray(contents)) {
+				break;
+			}
+
+			for (const item of contents) {
+				const videoRenderer = item?.playlistVideoRenderer;
+				if (videoRenderer?.videoId) {
 					items.push({
-						videoId: item.contentDetails.videoId,
-						title: item.snippet?.title || 'Untitled',
+						videoId: videoRenderer.videoId,
+						title: videoRenderer.title?.runs?.[0]?.text || 'Untitled',
 					});
+				}
+
+				// Check for continuation
+				const continuationItem = item?.continuationItemRenderer;
+				if (continuationItem?.continuationEndpoint?.continuationCommand?.token) {
+					continuationToken = continuationItem.continuationEndpoint.continuationCommand.token;
 				}
 			}
 
-			nextPageToken = data.nextPageToken;
-
 			// Safety limit
 			if (items.length >= 500) break;
-		} while (nextPageToken);
+
+			// If no continuation token found in contents, stop
+			if (!continuationToken) break;
+		} while (continuationToken);
 
 		return { success: true, items };
 	} catch (error) {
@@ -155,63 +188,53 @@ export async function fetchPlaylistItems(
 }
 
 /**
- * Fetch video details using YouTube Data API
+ * Fetch video details using InnerTube player endpoint
  *
- * Uses API key authentication for public video data.
- * No user OAuth required.
+ * Uses Android client (no API key required from user).
+ * Works for public videos.
  */
-export async function fetchVideoDetails(
-	videoId: string,
-	apiKey: string
-): Promise<ScrapeVideoResult> {
+export async function fetchVideoDetails(videoId: string): Promise<ScrapeVideoResult> {
 	try {
-		const params = new URLSearchParams({
-			part: 'snippet,contentDetails,statistics',
-			id: videoId,
-			key: apiKey,
+		const requestBody = {
+			context: createAndroidContext(),
+			videoId,
+		};
+
+		const response = await fetch(`${INNERTUBE_BASE}/player?key=${ANDROID_API_KEY}&prettyPrint=false`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'User-Agent': ANDROID_USER_AGENT,
+			},
+			body: JSON.stringify(requestBody),
 		});
 
-		const response = await fetch(`${YOUTUBE_API_BASE}/videos?${params}`);
-
 		if (!response.ok) {
-			const error = await response.json().catch(() => ({}));
 			return {
 				success: false,
-				error: `YouTube API error: ${error?.error?.message || response.status}`,
+				error: `InnerTube player error: ${response.status}`,
 			};
 		}
 
-		const data = (await response.json()) as {
-			items?: Array<{
-				id: string;
-				snippet?: {
-					title?: string;
-					description?: string;
-					publishedAt?: string;
-					channelTitle?: string;
-					thumbnails?: { high?: { url?: string } };
-				};
-				contentDetails?: { duration?: string };
-				statistics?: { viewCount?: string };
-			}>;
-		};
+		const data = await response.json();
 
-		const video = data.items?.[0];
-		if (!video) {
-			return { success: false, error: 'Video not found' };
+		// Extract video details from player response
+		const videoDetails = data?.videoDetails;
+		if (!videoDetails) {
+			return { success: false, error: 'Video details not found' };
 		}
 
 		return {
 			success: true,
 			data: {
-				id: video.id,
-				title: video.snippet?.title || 'Untitled',
-				description: video.snippet?.description || '',
-				publishedAt: video.snippet?.publishedAt || new Date().toISOString(),
-				channelTitle: video.snippet?.channelTitle || 'Unknown',
-				thumbnailUrl: video.snippet?.thumbnails?.high?.url,
-				duration: video.contentDetails?.duration,
-				viewCount: parseInt(video.statistics?.viewCount || '0', 10),
+				id: videoDetails.videoId || videoId,
+				title: videoDetails.title || 'Untitled',
+				description: videoDetails.shortDescription || '',
+				publishedAt: new Date().toISOString(), // Player endpoint doesn't provide publish date
+				channelTitle: videoDetails.author || 'Unknown',
+				thumbnailUrl: videoDetails.thumbnail?.thumbnails?.[0]?.url,
+				duration: `PT${videoDetails.lengthSeconds}S`, // Convert to ISO 8601 duration
+				viewCount: parseInt(videoDetails.viewCount || '0', 10),
 			},
 		};
 	} catch (error) {
@@ -233,36 +256,21 @@ export async function fetchTranscript(
 	videoId: string,
 	language: string = 'en'
 ): Promise<ScrapeTranscriptResult> {
-	const ANDROID_USER_AGENT = 'com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip';
-	const ANDROID_API_KEY = 'AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w';
-
 	try {
 		// Use Android player endpoint to get caption tracks
 		const playerRequestBody = {
-			context: {
-				client: {
-					hl: language,
-					gl: 'US',
-					clientName: 'ANDROID',
-					clientVersion: '19.09.37',
-					androidSdkVersion: 30,
-					userAgent: ANDROID_USER_AGENT,
-				},
-			},
+			context: createAndroidContext(language),
 			videoId,
 		};
 
-		const playerResponse = await fetch(
-			`https://www.youtube.com/youtubei/v1/player?key=${ANDROID_API_KEY}&prettyPrint=false`,
-			{
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'User-Agent': ANDROID_USER_AGENT,
-				},
-				body: JSON.stringify(playerRequestBody),
-			}
-		);
+		const playerResponse = await fetch(`${INNERTUBE_BASE}/player?key=${ANDROID_API_KEY}&prettyPrint=false`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				'User-Agent': ANDROID_USER_AGENT,
+			},
+			body: JSON.stringify(playerRequestBody),
+		});
 
 		if (!playerResponse.ok) {
 			return { success: false, error: `Player API error: ${playerResponse.status}` };

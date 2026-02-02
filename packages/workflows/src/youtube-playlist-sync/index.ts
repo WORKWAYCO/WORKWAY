@@ -8,11 +8,13 @@
  * ZUHANDENHEIT: The tool recedes, the outcome remains.
  * User thinks: "My YouTube research is automatically documented"
  *
- * ## Simplified Architecture (v2)
+ * ## Simplified Architecture (v3 - InnerTube)
  *
  * - NO YouTube OAuth required - works with public playlists only
- * - Video data: YouTube Data API with server-side API key
- * - Transcripts: Android client + timedtext API (no auth needed)
+ * - NO API key required - uses YouTube InnerTube (Android client)
+ * - Playlist items: InnerTube browse endpoint
+ * - Video metadata: InnerTube player endpoint
+ * - Transcripts: InnerTube player + timedtext API
  * - Only Notion OAuth required for writing pages
  *
  * This makes setup much simpler - users just need to:
@@ -226,17 +228,6 @@ export default defineWorkflow({
 			notion_date_property = 'Published',
 		} = inputs;
 
-		// YouTube API key for public data access (no user OAuth required)
-		const youtubeApiKey = env.YOUTUBE_API_KEY;
-
-		if (!youtubeApiKey) {
-			return {
-				success: false,
-				error: 'YOUTUBE_API_KEY environment variable not configured. Please set it in Wrangler secrets.',
-				videosSynced: 0,
-			};
-		}
-
 		// Extract playlist ID from URL if needed
 		const playlistId = extractPlaylistId(playlist_id);
 		if (!playlistId) {
@@ -271,8 +262,8 @@ export default defineWorkflow({
 			};
 		}
 
-		// Fetch playlist items via YouTube Data API (no user OAuth required)
-		const playlistResult = await fetchPlaylistItems(playlistId, youtubeApiKey);
+		// Fetch playlist items via InnerTube (no API key required)
+		const playlistResult = await fetchPlaylistItems(playlistId);
 
 		if (!playlistResult.success || !playlistResult.items) {
 			return {
@@ -306,7 +297,7 @@ export default defineWorkflow({
 		for (const item of newVideos) {
 			try {
 				// Fetch video details via YouTube Data API
-				const videoResult = await fetchVideoDetails(item.videoId, youtubeApiKey);
+				const videoResult = await fetchVideoDetails(item.videoId);
 				if (!videoResult.success || !videoResult.data) {
 					results.push({
 						videoId: item.videoId,
