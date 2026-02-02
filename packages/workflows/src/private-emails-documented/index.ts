@@ -176,20 +176,81 @@ async function trackExecution(
 // ============================================================================
 
 /**
+ * Sanitize HTML to prevent XSS attacks
+ * Removes dangerous tags, attributes, and protocols
+ */
+function sanitizeHtml(html: string): string {
+	if (!html) return '';
+
+	// Step 1: Remove dangerous tags entirely (including content)
+	let cleaned = html
+		// Scripts and styles
+		.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+		.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+		// Dangerous embedded content
+		.replace(/<iframe[^>]*>[\s\S]*?<\/iframe>/gi, '')
+		.replace(/<object[^>]*>[\s\S]*?<\/object>/gi, '')
+		.replace(/<embed[^>]*>[\s\S]*?<\/embed>/gi, '')
+		.replace(/<applet[^>]*>[\s\S]*?<\/applet>/gi, '')
+		// Forms and inputs (no user interaction in Notion)
+		.replace(/<form[^>]*>[\s\S]*?<\/form>/gi, '')
+		.replace(/<input[^>]*>/gi, '')
+		.replace(/<textarea[^>]*>[\s\S]*?<\/textarea>/gi, '')
+		.replace(/<button[^>]*>[\s\S]*?<\/button>/gi, '')
+		.replace(/<select[^>]*>[\s\S]*?<\/select>/gi, '')
+		// Meta/link tags
+		.replace(/<meta[^>]*>/gi, '')
+		.replace(/<link[^>]*>/gi, '')
+		.replace(/<base[^>]*>/gi, '')
+		// Comments
+		.replace(/<!--[\s\S]*?-->/g, '')
+		// Microsoft Office tags
+		.replace(/<o:p[^>]*>[\s\S]*?<\/o:p>/gi, '')
+		.replace(/<\/?[ovwxp]:[^>]*>/gi, '');
+
+	// Step 2: Remove dangerous attributes from remaining tags
+	// Remove event handlers (onclick, onload, onerror, etc.)
+	cleaned = cleaned.replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '');
+	cleaned = cleaned.replace(/\s+on\w+\s*=\s*[^\s>]*/gi, '');
+
+	// Step 3: Sanitize href and src attributes to prevent javascript: and data: URLs
+	cleaned = cleaned.replace(
+		/(<[^>]+\s+(?:href|src)\s*=\s*["'])([^"']*)(["'][^>]*>)/gi,
+		(match, prefix, url, suffix) => {
+			const lowerUrl = url.toLowerCase().trim();
+			// Block dangerous protocols
+			if (
+				lowerUrl.startsWith('javascript:') ||
+				lowerUrl.startsWith('data:') ||
+				lowerUrl.startsWith('vbscript:') ||
+				lowerUrl.startsWith('file:')
+			) {
+				return prefix + 'about:blank' + suffix; // Safe replacement
+			}
+			return match; // Keep safe URLs
+		}
+	);
+
+	// Step 4: Remove style attributes that could contain javascript
+	cleaned = cleaned.replace(/\s+style\s*=\s*["'][^"']*javascript:[^"']*["']/gi, '');
+
+	return cleaned;
+}
+
+/**
  * Convert HTML to Notion block objects
  * Uses regex-based parsing to avoid external dependencies
+ * SECURITY: All HTML is sanitized before processing
  */
 function htmlToNotionBlocks(html: string): any[] {
 	const blocks: any[] = [];
 
-	// Clean HTML first
-	let cleanedHtml = html
-		.replace(/<!DOCTYPE[^>]*>/gi, '')
-		.replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-		.replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.replace(/<o:p[^>]*>[\s\S]*?<\/o:p>/gi, '')
-		.replace(/<\/?[ovwxp]:[^>]*>/gi, '');
+	// SECURITY: Sanitize HTML first to prevent XSS
+	let cleanedHtml = sanitizeHtml(html);
+
+	// Additional cleanup
+	cleanedHtml = cleanedHtml
+		.replace(/<!DOCTYPE[^>]*>/gi, '');
 
 	// Extract headings
 	const headingMatches = cleanedHtml.matchAll(/<h([1-3])[^>]*>([\s\S]*?)<\/h\1>/gi);
