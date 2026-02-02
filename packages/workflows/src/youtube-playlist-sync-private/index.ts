@@ -321,8 +321,23 @@ export default defineWorkflow({
 		const trackingId = installationId || userId || 'default';
 
 		// YouTube API key for public data access (no user OAuth required)
-		// Private workflow - key is embedded for Half Dozen internal use
-		const youtubeApiKey = env.YOUTUBE_API_KEY || 'AIzaSyCMRwFVImHJykVaFqeR4PnYE2R2T3_kvaM';
+		const youtubeApiKey = env.YOUTUBE_API_KEY;
+
+		if (!youtubeApiKey) {
+			const error = 'YOUTUBE_API_KEY environment variable not configured';
+			if (trackingId && apiSecret) {
+				await trackExecution(trackingId, apiSecret, connectionUrl, {
+					status: 'error',
+					error,
+					completedAt: new Date().toISOString(),
+				});
+			}
+			return {
+				success: false,
+				error,
+				videosSynced: 0,
+			};
+		}
 
 		if (trackingId && apiSecret) {
 			await trackExecution(trackingId, apiSecret, connectionUrl, {

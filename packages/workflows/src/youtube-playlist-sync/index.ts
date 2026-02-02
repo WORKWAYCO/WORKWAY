@@ -227,7 +227,15 @@ export default defineWorkflow({
 		} = inputs;
 
 		// YouTube API key for public data access (no user OAuth required)
-		const youtubeApiKey = env.YOUTUBE_API_KEY || 'AIzaSyCMRwFVImHJykVaFqeR4PnYE2R2T3_kvaM';
+		const youtubeApiKey = env.YOUTUBE_API_KEY;
+
+		if (!youtubeApiKey) {
+			return {
+				success: false,
+				error: 'YOUTUBE_API_KEY environment variable not configured. Please set it in Wrangler secrets.',
+				videosSynced: 0,
+			};
+		}
 
 		// Extract playlist ID from URL if needed
 		const playlistId = extractPlaylistId(playlist_id);
