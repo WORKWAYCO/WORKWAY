@@ -23,7 +23,7 @@
 				</a>
 
 				<!-- Desktop Navigation -->
-				<div class="hidden md:flex items-center gap-8">
+				<div class="hidden md:flex items-center gap-md">
 					{#each navItems as item}
 						{#if item.external}
 							<a

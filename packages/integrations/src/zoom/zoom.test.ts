@@ -220,53 +220,18 @@ describe('Zoom', () => {
 			expect(result.data?.speakers).toContain('Jane');
 		});
 
-		it('should fall back to recordings API', async () => {
+		it('should return null when transcript API returns 404 (no fallback)', async () => {
 			// Mock transcript API returning 404
 			mockFetch.mockResolvedValueOnce({
 				ok: false,
 				status: 404,
 			});
 
-			// Mock recordings API
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						id: 'rec123',
-						meeting_id: '123456789',
-						recording_start: '2024-01-15T10:00:00Z',
-						recording_end: '2024-01-15T11:00:00Z',
-						duration: 3600,
-						total_size: 1000000,
-						recording_count: 1,
-						recording_files: [
-							{
-								id: 'file123',
-								meeting_id: '123456789',
-								recording_start: '2024-01-15T10:00:00Z',
-								recording_end: '2024-01-15T11:00:00Z',
-								file_type: 'TRANSCRIPT',
-								file_size: 5000,
-								download_url: 'https://zoom.us/download/transcript',
-								status: 'completed',
-							},
-						],
-					}),
-			});
-
-			// Mock transcript download
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				text: () =>
-					Promise.resolve('WEBVTT\n\n00:00:00.000 --> 00:00:05.000\nHello world'),
-			});
-
 			const client = new Zoom(testConfig);
 			const result = await client.getTranscript({ meetingId: '123456789' });
 
 			expect(result.success).toBe(true);
-			expect(result.data).not.toBeNull();
-			expect(result.data?.transcript_text).toContain('Hello world');
+			expect(result.data).toBeNull();
 		});
 
 		it('should return null when no transcript available', async () => {
@@ -350,38 +315,15 @@ describe('Zoom', () => {
 			expect(result.error?.code).toBe('missing_required_field');
 		});
 
-		it('should require browser scraper URL', async () => {
+		it('should return api_error (OAuth API does not provide clip transcripts)', async () => {
 			const client = new Zoom(testConfig);
 			const result = await client.getClipTranscript({
 				shareUrl: 'https://zoom.us/clip/clip123',
 			});
 
 			expect(result.success).toBe(false);
-			expect(result.error?.code).toBe('missing_required_field');
-		});
-
-		it('should fetch transcript from browser scraper', async () => {
-			mockFetch.mockResolvedValueOnce({
-				ok: true,
-				json: () =>
-					Promise.resolve({
-						transcript: 'John: This is a test clip\nJane: Thanks for sharing',
-						segments_count: 2,
-					}),
-			});
-
-			const client = new Zoom({
-				...testConfig,
-				browserScraperUrl: 'https://scraper.example.com',
-			});
-			const result = await client.getClipTranscript({
-				shareUrl: 'https://zoom.us/clip/clip123',
-			});
-
-			expect(result.success).toBe(true);
-			expect(result.data).not.toBeNull();
-			expect(result.data?.source).toBe('browser_scraper');
-			expect(result.data?.speakers).toContain('John');
+			expect(result.error?.code).toBe('api_error');
+			expect(result.error?.message).toContain('not available via Zoom OAuth API');
 		});
 	});
 

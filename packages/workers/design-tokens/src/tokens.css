@@ -120,13 +120,12 @@
 
   /* ==========================================================================
      Golden Ratio Spacing Scale (phi = 1.618)
+     "Weniger, aber besser" - 4 values, rigorously applied
      ========================================================================== */
-  --space-xs: 0.5rem;      /* 8px */
-  --space-sm: 1rem;        /* 16px - base unit */
-  --space-md: 1.618rem;    /* ~26px */
-  --space-lg: 2.618rem;    /* ~42px */
-  --space-xl: 4.236rem;    /* ~68px */
-  --space-2xl: 6.854rem;   /* ~110px */
+  --space-sm: 1rem;        /* 16px - base unit, tight relationships */
+  --space-md: 1.618rem;    /* ~26px - default breathing room */
+  --space-lg: 2.618rem;    /* ~42px - between related sections */
+  --space-xl: 4.236rem;    /* ~68px - major landmarks, heroes */
 
   /* ==========================================================================
      Icon Size Scale - Consistent 16, 20, 24px

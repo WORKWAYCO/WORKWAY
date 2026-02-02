@@ -1,5 +1,5 @@
 {
-  "name": "@workway/learn",
+  "name": "@workwayco/learn",
   "version": "1.0.1",
   "description": "MCP server and CLI for learning WORKWAY workflow development with Claude Code. Build automations that recede—outcomes remain.",
   "type": "module",
@@ -27,7 +27,12 @@
     "build": "tsup src/index.ts src/server.ts src/cli.ts --format esm --dts --clean",
     "dev": "tsup src/index.ts src/server.ts src/cli.ts --format esm --dts --watch",
     "start": "node dist/server.js",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "npm run build"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

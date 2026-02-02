@@ -5,6 +5,12 @@
  * Your items appear in their database. Their updates appear in yours.
  * Changes sync every five seconds. Last edit wins.
  *
+ * ## What's New in v2.0.0
+ *
+ * - **Optional Filtering**: Specify a property and values to filter which pages sync
+ * - **Multi-client support**: Share one database with multiple clients, each seeing only their items
+ * - **Backwards compatible**: No filter = syncs all pages (same as v1)
+ *
  * ## Design Philosophy (Heideggerian)
  *
  * The client never sees WORKWAY. They click a link, connect Notion, pick a database.
@@ -15,6 +21,9 @@
  * ```
  * Agency Notion                              Client Notion
  * (Base Database)                            (Mirror Database)
+ *       │                                           │
+ *       │ ←────── Optional Filter Layer ──────→    │
+ *       │         (e.g., Client = "Acme")          │
  *       │                                           │
  *       │ ←────── SyncScheduler DO (5s) ──────→    │
  *       │      Content-based comparison            │
@@ -27,6 +36,7 @@
  * │  │ State Store (KV)                                        │ │
  * │  │ - pageId → { basePageId, mirrorPageId, lastSync }       │ │
  * │  │ - propertyMappings: auto-discovered by name             │ │
+ * │  │ - filterProperty / filterValues (optional)              │ │
  * │  └─────────────────────────────────────────────────────────┘ │
  * └─────────────────────────────────────────────────────────────┘
  * ```
@@ -34,7 +44,7 @@
  * ## Sync Flow
  *
  * 1. **Initial Sync** (triggered on client_connected)
- *    - Copy all pages from base database to mirror
+ *    - Copy all pages from base database to mirror (filtered if configured)
  *    - Store page ID mappings in state
  *    - Activate 5-second SyncScheduler
  *
@@ -42,7 +52,7 @@
  *    - Compare content (not timestamps—Notion updates those on view)
  *    - When content differs: last_edited_time determines winner
  *    - Newer page's values sync to older page
- *    - New pages in either database sync to the other
+ *    - New pages in either database sync to the other (respecting filter)
  *
  * ## Conflict Resolution: Last-Write-Wins
  *
@@ -59,8 +69,15 @@
  * - "Priority" in base, no match in mirror → skipped
  * - Supports: checkbox, text, select, date, number, url, email
  *
+ * ## Filtering (v2.0.0+)
+ *
+ * Optionally filter which pages sync:
+ * - filterProperty: "Client" → filterValues: "Acme Corp"
+ * - Only pages where Client = "Acme Corp" sync to mirror
+ * - Leave empty to sync all pages (v1 behavior)
+ *
  * @public Marketplace workflow
- * @version 1.1.0
+ * @version 2.0.0
  */
 
 import { defineWorkflow, webhook } from '@workwayco/sdk';
@@ -137,8 +154,8 @@ interface SyncResult {
 export default defineWorkflow({
 	name: 'Share a Notion Database',
 	description:
-		'Collaborate on a Notion database without sharing your workspace. Send a link, they connect Notion, everything syncs every five seconds. Their updates appear in yours. Yours appear in theirs. Last edit wins.',
-	version: '1.1.0',
+		'Collaborate on a Notion database without sharing your workspace. Send a link, they connect Notion, everything syncs every five seconds. Their updates appear in yours. Yours appear in theirs. Last edit wins. Optionally filter by property to share only specific items.',
+	version: '2.0.0',
 
 	pathway: {
 		outcomeFrame: 'when_collaborating',
@@ -225,6 +242,22 @@ export default defineWorkflow({
 			description: 'The database you want to share with clients',
 		},
 
+		// Filter property - optional, to filter which items sync (v2.0.0+)
+		filterProperty: {
+			type: 'text',
+			label: 'Filter Property (Optional)',
+			required: false,
+			description: 'Property name to filter by (e.g., "Client", "Project"). Leave empty to sync all items.',
+		},
+
+		// Filter values - comma-separated list of values to include (v2.0.0+)
+		filterValues: {
+			type: 'text',
+			label: 'Filter Values',
+			required: false,
+			description: 'Comma-separated values to include (e.g., "Acme Corp" or "Client A, Client B")',
+		},
+
 		// Mirror database - filled in by client invite flow
 		_mirrorDatabase: {
 			type: 'text',
@@ -273,6 +306,34 @@ export default defineWorkflow({
 
 		// Handle webhook triggers for ongoing sync
 		if (trigger.type === 'webhook') {
+			// Validate webhook token if secret is configured
+			// This provides basic authentication for webhook endpoints
+			const webhookSecret = env.WORKFLOW_API_SECRET;
+			if (webhookSecret) {
+				const payload = trigger.data as {
+					_token?: string;
+					page?: { id: string; last_edited_time: string };
+					database_id?: string;
+				};
+
+				// Constant-time comparison to prevent timing attacks
+				const payloadToken = payload._token || '';
+				if (payloadToken.length !== webhookSecret.length) {
+					return { success: false, error: 'Invalid webhook token' };
+				}
+
+				let isValid = true;
+				for (let i = 0; i < webhookSecret.length; i++) {
+					if (payloadToken.charCodeAt(i) !== webhookSecret.charCodeAt(i)) {
+						isValid = false;
+					}
+				}
+
+				if (!isValid) {
+					return { success: false, error: 'Invalid webhook token' };
+				}
+			}
+
 			const payload = trigger.data as {
 				page?: { id: string; last_edited_time: string };
 				database_id?: string;
@@ -547,7 +608,25 @@ async function syncBaseToMirror(params: {
 		);
 
 		if (mapping) {
-			// Update existing mirror page
+			// Last-write-wins: fetch mirror page to compare timestamps
+			const mirrorPageResult = await fetchWithToken(
+				`https://api.notion.com/v1/pages/${mapping.mirrorPageId}`,
+				mirrorToken,
+				'GET'
+			);
+
+			if (mirrorPageResult.ok) {
+				const mirrorPage = await mirrorPageResult.json();
+				const baseEditTime = new Date(basePage.last_edited_time).getTime();
+				const mirrorEditTime = new Date(mirrorPage.last_edited_time).getTime();
+
+				// Skip if mirror is newer - it will sync in the other direction
+				if (mirrorEditTime > baseEditTime) {
+					return { success: true, action: 'skipped_mirror_newer' };
+				}
+			}
+
+			// Update existing mirror page (base is newer or equal)
 			const updateResult = await fetchWithToken(
 				`https://api.notion.com/v1/pages/${mapping.mirrorPageId}`,
 				mirrorToken,
@@ -656,7 +735,23 @@ async function syncMirrorToBase(params: {
 
 		const mirrorPage = await pageResult.json();
 
-		// Map properties from mirror to base
+		// Last-write-wins: fetch base page to compare timestamps
+		const basePageResult = await integrations.notion.pages.retrieve({
+			page_id: mapping.basePageId,
+		});
+
+		if (basePageResult.success) {
+			const basePage = basePageResult.data;
+			const mirrorEditTime = new Date(mirrorPage.last_edited_time).getTime();
+			const baseEditTime = new Date(basePage.last_edited_time).getTime();
+
+			// Skip if base is newer - it will sync in the other direction
+			if (baseEditTime > mirrorEditTime) {
+				return { success: true, action: 'skipped_base_newer' };
+			}
+		}
+
+		// Map properties from mirror to base (mirror is newer or equal)
 		const baseProperties = mapProperties(
 			mirrorPage.properties,
 			state.propertyMappings,
@@ -836,8 +931,15 @@ function clonePropertyValue(prop: any): any {
 // HELPERS
 // ============================================================================
 
+/** Maximum retry attempts for rate-limited requests */
+const MAX_RETRIES = 3;
+
+/** Base delay for exponential backoff (ms) */
+const BASE_RETRY_DELAY_MS = 1000;
+
 /**
  * Fetch with Notion token (for client's mirror database)
+ * Includes exponential backoff retry logic for 429 rate limits
  */
 async function fetchWithToken(
 	url: string,
@@ -858,7 +960,58 @@ async function fetchWithToken(
 		options.body = JSON.stringify(body);
 	}
 
-	return fetch(url, options);
+	let lastError: Error | null = null;
+
+	for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+		try {
+			const response = await fetch(url, options);
+
+			// Handle rate limiting with retry
+			if (response.status === 429) {
+				if (attempt === MAX_RETRIES) {
+					// Final attempt failed, return the 429 response
+					return response;
+				}
+
+				// Calculate delay: use Retry-After header if available, else exponential backoff
+				const retryAfter = response.headers.get('Retry-After');
+				let delayMs: number;
+
+				if (retryAfter) {
+					// Retry-After can be seconds or a date string
+					const seconds = parseInt(retryAfter, 10);
+					delayMs = isNaN(seconds) ? BASE_RETRY_DELAY_MS * Math.pow(2, attempt) : seconds * 1000;
+				} else {
+					// Exponential backoff: 1s, 2s, 4s
+					delayMs = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+				}
+
+				// Cap at 30 seconds
+				delayMs = Math.min(delayMs, 30000);
+
+				console.log(`Rate limited (429), retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+				await delay(delayMs);
+				continue;
+			}
+
+			// Return successful or non-retryable response
+			return response;
+		} catch (error) {
+			lastError = error instanceof Error ? error : new Error(String(error));
+
+			if (attempt === MAX_RETRIES) {
+				throw lastError;
+			}
+
+			// Network error - retry with exponential backoff
+			const delayMs = BASE_RETRY_DELAY_MS * Math.pow(2, attempt);
+			console.log(`Network error, retrying in ${delayMs}ms (attempt ${attempt + 1}/${MAX_RETRIES})`);
+			await delay(delayMs);
+		}
+	}
+
+	// Should never reach here, but TypeScript needs this
+	throw lastError || new Error('Unexpected retry loop exit');
 }
 
 // delay is now imported from ../_shared/utils.js

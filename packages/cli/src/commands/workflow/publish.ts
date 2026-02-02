@@ -15,6 +15,7 @@ import { DEFAULT_PRICING, formatCents, getPriceForTier, type ComplexityTier } fr
 
 interface PublishOptions {
 	draft?: boolean;
+	notes?: string;
 }
 
 export async function workflowPublishCommand(options: PublishOptions): Promise<void> {
@@ -169,6 +170,20 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 		Logger.listItem(`Trial: ${DEFAULT_PRICING.freeTrialRuns} free executions`);
 		Logger.listItem(`After trial: ${formatCents(usagePricePerRun)} per execution`);
 		Logger.blank();
+
+		// Ask for version notes
+		let versionNotes = options.notes || '';
+		if (!versionNotes) {
+			const notesAnswer = await inquirer.prompt([
+				{
+					type: 'input',
+					name: 'notes',
+					message: 'Version notes (optional, helps track changes):',
+					default: '',
+				},
+			]);
+			versionNotes = notesAnswer.notes;
+		}
 
 		const confirmAnswer = await inquirer.prompt([
 			{
@@ -334,9 +349,43 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 
 			if (response.success) {
 				spinner.succeed('Workflow published successfully!');
+				
+				// Save integration ID to config for version tracking
+				const existingConfig = await fs.readJson(configPath);
+				existingConfig.integrationId = response.integration.id;
+				await fs.writeJson(configPath, existingConfig, { spaces: 2 });
+				
 				Logger.blank();
 				Logger.success(`Workflow "${answers.name}" is now in the marketplace`);
 				Logger.blank();
+
+				// Try to create a version record
+				try {
+					const versionResponse = await apiClient.postJson(`/integrations/${response.integration.id}/versions`, {
+						body: {
+							workflowDefinition: {
+								source: workflowContent,
+								language: 'typescript',
+							},
+							notes: versionNotes || 'Initial version',
+						}
+					}) as {
+						success: boolean;
+						version: { id: string; versionNumber: number };
+					};
+					
+					if (versionResponse.success && versionResponse.version) {
+						// Auto-publish the version
+						await apiClient.postJson(
+							`/integrations/${response.integration.id}/versions/${versionResponse.version.id}/publish`,
+							{ body: { notes: versionNotes } }
+						);
+						Logger.info(`📦 Version ${versionResponse.version.versionNumber} created`);
+					}
+				} catch (versionError) {
+					// Version creation is optional - don't fail the publish
+					// This happens if versioning API isn't deployed yet
+				}
 
 				if (options.draft) {
 					Logger.info('📝 Published as draft (not visible to public)');
@@ -355,6 +404,7 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 				Logger.listItem('Monitor your workflow analytics');
 				Logger.listItem('Respond to user reviews');
 				Logger.listItem('Update pricing or features as needed');
+				Logger.listItem('Use "workway workflow version" to manage versions');
 			} else {
 				spinner.fail('Failed to publish workflow');
 				Logger.error(response.error || 'Unknown error');

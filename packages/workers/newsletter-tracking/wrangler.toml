@@ -1,0 +1,56 @@
+name = "newsletter-tracking"
+main = "src/index.ts"
+compatibility_date = "2025-11-09"
+compatibility_flags = ["nodejs_compat"]
+account_id = "5c3e9cf4d55ce171b844fad0931607f9"
+
+# KV namespace for token storage
+[[kv_namespaces]]
+binding = "TOKENS"
+id = "bc0c37fc62324c26b15bef31b8da5284"
+
+# Analytics Engine for cross-property tracking
+[[analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "newsletter_tracking"
+
+# D1 Database binding (shared with workway-platform)
+[[d1_databases]]
+binding = "DB"
+database_name = "marketplace-production"
+database_id = "8d65abf7-297f-4c72-b2d0-0deb22beea6a"
+
+# Environment variables
+[vars]
+WORKWAY_URL = "https://workway.co"
+CREATESOMETHING_URL = "https://learn.createsomething.space"
+
+# Custom domain route (uncomment after deploying)
+# [[routes]]
+# pattern = "track.workway.co/*"
+# zone_name = "workway.co"
+
+[env.production]
+name = "newsletter-tracking-production"
+workers_dev = true
+
+[env.production.vars]
+WORKWAY_URL = "https://workway.co"
+CREATESOMETHING_URL = "https://learn.createsomething.space"
+
+[[env.production.kv_namespaces]]
+binding = "TOKENS"
+id = "b802a1ecbf684ae8951641bfe1b134c5"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "marketplace-production"
+database_id = "8d65abf7-297f-4c72-b2d0-0deb22beea6a"
+
+[[env.production.analytics_engine_datasets]]
+binding = "ANALYTICS"
+dataset = "newsletter_tracking"
+
+[[env.production.routes]]
+pattern = "track.workway.co/*"
+zone_name = "workway.co"

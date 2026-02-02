@@ -139,15 +139,9 @@ export default defineWorkflow({
 		transcript_mode: {
 			type: 'select',
 			label: 'Transcript Extraction',
-			options: ['oauth_only', 'prefer_speakers', 'always_browser'],
-			default: 'prefer_speakers',
-			description: 'oauth_only: Fast but may lack speaker names. prefer_speakers: Falls back to browser scraper for speaker attribution.',
-		},
-		browser_scraper_url: {
-			type: 'text',
-			label: 'Browser Scraper URL',
-			default: 'https://zoom-scraper.half-dozen.workers.dev',
-			description: 'Cloudflare Worker URL for transcript scraping (required for speaker attribution)',
+			options: ['oauth_only'],
+			default: 'oauth_only',
+			description: 'Uses Zoom OAuth API. Speaker attribution depends on Zoom\'s processing. Transcripts may not be available for all meetings.',
 		},
 
 		// AI settings
@@ -443,18 +437,9 @@ interface ProcessClipParams {
 async function processClip(params: ProcessClipParams) {
 	const { clipId, title, createdAt, shareUrl, inputs, integrations, env } = params;
 
+	// Note: Clip transcripts are not available via Zoom OAuth API
+	// Clips will be synced with metadata only (no transcript, no AI analysis)
 	let transcript: string | null = null;
-
-	// 1. Get transcript (clips require browser scraper)
-	if (shareUrl && inputs.browserScraperUrl) {
-		const transcriptResult = await integrations.zoom.getClipTranscript({
-			shareUrl,
-		});
-
-		if (transcriptResult.success && transcriptResult.data) {
-			transcript = transcriptResult.data.transcript_text;
-		}
-	}
 
 	// 2. AI Analysis (if enabled)
 	let analysis: any = null;

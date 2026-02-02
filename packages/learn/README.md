@@ -1,7 +1,7 @@
-# @workway/learn
+# @workwayco/learn
 
-[![npm version](https://img.shields.io/npm/v/@workway/learn.svg)](https://www.npmjs.com/package/@workway/learn)
-[![License](https://img.shields.io/npm/l/@workway/learn.svg)](https://github.com/workwayco/workway/blob/main/LICENSE)
+[![npm version](https://img.shields.io/npm/v/@workwayco/learn.svg)](https://www.npmjs.com/package/@workwayco/learn)
+[![License](https://img.shields.io/npm/l/@workwayco/learn.svg)](https://github.com/workwayco/workway/blob/main/LICENSE)
 
 **MCP server and CLI for learning WORKWAY workflow development with Claude Code.**
 
@@ -19,10 +19,10 @@ Build automations that recede—outcomes remain.
 
 ```bash
 # Install globally
-npm install -g @workway/learn
+npm install -g @workwayco/learn
 
 # Or run directly
-npx @workway/learn
+npx @workwayco/learn
 ```
 
 ## CLI Usage
@@ -53,7 +53,7 @@ Add to your Claude Code MCP settings (`.mcp.json`):
   "mcpServers": {
     "workway-learn": {
       "command": "npx",
-      "args": ["@workway/learn", "--server"]
+      "args": ["@workwayco/learn", "--server"]
     }
   }
 }

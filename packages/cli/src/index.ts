@@ -25,6 +25,7 @@ import {
 	workflowAccessGrantCreateCommand,
 	workflowAccessGrantRevokeCommand,
 } from './commands/workflow/access-grants.js';
+import { workflowVersionCommand } from './commands/workflow/version.js';
 import { oauthConnectCommand } from './commands/oauth/connect.js';
 import { oauthListCommand } from './commands/oauth/list.js';
 import { oauthDisconnectCommand } from './commands/oauth/disconnect.js';
@@ -52,6 +53,7 @@ import { explainCommand } from './commands/agentic/explain.js';
 import { modifyCommand } from './commands/agentic/modify.js';
 import { diagnoseCommand } from './commands/agentic/diagnose.js';
 import { marketplaceNeedsCommand, marketplaceSearchCommand, marketplaceBrowseCommand, marketplaceInfoCommand } from './commands/marketplace/index.js';
+import { requestsCommand } from './commands/requests.js';
 import { dbCheckCommand } from './commands/db/check.js';
 import { dbSyncWorkflowsCommand } from './commands/db/sync-workflows.js';
 import { beadsNotionInitCommand } from './commands/beads/notion-init.js';
@@ -139,6 +141,7 @@ workflowCommand
 	.command('publish')
 	.description('Publish workflow to marketplace')
 	.option('--draft', 'Publish as draft (not public)')
+	.option('--notes <text>', 'Version notes for this release')
 	.action(handleCommand(workflowPublishCommand));
 
 workflowCommand
@@ -190,6 +193,85 @@ workflowCommand
 	.option('--keep-data', 'Keep stored data (only remove workflow)')
 	.action(handleCommand(async (workflowId: string, options: any) => {
 		await workflowDeleteCommand(workflowId, options);
+	}));
+
+// Version management subcommand
+const versionCommand = workflowCommand.command('version').description('Manage workflow versions');
+
+versionCommand
+	.command('list')
+	.description('List all versions for the current workflow')
+	.action(handleCommand(async () => {
+		await workflowVersionCommand('list', {});
+	}));
+
+versionCommand
+	.command('show')
+	.description('Show current workflow version')
+	.action(handleCommand(async () => {
+		await workflowVersionCommand('show', {});
+	}));
+
+versionCommand
+	.command('bump [type]')
+	.description('Bump version number (patch, minor, major)')
+	.action(handleCommand(async (type: string | undefined) => {
+		await workflowVersionCommand('bump', { type: type as any });
+	}));
+
+versionCommand
+	.command('rollback [versionId]')
+	.description('Create draft from an old version')
+	.action(handleCommand(async (versionId: string | undefined) => {
+		await workflowVersionCommand('rollback', { versionId });
+	}));
+
+versionCommand
+	.command('pin [installationId]')
+	.description('Pin installation to a specific version')
+	.option('--version <versionId>', 'Version ID to pin to')
+	.option('--reason <text>', 'Reason for pinning')
+	.action(handleCommand(async (installationId: string | undefined, options: any) => {
+		await workflowVersionCommand('pin', {
+			installationId,
+			versionId: options.version,
+			reason: options.reason,
+		});
+	}));
+
+versionCommand
+	.command('deprecate [versionId]')
+	.description('Deprecate a published version')
+	.option('--reason <text>', 'Reason for deprecation')
+	.action(handleCommand(async (versionId: string | undefined, options: any) => {
+		await workflowVersionCommand('deprecate', {
+			versionId,
+			reason: options.reason,
+		});
+	}));
+
+versionCommand
+	.command('approve [versionId]')
+	.description('Approve a pending version')
+	.option('--notes <text>', 'Approval notes')
+	.option('--publish', 'Also publish the version immediately')
+	.action(handleCommand(async (versionId: string | undefined, options: any) => {
+		await workflowVersionCommand('approve', {
+			versionId,
+			reason: options.notes,
+			autoPublish: options.publish,
+		});
+	}));
+
+versionCommand
+	.command('reject [versionId]')
+	.description('Reject a pending version')
+	.option('--reason <text>', 'Rejection reason')
+	.action(handleCommand(async (versionId: string | undefined, options: any) => {
+		await workflowVersionCommand('reject', {
+			versionId,
+			reason: options.reason,
+		});
 	}));
 
 // Access Grants subcommand (Private Workflows)
@@ -306,6 +388,63 @@ program
 			after: options.after,
 			showOutcomes: options.showOutcomes,
 		});
+	}));
+
+// ============================================================================
+// ENTERPRISE REQUESTS COMMANDS
+// ============================================================================
+
+const requestsCommandGroup = program.command('requests').description('Enterprise workflow request management');
+
+requestsCommandGroup
+	.command('list')
+	.description('List workflow requests')
+	.option('--status <status>', 'Filter by status (submitted, approved, in_progress, etc.)')
+	.option('--assigned-to-me', 'Show requests assigned to me')
+	.option('--available', 'Show available requests to claim')
+	.action(handleCommand(async (options: { status?: string; assignedToMe?: boolean; available?: boolean }) => {
+		await requestsCommand('list', undefined, {
+			status: options.status,
+			assignedToMe: options.assignedToMe,
+			available: options.available,
+		});
+	}));
+
+requestsCommandGroup
+	.command('show [id]')
+	.description('Show request details')
+	.action(handleCommand(async (id?: string) => {
+		await requestsCommand('show', id);
+	}));
+
+requestsCommandGroup
+	.command('claim [id]')
+	.description('Claim an unassigned request')
+	.action(handleCommand(async (id?: string) => {
+		await requestsCommand('claim', id);
+	}));
+
+requestsCommandGroup
+	.command('start [id]')
+	.description('Mark request as in progress')
+	.action(handleCommand(async (id?: string) => {
+		await requestsCommand('start', id);
+	}));
+
+requestsCommandGroup
+	.command('complete [id]')
+	.description('Complete a request and optionally link workflow')
+	.option('--workflow <id>', 'Link to workflow ID')
+	.action(handleCommand(async (id?: string, options?: { workflow?: string }) => {
+		await requestsCommand('complete', id, { integrationId: options?.workflow });
+	}));
+
+requestsCommandGroup
+	.command('comment [id]')
+	.description('Add a comment to a request')
+	.option('--question', 'Mark as question (notifies watchers)')
+	.action(handleCommand(async (id?: string, options?: { question?: boolean }) => {
+		await requestsCommand('comment', id, { isQuestion: options?.question });
 	}));
 
 // ============================================================================

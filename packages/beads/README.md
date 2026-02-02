@@ -14,6 +14,16 @@ Two CLIs are provided:
 - `bd` - Human mutations (create, update, close)
 - `bv` - Robot-friendly views (JSON output for agents)
 
+### Quick Start for Agents
+
+```bash
+bd onboard                 # Get started guide
+bd prime                   # Load session context
+bd work "Task title"       # Create and claim atomically
+bd close <id> --reason "Done"
+bd sync                    # Sync with git
+```
+
 ### Initialize
 
 ```bash
@@ -22,11 +32,21 @@ bd init
 
 Creates `.beads/` directory with `config.json` and `issues.jsonl`.
 
+### Work on Issues
+
+```bash
+bd work "Implement user authentication"       # Create + start working
+bd work --id ww-abc123                        # Work on existing issue
+bd work                                       # Auto-select highest priority ready issue
+```
+
 ### Create Issues
 
 ```bash
 bd create "Implement user authentication"
-bd create "Fix login bug" --priority 4 --type bug --labels security,urgent
+bd create "Fix login bug" --priority P1 --type bug --labels security,urgent
+bd create --title "Task" --type feature       # Alternative syntax
+bd create "Task" --json                       # Output as JSON
 ```
 
 ### List & View
@@ -34,16 +54,31 @@ bd create "Fix login bug" --priority 4 --type bug --labels security,urgent
 ```bash
 bd list                    # List open issues
 bd list --all              # Include closed issues
+bd list --json             # Output as JSON
+bd list --limit 5          # Limit results
+bd list --label bug        # Filter by label
+bd list --status in_progress
 bd show <id>               # Show issue details
+bd show <id> --json        # Output as JSON
 ```
 
 ### Update & Close
 
 ```bash
 bd update <id> --status in_progress
-bd update <id> --priority 3
+bd update <id> --priority P3
+bd update <id> --description "New description"
 bd close <id>
-bd close <id> --comment "Completed in PR #123"
+bd close <id> --reason "Completed in PR #123"
+bd close <id> --comment "Fixed"               # Alias for --reason
+```
+
+### Session Management
+
+```bash
+bd prime                   # Load context at session start
+bd onboard                 # Quick start guide
+bd sync                    # Sync .beads/ with git staging
 ```
 
 ### Dependencies
@@ -54,12 +89,17 @@ bd dep add <id> <depends-on-id> --type any-of
 bd dep remove <id> <depends-on-id>
 ```
 
-### Progress
+### Progress & Status
 
 ```bash
 bd progress                # Human-readable summary
+bd progress --json         # Output as JSON
 bd ready                   # Issues ready to work on (not blocked)
+bd ready --json            # Output as JSON
+bd ready --label bug       # Filter by label
+bd ready --limit 3         # Limit results
 bd blocked                 # Issues waiting on dependencies
+bd blocked --json          # Output as JSON
 ```
 
 ### Robot Mode (for agents)
@@ -68,6 +108,29 @@ bd blocked                 # Issues waiting on dependencies
 bv --robot-priority        # Priority-ranked issues as JSON
 bv --robot-insights        # Graph analysis, bottlenecks
 bv --robot-plan            # Suggested execution sequence
+```
+
+### Molecules (Multi-Step Workflows)
+
+Molecules are multi-step workflow templates using a chemistry metaphor:
+
+| Phase | Type | Persistence | Use Case |
+|-------|------|-------------|----------|
+| **Solid** | Proto | Template (reusable) | Workflow patterns |
+| **Liquid** | Mol | Persistent (git-synced) | Feature work |
+| **Vapor** | Wisp | Ephemeral (gitignored) | Scratch work |
+
+```bash
+bd mol current             # Show current molecule context
+bd mol catalog             # List available templates (protos)
+bd mol show <id>           # Show molecule structure
+bd mol spawn <proto-id>    # Create molecule from template
+bd pour <proto-id>         # Alias for mol spawn
+```
+
+Create a template by labeling an epic:
+```bash
+bd label add <epic-id> template
 ```
 
 ## Programmatic API

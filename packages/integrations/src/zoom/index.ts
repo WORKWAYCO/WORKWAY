@@ -1,30 +1,19 @@
 /**
  * Zoom Integration for WORKWAY
  *
- * Unified client for Zoom Meetings, Clips, and Transcripts.
- * Supports both OAuth API transcripts and browser scraper fallback
- * for full speaker attribution.
+ * Unified client for Zoom Meetings, Clips, and Transcripts via OAuth API.
  *
- * ## Transcript Retrieval (3-tier approach)
+ * ## Transcript Retrieval
  *
- * 1. **OAuth API** - Fast, but may lack speaker names
- * 2. **Recordings API** - Falls back to download URL
- * 3. **Browser Scraper** - Full speaker attribution (requires setup)
+ * Uses Zoom's OAuth API `/meetings/{id}/transcript` endpoint. Transcripts are
+ * available after Zoom finishes processing (typically 1-2 hours post-meeting).
  *
- * ## Browser Scraper Setup
+ * **Limitations:**
+ * - Speaker attribution depends on Zoom's processing (may be missing)
+ * - Not all meetings have transcripts available via API
+ * - Transcript availability delayed after meeting ends
  *
- * For speaker-attributed transcripts, deploy the WORKWAY Zoom Scraper:
- *
- * ```bash
- * cd packages/workers/zoom-scraper
- * wrangler kv:namespace create ZOOM_COOKIES
- * wrangler secret put UPLOAD_SECRET
- * wrangler deploy
- * ```
- *
- * Then visit `/sync` to authenticate via bookmarklet.
- *
- * @example Basic usage (OAuth API only)
+ * @example Basic usage
  * ```typescript
  * import { Zoom } from '@workwayco/integrations/zoom';
  *
@@ -33,24 +22,13 @@
  * // Get recent meetings
  * const meetings = await zoom.getMeetings({ days: 1 });
  *
- * // Get transcript (OAuth API)
+ * // Get transcript (OAuth API) - returns null if not available
  * const transcript = await zoom.getTranscript({ meetingId: '123456' });
- * ```
  *
- * @example With browser scraper fallback (speaker attribution)
- * ```typescript
- * const zoom = new Zoom({
- *   accessToken: tokens.zoom.access_token,
- *   browserScraperUrl: 'https://zoom-scraper.your-domain.workers.dev'
- * });
- *
- * // Get transcript with speaker names
- * const transcript = await zoom.getTranscript({
- *   meetingId: '123456',
- *   fallbackToBrowser: true,
- *   shareUrl: recording.share_url
- * });
- * // Returns: { speakers: ['Alice', 'Bob'], has_speaker_attribution: true }
+ * if (transcript.data) {
+ *   console.log('Transcript:', transcript.data.transcript_text);
+ *   console.log('Has speakers:', transcript.data.has_speaker_attribution);
+ * }
  * ```
  */
 
@@ -84,8 +62,6 @@ export interface ZoomConfig {
 	apiUrl?: string;
 	/** Request timeout in milliseconds (default: 30000) */
 	timeout?: number;
-	/** Browser scraper URL for transcript fallback */
-	browserScraperUrl?: string;
 }
 
 /**
@@ -240,10 +216,6 @@ export interface GetRecordingsOptions {
 export interface GetTranscriptOptions {
 	/** Meeting ID */
 	meetingId: string | number;
-	/** Fall back to browser scraper if OAuth transcript lacks speaker attribution */
-	fallbackToBrowser?: boolean;
-	/** Share URL for browser scraper (required if fallbackToBrowser is true) */
-	shareUrl?: string;
 }
 
 /**
@@ -286,8 +258,6 @@ const handleError = createErrorHandler('zoom');
  * Extends BaseAPIClient for shared HTTP logic.
  */
 export class Zoom extends BaseAPIClient {
-	private browserScraperUrl?: string;
-
 	constructor(config: ZoomConfig) {
 		validateAccessToken(config.accessToken, 'zoom');
 		super({
@@ -295,7 +265,6 @@ export class Zoom extends BaseAPIClient {
 			apiUrl: config.apiUrl || 'https://api.zoom.us/v2',
 			timeout: config.timeout,
 		});
-		this.browserScraperUrl = config.browserScraperUrl;
 	}
 
 	// ==========================================================================
@@ -461,15 +430,13 @@ export class Zoom extends BaseAPIClient {
 	/**
 	 * Get transcript for a meeting
 	 *
-	 * Uses a hybrid approach:
-	 * 1. First tries the OAuth API /meetings/{id}/transcript endpoint
-	 * 2. Falls back to recordings API for download URL
-	 * 3. Optionally falls back to browser scraper for speaker attribution
+	 * Uses Zoom's OAuth API /meetings/{id}/transcript endpoint.
+	 * Returns null if transcript not available (Zoom may not have processed it yet).
 	 *
-	 * @returns ActionResult with transcript data
+	 * @returns ActionResult with transcript data (null if not available)
 	 */
 	async getTranscript(options: GetTranscriptOptions): Promise<ActionResult<TranscriptResult | null>> {
-		const { meetingId, fallbackToBrowser = false, shareUrl } = options;
+		const { meetingId } = options;
 
 		if (!meetingId) {
 			return ActionResult.error('Meeting ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
@@ -479,7 +446,7 @@ export class Zoom extends BaseAPIClient {
 		}
 
 		try {
-			// TIER 1: Try the transcript API endpoint first
+			// Get transcript from OAuth API
 			const transcriptMeta = await this.getTranscriptMetadata(meetingId);
 
 			if (transcriptMeta && transcriptMeta.download_url) {
@@ -494,69 +461,16 @@ export class Zoom extends BaseAPIClient {
 					speakers: speakers.length > 0 ? speakers : undefined,
 				};
 
-				// If we got speakers or don't need fallback, return
-				if (speakers.length > 0 || !fallbackToBrowser) {
-					return createActionResult({
-						data: result,
-						integration: 'zoom',
-						action: 'get-transcript',
-						schema: 'zoom.transcript.v1',
-						capabilities: this.getCapabilities(),
-					});
-				}
+				return createActionResult({
+					data: result,
+					integration: 'zoom',
+					action: 'get-transcript',
+					schema: 'zoom.transcript.v1',
+					capabilities: this.getCapabilities(),
+				});
 			}
 
-			// TIER 2: Try recordings API for transcript file
-			const recordingsResult = await this.getRecordings({ meetingId });
-
-			if (recordingsResult.success && recordingsResult.data) {
-				const recording = recordingsResult.data;
-				const transcriptFile = recording.recording_files.find(
-					(f) => f.file_type === 'TRANSCRIPT'
-				);
-
-				if (transcriptFile) {
-					const webvtt = await this.downloadFile(transcriptFile.download_url);
-					const { text, speakers } = this.parseWebVTT(webvtt);
-
-					const result: TranscriptResult = {
-						transcript_text: text,
-						webvtt_raw: webvtt,
-						source: 'oauth_api',
-						has_speaker_attribution: speakers.length > 0,
-						speakers: speakers.length > 0 ? speakers : undefined,
-						recording,
-					};
-
-					// If we got speakers or don't need fallback, return
-					if (speakers.length > 0 || !fallbackToBrowser) {
-						return createActionResult({
-							data: result,
-							integration: 'zoom',
-							action: 'get-transcript',
-							schema: 'zoom.transcript.v1',
-							capabilities: this.getCapabilities(),
-						});
-					}
-				}
-			}
-
-			// TIER 3: Browser scraper fallback for speaker attribution
-			if (fallbackToBrowser && shareUrl && this.browserScraperUrl) {
-				const scraperResult = await this.fetchFromBrowserScraper(shareUrl);
-
-				if (scraperResult) {
-					return createActionResult({
-						data: scraperResult,
-						integration: 'zoom',
-						action: 'get-transcript',
-						schema: 'zoom.transcript.v1',
-						capabilities: this.getCapabilities(),
-					});
-				}
-			}
-
-			// No transcript found
+			// No transcript available
 			return createActionResult({
 				data: null,
 				integration: 'zoom',
@@ -665,55 +579,6 @@ export class Zoom extends BaseAPIClient {
 		};
 	}
 
-	/**
-	 * Fetch transcript from browser scraper (for speaker attribution)
-	 */
-	private async fetchFromBrowserScraper(shareUrl: string): Promise<TranscriptResult | null> {
-		if (!this.browserScraperUrl) {
-			return null;
-		}
-
-		try {
-			const response = await fetch(this.browserScraperUrl, {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-				},
-				body: JSON.stringify({ zoomUrl: shareUrl }),
-			});
-
-			if (!response.ok) {
-				return null;
-			}
-
-			const result = (await response.json()) as {
-				transcript?: string;
-				segments_count?: number;
-				error?: string;
-			};
-
-			if (result.error || !result.transcript) {
-				return null;
-			}
-
-			// Extract speakers from transcript
-			const speakers = new Set<string>();
-			const speakerRegex = /^([^:]+):/gm;
-			let match: RegExpExecArray | null;
-			while ((match = speakerRegex.exec(result.transcript)) !== null) {
-				speakers.add(match[1].trim());
-			}
-
-			return {
-				transcript_text: result.transcript,
-				source: 'browser_scraper',
-				has_speaker_attribution: speakers.size > 0,
-				speakers: Array.from(speakers),
-			};
-		} catch {
-			return null;
-		}
-	}
 
 	// ==========================================================================
 	// CLIPS
@@ -817,11 +682,12 @@ export class Zoom extends BaseAPIClient {
 	}
 
 	/**
-	 * Get transcript for a clip using browser scraper
+	 * Get transcript for a clip
 	 *
-	 * Note: Clips don't have OAuth transcript API, so this always uses the scraper
+	 * Note: Zoom's OAuth API does not provide transcript access for clips.
+	 * This method always returns an error. Use getClips() to get clip metadata only.
 	 *
-	 * @returns ActionResult with transcript data
+	 * @returns ActionResult with error (transcript not available via OAuth API)
 	 */
 	async getClipTranscript(options: GetClipTranscriptOptions): Promise<ActionResult<TranscriptResult | null>> {
 		const { shareUrl } = options;
@@ -833,27 +699,15 @@ export class Zoom extends BaseAPIClient {
 			});
 		}
 
-		if (!this.browserScraperUrl) {
-			return ActionResult.error(
-				'Browser scraper URL not configured',
-				ErrorCode.MISSING_REQUIRED_FIELD,
-				{ integration: 'zoom', action: 'get-clip-transcript' }
-			);
-		}
-
-		try {
-			const result = await this.fetchFromBrowserScraper(shareUrl);
-
-			return createActionResult({
-				data: result,
+		return ActionResult.error(
+			'Clip transcripts are not available via Zoom OAuth API. Use getClips() for clip metadata only.',
+			ErrorCode.API_ERROR,
+			{
 				integration: 'zoom',
 				action: 'get-clip-transcript',
-				schema: 'zoom.transcript.v1',
-				capabilities: this.getCapabilities(),
-			});
-		} catch (error) {
-			return handleError(error, 'get-clip-transcript');
-		}
+				retryable: false,
+			}
+		);
 	}
 
 	// ==========================================================================

@@ -1,6 +1,6 @@
 {
 	"name": "@workwayco/integrations",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"description": "Official WORKWAY integrations - concrete implementations of the SDK patterns",
 	"type": "module",
 	"main": "./dist/index.js",
@@ -110,7 +110,7 @@
 		"clean": "rm -rf dist"
 	},
 	"dependencies": {
-		"@workwayco/sdk": "workspace:*"
+		"@workwayco/sdk": "^1.1.0"
 	},
 	"devDependencies": {
 		"@types/node": "^20.10.0",
@@ -121,7 +121,25 @@
 		"workway",
 		"integrations",
 		"api",
-		"sdk"
+		"sdk",
+		"slack",
+		"notion",
+		"stripe",
+		"github",
+		"hubspot",
+		"airtable",
+		"zoom",
+		"linear"
 	],
-	"license": "Apache-2.0"
+	"license": "Apache-2.0",
+	"publishConfig": {
+		"access": "public",
+		"registry": "https://registry.npmjs.org/"
+	},
+	"prepublishOnly": "npm run build",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/workwayco/workway.git",
+		"directory": "packages/integrations"
+	}
 }

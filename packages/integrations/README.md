@@ -1,23 +1,44 @@
 # @workwayco/integrations
 
-Official WORKWAY integrations - concrete implementations of the SDK patterns.
+[![npm version](https://img.shields.io/npm/v/@workwayco/integrations.svg)](https://www.npmjs.com/package/@workwayco/integrations)
+[![License](https://img.shields.io/npm/l/@workwayco/integrations.svg)](https://github.com/workwayco/workway/blob/main/LICENSE)
+
+Official WORKWAY integrations - concrete implementations built on `BaseAPIClient`.
+
+> **Zuhandenheit**: The tool recedes; the outcome remains.
 
 ## Installation
 
 ```bash
-pnpm add @workwayco/integrations
+npm install @workwayco/integrations
 ```
 
-## Available Integrations
+## Available Integrations (21+)
 
-| Integration | Status | OAuth Required |
-|-------------|--------|----------------|
-| Gmail | Stable | Yes |
-| Slack | Stable | Yes |
-| Notion | Stable | Yes |
-| Stripe | Stable | Yes |
-| Google Sheets | Stable | Yes |
-| Workers AI | Beta | No |
+| Category | Integrations |
+|----------|--------------|
+| **Productivity** | Notion, Airtable, Google Sheets, Todoist, Linear |
+| **Communication** | Slack, Discord |
+| **CRM & Sales** | HubSpot, Follow Up Boss |
+| **Payments** | Stripe, QuickBooks |
+| **Scheduling** | Zoom, Calendly |
+| **Developer** | GitHub |
+| **Forms** | Typeform |
+| **Design** | Dribbble |
+| **Documents** | DocuSign |
+| **Video** | YouTube |
+| **Healthcare** | NexHealth, Weave, Sikka |
+| **Construction** | Procore |
+
+### Import Paths
+
+```typescript
+import { Slack } from '@workwayco/integrations/slack';
+import { Notion } from '@workwayco/integrations/notion';
+import { Stripe } from '@workwayco/integrations/stripe';
+import { GitHub } from '@workwayco/integrations/github';
+// ... etc
+```
 
 ## Usage
 
@@ -148,6 +169,45 @@ pnpm test
 ```bash
 pnpm build
 ```
+
+## Building Custom Integrations
+
+All integrations extend `BaseAPIClient` from `@workwayco/sdk`:
+
+```typescript
+import { BaseAPIClient } from '@workwayco/integrations';
+
+export class MyService extends BaseAPIClient {
+  constructor(config: { accessToken: string }) {
+    super({
+      accessToken: config.accessToken,
+      apiUrl: 'https://api.myservice.com/v1',
+      errorContext: { integration: 'myservice' },
+    });
+  }
+
+  async getItems(): Promise<ActionResult<Item[]>> {
+    return this.getJson('/items');
+  }
+
+  async createItem(data: CreateItemInput): Promise<ActionResult<Item>> {
+    return this.postJson('/items', data);
+  }
+}
+```
+
+This gives you:
+- Automatic token refresh
+- Consistent error handling
+- Rate limiting
+- Timeout management
+- Type-safe responses
+
+## Links
+
+- **SDK**: [@workwayco/sdk](https://www.npmjs.com/package/@workwayco/sdk)
+- **Platform**: [workway.co](https://workway.co)
+- **GitHub**: [github.com/workwayco/workway](https://github.com/workwayco/workway)
 
 ## License
 

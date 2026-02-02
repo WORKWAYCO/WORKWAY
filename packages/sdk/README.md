@@ -1,11 +1,14 @@
-# @workway/sdk
+# @workwayco/sdk
+
+[![npm version](https://img.shields.io/npm/v/@workwayco/sdk.svg)](https://www.npmjs.com/package/@workwayco/sdk)
+[![License](https://img.shields.io/npm/l/@workwayco/sdk.svg)](https://github.com/workwayco/workway/blob/main/LICENSE)
 
 The official SDK for building WORKWAY workflows.
 
 ## Installation
 
 ```bash
-npm install @workway/sdk
+npm install @workwayco/sdk
 ```
 
 ## Quick Start
@@ -13,7 +16,7 @@ npm install @workway/sdk
 ### Integration Workflow (No AI - Most Common)
 
 ```typescript
-import { defineWorkflow, webhook } from '@workway/sdk'
+import { defineWorkflow, webhook } from '@workwayco/sdk'
 
 // Simple, profitable, high-margin integration
 export default defineWorkflow({
@@ -57,8 +60,8 @@ export default defineWorkflow({
 ### AI-Enhanced Workflow (Cloudflare Workers AI)
 
 ```typescript
-import { defineWorkflow, webhook } from '@workway/sdk'
-import { createAIClient, AIModels } from '@workway/sdk/workers-ai'
+import { defineWorkflow, webhook } from '@workwayco/sdk'
+import { createAIClient, AIModels } from '@workwayco/sdk/workers-ai'
 
 // Integration + Cloudflare Workers AI for categorization
 export default defineWorkflow({
@@ -117,8 +120,8 @@ export default defineWorkflow({
 ### AI-Native Workflow (Multi-Step AI)
 
 ```typescript
-import { defineWorkflow, schedule, http } from '@workway/sdk'
-import { createAIClient, AIModels } from '@workway/sdk/workers-ai'
+import { defineWorkflow, schedule, http } from '@workwayco/sdk'
+import { createAIClient, AIModels } from '@workwayco/sdk/workers-ai'
 
 // Multiple AI steps using Cloudflare Workers AI
 export default defineWorkflow({
@@ -359,7 +362,7 @@ pricing: {
 For workflows running on Cloudflare Workers, use the native Workers AI integration — no API keys required.
 
 ```typescript
-import { createAIClient, AIModels } from '@workway/sdk/workers-ai'
+import { createAIClient, AIModels } from '@workwayco/sdk/workers-ai'
 
 export default defineWorkflow({
   name: 'AI Email Processor',
@@ -481,7 +484,7 @@ const results = await ai.chain([
 Build semantic search, knowledge bases, and RAG systems with Cloudflare Vectorize.
 
 ```typescript
-import { createVectorClient } from '@workway/sdk/vectorize'
+import { createVectorClient } from '@workwayco/sdk/vectorize'
 
 export default defineWorkflow({
   name: 'Knowledge Base Search',
@@ -602,7 +605,7 @@ binding = "AI"  # Required for auto-embeddings
 ### HTTP Module
 
 ```typescript
-import { http } from '@workway/sdk'
+import { http } from '@workwayco/sdk'
 
 // GET request
 const { data } = await http.get('https://api.example.com/users', {
@@ -625,7 +628,7 @@ await http.delete(url, options)
 ### Cache Module
 
 ```typescript
-import { createCache } from '@workway/sdk'
+import { createCache } from '@workwayco/sdk'
 
 // Create cache from KV binding
 const cache = createCache(env.CACHE)
@@ -649,7 +652,7 @@ await cache.invalidateByTags(['user:123']) // Clears all tagged entries
 ### Storage Module
 
 ```typescript
-import { createKVStorage, createObjectStorage } from '@workway/sdk'
+import { createKVStorage, createObjectStorage } from '@workwayco/sdk'
 
 // Key-Value storage (Cloudflare KV)
 const kv = createKVStorage(env.MY_KV)
@@ -669,7 +672,7 @@ const metadata = await storage.getMetadata('docs/report.pdf')
 ### Transform Module
 
 ```typescript
-import { transform } from '@workway/sdk'
+import { transform } from '@workwayco/sdk'
 
 // Array operations
 const grouped = transform.groupBy(users, u => u.department)
@@ -855,7 +858,7 @@ export default defineWorkflow({
 
 ```typescript
 // test/workflow.test.ts
-import { test, expect } from '@workway/testing'
+import { test, expect } from '@workwayco/testing'
 import workflow from '../workflow'
 
 test('processes payment correctly', async () => {
@@ -914,7 +917,7 @@ WORKWAY uses Cloudflare Workers AI exclusively for maximum cost efficiency:
 
 ### 1. **Use the Right Model**
 ```typescript
-import { createAIClient, AIModels } from '@workway/sdk/workers-ai'
+import { createAIClient, AIModels } from '@workwayco/sdk/workers-ai'
 
 const ai = createAIClient(env)
 

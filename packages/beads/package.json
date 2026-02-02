@@ -56,5 +56,10 @@
     "claude-code",
     "issue-tracking",
     "zuhandenheit"
-  ]
+  ],
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "prepublishOnly": "npm run build"
 }
