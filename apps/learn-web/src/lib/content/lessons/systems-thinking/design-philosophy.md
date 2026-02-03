@@ -1,18 +1,14 @@
-# Design Philosophy
+# Apply design philosophy
 
-## Learning Objectives
+Build workflows that recede from attention.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Apply Zuhandenheit (ready-to-hand) as a design principle for invisible workflows
-- Evaluate workflows against Dieter Rams' "Less, but better" principles
-- Design configSchemas that minimize user decisions while maximizing flexibility
-- Recognize and eliminate over-engineering patterns in workflow code
-- Create self-documenting workflows that don't require external documentation
-
----
-
-Building workflows that work is the foundation. Building workflows that _recede_ is the craft. This lesson elevates your thinking from functional automation to intentional design.
+- Apply Zuhandenheit: tools that disappear during use
+- Evaluate against "Less, but better" principles
+- Minimize configSchema decisions
+- Eliminate over-engineering patterns
+- Create self-documenting code
 
 ## Step-by-Step: Apply Design Philosophy to Your Workflow
 

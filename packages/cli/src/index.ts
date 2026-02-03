@@ -99,13 +99,13 @@ const workflowCommand = program.command('workflow').description('Workflow develo
 workflowCommand
 	.command('init [name]')
 	.description('Create a new workflow project')
-	.option('--ai', 'Create AI-powered workflow using Cloudflare Workers AI')
-	.option('--with-claude', 'Generate .claude/ directory for Claude Code integration')
+	.option('--ai', 'Use Workers AI template')
+	.option('--with-claude', 'Include .claude/ directory')
 	.action(handleCommand(workflowInitCommand));
 
 workflowCommand
 	.command('test')
-	.description('Test drive your workflow')
+	.description('Run workflow tests')
 	.option('--mock', 'Use mocked integrations')
 	.option('--live', 'Use live OAuth connections')
 	.option('--data <file>', 'Path to test data file')
@@ -122,7 +122,7 @@ workflowCommand
 
 workflowCommand
 	.command('dev')
-	.description('Start the test track (dev server with hot reload)')
+	.description('Start dev server with hot reload')
 	.option('--port <port>', 'Port number')
 	.option('--mock', 'Use mock mode')
 	.option('--no-mock', 'Use live OAuth connections')
@@ -130,7 +130,7 @@ workflowCommand
 
 workflowCommand
 	.command('build')
-	.description('Assemble workflow for production')
+	.description('Build workflow for deployment')
 	.option('--out-dir <dir>', 'Output directory')
 	.option('--minify', 'Minify output')
 	.option('--no-minify', 'Disable minification')
@@ -140,20 +140,20 @@ workflowCommand
 workflowCommand
 	.command('publish')
 	.description('Publish workflow to marketplace')
-	.option('--draft', 'Publish as draft (not public)')
-	.option('--notes <text>', 'Version notes for this release')
+	.option('--draft', 'Publish as draft')
+	.option('--notes <text>', 'Version notes')
 	.action(handleCommand(workflowPublishCommand));
 
 workflowCommand
 	.command('validate [file]')
-	.description('Validate workflow schema without building')
+	.description('Validate workflow schema')
 	.option('--strict', 'Treat warnings as errors')
-	.option('--json', 'Output as JSON (for CI/CD)')
-	.option('--benchmark', 'Show timing information for validator performance')
-	.option('--iterations <n>', 'Number of iterations for benchmarking', (v) => parseInt(v, 10))
-	.option('--wasm', 'Force WASM validator (default: auto-detect)')
+	.option('--json', 'Output as JSON')
+	.option('--benchmark', 'Show timing info')
+	.option('--iterations <n>', 'Benchmark iterations', (v) => parseInt(v, 10))
+	.option('--wasm', 'Force WASM validator')
 	.option('--no-wasm', 'Force TypeScript validator')
-	.option('--compare-validators', 'Compare WASM vs TypeScript performance')
+	.option('--compare-validators', 'Compare validator performance')
 	.action(async (file: string, options: any) => {
 		try {
 			await workflowValidateCommand(file, options);
@@ -165,14 +165,14 @@ workflowCommand
 
 workflowCommand
 	.command('fork [workflow]')
-	.description('Fork a workflow from the marketplace')
+	.description('Fork a marketplace workflow')
 	.action(handleCommand(workflowForkCommand));
 
 workflowCommand
 	.command('install [workflow]')
-	.description('Install a workflow from the marketplace')
-	.option('--dir <name>', 'Custom directory name for the project')
-	.option('--force', 'Skip confirmation prompt')
+	.description('Install a marketplace workflow')
+	.option('--dir <name>', 'Custom directory name')
+	.option('--force', 'Skip confirmation')
 	.action(handleCommand(async (workflow: string | undefined, options: any) => {
 		await workflowInstallCommand(workflow, {
 			dir: options.dir,
@@ -182,15 +182,15 @@ workflowCommand
 
 workflowCommand
 	.command('lineage [workflow]')
-	.description('View fork lineage and ancestry')
+	.description('View fork history')
 	.action(handleCommand(workflowLineageCommand));
 
 workflowCommand
 	.command('delete [workflow-id]')
-	.description('Permanently delete an inactive workflow')
-	.option('--force', 'Skip confirmation prompt')
+	.description('Delete an inactive workflow')
+	.option('--force', 'Skip confirmation')
 	.option('--path <path>', 'Path to workflow file')
-	.option('--keep-data', 'Keep stored data (only remove workflow)')
+	.option('--keep-data', 'Keep stored data')
 	.action(handleCommand(async (workflowId: string, options: any) => {
 		await workflowDeleteCommand(workflowId, options);
 	}));
@@ -200,36 +200,36 @@ const versionCommand = workflowCommand.command('version').description('Manage wo
 
 versionCommand
 	.command('list')
-	.description('List all versions for the current workflow')
+	.description('List all versions')
 	.action(handleCommand(async () => {
 		await workflowVersionCommand('list', {});
 	}));
 
 versionCommand
 	.command('show')
-	.description('Show current workflow version')
+	.description('Show current version')
 	.action(handleCommand(async () => {
 		await workflowVersionCommand('show', {});
 	}));
 
 versionCommand
 	.command('bump [type]')
-	.description('Bump version number (patch, minor, major)')
+	.description('Bump version (patch, minor, major)')
 	.action(handleCommand(async (type: string | undefined) => {
 		await workflowVersionCommand('bump', { type: type as any });
 	}));
 
 versionCommand
 	.command('rollback [versionId]')
-	.description('Create draft from an old version')
+	.description('Create draft from old version')
 	.action(handleCommand(async (versionId: string | undefined) => {
 		await workflowVersionCommand('rollback', { versionId });
 	}));
 
 versionCommand
 	.command('pin [installationId]')
-	.description('Pin installation to a specific version')
-	.option('--version <versionId>', 'Version ID to pin to')
+	.description('Pin installation to specific version')
+	.option('--version <versionId>', 'Version ID')
 	.option('--reason <text>', 'Reason for pinning')
 	.action(handleCommand(async (installationId: string | undefined, options: any) => {
 		await workflowVersionCommand('pin', {
@@ -241,8 +241,8 @@ versionCommand
 
 versionCommand
 	.command('deprecate [versionId]')
-	.description('Deprecate a published version')
-	.option('--reason <text>', 'Reason for deprecation')
+	.description('Deprecate a version')
+	.option('--reason <text>', 'Reason')
 	.action(handleCommand(async (versionId: string | undefined, options: any) => {
 		await workflowVersionCommand('deprecate', {
 			versionId,
@@ -252,9 +252,9 @@ versionCommand
 
 versionCommand
 	.command('approve [versionId]')
-	.description('Approve a pending version')
-	.option('--notes <text>', 'Approval notes')
-	.option('--publish', 'Also publish the version immediately')
+	.description('Approve pending version')
+	.option('--notes <text>', 'Notes')
+	.option('--publish', 'Publish immediately')
 	.action(handleCommand(async (versionId: string | undefined, options: any) => {
 		await workflowVersionCommand('approve', {
 			versionId,
@@ -265,8 +265,8 @@ versionCommand
 
 versionCommand
 	.command('reject [versionId]')
-	.description('Reject a pending version')
-	.option('--reason <text>', 'Rejection reason')
+	.description('Reject pending version')
+	.option('--reason <text>', 'Reason')
 	.action(handleCommand(async (versionId: string | undefined, options: any) => {
 		await workflowVersionCommand('reject', {
 			versionId,
@@ -275,22 +275,22 @@ versionCommand
 	}));
 
 // Access Grants subcommand (Private Workflows)
-const accessGrantsCommand = workflowCommand.command('access-grants').description('Manage private workflow access');
+const accessGrantsCommand = workflowCommand.command('access-grants').description('Manage access grants');
 
 accessGrantsCommand
 	.command('list [workflow-id]')
-	.description('List access grants for a workflow')
+	.description('List access grants')
 	.action(handleCommand(async (workflowId: string | undefined, options: any) => {
 		await workflowAccessGrantListCommand(workflowId, options);
 	}));
 
 accessGrantsCommand
 	.command('create [workflow-id]')
-	.description('Create an access grant for a private workflow')
-	.option('--grant-type <type>', 'Grant type: user, email_domain, access_code')
-	.option('--grant-value <value>', 'Email, domain, or access code')
-	.option('--max-installs <n>', 'Maximum installations allowed', parseInt)
-	.option('--expires <date>', 'Expiration date (ISO format)')
+	.description('Create access grant')
+	.option('--grant-type <type>', 'Type: user, email_domain, access_code')
+	.option('--grant-value <value>', 'Email, domain, or code')
+	.option('--max-installs <n>', 'Max installations', parseInt)
+	.option('--expires <date>', 'Expiration date (ISO)')
 	.option('--notes <text>', 'Internal notes')
 	.action(handleCommand(async (workflowId: string | undefined, options: any) => {
 		await workflowAccessGrantCreateCommand(workflowId, {
@@ -304,8 +304,8 @@ accessGrantsCommand
 
 accessGrantsCommand
 	.command('revoke [grant-id]')
-	.description('Revoke an access grant')
-	.option('--workflow-id <id>', 'Workflow ID (for lookup)')
+	.description('Revoke access grant')
+	.option('--workflow-id <id>', 'Workflow ID')
 	.action(handleCommand(async (grantId: string | undefined, options: any) => {
 		await workflowAccessGrantRevokeCommand(grantId, { workflowId: options.workflowId });
 	}));
@@ -314,16 +314,16 @@ accessGrantsCommand
 // MARKETPLACE COMMANDS
 // ============================================================================
 
-const marketplaceCommand = program.command('marketplace').description('Discover and explore workflows');
+const marketplaceCommand = program.command('marketplace').description('Browse and search workflows');
 
 // Primary discovery command (Pathway Model)
 marketplaceCommand
 	.command('needs')
-	.description('Discover workflows based on your needs (recommended)')
-	.option('--from <integration>', 'Source integration (e.g., zoom, stripe)')
-	.option('--to <integration>', 'Target integration (e.g., notion, slack)')
-	.option('--after <outcome>', 'Outcome frame (e.g., meetings, calls)')
-	.option('--show-outcomes', 'Show available outcome frames')
+	.description('Find workflows by outcome')
+	.option('--from <integration>', 'Source integration')
+	.option('--to <integration>', 'Target integration')
+	.option('--after <outcome>', 'Outcome frame')
+	.option('--show-outcomes', 'List outcome frames')
 	.action(handleCommand(async (options: any) => {
 		await marketplaceNeedsCommand({
 			from: options.from,
@@ -333,13 +333,12 @@ marketplaceCommand
 		});
 	}));
 
-// Legacy commands (consider using 'needs' instead)
 marketplaceCommand
 	.command('search [query]')
-	.description('Search workflows in the marketplace (legacy)')
+	.description('Search workflows')
 	.option('--category <category>', 'Filter by category')
 	.option('--developer <developer>', 'Filter by developer')
-	.option('--sort <sort>', 'Sort by: relevance, popular, recent, rating')
+	.option('--sort <sort>', 'Sort: relevance, popular, recent, rating')
 	.option('--limit <n>', 'Limit results', parseInt)
 	.action(handleCommand(async (query: string, options: any) => {
 		await marketplaceSearchCommand(query, {
@@ -352,9 +351,9 @@ marketplaceCommand
 
 marketplaceCommand
 	.command('browse')
-	.description('Browse workflows by category (legacy - use "needs" instead)')
-	.option('--category <category>', 'Browse specific category')
-	.option('--featured', 'Show featured workflows')
+	.description('Browse by category')
+	.option('--category <category>', 'Category')
+	.option('--featured', 'Featured only')
 	.option('--limit <n>', 'Limit results', parseInt)
 	.action(handleCommand(async (options: any) => {
 		await marketplaceBrowseCommand({
@@ -366,7 +365,7 @@ marketplaceCommand
 
 marketplaceCommand
 	.command('info [workflow]')
-	.description('View detailed workflow information')
+	.description('View workflow details')
 	.action(handleCommand(marketplaceInfoCommand));
 
 // ============================================================================
@@ -376,11 +375,11 @@ marketplaceCommand
 // Allow `workway needs` as shortcut for `workway marketplace needs`
 program
 	.command('needs')
-	.description('Discover workflows based on your needs')
-	.option('--from <integration>', 'Source integration (e.g., zoom, stripe)')
-	.option('--to <integration>', 'Target integration (e.g., notion, slack)')
-	.option('--after <outcome>', 'Outcome frame (e.g., meetings, calls)')
-	.option('--show-outcomes', 'Show available outcome frames')
+	.description('Find workflows by outcome')
+	.option('--from <integration>', 'Source integration')
+	.option('--to <integration>', 'Target integration')
+	.option('--after <outcome>', 'Outcome frame')
+	.option('--show-outcomes', 'List outcome frames')
 	.action(handleCommand(async (options: any) => {
 		await marketplaceNeedsCommand({
 			from: options.from,
@@ -394,14 +393,14 @@ program
 // ENTERPRISE REQUESTS COMMANDS
 // ============================================================================
 
-const requestsCommandGroup = program.command('requests').description('Enterprise workflow request management');
+const requestsCommandGroup = program.command('requests').description('Manage workflow requests');
 
 requestsCommandGroup
 	.command('list')
-	.description('List workflow requests')
-	.option('--status <status>', 'Filter by status (submitted, approved, in_progress, etc.)')
-	.option('--assigned-to-me', 'Show requests assigned to me')
-	.option('--available', 'Show available requests to claim')
+	.description('List requests')
+	.option('--status <status>', 'Filter by status')
+	.option('--assigned-to-me', 'Show my requests')
+	.option('--available', 'Show claimable requests')
 	.action(handleCommand(async (options: { status?: string; assignedToMe?: boolean; available?: boolean }) => {
 		await requestsCommand('list', undefined, {
 			status: options.status,
@@ -433,16 +432,16 @@ requestsCommandGroup
 
 requestsCommandGroup
 	.command('complete [id]')
-	.description('Complete a request and optionally link workflow')
-	.option('--workflow <id>', 'Link to workflow ID')
+	.description('Complete request')
+	.option('--workflow <id>', 'Link workflow')
 	.action(handleCommand(async (id?: string, options?: { workflow?: string }) => {
 		await requestsCommand('complete', id, { integrationId: options?.workflow });
 	}));
 
 requestsCommandGroup
 	.command('comment [id]')
-	.description('Add a comment to a request')
-	.option('--question', 'Mark as question (notifies watchers)')
+	.description('Add comment')
+	.option('--question', 'Mark as question')
 	.action(handleCommand(async (id?: string, options?: { question?: boolean }) => {
 		await requestsCommand('comment', id, { isQuestion: options?.question });
 	}));
@@ -451,29 +450,29 @@ requestsCommandGroup
 // AI COMMANDS - Cloudflare Workers AI
 // ============================================================================
 
-const aiCommand = program.command('ai').description('Cloudflare Workers AI tools');
+const aiCommand = program.command('ai').description('Workers AI tools');
 
 aiCommand
 	.command('models')
-	.description('List available AI models with costs')
-	.option('--type <type>', 'Filter by type (text, embeddings, image, audio, translation, classification)')
+	.description('List AI models')
+	.option('--type <type>', 'Filter by type')
 	.option('--json', 'Output as JSON')
 	.action(handleCommand(aiModelsCommand));
 
 aiCommand
 	.command('test [prompt]')
-	.description('Test AI model with a prompt')
-	.option('--model <model>', 'Model to use (e.g., LLAMA_3_8B)')
-	.option('--mock', 'Use mock response (no API call)')
+	.description('Test AI model')
+	.option('--model <model>', 'Model name')
+	.option('--mock', 'Use mock response')
 	.option('--json', 'Output as JSON')
 	.action(handleCommand(aiTestCommand));
 
 aiCommand
 	.command('estimate')
-	.description('Estimate AI workflow costs')
+	.description('Estimate AI costs')
 	.option('--executions <n>', 'Monthly executions', parseInt)
 	.option('--tokens <n>', 'Tokens per execution', parseInt)
-	.option('--model <model>', 'Model to estimate (e.g., LLAMA_3_8B)')
+	.option('--model <model>', 'Model name')
 	.action(
 		handleCommand(async (options: any) => {
 			await aiEstimateCommand({
@@ -488,21 +487,21 @@ aiCommand
 // OAUTH COMMANDS
 // ============================================================================
 
-const oauthCommand = program.command('oauth').description('OAuth connection management');
+const oauthCommand = program.command('oauth').description('Manage OAuth connections');
 
 oauthCommand
 	.command('connect [provider]')
-	.description('Connect an OAuth account for testing')
+	.description('Connect OAuth account')
 	.action(handleCommand(oauthConnectCommand));
 
 oauthCommand
 	.command('list')
-	.description('List connected OAuth accounts')
+	.description('List connections')
 	.action(handleCommand(oauthListCommand));
 
 oauthCommand
 	.command('disconnect [provider]')
-	.description('Disconnect an OAuth account')
+	.description('Remove connection')
 	.action(handleCommand(oauthDisconnectCommand));
 
 // ============================================================================
@@ -511,33 +510,33 @@ oauthCommand
 
 program
 	.command('status')
-	.description('Show your dashboard')
+	.description('Show account status')
 	.action(handleCommand(statusCommand));
 
 program
 	.command('logs')
-	.description('View trip log (production runs)')
-	.option('--workflow <id>', 'Filter by workflow ID')
-	.option('--limit <n>', 'Number of logs to show', '20')
-	.option('--follow', 'Follow logs in real-time')
-	.option('--status <status>', 'Filter by status (completed/failed/running)')
+	.description('View execution logs')
+	.option('--workflow <id>', 'Filter by workflow')
+	.option('--limit <n>', 'Number of logs', '20')
+	.option('--follow', 'Stream logs')
+	.option('--status <status>', 'Filter: completed/failed/running')
 	.action(handleCommand(logsCommand));
 
 // ============================================================================
 // DEVELOPER COMMANDS
 // ============================================================================
 
-const developerCommand = program.command('developer').description('Developer profile and marketplace access');
+const developerCommand = program.command('developer').description('Developer account management');
 
 // Waitlist flow commands
 developerCommand
 	.command('init')
-	.description('Create your developer profile')
+	.description('Create developer profile')
 	.action(handleCommand(developerInitCommand));
 
 developerCommand
 	.command('submit')
-	.description('Submit profile for marketplace review')
+	.description('Submit for review')
 	.action(handleCommand(developerSubmitCommand));
 
 developerCommand
@@ -548,25 +547,25 @@ developerCommand
 // Legacy/approved developer commands
 developerCommand
 	.command('register')
-	.description('Register as a workflow developer (legacy)')
+	.description('Register as developer')
 	.action(handleCommand(developerRegisterCommand));
 
 developerCommand
 	.command('profile')
-	.description('View/edit developer profile (requires approval)')
-	.option('--edit', 'Edit profile interactively')
+	.description('View or edit profile')
+	.option('--edit', 'Edit interactively')
 	.action(handleCommand(developerProfileCommand));
 
 developerCommand
 	.command('earnings')
-	.description('View earnings and payouts')
-	.option('--setup', 'Set up Stripe Connect for payouts')
-	.option('--period <period>', 'Time period (week/month/year)')
+	.description('View earnings')
+	.option('--setup', 'Set up Stripe Connect')
+	.option('--period <period>', 'Period: week/month/year')
 	.action(handleCommand(developerEarningsCommand));
 
 developerCommand
 	.command('stripe [action]')
-	.description('Manage Stripe Connect for receiving payments (setup/status/refresh)')
+	.description('Manage Stripe Connect')
 	.action(async (action: string = 'status') => {
 		try {
 			const validActions = ['setup', 'status', 'refresh'];
@@ -584,17 +583,17 @@ developerCommand
 	});
 
 // OAuth Apps subcommand (BYOO - Bring Your Own OAuth)
-const developerOAuthCommand = developerCommand.command('oauth').description('Manage your OAuth apps (BYOO)');
+const developerOAuthCommand = developerCommand.command('oauth').description('Manage OAuth apps');
 
 developerOAuthCommand
 	.command('list')
-	.description('List your OAuth apps')
+	.description('List OAuth apps')
 	.action(handleCommand(developerOAuthListCommand));
 
 developerOAuthCommand
 	.command('add [provider]')
-	.description('Add OAuth app credentials')
-	.option('--force', 'Overwrite existing app')
+	.description('Add OAuth credentials')
+	.option('--force', 'Overwrite existing')
 	.action(handleCommand(async (provider: string | undefined, options: any) => {
 		await developerOAuthAddCommand({ provider, force: options.force });
 	}));
@@ -609,14 +608,14 @@ developerOAuthCommand
 
 developerOAuthCommand
 	.command('test [provider]')
-	.description('Test OAuth app credentials')
+	.description('Test credentials')
 	.action(handleCommand(async (provider: string | undefined) => {
 		await developerOAuthTestCommand({ provider });
 	}));
 
 developerOAuthCommand
 	.command('promote [provider]')
-	.description('Promote OAuth app to production')
+	.description('Promote to production')
 	.action(handleCommand(async (provider: string | undefined) => {
 		await developerOAuthPromoteCommand({ provider });
 	}));
@@ -625,15 +624,15 @@ developerOAuthCommand
 // DATABASE COMMANDS
 // ============================================================================
 
-const dbCommand = program.command('db').description('Database management and debugging tools');
+const dbCommand = program.command('db').description('Database tools');
 
 dbCommand
 	.command('check')
-	.description('Check D1 schema against Drizzle definitions')
-	.option('--table <table>', 'Check specific table only')
-	.option('--generate-migration', 'Generate SQL to fix drift')
-	.option('--local', 'Check local database instead of remote')
-	.option('--config <path>', 'Path to wrangler config file')
+	.description('Check schema drift')
+	.option('--table <table>', 'Check specific table')
+	.option('--generate-migration', 'Generate fix SQL')
+	.option('--local', 'Check local database')
+	.option('--config <path>', 'Wrangler config path')
 	.action(handleCommand(async (options: any) => {
 		await dbCheckCommand({
 			table: options.table,
@@ -645,10 +644,10 @@ dbCommand
 
 dbCommand
 	.command('sync-workflows')
-	.description('Sync workflows from @workwayco/workflows to D1 database')
-	.option('--dry-run', 'Show what would be synced without making changes')
-	.option('--local', 'Sync to local database instead of remote')
-	.option('--config <path>', 'Path to wrangler config file')
+	.description('Sync workflows to D1')
+	.option('--dry-run', 'Preview changes')
+	.option('--local', 'Use local database')
+	.option('--config <path>', 'Wrangler config path')
 	.action(handleCommand(async (options: any) => {
 		await dbSyncWorkflowsCommand({
 			dryRun: options.dryRun,
@@ -661,16 +660,16 @@ dbCommand
 // BEADS COMMANDS - Issue Tracking Integration
 // ============================================================================
 
-const beadsCommand = program.command('beads').description('Beads issue tracking integration');
+const beadsCommand = program.command('beads').description('Issue tracking');
 
-const beadsNotionCommand = beadsCommand.command('notion').description('Notion sync management');
+const beadsNotionCommand = beadsCommand.command('notion').description('Notion sync');
 
 beadsNotionCommand
 	.command('init')
-	.description('Initialize Notion database for Beads issues')
-	.option('--parent-page-id <id>', 'Notion page ID to create database in')
-	.option('--title <title>', 'Database title (default: WORKWAY Issues)')
-	.option('--token <token>', 'Notion internal integration token')
+	.description('Set up Notion database')
+	.option('--parent-page-id <id>', 'Parent page ID')
+	.option('--title <title>', 'Database title')
+	.option('--token <token>', 'Notion token')
 	.action(handleCommand(async (options: any) => {
 		await beadsNotionInitCommand({
 			parentPageId: options.parentPageId,
@@ -681,9 +680,9 @@ beadsNotionCommand
 
 beadsNotionCommand
 	.command('sync')
-	.description('Sync Beads issues to Notion')
-	.option('--dry-run', 'Preview changes without syncing')
-	.option('--force', 'Force update all issues (ignore timestamps)')
+	.description('Sync issues to Notion')
+	.option('--dry-run', 'Preview changes')
+	.option('--force', 'Force update all')
 	.action(handleCommand(async (options: any) => {
 		await beadsNotionSyncCommand({
 			dryRun: options.dryRun,
@@ -697,17 +696,17 @@ beadsNotionCommand
 
 program
 	.command('create [prompt]')
-	.description('Create a workflow from natural language description')
+	.description('Create workflow from description')
 	.action(handleCommand(createCommand));
 
 program
 	.command('explain [file]')
-	.description('Explain what a workflow does in plain English')
+	.description('Explain workflow in plain English')
 	.action(handleCommand(explainCommand));
 
 program
 	.command('modify [file] [request]')
-	.description('Modify a workflow using natural language')
+	.description('Modify workflow with natural language')
 	.action(async (file: string, request: string) => {
 		try {
 			await modifyCommand(file, request);
@@ -719,8 +718,8 @@ program
 
 program
 	.command('diagnose [file]')
-	.description('AI-powered workflow diagnosis - analyze code for issues and best practices')
-	.option('--verbose', 'Show all issues including info level')
+	.description('Analyze workflow for issues')
+	.option('--verbose', 'Show all issues')
 	.option('--json', 'Output as JSON')
 	.action(handleCommand(async (file: string, options: { verbose?: boolean; json?: boolean }) => {
 		await diagnoseCommand(file, options);
@@ -732,19 +731,16 @@ program
 
 program
 	.command('learn')
-	.description('Open WORKWAY learning resources (alias for learn.workway.co)')
+	.description('Open learning resources')
 	.action(() => {
 		Logger.header('WORKWAY Learn');
 		Logger.blank();
-		Logger.log('Learning resources are available at:');
+		Logger.log('Documentation: https://learn.workway.co');
 		Logger.blank();
-		Logger.log('  🌐 https://learn.workway.co');
-		Logger.blank();
-		Logger.log('Or install the learn CLI:');
+		Logger.log('Install CLI:');
 		Logger.log('  npm install -g @workway/learn');
-		Logger.log('  workway-learn init');
 		Logger.blank();
-		Logger.log('MCP server for Claude Code:');
+		Logger.log('MCP server:');
 		Logger.log('  npx @workway/learn --server');
 	});
 
@@ -758,15 +754,15 @@ registerSLICommand(program);
 // RLM COMMANDS - Recursive Language Model Assessment
 // ============================================================================
 
-const rlmCommand = program.command('rlm').description('RLM (Recursive Language Model) quality assessment');
+const rlmCommand = program.command('rlm').description('RLM quality assessment');
 
 rlmCommand
 	.command('assess')
-	.description('Assess Gas Town worker outputs using RLM')
-	.option('--workers <ids>', 'Comma-separated worker IDs (e.g., a548b2a,aaca4cf)')
-	.option('--json', 'Output results as JSON')
-	.option('--verbose', 'Show RLM execution details')
-	.option('--output-dir <dir>', 'Custom output directory for worker files')
+	.description('Assess worker outputs')
+	.option('--workers <ids>', 'Worker IDs (comma-separated)')
+	.option('--json', 'Output as JSON')
+	.option('--verbose', 'Show details')
+	.option('--output-dir <dir>', 'Output directory')
 	.action(handleCommand(async (options: any) => {
 		await rlmAssessCommand({
 			workers: options.workers,

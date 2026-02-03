@@ -1,19 +1,15 @@
-# Monitoring & Debugging
+# Monitor and debug
 
-## Learning Objectives
+Find and fix production issues with logging and alerts.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Use Cloudflare's native debugging tools (`wrangler tail`, Dashboard analytics)
-- Add structured logging with `console.log/warn/error` in Workers
-- Use `workway executions` and `workway logs` to identify failing workflows
-- Reproduce failures locally with `wrangler dev` and payload replay
-- Configure alerts for error rate spikes, latency issues, and stale workflows
-- Implement health checks and integration status monitoring
-
----
-
-Workflows in production need visibility. When something goes wrong—and it will—you need the tools to understand what happened and fix it fast.
+- Use `wrangler tail` and Dashboard analytics
+- Add structured logging in Workers
+- Identify failures with `workway executions` and `workway logs`
+- Reproduce failures locally with payload replay
+- Configure alerts for errors and latency
+- Implement health checks
 
 WORKWAY workflows run on Cloudflare Workers, which means you have access to Cloudflare's native debugging tools alongside WORKWAY's workflow-specific monitoring.
 

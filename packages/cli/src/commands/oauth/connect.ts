@@ -137,11 +137,11 @@ export async function oauthConnectCommand(provider?: string): Promise<void> {
 				connectedAt: Date.now(),
 			});
 
-			spinner.succeed('OAuth connection successful!');
+			spinner.succeed(`${provider} connected`);
 			Logger.blank();
 
 			// Display connection info
-			Logger.section('Connection Details');
+			Logger.section('Connection');
 			Logger.listItem(`Provider: ${provider}`);
 
 			if (tokens.email) {
@@ -158,12 +158,9 @@ export async function oauthConnectCommand(provider?: string): Promise<void> {
 			}
 
 			Logger.blank();
-			Logger.success(`${provider} account connected successfully!`);
-			Logger.blank();
-			Logger.log('💡 You can now use --live mode for workflow testing');
-			Logger.code('workway workflow test --live');
+			Logger.log('Test with live OAuth: workway workflow test --live');
 		} catch (error: any) {
-			spinner.fail('OAuth connection failed');
+			spinner.fail('Connection failed');
 			Logger.blank();
 
 			if (error instanceof APIError) {
@@ -171,8 +168,7 @@ export async function oauthConnectCommand(provider?: string): Promise<void> {
 
 				if (error.isUnauthorized()) {
 					Logger.log('');
-					Logger.log('💡 Please log in first:');
-					Logger.code('workway login');
+					Logger.log('Run `workway login` first');
 				}
 			} else {
 				Logger.error(error.message);
@@ -180,14 +176,10 @@ export async function oauthConnectCommand(provider?: string): Promise<void> {
 				// Common error hints
 				if (error.message.includes('EADDRINUSE')) {
 					Logger.log('');
-					Logger.log('💡 Port is already in use. Try:');
-					Logger.log('  1. Close other applications using port ' + callbackPort);
-					Logger.log('  2. Wait a moment and try again');
+					Logger.log(`Port ${callbackPort} in use. Close other apps or wait and retry.`);
 				} else if (error.message.includes('timeout')) {
 					Logger.log('');
-					Logger.log('💡 Authorization timed out. Please:');
-					Logger.log('  1. Complete the authorization in your browser');
-					Logger.log('  2. Ensure the callback URL is correct');
+					Logger.log('Authorization timed out. Complete auth in browser and retry.');
 				}
 			}
 

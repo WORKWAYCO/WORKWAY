@@ -1,18 +1,14 @@
-# The defineWorkflow() Pattern
+# Use defineWorkflow()
 
-## Learning Objectives
+Learn the pattern once, build any workflow.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Create a complete workflow using the `defineWorkflow()` function
-- Define the core workflow properties: `name`, `description`, `version`
-- Understand the five key sections: integrations, inputs, trigger, execute, pathway
-- Destructure `integrations`, `trigger`, `inputs`, and `storage` in the execute function
-- Return properly structured results with `success`, `data`, and `error` properties
-
----
-
-Every WORKWAY workflow follows the same structure. Learn this pattern once, build any workflow.
+- Create workflows with `defineWorkflow()`
+- Set core properties: name, description, version
+- Configure: integrations, inputs, trigger, execute
+- Destructure `integrations`, `trigger`, `inputs`, `storage`
+- Return structured results: success, data, error
 
 ## Step-by-Step: Create Your First Workflow
 

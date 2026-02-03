@@ -268,10 +268,9 @@
 		<!-- Hero -->
 		<section class="text-center mb-section">
 			<h1 class="mx-auto text-center">Learn WORKWAY</h1>
-			<p class="text-xl md:text-2xl text-[var(--color-fg-muted)] max-w-2xl mx-auto mb-lg">
-				Build powerful workflow automations using Claude Code. From first commit to production-ready
-				compound workflows.
-			</p>
+		<p class="text-xl md:text-2xl text-[var(--color-fg-muted)] max-w-2xl mx-auto mb-lg">
+			Build workflow automations with Claude Code. From first commit to production.
+		</p>
 			<a href="/paths" class="button-primary">
 				Start Learning
 				<ArrowRight size={20} />

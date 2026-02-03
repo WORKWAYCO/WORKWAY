@@ -46,7 +46,7 @@ export async function workflowDevCommand(options: DevOptions): Promise<void> {
 		Logger.blank();
 
 		// Start watching for changes
-		Logger.log('👀 Watching for changes...');
+		Logger.log('Watching for changes...');
 		Logger.blank();
 
 		// Initial run
@@ -67,10 +67,10 @@ export async function workflowDevCommand(options: DevOptions): Promise<void> {
 			ignoreInitial: true,
 		});
 
-		watcher.on('change', async (changedPath) => {
-			Logger.blank();
-			Logger.log(`📝 File changed: ${path.relative(process.cwd(), changedPath)}`);
-			Logger.blank();
+	watcher.on('change', async (changedPath) => {
+		Logger.blank();
+		Logger.log(`Changed: ${path.relative(process.cwd(), changedPath)}`);
+		Logger.blank();
 
 			// Kill any running process
 			if (currentProcess) {
@@ -108,7 +108,7 @@ async function runWorkflow(
 	mockMode: boolean,
 	oauthTokens: Record<string, any>
 ): Promise<void> {
-	Logger.log('🔄 Starting engine...');
+	Logger.log('Running...');
 	Logger.blank();
 
 	const startTime = Date.now();
@@ -203,12 +203,12 @@ run();
 			await fs.remove(runnerPath);
 
 			if (code === 0) {
-				Logger.log(`  ⏱️  Completed in ${duration}ms`);
+				Logger.log(`  Done in ${duration}ms`);
 			} else {
-				Logger.warn(`  ⚠️  Exited with code ${code} (${duration}ms)`);
+				Logger.warn(`  Exit code ${code} (${duration}ms)`);
 			}
 			Logger.blank();
-			Logger.log('👀 Watching for changes...');
+			Logger.log('Watching for changes...');
 		});
 
 	} catch (error: any) {
@@ -221,7 +221,7 @@ run();
  */
 function cleanup(): void {
 	Logger.blank();
-	Logger.log('🛑 Engine off. Leaving test track...');
+	Logger.log('Dev server stopped');
 
 	if (watcher) {
 		watcher.close();
@@ -237,6 +237,5 @@ function cleanup(): void {
 	const runnerPath = path.join(process.cwd(), '.workway-runner.mjs');
 	fs.removeSync(runnerPath);
 
-	Logger.success('Goodbye!');
 	process.exit(0);
 }

@@ -12,11 +12,11 @@ export async function logoutCommand(): Promise<void> {
 		// Clear credentials
 		await clearConfig();
 
-		Logger.success('Successfully logged out');
+		Logger.success('Logged out');
 		Logger.blank();
-		Logger.log('💡 Tip: Run `workway login` to log in again');
+		Logger.log('Run `workway login` to sign in again');
 	} catch (error: any) {
-		Logger.error(`Failed to logout: ${error.message}`);
+		Logger.error(`Logout failed: ${error.message}`);
 		process.exit(1);
 	}
 }

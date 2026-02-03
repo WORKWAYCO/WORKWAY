@@ -1,18 +1,14 @@
-# Configuration Schemas
+# Define configuration
 
-## Learning Objectives
+Design schemas that minimize user decisions.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Define workflow inputs using the modern `inputs` pattern
-- Use appropriate input types: `text`, `number`, `boolean`, `select`, `picker`
-- Create dynamic pickers for Notion databases, Slack channels, and other resources
-- Provide sensible defaults that make workflows work out of the box
-- Group related inputs for better user experience
-
----
-
-Config schemas define what users customize. Good schemas make workflows flexible without overwhelming users.
+- Define inputs: text, number, boolean, select, picker
+- Create pickers for Notion databases, Slack channels
+- Set sensible defaults
+- Use `showIf` for conditional fields
+- Group related inputs
 
 ## Real-World Example: Meeting Intelligence Workflow
 

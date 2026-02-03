@@ -25,11 +25,11 @@ export interface Path {
 export const paths: Path[] = [
   {
     id: "getting-started",
-    title: "Getting Started",
+    title: "Set up your environment",
     description:
-      "Get your development environment ready in under 2 hours. Install WezTerm, Claude Code, and WORKWAY CLI—everything needed to start building workflows.",
+      "Install WezTerm, Claude Code, and WORKWAY CLI in under 2 hours.",
     introduction:
-      "Your terminal is the cockpit for building workflows that run themselves. In this path, you will install Claude Code as your AI pair programmer—then use it to configure WezTerm, Neomutt, and the WORKWAY CLI. By the end, you will have a professional development environment where tools recede and outcomes remain.",
+      "Configure your terminal, install Claude Code, and set up the WORKWAY CLI.",
     icon: "terminal",
     difficulty: "beginner",
     estimatedHours: 2,
@@ -81,11 +81,11 @@ export const paths: Path[] = [
   },
   {
     id: "workflow-foundations",
-    title: "Workflow Foundations",
+    title: "Understand workflow patterns",
     description:
-      "Understand the building blocks that make automations work. Learn patterns for connecting services, handling OAuth, and triggering workflows reliably.",
+      "Learn defineWorkflow(), integrations, OAuth, triggers, and configuration schemas.",
     introduction:
-      "Before you build, you need to understand what makes workflows invisible. This path covers the Zuhandenheit philosophy—designing tools that recede from attention—and the technical patterns that make it possible. You will learn the defineWorkflow() structure, connect services through OAuth, design configuration schemas, and set up triggers. These foundations appear in every workflow you will build.",
+      "This path covers the core patterns: defineWorkflow() structure, OAuth integrations, configuration schemas, and triggers.",
     icon: "workflow",
     difficulty: "beginner",
     estimatedHours: 3,
@@ -138,11 +138,11 @@ export const paths: Path[] = [
   },
   {
     id: "building-workflows",
-    title: "Building Workflows",
+    title: "Build real workflows",
     description:
-      "Build real automations: sync Gmail to Notion, summarize meetings with AI, connect Slack with your tools. Five hours of hands-on projects you can ship.",
+      "Create Gmail to Notion sync, AI summaries, and multi-service integrations.",
     introduction:
-      "Theory becomes practice. In this path, you will build real workflows from scratch—starting with a Gmail to Notion sync and progressing to multi-service integrations with Workers AI. Each lesson produces working code you can deploy. You will also learn the patterns that separate fragile automations from production-ready systems: error handling, retry logic, and local testing.",
+      "Build production workflows from scratch: Gmail sync, AI integration, error handling, and local testing.",
     icon: "code",
     difficulty: "intermediate",
     estimatedHours: 5,
@@ -207,11 +207,11 @@ export const paths: Path[] = [
   },
   {
     id: "systems-thinking",
-    title: "Systems Thinking",
+    title: "Design compound workflows",
     description:
-      "Design compound workflows where one meeting triggers Notion notes, Slack updates, email drafts, and CRM entries—all automatically. Production patterns.",
+      "Orchestrate multi-service workflows: Meeting → Notion + Slack + Email + CRM.",
     introduction:
-      "Single automations move data from A to B. Systems thinking means designing complete outcomes that span multiple services, handle failures gracefully, and scale to production workloads. In this path, you will learn to orchestrate compound workflows that turn one event into many coordinated actions, build private workflows with enterprise-grade access controls, apply agency patterns that generate recurring revenue, and master the performance and monitoring techniques that separate hobby projects from production systems.",
+      "Design workflows that span multiple services, handle failures gracefully, and scale to production.",
     icon: "brain",
     difficulty: "advanced",
     estimatedHours: 4,

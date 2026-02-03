@@ -61,14 +61,14 @@ export async function loginCommand(): Promise<void> {
 				},
 			});
 
-			spinner.succeed('Successfully logged in!');
+			spinner.succeed('Logged in');
 			Logger.blank();
-			Logger.success(`Welcome back, ${authResponse.email}!`);
-			Logger.info(`Role: ${authResponse.role}`);
+			Logger.log(`  Account: ${authResponse.email}`);
+			Logger.log(`  Role: ${authResponse.role}`);
 			Logger.blank();
-			Logger.log('💡 Tip: Run `workway whoami` to see your account details');
+			Logger.log('Run `workway whoami` to see account details');
 		} catch (error) {
-			spinner.fail('Authentication failed');
+			spinner.fail('Login failed');
 
 			if (error instanceof APIError) {
 				if (error.isUnauthorized()) {

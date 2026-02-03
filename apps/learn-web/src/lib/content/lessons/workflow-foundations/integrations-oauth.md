@@ -1,19 +1,15 @@
-# Integrations & OAuth Providers
+# Connect integrations
 
-## Learning Objectives
+WORKWAY handles OAuth. Connect once, use everywhere.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Understand the BaseAPIClient pattern that powers all WORKWAY integrations
-- Declare integrations with proper OAuth scopes in the `integrations` array
-- Use the extended format for optional integrations and credential aliasing
-- Handle `ActionResult` responses with `success`, `data`, and `error` checking
-- Implement graceful degradation when optional integrations fail
-- Understand how WORKWAY handles token refresh and rate limiting automatically
-
----
-
-WORKWAY handles OAuth complexity so your workflows can focus on outcomes. Connect once, use everywhere.
+- Understand the BaseAPIClient pattern
+- Declare integrations with OAuth scopes
+- Mark integrations as optional
+- Handle `ActionResult` responses
+- Implement graceful degradation
+- Let WORKWAY handle token refresh automatically
 
 ## Step-by-Step: Add Your First Integration
 

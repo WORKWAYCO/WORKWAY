@@ -503,14 +503,11 @@ milestones:
 				await fs.writeFile(path.join(claudeDir, 'workflow-meta.yaml'), metaContent);
 			}
 
-			spinner.succeed(`Created ${isAI ? 'AI ' : ''}workflow project "${projectName}"`);
+			spinner.succeed(`Project created: ${projectName}/`);
 
 			// Show success message
 			Logger.blank();
-			Logger.success('Workflow project created successfully!');
-			Logger.blank();
-
-			Logger.section('Project Details');
+			Logger.section('Details');
 			Logger.listItem(`Name: ${answers.name}`);
 			if (isAI) {
 				Logger.listItem(`AI Task: ${answers.aiTask}`);
@@ -520,44 +517,24 @@ milestones:
 			if (!isAI) {
 				Logger.listItem(`Trial: ${answers.trialDays} days`);
 			}
-			Logger.listItem(`Location: ./${projectName}/`);
 
 			Logger.blank();
-			Logger.section('Next Steps');
-			Logger.log('1. Navigate to your project:');
-			Logger.code(`cd ${projectName}`);
-
-			Logger.log('2. Install dependencies:');
-			Logger.code('npm install');
-
-			Logger.log('3. Edit workflow.ts to customize your workflow');
-			Logger.blank();
+			Logger.section('Next steps');
+			Logger.log(`  cd ${projectName}`);
+			Logger.log('  npm install');
+			Logger.log('  # Edit workflow.ts');
 
 			if (isAI) {
-				Logger.log('4. Explore available AI models:');
-				Logger.code('workway ai models');
-
-				Logger.log('5. Test your AI workflow:');
-				Logger.code('workway workflow test --mock');
-
-				Logger.log('6. When ready, publish to marketplace:');
-				Logger.code('workway workflow publish');
-
-				Logger.blank();
-				Logger.section('AI Cost Estimate');
-				Logger.listItem('Llama 2 (fast): ~$0.005 per 1M tokens');
-				Logger.listItem('Llama 3 (balanced): ~$0.01 per 1M tokens');
-				Logger.listItem('Mistral (quality): ~$0.02 per 1M tokens');
+				Logger.log('  workway ai models        # List AI models');
+				Logger.log('  workway workflow test    # Test workflow');
+				Logger.log('  workway workflow publish # Publish to marketplace');
 			} else {
-				Logger.log('4. Test your workflow:');
-				Logger.code('npm test');
-
-				Logger.log('5. When ready, publish to marketplace:');
-				Logger.code('npm run publish');
+				Logger.log('  npm test                 # Run tests');
+				Logger.log('  workway workflow publish # Publish to marketplace');
 			}
 
 			Logger.blank();
-			Logger.info('Documentation: https://docs.workway.dev/workflows');
+			Logger.log('Docs: https://docs.workway.dev/workflows');
 		} catch (error: any) {
 			spinner.fail('Failed to create project');
 			Logger.error(error.message);

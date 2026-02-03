@@ -143,16 +143,16 @@ export async function workflowBuildCommand(options: BuildOptions): Promise<void>
 		}
 
 		Logger.blank();
-		Logger.success('Assembly complete! 🎉');
+		Logger.success('Build complete');
 		Logger.blank();
 		Logger.section('Output');
-		Logger.listItem(`${outDir}/workflow.js - Engine bundle`);
+		Logger.listItem(`${outDir}/workflow.js`);
 		if (sourcemap) {
-			Logger.listItem(`${outDir}/workflow.js.map - Diagnostic map`);
+			Logger.listItem(`${outDir}/workflow.js.map`);
 		}
-		Logger.listItem(`${outDir}/manifest.json - Parts manifest`);
+		Logger.listItem(`${outDir}/manifest.json`);
 		Logger.blank();
-		Logger.log('📦 Ready to ship with: workway workflow publish');
+		Logger.log('Run `workway workflow publish` to deploy');
 
 	} catch (error: any) {
 		Logger.error(error.message);

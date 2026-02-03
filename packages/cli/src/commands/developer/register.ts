@@ -35,8 +35,6 @@ export async function developerRegisterCommand(): Promise<void> {
 		}
 
 		Logger.blank();
-		Logger.log('Register as a WORKWAY developer to publish workflows.');
-		Logger.blank();
 
 		// Gather developer info
 		const answers = await inquirer.prompt([
@@ -89,16 +87,15 @@ export async function developerRegisterCommand(): Promise<void> {
 				websiteUrl: answers.websiteUrl || undefined,
 			});
 
-			spinner2.succeed('Developer account created!');
+			spinner2.succeed('Developer account created');
 			Logger.blank();
 
-			Logger.section('Next Steps');
-			Logger.log('  1. Create your first workflow: workway workflow init');
-			Logger.log('  2. Develop and test: workway workflow dev');
-			Logger.log('  3. Publish to marketplace: workway workflow publish');
+			Logger.section('Next steps');
+			Logger.log('  workway workflow init     # Create workflow');
+			Logger.log('  workway workflow dev      # Develop and test');
+			Logger.log('  workway workflow publish  # Publish to marketplace');
 			Logger.blank();
-
-			Logger.log('💡 Set up Stripe to receive payments: workway developer earnings --setup');
+			Logger.log('Set up payouts: workway developer earnings --setup');
 
 		} catch (error: any) {
 			spinner2.fail('Registration failed');

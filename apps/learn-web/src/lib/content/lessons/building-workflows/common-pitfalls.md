@@ -1,20 +1,15 @@
-# Common Pitfalls & Solutions
+# Avoid common pitfalls
 
-## Learning Objectives
+Know what works, what doesn't, and how to fix common issues.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Understand what you CAN do inside WORKWAY workflows (significant flexibility)
-- Understand what you CANNOT do (runtime constraints)
-- Replace Node.js patterns with Workers-compatible alternatives
-- Debug runtime errors caused by incompatible npm packages
-- Handle OAuth token expiration and authentication failures gracefully
-- Avoid rate limiting issues with proper batching and backoff strategies
-- Structure workflows to prevent state management bugs
-
----
-
-Every developer hits the same walls when starting with WORKWAY. This lesson documents the pitfalls we see repeatedly—and the solutions that work.
+- Understand workflow capabilities and constraints
+- Replace Node.js APIs with Workers alternatives
+- Debug incompatible npm packages
+- Handle OAuth token expiration
+- Avoid rate limits with batching
+- Prevent state management bugs
 
 But first, let's be clear about what you CAN do. WORKWAY workflows are TypeScript-based with more flexibility than you might expect.
 

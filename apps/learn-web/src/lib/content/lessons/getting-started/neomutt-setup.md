@@ -1,19 +1,14 @@
-# Neomutt for Email Workflow
+# Configure Neomutt
 
-## Learning Objectives
+Set up Neomutt for Gmail and learn email patterns that become workflow triggers.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
 - Install Neomutt on macOS or Linux
-- Configure Neomutt with Gmail IMAP and SMTP settings
-- Generate and use a Gmail App Password for secure authentication
-- Navigate emails using Neomutt's vim-style keyboard shortcuts (`j/k`, `/`, `r`, `m`)
-- Understand how terminal email enables workflow-triggered automations
-- Connect email patterns to WORKWAY workflow triggers
-
----
-
-Email is a workflow trigger. Neomutt brings email into your terminal, where it can integrate with your development flow and—more importantly—help you recognize the patterns that become automated workflows.
+- Configure Gmail IMAP and SMTP
+- Generate a Gmail App Password
+- Navigate with vim-style shortcuts: `j/k`, `/`, `r`, `m`
+- Recognize email patterns for automation
 
 ## Use Claude Code
 

@@ -1,18 +1,14 @@
-# Private Workflows & BYOO Patterns
+# Build private workflows
 
-## Learning Objectives
+Create organization-specific workflows with access controls.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Distinguish when to build private vs public workflows
-- Configure visibility and access controls in workflow metadata
-- Define `accessGrants` with email domains and specific user permissions
-- Implement BYOO (Bring Your Own OAuth) patterns for client credentials
-- Use persistent storage for organization-specific data isolation
-
----
-
-Not every workflow belongs in the marketplace. Private workflows serve specific organizations with custom requirements while leveraging the full WORKWAY platform.
+- Choose private vs public visibility
+- Configure access controls in metadata
+- Define `accessGrants` by email domain
+- Implement BYOO (Bring Your Own OAuth)
+- Isolate organization data with storage
 
 ## Real Example: Private Emails Documented
 

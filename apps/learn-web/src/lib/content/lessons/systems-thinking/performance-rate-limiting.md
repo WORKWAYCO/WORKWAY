@@ -1,19 +1,15 @@
-# Performance & Rate Limiting
+# Optimize performance
 
-## Learning Objectives
+Handle rate limits, caching, and execution timeouts.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Identify performance bottlenecks using timing instrumentation
-- Use the SDK's built-in retry utilities (`withRetry`, `fetchWithRetry`)
-- Implement in-memory caching for repeated lookups within a single execution
-- Process items in rate-limited chunks using `processInChunks()` patterns
-- Handle API rate limits with exponential backoff using `createRateLimitAwareRetry`
-- Use checkpointing for long-running operations that might timeout
-
----
-
-Workflows run in the real world of API limits, execution timeouts, and finite resources. WORKWAY's SDK provides built-in utilities for handling these constraints, so you don't have to reinvent retry logic.
+- Identify bottlenecks with timing instrumentation
+- Use SDK retries: `withRetry`, `fetchWithRetry`
+- Cache repeated lookups within executions
+- Process items in rate-limited chunks
+- Handle limits with exponential backoff
+- Use checkpointing for long operations
 
 ## SDK Rate Limiting Utilities
 

@@ -1,18 +1,14 @@
-# Triggers: Webhooks, Cron, Manual
+# Configure triggers
 
-## Learning Objectives
+Define when workflows run: webhooks, schedules, manual, or polling.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Implement the four trigger types: `webhook`, `schedule`, `manual`, and `poll`
-- Write valid cron expressions for scheduled workflows
-- Access trigger data and payloads in the execute function
-- Implement idempotency checks to prevent duplicate processing
-- Handle multiple trigger types with conditional logic in a single workflow
-
----
-
-A workflow without a trigger is just code. Triggers are the ignition system—they define when your workflow engine starts.
+- Use trigger types: `webhook`, `schedule`, `manual`, `poll`
+- Write cron expressions
+- Access trigger data in execute
+- Implement idempotency checks
+- Handle multiple triggers in one workflow
 
 ## Step-by-Step: Add a Trigger to Your Workflow
 

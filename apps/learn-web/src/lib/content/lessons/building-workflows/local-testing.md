@@ -1,18 +1,14 @@
-# Testing Workflows Locally
+# Test workflows locally
 
-## Learning Objectives
+Use wrangler dev, curl, and Vitest to test before deploying.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Start the local development server with `wrangler dev` and understand Cloudflare Workers runtime
-- Test workflows using `curl` with custom JSON payloads
-- Create mock integrations using Vitest patterns from the codebase
-- Write unit tests with proper mocking of storage, integrations, and AI
-- Debug workflows using `wrangler tail` and structured logging
-
----
-
-Test before deploy. Find bugs locally, not in production. Wrangler brings the Cloudflare Workers environment to your machine.
+- Start local dev with `wrangler dev`
+- Test with `curl` and JSON payloads
+- Create mock integrations with Vitest
+- Write unit tests with mocked storage and AI
+- Debug with `wrangler tail` and structured logging
 
 ## Step-by-Step: Test Your Workflow Locally
 

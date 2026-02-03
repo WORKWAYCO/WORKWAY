@@ -1,18 +1,14 @@
-# Claude Code Setup
+# Install Claude Code
 
-## Learning Objectives
+Install Claude Code, authenticate, and configure MCP servers.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Install Claude Code on your system using npm
-- Authenticate Claude Code with your Anthropic account
-- Configure the WORKWAY Learn MCP server for enhanced learning features
-- Use essential Claude Code session commands (`/help`, `/clear`, `/compact`)
-- Invoke WORKWAY-specific skills (`/heidegger-design`, `/workway-integrations`) within Claude Code
-
----
-
-Claude Code is your primary tool for building WORKWAY workflows. Not a helper—the tool through which you'll complete everything that follows.
+- Install Claude Code via npm
+- Authenticate with your Anthropic account
+- Configure the WORKWAY Learn MCP server
+- Use session commands: `/help`, `/clear`, `/compact`
+- Invoke skills: `/heidegger-design`, `/workway-integrations`
 
 ## Why Claude Code First?
 

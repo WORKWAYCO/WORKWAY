@@ -44,8 +44,7 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 		const workflowPath = getWorkflowPath();
 
 		Logger.blank();
-		Logger.section('Workflow Configuration');
-		Logger.log('Let\'s configure your workflow pricing and details.');
+		Logger.section('Configuration');
 		Logger.blank();
 
 		// Get workflow details from user
@@ -348,15 +347,13 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 			const response = await apiClient.createIntegration(integrationData);
 
 			if (response.success) {
-				spinner.succeed('Workflow published successfully!');
+				spinner.succeed('Workflow published');
 				
 				// Save integration ID to config for version tracking
 				const existingConfig = await fs.readJson(configPath);
 				existingConfig.integrationId = response.integration.id;
 				await fs.writeJson(configPath, existingConfig, { spaces: 2 });
 				
-				Logger.blank();
-				Logger.success(`Workflow "${answers.name}" is now in the marketplace`);
 				Logger.blank();
 
 				// Try to create a version record
@@ -380,7 +377,7 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 							`/integrations/${response.integration.id}/versions/${versionResponse.version.id}/publish`,
 							{ body: { notes: versionNotes } }
 						);
-						Logger.info(`📦 Version ${versionResponse.version.versionNumber} created`);
+						Logger.log(`Version ${versionResponse.version.versionNumber} created`);
 					}
 				} catch (versionError) {
 					// Version creation is optional - don't fail the publish
@@ -388,23 +385,16 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 				}
 
 				if (options.draft) {
-					Logger.info('📝 Published as draft (not visible to public)');
+					Logger.log('Published as draft');
 					Logger.log('');
-					Logger.log('To make it public, run:');
-					Logger.code(`workway workflow publish --id ${response.integration.id}`);
+					Logger.log('To make public:');
+					Logger.log(`  workway workflow publish --id ${response.integration.id}`);
 				} else {
-					Logger.info('🎉 Your workflow is now live!');
-					Logger.log('');
-					Logger.log('View in marketplace:');
-					Logger.code(`https://marketplace.workway.dev/workflow/${response.integration.id}`);
+					Logger.log(`View at: https://marketplace.workway.dev/workflow/${response.integration.id}`);
 				}
 
 				Logger.blank();
-				Logger.section('Next Steps');
-				Logger.listItem('Monitor your workflow analytics');
-				Logger.listItem('Respond to user reviews');
-				Logger.listItem('Update pricing or features as needed');
-				Logger.listItem('Use "workway workflow version" to manage versions');
+				Logger.log('Manage versions: workway workflow version');
 			} else {
 				spinner.fail('Failed to publish workflow');
 				Logger.error(response.error || 'Unknown error');

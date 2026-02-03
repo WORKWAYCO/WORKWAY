@@ -1,18 +1,14 @@
-# WORKWAY CLI Installation
+# Install the WORKWAY CLI
 
-## Learning Objectives
+Install the CLI, authenticate, and deploy your first workflow.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Install the WORKWAY CLI globally using pnpm or npm
-- Authenticate with the WORKWAY platform using `workway login`
-- Initialize a new workflow project with `workway init`
-- Start a local development server with `workway dev`
-- Deploy a workflow to production with `workway deploy`
-
----
-
-The WORKWAY CLI connects your local development environment to the WORKWAY platform. Deploy, test, and manage workflows from your terminal.
+- Install the CLI with pnpm or npm
+- Authenticate with `workway login`
+- Initialize a project with `workway init`
+- Run locally with `workway dev`
+- Deploy with `workway deploy`
 
 ## Use Claude Code
 

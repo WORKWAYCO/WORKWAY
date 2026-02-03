@@ -1,18 +1,14 @@
-# Using Workers AI for Intelligence
+# Add Workers AI
 
-## Learning Objectives
+Use AI for summarization, classification, and structured extraction.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Use `ai.generateText()` with system prompts and temperature settings
-- Extract structured data using `ai.extractStructured()` with schemas
-- Choose appropriate AI models for different tasks (LLaMA 3, Code LLaMA, BGE)
-- Handle AI failures gracefully with fallback responses
-- Apply prompt engineering best practices for consistent outputs
-
----
-
-Transform raw data into insights. Workers AI runs on Cloudflare's global network—no external API keys needed.
+- Generate text with `ai.generateText()`
+- Extract structured data with `ai.extractStructured()`
+- Choose models: LLaMA 3, Code LLaMA, BGE
+- Handle AI failures with fallbacks
+- Apply prompt engineering for consistent output
 
 ## Step-by-Step: Add AI to Your Workflow
 

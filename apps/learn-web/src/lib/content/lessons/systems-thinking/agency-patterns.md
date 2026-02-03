@@ -1,19 +1,14 @@
-# Agency Workflow Patterns
+# Use agency patterns
 
-## Learning Objectives
+Build once, deploy many. Turn client work into platform assets.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Conduct workflow discovery interviews with clients using outcome-focused questions
-- Identify patterns across client projects that can become marketplace workflows
-- Apply the "Build Once, Deploy Many" strategy for workflow reusability
-- Structure client engagements with scoping, building, and maintenance phases
-- Price workflows using hybrid models (implementation fee + per-execution)
-- Understand the agency-as-moat strategic pattern and double Zuhandenheit
-
----
-
-Agencies building workflows for clients sit at a strategic leverage point. Build once, deploy many. Turn client projects into platform assets.
+- Conduct discovery interviews with outcome-focused questions
+- Identify patterns across clients for marketplace workflows
+- Apply "Build Once, Deploy Many" strategy
+- Structure engagements: scoping, building, maintenance
+- Price with hybrid models: implementation + per-execution
 
 ## The Agency-as-Moat Strategy
 

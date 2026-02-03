@@ -1,19 +1,15 @@
-# Working with Integrations
+# Chain integrations
 
-## Learning Objectives
+Connect Zoom → Notion → Slack in a single workflow.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Chain multiple integrations in a single workflow (Zoom → Notion → Slack)
-- Use Slack messaging with threading and search capabilities
-- Access Zoom meeting data, recordings, clips, and transcripts
-- Create and update Notion pages using document templates
-- Handle integration-specific conventions (Stripe cents, Gmail query syntax)
-- Implement error isolation for optional workflow steps
-
----
-
-Master the integration patterns for Slack, Zoom, Stripe, and more. Each service has its own conventions.
+- Chain multiple integrations: Zoom, Notion, Slack
+- Send Slack messages with threading
+- Access Zoom meetings, recordings, and transcripts
+- Create Notion pages with templates
+- Handle Stripe cents, Gmail query syntax
+- Isolate errors for optional steps
 
 ## Step-by-Step: Chain Multiple Integrations
 

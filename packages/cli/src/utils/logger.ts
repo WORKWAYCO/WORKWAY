@@ -26,28 +26,28 @@ export class Logger {
 	 * Success message (green checkmark)
 	 */
 	static success(message: string): void {
-		console.log(chalk.green('✅'), message);
+		console.log(chalk.green('✓'), message);
 	}
 
 	/**
 	 * Error message (red X)
 	 */
 	static error(message: string): void {
-		console.log(chalk.red('❌'), message);
+		console.log(chalk.red('✗'), message);
 	}
 
 	/**
 	 * Warning message (yellow exclamation)
 	 */
 	static warn(message: string): void {
-		console.log(chalk.yellow('⚠️ '), message);
+		console.log(chalk.yellow('!'), message);
 	}
 
 	/**
 	 * Info message (blue info icon)
 	 */
 	static info(message: string): void {
-		console.log(chalk.blue('ℹ️ '), message);
+		console.log(chalk.blue('→'), message);
 	}
 
 	/**
@@ -55,7 +55,7 @@ export class Logger {
 	 */
 	static debug(message: string): void {
 		if (process.env.DEBUG) {
-			console.log(chalk.gray('🐛'), chalk.gray(message));
+			console.log(chalk.gray('·'), chalk.gray(message));
 		}
 	}
 

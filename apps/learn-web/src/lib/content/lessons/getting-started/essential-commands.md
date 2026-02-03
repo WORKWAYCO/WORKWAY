@@ -1,20 +1,15 @@
-# Essential Commands & Shortcuts
+# Learn essential commands
 
-## Learning Objectives
+Configure shell aliases and shortcuts for efficient workflow development.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Navigate directories efficiently using `cd`, `pushd/popd`, and shell shortcuts
-- Use essential Git commands for version control: `status`, `add -p`, `commit`, `stash`
-- Configure shell aliases for WORKWAY, Wrangler, Git, and Claude Code
-- Use Wrangler commands for debugging Cloudflare Workers: `tail`, `secret`, `d1`
-- Test workflows locally with `curl` and process JSON responses with `jq`
-- Use Claude Code slash commands and MCP learning tools
-- Execute the complete development flow: `workway dev` → test → commit → deploy
-
----
-
-Master these commands to move efficiently through your workflow development cycle. The goal: muscle memory that lets the tools recede.
+- Navigate with `cd`, `pushd/popd`, shell shortcuts
+- Use Git commands: `status`, `add -p`, `commit`, `stash`
+- Configure aliases for WORKWAY, Wrangler, Git, Claude Code
+- Debug with Wrangler: `tail`, `secret`, `d1`
+- Test workflows with `curl` and `jq`
+- Run the development flow: dev → test → commit → deploy
 
 ## Use Claude Code
 

@@ -1,18 +1,14 @@
-# Worker Patterns
+# Master Workers patterns
 
-## Learning Objectives
+Use Web APIs instead of Node.js and handle runtime constraints.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
-- Understand the Cloudflare Workers V8 isolate runtime and its constraints
-- Use Web Standard APIs (`fetch()`, `crypto.subtle`, `TextEncoder`) instead of Node.js equivalents
-- Identify which npm packages work in Workers and which don't
-- Apply common patterns for HTTP requests, UUID generation, and hashing
-- Handle execution limits (30s CPU, 50 subrequests) in workflow design
-
----
-
-WORKWAY workflows run on Cloudflare Workers—a V8 isolate environment, not Node.js. Understanding this runtime unlocks patterns that make workflows reliable and performant.
+- Understand the V8 isolate runtime
+- Use Web APIs: `fetch()`, `crypto.subtle`, `TextEncoder`
+- Identify Workers-compatible npm packages
+- Apply patterns for HTTP, UUID, hashing
+- Handle limits: 30s CPU, 50 subrequests
 
 ## The Workers Runtime Model
 

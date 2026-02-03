@@ -28,11 +28,11 @@ export async function whoamiCommand(): Promise<void> {
 				// User might not be a developer
 			}
 
-			spinner.succeed('Account information');
+			spinner.succeed('Account loaded');
 			Logger.blank();
 
 			// Display user info
-			Logger.section('User Information');
+			Logger.section('User');
 			Logger.listItem(`Email: ${userInfo.email}`);
 			Logger.listItem(`User ID: ${userInfo.userId}`);
 			Logger.listItem(`Role: ${userInfo.role}`);
@@ -40,9 +40,9 @@ export async function whoamiCommand(): Promise<void> {
 			// Display developer info if available
 			if (developerProfile) {
 				Logger.blank();
-				Logger.section('Developer Profile');
+				Logger.section('Developer');
 				Logger.listItem(`Developer ID: ${developerProfile.id}`);
-				Logger.listItem(`Status: ${developerProfile.verified ? 'Verified ✓' : 'Not verified'}`);
+				Logger.listItem(`Status: ${developerProfile.verified ? 'Verified' : 'Not verified'}`);
 				Logger.listItem(`Onboarding: ${developerProfile.onboardingStatus}`);
 
 				if (developerProfile.companyName) {
@@ -50,25 +50,25 @@ export async function whoamiCommand(): Promise<void> {
 				}
 
 				if (developerProfile.stripeConnectAccountId) {
-					Logger.listItem('Payout: Stripe Connect configured ✓');
+					Logger.listItem('Payout: Stripe Connect configured');
 				}
 			}
 
 			Logger.blank();
-			Logger.info('API URL: ' + apiUrl);
+			Logger.log(`API: ${apiUrl}`);
 		} catch (error) {
-			spinner.fail('Failed to fetch account info');
+			spinner.fail('Failed to load account');
 
 			if (error instanceof APIError) {
 				if (error.isUnauthorized()) {
-					Logger.error('Session expired. Please log in again.');
+					Logger.error('Session expired');
 					Logger.log('');
-					Logger.log('💡 Run `workway login` to authenticate');
+					Logger.log('Run `workway login` to authenticate');
 				} else {
 					Logger.error(error.message);
 				}
 			} else {
-				Logger.error('An unexpected error occurred');
+				Logger.error('Unexpected error');
 			}
 
 			process.exit(1);

@@ -1,18 +1,13 @@
-# WezTerm Installation & Configuration
+# Install WezTerm
 
-## Learning Objectives
+Install and configure WezTerm with the WORKWAY monochrome theme.
 
-By the end of this lesson, you will be able to:
+## What you'll do
 
 - Install WezTerm on macOS, Linux, or Windows
-- Configure WezTerm using a Lua configuration file (`wezterm.lua`)
-- Set up the WORKWAY monochrome color scheme with proper fonts
-- Use WezTerm's multiplexing features for split panes and tabs
-- Create custom keybindings for rapid Claude Code and WORKWAY development
-
----
-
-The terminal is where workflows come to life. WezTerm provides a modern, GPU-accelerated terminal that disappears into your work.
+- Configure `wezterm.lua` with WORKWAY color scheme
+- Set up split panes and tabs
+- Create keybindings for Claude Code and WORKWAY development
 
 ## Use Claude Code
 
