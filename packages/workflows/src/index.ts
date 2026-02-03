@@ -59,6 +59,7 @@ export { default as onboardingAutomation } from './onboarding/index.js';
 
 // Email Sync (Private - BYOO)
 export { default as privateEmailsDocumented } from './private-emails-documented/index.js';
+export { default as gmailToNotion } from './gmail-to-notion/index.js';
 
 // Dev Team & Data
 export { default as sprintProgressTracker } from './sprint-progress-tracker/index.js';
@@ -792,6 +793,7 @@ export const workflows = {
 	'task-sync-bridge': { id: 'task-sync-bridge', outcomeFrame: 'when_tasks_complete' },
 	// Email Sync (Private - BYOO)
 	'private-emails-documented': { id: 'private-emails-documented', outcomeFrame: 'when_emails_arrive', experimental: true },
+	'gmail-to-notion': { id: 'gmail-to-notion', outcomeFrame: 'when_emails_arrive', experimental: true },
 	// Error Tracking & Developer Tools
 	'error-incident-manager': { id: 'error-incident-manager', outcomeFrame: 'when_errors_happen' },
 	'issues-synced-to-sprint': { id: 'issues-synced-to-sprint', outcomeFrame: 'when_issues_arrive' },

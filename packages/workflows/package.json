@@ -145,6 +145,11 @@
 			"types": "./dist/dental-review-booster/index.d.ts",
 			"import": "./dist/dental-review-booster/index.js",
 			"default": "./dist/dental-review-booster/index.js"
+		},
+		"./gmail-to-notion": {
+			"types": "./dist/gmail-to-notion/index.d.ts",
+			"import": "./dist/gmail-to-notion/index.js",
+			"default": "./dist/gmail-to-notion/index.js"
 		}
 	},
 	"files": [
