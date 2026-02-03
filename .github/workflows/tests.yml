@@ -1,0 +1,152 @@
+name: Tests
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  test-workflows:
+    name: Workflow Tests (259)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run workflow tests
+        run: pnpm --filter @workwayco/workflows test
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## Workflow Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ **259 workflow tests passed**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Workflow tests failed**" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Package: \`@workwayco/workflows\`" >> $GITHUB_STEP_SUMMARY
+
+  test-integrations:
+    name: Integration Tests (68)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run integration tests
+        run: pnpm --filter @workwayco/integrations test
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## Integration Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ **68 integration tests passed**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **Integration tests failed**" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Package: \`@workwayco/integrations\`" >> $GITHUB_STEP_SUMMARY
+
+  test-sdk:
+    name: SDK Tests (433)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run SDK tests
+        run: pnpm --filter @workwayco/sdk test
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## SDK Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ **433 SDK tests passed**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **SDK tests failed**" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Package: \`@workwayco/sdk\`" >> $GITHUB_STEP_SUMMARY
+
+  test-summary:
+    name: Test Summary
+    runs-on: ubuntu-latest
+    needs: [test-workflows, test-integrations, test-sdk]
+    if: always()
+    steps:
+      - name: Overall Test Summary
+        run: |
+          echo "## 🧪 WORKWAY Test Suite Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | Tests | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|-------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Workflows | 259 | ${{ needs.test-workflows.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integrations | 68 | ${{ needs.test-integrations.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SDK | 433 | ${{ needs.test-sdk.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Total: 760 tests**" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.test-workflows.result }}" == "success" ] && \
+             [ "${{ needs.test-integrations.result }}" == "success" ] && \
+             [ "${{ needs.test-sdk.result }}" == "success" ]; then
+            echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY
+            exit 0
+          else
+            echo "❌ **Some tests failed. Review the logs above.**" >> $GITHUB_STEP_SUMMARY
+            exit 1
+          fi
