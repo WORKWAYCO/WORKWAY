@@ -1,6 +1,10 @@
 /**
  * Notion API Client
  * Creates database pages for F→N sync
+ *
+ * API Version 2025-09-03:
+ * - Uses data_source_id for page creation and queries
+ * - Search returns data_source objects instead of database
  */
 
 const NOTION_API_URL = 'https://api.notion.com/v1';
@@ -9,7 +13,17 @@ const NOTION_VERSION = '2025-09-03';
 export interface NotionDatabase {
 	id: string;
 	title: Array<{ plain_text: string }>;
+	properties?: Record<string, NotionProperty>;
+	/** Data sources in this database (2025-09-03+) */
+	data_sources?: Array<{ id: string; name: string }>;
+}
+
+export interface NotionDataSource {
+	id: string;
+	object: 'data_source';
+	name?: string;
 	properties: Record<string, NotionProperty>;
+	parent: { type: 'database_id'; database_id: string };
 }
 
 export interface NotionProperty {
@@ -26,11 +40,16 @@ export interface NotionPage {
 export interface NotionClient {
 	getDatabases(): Promise<NotionDatabase[]>;
 	getDatabase(id: string): Promise<NotionDatabase | null>;
+	getDataSource(dataSourceId: string): Promise<NotionDataSource | null>;
+	resolveDataSourceId(databaseId: string): Promise<string>;
 	createPage(databaseId: string, properties: Record<string, unknown>, children?: unknown[]): Promise<NotionPage>;
 	appendBlocks(pageId: string, children: unknown[]): Promise<void>;
 }
 
 export function createNotionClient(accessToken: string): NotionClient {
+	// Cache for database_id -> data_source_id mappings
+	const dataSourceCache = new Map<string, string>();
+
 	async function request<T>(
 		endpoint: string,
 		options: RequestInit = {},
@@ -71,18 +90,42 @@ export function createNotionClient(accessToken: string): NotionClient {
 	}
 
 	return {
+		/**
+		 * Get all accessible databases
+		 * In 2025-09-03, search returns data_source objects
+		 */
 		async getDatabases(): Promise<NotionDatabase[]> {
-			const data = await request<{ results: NotionDatabase[] }>('/search', {
+			// Search for data sources, then group by parent database
+			const data = await request<{ results: NotionDataSource[] }>('/search', {
 				method: 'POST',
 				body: JSON.stringify({
-					filter: { property: 'object', value: 'database' },
+					filter: { property: 'object', value: 'data_source' },
 					page_size: 100
 				})
 			});
 
-			return data.results || [];
+			// Convert data sources to database format for backward compatibility
+			const databaseMap = new Map<string, NotionDatabase>();
+			for (const ds of data.results || []) {
+				const dbId = ds.parent?.database_id;
+				if (dbId && !databaseMap.has(dbId)) {
+					databaseMap.set(dbId, {
+						id: dbId,
+						title: ds.name ? [{ plain_text: ds.name }] : [{ plain_text: 'Untitled' }],
+						properties: ds.properties,
+						data_sources: [{ id: ds.id, name: ds.name || 'Default' }]
+					});
+					// Cache the mapping
+					dataSourceCache.set(dbId, ds.id);
+				}
+			}
+
+			return Array.from(databaseMap.values());
 		},
 
+		/**
+		 * Get a database by ID (returns data_sources list)
+		 */
 		async getDatabase(id: string): Promise<NotionDatabase | null> {
 			try {
 				return await request<NotionDatabase>(`/databases/${id}`);
@@ -91,15 +134,52 @@ export function createNotionClient(accessToken: string): NotionClient {
 			}
 		},
 
+		/**
+		 * Get a data source by ID (contains the actual schema/properties)
+		 */
+		async getDataSource(dataSourceId: string): Promise<NotionDataSource | null> {
+			try {
+				return await request<NotionDataSource>(`/data_sources/${dataSourceId}`);
+			} catch {
+				return null;
+			}
+		},
+
+		/**
+		 * Resolve a database ID to its primary data source ID
+		 */
+		async resolveDataSourceId(databaseId: string): Promise<string> {
+			// Check cache first
+			const cached = dataSourceCache.get(databaseId);
+			if (cached) return cached;
+
+			// Fetch database to get data sources list
+			const db = await request<NotionDatabase>(`/databases/${databaseId}`);
+			if (!db.data_sources?.length) {
+				throw new Error(`No data sources found for database ${databaseId}`);
+			}
+
+			const dataSourceId = db.data_sources[0].id;
+			dataSourceCache.set(databaseId, dataSourceId);
+			return dataSourceId;
+		},
+
+		/**
+		 * Create a page in a database
+		 * Automatically resolves database_id to data_source_id for 2025-09-03
+		 */
 		async createPage(
 			databaseId: string,
 			properties: Record<string, unknown>,
 			children: unknown[] = []
 		): Promise<NotionPage> {
+			// Resolve to data source ID
+			const dataSourceId = await this.resolveDataSourceId(databaseId);
+
 			return request<NotionPage>('/pages', {
 				method: 'POST',
 				body: JSON.stringify({
-					parent: { database_id: databaseId },
+					parent: { type: 'data_source_id', data_source_id: dataSourceId },
 					properties,
 					children: children.slice(0, 100) // Notion limit
 				})

@@ -86,7 +86,8 @@ export interface NotionPage {
 	created_by: { object: 'user'; id: string };
 	last_edited_by: { object: 'user'; id: string };
 	parent:
-		| { type: 'database_id'; database_id: string }
+		| { type: 'database_id'; database_id: string; data_source_id?: string }
+		| { type: 'data_source_id'; data_source_id: string }
 		| { type: 'page_id'; page_id: string }
 		| { type: 'workspace'; workspace: true };
 	archived: boolean;
@@ -97,7 +98,7 @@ export interface NotionPage {
 }
 
 /**
- * Notion database object
+ * Notion database object (2025-09-03: now contains data_sources list)
  */
 export interface NotionDatabase {
 	object: 'database';
@@ -108,12 +109,36 @@ export interface NotionDatabase {
 	last_edited_time: string;
 	icon?: { type: 'emoji'; emoji: string } | { type: 'external'; external: { url: string } } | null;
 	cover?: { type: 'external'; external: { url: string } } | null;
-	properties: Record<string, NotionPropertySchema>;
+	/** In 2025-09-03, properties moved to data_sources. This may be empty. */
+	properties?: Record<string, NotionPropertySchema>;
+	/** List of data sources in this database (2025-09-03+) */
+	data_sources?: Array<{ id: string; name: string }>;
 	parent:
 		| { type: 'page_id'; page_id: string }
 		| { type: 'workspace'; workspace: true };
 	url: string;
 	archived: boolean;
+	is_inline?: boolean;
+	in_trash?: boolean;
+}
+
+/**
+ * Notion data source object (2025-09-03+)
+ * Contains the schema (properties) for a single source within a database
+ */
+export interface NotionDataSource {
+	object: 'data_source';
+	id: string;
+	name?: string;
+	created_time: string;
+	last_edited_time: string;
+	properties: Record<string, NotionPropertySchema>;
+	parent: { type: 'database_id'; database_id: string };
+	/** The database's parent (grandparent of this data source) */
+	database_parent:
+		| { type: 'page_id'; page_id: string }
+		| { type: 'workspace'; workspace: true };
+	in_trash?: boolean;
 }
 
 /**
@@ -188,8 +213,8 @@ export interface NotionConfig {
 export interface SearchOptions {
 	/** Search query */
 	query?: string;
-	/** Filter by object type: 'page' or 'database' */
-	filter?: { property: 'object'; value: 'page' | 'database' };
+	/** Filter by object type: 'page' or 'data_source' (2025-09-03+) */
+	filter?: { property: 'object'; value: 'page' | 'data_source' };
 	/** Sort direction */
 	sort?: { direction: 'ascending' | 'descending'; timestamp: 'last_edited_time' };
 	/** Pagination cursor */
@@ -210,9 +235,11 @@ export interface GetPageOptions {
  * Options for creating a page
  */
 export interface CreatePageOptions {
-	/** Parent database ID (mutually exclusive with parentPageId) */
+	/** Parent data source ID (2025-09-03+, preferred over parentDatabaseId) */
+	parentDataSourceId?: string;
+	/** Parent database ID (deprecated in 2025-09-03, use parentDataSourceId instead) */
 	parentDatabaseId?: string;
-	/** Parent page ID (mutually exclusive with parentDatabaseId) */
+	/** Parent page ID (mutually exclusive with parentDataSourceId/parentDatabaseId) */
 	parentPageId?: string;
 	/** Page properties */
 	properties: Record<string, unknown>;
@@ -241,11 +268,13 @@ export interface UpdatePageOptions {
 }
 
 /**
- * Options for querying a database
+ * Options for querying a database/data source
  */
 export interface QueryDatabaseOptions {
-	/** Database ID */
-	databaseId: string;
+	/** Data source ID (2025-09-03+, preferred) */
+	dataSourceId?: string;
+	/** Database ID (will be resolved to data source ID automatically) */
+	databaseId?: string;
 	/** Filter conditions */
 	filter?: Record<string, unknown>;
 	/** Sort conditions */
@@ -279,9 +308,16 @@ const handleError = createErrorHandler('notion');
  * Notion Integration
  *
  * Weniger, aber besser: Extends BaseAPIClient for shared HTTP logic.
+ *
+ * API Version 2025-09-03:
+ * - Uses data_source_id instead of database_id for queries and page creation
+ * - Search filter uses 'data_source' instead of 'database'
+ * - Database endpoint returns data_sources list; use getDataSource() for schema
  */
 export class Notion extends BaseAPIClient {
 	private notionVersion: string;
+	/** Cache of database_id -> data_source_id mappings */
+	private dataSourceCache: Map<string, string> = new Map();
 
 	constructor(config: NotionConfig) {
 		validateAccessToken(config.accessToken, 'notion');
@@ -299,15 +335,79 @@ export class Notion extends BaseAPIClient {
 	}
 
 	// ==========================================================================
+	// DATA SOURCE RESOLUTION (2025-09-03+)
+	// ==========================================================================
+
+	/**
+	 * Resolve a database ID to its primary data source ID
+	 *
+	 * In 2025-09-03+, most operations require data_source_id instead of database_id.
+	 * This method fetches the database and returns the first data source ID.
+	 *
+	 * Results are cached to avoid repeated API calls.
+	 */
+	async resolveDataSourceId(databaseId: string): Promise<string> {
+		// Check cache first
+		const cached = this.dataSourceCache.get(databaseId);
+		if (cached) return cached;
+
+		// Fetch database to get data sources
+		const result = await this.getDatabase(databaseId);
+		if (!result.success || !result.data.data_sources?.length) {
+			throw new Error(`Could not resolve data source for database ${databaseId}`);
+		}
+
+		const dataSourceId = result.data.data_sources[0].id;
+		this.dataSourceCache.set(databaseId, dataSourceId);
+		return dataSourceId;
+	}
+
+	/**
+	 * Get a data source by ID (2025-09-03+)
+	 *
+	 * Use this to get the schema (properties) of a data source.
+	 * In 2025-09-03, getDatabase() returns the database container,
+	 * while getDataSource() returns the actual schema.
+	 */
+	async getDataSource(dataSourceId: string): Promise<ActionResult<NotionDataSource>> {
+		if (!dataSourceId) {
+			return ActionResult.error('Data source ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+				integration: 'notion',
+				action: 'get-data-source',
+			});
+		}
+
+		try {
+			const response = await this.get(`/data_sources/${dataSourceId}`, this.notionHeaders);
+			await assertResponseOk(response, { integration: 'notion', action: 'get-data-source' });
+
+			const dataSource = (await response.json()) as NotionDataSource;
+
+			return createActionResult({
+				data: dataSource,
+				integration: 'notion',
+				action: 'get-data-source',
+				schema: 'notion.data-source.v1',
+				capabilities: this.getCapabilities(),
+			});
+		} catch (error) {
+			return handleError(error, 'get-data-source');
+		}
+	}
+
+	// ==========================================================================
 	// ACTIONS
 	// ==========================================================================
 
 	/**
-	 * Search pages and databases
+	 * Search pages and data sources
+	 *
+	 * Note: In 2025-09-03+, use filter value 'data_source' instead of 'database'.
+	 * Search results for data sources return the schema (properties).
 	 *
 	 * @returns ActionResult with search results
 	 */
-	async search(options: SearchOptions = {}): Promise<ActionResult<Array<NotionPage | NotionDatabase>>> {
+	async search(options: SearchOptions = {}): Promise<ActionResult<Array<NotionPage | NotionDataSource>>> {
 		const { query, filter, sort, start_cursor, page_size = 100 } = options;
 
 		try {
@@ -325,7 +425,7 @@ export class Notion extends BaseAPIClient {
 
 			const data = (await response.json()) as {
 				object: 'list';
-				results: Array<NotionPage | NotionDatabase>;
+				results: Array<NotionPage | NotionDataSource>;
 				has_more: boolean;
 				next_cursor: string | null;
 			};
@@ -336,14 +436,11 @@ export class Notion extends BaseAPIClient {
 				items: data.results.map((item) => ({
 					id: item.id,
 					title: this.extractTitle(item),
-					description:
-						item.object === 'database'
-							? this.richTextToPlain((item as NotionDatabase).description)
-							: undefined,
-					url: item.url,
+					description: undefined,
+					url: item.object === 'page' ? (item as NotionPage).url : undefined,
 					metadata: {
 						object: item.object,
-						archived: item.archived,
+						archived: item.object === 'page' ? (item as NotionPage).archived : undefined,
 					},
 				})),
 				metadata: {
@@ -404,24 +501,44 @@ export class Notion extends BaseAPIClient {
 	/**
 	 * Create a new page
 	 *
+	 * In 2025-09-03+, use parentDataSourceId for database pages.
+	 * parentDatabaseId is still supported but will be automatically resolved.
+	 *
 	 * @returns ActionResult with created page
 	 */
 	async createPage(options: CreatePageOptions): Promise<ActionResult<NotionPage>> {
-		const { parentDatabaseId, parentPageId, properties, children, icon, cover } = options;
+		const { parentDataSourceId, parentDatabaseId, parentPageId, properties, children, icon, cover } = options;
 
-		if (!parentDatabaseId && !parentPageId) {
+		if (!parentDataSourceId && !parentDatabaseId && !parentPageId) {
 			return ActionResult.error(
-				'Either parentDatabaseId or parentPageId is required',
+				'Either parentDataSourceId, parentDatabaseId, or parentPageId is required',
 				ErrorCode.MISSING_REQUIRED_FIELD,
 				{ integration: 'notion', action: 'create-page' }
 			);
 		}
 
 		try {
+			let parent: Record<string, unknown>;
+
+			if (parentPageId) {
+				parent = { page_id: parentPageId };
+			} else if (parentDataSourceId) {
+				// Use data_source_id directly (2025-09-03+)
+				parent = { type: 'data_source_id', data_source_id: parentDataSourceId };
+			} else if (parentDatabaseId) {
+				// Resolve database_id to data_source_id
+				const dataSourceId = await this.resolveDataSourceId(parentDatabaseId);
+				parent = { type: 'data_source_id', data_source_id: dataSourceId };
+			} else {
+				return ActionResult.error(
+					'No valid parent specified',
+					ErrorCode.MISSING_REQUIRED_FIELD,
+					{ integration: 'notion', action: 'create-page' }
+				);
+			}
+
 			const body: Record<string, unknown> = {
-				parent: parentDatabaseId
-					? { database_id: parentDatabaseId }
-					: { page_id: parentPageId },
+				parent,
 				properties,
 			};
 
@@ -486,21 +603,27 @@ export class Notion extends BaseAPIClient {
 	}
 
 	/**
-	 * Query a database
+	 * Query a database/data source
+	 *
+	 * In 2025-09-03+, uses /data_sources/:id/query endpoint.
+	 * If databaseId is provided, it will be automatically resolved to dataSourceId.
 	 *
 	 * @returns ActionResult with database items (pages)
 	 */
 	async queryDatabase(options: QueryDatabaseOptions): Promise<ActionResult<NotionPage[]>> {
-		const { databaseId, filter, sorts, start_cursor, page_size = 100 } = options;
+		const { dataSourceId, databaseId, filter, sorts, start_cursor, page_size = 100 } = options;
 
-		if (!databaseId) {
-			return ActionResult.error('Database ID is required', ErrorCode.MISSING_REQUIRED_FIELD, {
+		if (!dataSourceId && !databaseId) {
+			return ActionResult.error('Either dataSourceId or databaseId is required', ErrorCode.MISSING_REQUIRED_FIELD, {
 				integration: 'notion',
 				action: 'query-database',
 			});
 		}
 
 		try {
+			// Resolve to data source ID if needed
+			const resolvedDataSourceId = dataSourceId || await this.resolveDataSourceId(databaseId!);
+
 			const body: Record<string, unknown> = {
 				page_size: Math.min(page_size, 100),
 			};
@@ -509,7 +632,8 @@ export class Notion extends BaseAPIClient {
 			if (sorts) body.sorts = sorts;
 			if (start_cursor) body.start_cursor = start_cursor;
 
-			const response = await this.post(`/databases/${databaseId}/query`, body, this.notionHeaders);
+			// Use /data_sources endpoint (2025-09-03+)
+			const response = await this.post(`/data_sources/${resolvedDataSourceId}/query`, body, this.notionHeaders);
 			await assertResponseOk(response, { integration: 'notion', action: 'query-database' });
 
 			const data = (await response.json()) as {
@@ -803,11 +927,16 @@ export class Notion extends BaseAPIClient {
 	}
 
 	/**
-	 * Extract title from a page or database
+	 * Extract title from a page, database, or data source
 	 */
-	private extractTitle(item: NotionPage | NotionDatabase): string {
+	private extractTitle(item: NotionPage | NotionDatabase | NotionDataSource): string {
 		if (item.object === 'database') {
 			return this.richTextToPlain((item as NotionDatabase).title);
+		}
+
+		if (item.object === 'data_source') {
+			// Data sources have a name property
+			return (item as NotionDataSource).name || 'Untitled Data Source';
 		}
 
 		// For pages, find the title property
