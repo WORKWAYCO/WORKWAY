@@ -140,37 +140,41 @@ export class BaseAPIClient extends AuthenticatedHTTPClient {
 
 	/**
 	 * GET request with optional additional headers
+	 *
+	 * NOTE: We call the parent class's request() method directly to avoid
+	 * signature conflicts with our backwards-compatible request() override.
 	 */
-	get(path: string, additionalHeaders: Record<string, string> = {}): Promise<Response> {
-		return super.get(path, { headers: additionalHeaders });
+	override get(path: string, additionalHeaders: Record<string, string> = {}): Promise<Response> {
+		// Call grandparent's request() method directly, bypassing our override
+		return AuthenticatedHTTPClient.prototype.request.call(this, 'GET', path, { headers: additionalHeaders });
 	}
 
 	/**
 	 * POST request with JSON body and optional additional headers
 	 */
-	post(path: string, body?: unknown, additionalHeaders: Record<string, string> = {}): Promise<Response> {
-		return super.post(path, { body, headers: additionalHeaders });
+	override post(path: string, body?: unknown, additionalHeaders: Record<string, string> = {}): Promise<Response> {
+		return AuthenticatedHTTPClient.prototype.request.call(this, 'POST', path, { body, headers: additionalHeaders });
 	}
 
 	/**
 	 * PATCH request with JSON body and optional additional headers
 	 */
-	patch(path: string, body?: unknown, additionalHeaders: Record<string, string> = {}): Promise<Response> {
-		return super.patch(path, { body, headers: additionalHeaders });
+	override patch(path: string, body?: unknown, additionalHeaders: Record<string, string> = {}): Promise<Response> {
+		return AuthenticatedHTTPClient.prototype.request.call(this, 'PATCH', path, { body, headers: additionalHeaders });
 	}
 
 	/**
 	 * PUT request with JSON body and optional additional headers
 	 */
-	put(path: string, body?: unknown, additionalHeaders: Record<string, string> = {}): Promise<Response> {
-		return super.put(path, { body, headers: additionalHeaders });
+	override put(path: string, body?: unknown, additionalHeaders: Record<string, string> = {}): Promise<Response> {
+		return AuthenticatedHTTPClient.prototype.request.call(this, 'PUT', path, { body, headers: additionalHeaders });
 	}
 
 	/**
 	 * DELETE request with optional additional headers
 	 */
-	delete(path: string, additionalHeaders: Record<string, string> = {}): Promise<Response> {
-		return super.delete(path, { headers: additionalHeaders });
+	override delete(path: string, additionalHeaders: Record<string, string> = {}): Promise<Response> {
+		return AuthenticatedHTTPClient.prototype.request.call(this, 'DELETE', path, { headers: additionalHeaders });
 	}
 
 	// =========================================================================

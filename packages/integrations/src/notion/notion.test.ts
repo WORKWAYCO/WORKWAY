@@ -11,6 +11,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { Notion } from './index.js';
 
+// Save original fetch
+const originalFetch = global.fetch;
+
 // ============================================================================
 // CONSTRUCTOR TESTS
 // ============================================================================
@@ -207,56 +210,67 @@ describe('Notion.search Options', () => {
 	it('should include query in request body', async () => {
 		await notion.search({ query: 'Project Notes' });
 
-		expect(global.fetch).toHaveBeenCalled();
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.query).toBe('Project Notes');
+		const call = vi.mocked(global.fetch).mock.calls[0];
+		const body = JSON.parse(call[1]?.body as string);
+
+		expect(call[0]).toContain('/search');
+		expect(call[1]?.method).toBe('POST');
+		expect(body).toEqual({ query: 'Project Notes', page_size: 100 });
 	});
 
 	it('should respect page_size limit', async () => {
 		await notion.search({ page_size: 50 });
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.page_size).toBe(50);
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/search'),
+			expect.objectContaining({
+				body: JSON.stringify({ page_size: 50 }),
+			})
+		);
 	});
 
 	it('should cap page_size at 100', async () => {
 		await notion.search({ page_size: 200 });
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.page_size).toBe(100);
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/search'),
+			expect.objectContaining({
+				body: JSON.stringify({ page_size: 100 }),
+			})
+		);
 	});
 
 	it('should include filter when provided', async () => {
 		await notion.search({ filter: { property: 'object', value: 'page' } });
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.filter).toEqual({ property: 'object', value: 'page' });
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/search'),
+			expect.objectContaining({
+				body: JSON.stringify({ page_size: 100, filter: { property: 'object', value: 'page' } }),
+			})
+		);
 	});
 
 	it('should include sort when provided', async () => {
 		await notion.search({ sort: { direction: 'descending', timestamp: 'last_edited_time' } });
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.sort).toEqual({ direction: 'descending', timestamp: 'last_edited_time' });
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/search'),
+			expect.objectContaining({
+				body: JSON.stringify({ page_size: 100, sort: { direction: 'descending', timestamp: 'last_edited_time' } }),
+			})
+		);
 	});
 
 	it('should include pagination cursor when provided', async () => {
 		await notion.search({ start_cursor: 'cursor_abc123' });
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.start_cursor).toBe('cursor_abc123');
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/search'),
+			expect.objectContaining({
+				body: JSON.stringify({ page_size: 100, start_cursor: 'cursor_abc123' }),
+			})
+		);
 	});
 });
 
@@ -269,6 +283,9 @@ describe('Notion API Requests', () => {
 
 	beforeEach(() => {
 		notion = new Notion({ accessToken: 'secret_test_token' });
+		vi.spyOn(global, 'fetch').mockResolvedValue(
+			new Response(JSON.stringify({ object: 'list', results: [], has_more: false, next_cursor: null }), { status: 200 })
+		);
 	});
 
 	afterEach(() => {
@@ -276,28 +293,18 @@ describe('Notion API Requests', () => {
 	});
 
 	it('should include authorization header', async () => {
-		vi.spyOn(global, 'fetch').mockResolvedValue(
-			new Response(JSON.stringify({ object: 'list', results: [], has_more: false, next_cursor: null }), { status: 200 })
-		);
-
 		await notion.search();
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const headers = init?.headers as Headers;
+		const call = vi.mocked(global.fetch).mock.calls[0];
+		const headers = call[1]?.headers as Headers;
 		expect(headers.get('Authorization')).toBe('Bearer secret_test_token');
 	});
 
 	it('should include Notion-Version header', async () => {
-		vi.spyOn(global, 'fetch').mockResolvedValue(
-			new Response(JSON.stringify({ object: 'list', results: [], has_more: false, next_cursor: null }), { status: 200 })
-		);
-
 		await notion.search();
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const headers = init?.headers as Headers;
+		const call = vi.mocked(global.fetch).mock.calls[0];
+		const headers = call[1]?.headers as Headers;
 		expect(headers.get('Notion-Version')).toBe('2022-06-28');
 	});
 
@@ -307,28 +314,18 @@ describe('Notion API Requests', () => {
 			notionVersion: '2023-01-01',
 		});
 
-		vi.spyOn(global, 'fetch').mockResolvedValue(
-			new Response(JSON.stringify({ object: 'list', results: [], has_more: false, next_cursor: null }), { status: 200 })
-		);
-
 		await customNotion.search();
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const headers = init?.headers as Headers;
+		const call = vi.mocked(global.fetch).mock.calls[0];
+		const headers = call[1]?.headers as Headers;
 		expect(headers.get('Notion-Version')).toBe('2023-01-01');
 	});
 
 	it('should include Content-Type header', async () => {
-		vi.spyOn(global, 'fetch').mockResolvedValue(
-			new Response(JSON.stringify({ object: 'list', results: [], has_more: false, next_cursor: null }), { status: 200 })
-		);
-
 		await notion.search();
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const headers = init?.headers as Headers;
+		const call = vi.mocked(global.fetch).mock.calls[0];
+		const headers = call[1]?.headers as Headers;
 		expect(headers.get('Content-Type')).toBe('application/json');
 	});
 });
@@ -387,10 +384,12 @@ describe('Notion.getPage', () => {
 	it('should call correct API endpoint', async () => {
 		await notion.getPage({ pageId: 'page-123' });
 
-		expect(global.fetch).toHaveBeenCalled();
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const url = calls[0][0] as string;
-		expect(url).toContain('/pages/page-123');
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/pages/page-123'),
+			expect.objectContaining({
+				method: 'GET',
+			})
+		);
 	});
 });
 
@@ -420,9 +419,12 @@ describe('Notion.queryDatabase', () => {
 	it('should call correct API endpoint', async () => {
 		await notion.queryDatabase({ databaseId: 'db-123' });
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const url = calls[0][0] as string;
-		expect(url).toContain('/databases/db-123/query');
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/databases/db-123/query'),
+			expect.objectContaining({
+				method: 'POST',
+			})
+		);
 	});
 
 	it('should include filter in request body', async () => {
@@ -433,10 +435,12 @@ describe('Notion.queryDatabase', () => {
 
 		await notion.queryDatabase({ databaseId: 'db-123', filter });
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.filter).toEqual(filter);
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/databases/db-123/query'),
+			expect.objectContaining({
+				body: JSON.stringify({ page_size: 100, filter }),
+			})
+		);
 	});
 
 	it('should include sorts in request body', async () => {
@@ -444,10 +448,12 @@ describe('Notion.queryDatabase', () => {
 
 		await notion.queryDatabase({ databaseId: 'db-123', sorts });
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.sorts).toEqual(sorts);
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/databases/db-123/query'),
+			expect.objectContaining({
+				body: JSON.stringify({ page_size: 100, sorts }),
+			})
+		);
 	});
 
 	it('should return correct schema', async () => {
@@ -510,10 +516,12 @@ describe('Notion.createPage', () => {
 
 		expect(result.success).toBe(true);
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.parent).toEqual({ page_id: 'parent-page-123' });
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/pages'),
+			expect.objectContaining({
+				body: expect.stringContaining('"page_id":"parent-page-123"'),
+			})
+		);
 	});
 
 	it('should include icon when provided', async () => {
@@ -523,10 +531,12 @@ describe('Notion.createPage', () => {
 			icon: { type: 'emoji', emoji: '🚀' },
 		});
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.icon).toEqual({ type: 'emoji', emoji: '🚀' });
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/pages'),
+			expect.objectContaining({
+				body: expect.stringContaining('"icon":{"type":"emoji","emoji":"🚀"}'),
+			})
+		);
 	});
 
 	it('should call POST on /pages endpoint', async () => {
@@ -535,11 +545,12 @@ describe('Notion.createPage', () => {
 			properties: {},
 		});
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const url = calls[0][0] as string;
-		const init = calls[0][1];
-		expect(url).toContain('/pages');
-		expect(init?.method).toBe('POST');
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/pages'),
+			expect.objectContaining({
+				method: 'POST',
+			})
+		);
 	});
 });
 
@@ -571,11 +582,12 @@ describe('Notion.updatePage', () => {
 			properties: { Status: { select: { name: 'Done' } } },
 		});
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const url = calls[0][0] as string;
-		const init = calls[0][1];
-		expect(url).toContain('/pages/page-123');
-		expect(init?.method).toBe('PATCH');
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/pages/page-123'),
+			expect.objectContaining({
+				method: 'PATCH',
+			})
+		);
 	});
 
 	it('should include properties in request body', async () => {
@@ -586,10 +598,12 @@ describe('Notion.updatePage', () => {
 			properties,
 		});
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.properties).toEqual(properties);
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/pages/page-123'),
+			expect.objectContaining({
+				body: JSON.stringify({ properties }),
+			})
+		);
 	});
 
 	it('should handle archive flag', async () => {
@@ -598,10 +612,12 @@ describe('Notion.updatePage', () => {
 			archived: true,
 		});
 
-		const calls = vi.mocked(global.fetch).mock.calls;
-		const init = calls[0][1];
-		const body = JSON.parse(init?.body as string);
-		expect(body.archived).toBe(true);
+		expect(global.fetch).toHaveBeenCalledWith(
+			expect.stringContaining('/pages/page-123'),
+			expect.objectContaining({
+				body: JSON.stringify({ archived: true }),
+			})
+		);
 	});
 });
 
