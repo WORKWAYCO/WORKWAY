@@ -86,14 +86,18 @@ export async function readQuery<T = Record<string, unknown>>(
 ): Promise<T[]> {
 	const { consistency = 'strong' } = options;
 
-	const stmt = db.prepare(query);
+	// D1 read replicas use Sessions API: withSession()
+	// - 'strong' → use 'first-primary' session parameter
+	// - 'eventual' → use 'first-unconstrained' session parameter (default)
+	const sessionParam = consistency === 'strong' ? 'first-primary' : 'first-unconstrained';
+
+	// @ts-expect-error - D1 types may not include withSession yet
+	const session = typeof db.withSession === 'function' ? db.withSession(sessionParam) : db;
+
+	const stmt = session.prepare(query);
 	const bound = params.length > 0 ? stmt.bind(...params) : stmt;
 
-	// D1 read replicas - consistency is set at database level
-	// The consistency parameter is passed to the query for documentation
-	// but actual replica routing is handled by Cloudflare
-	void consistency; // Document intent, actual routing is automatic
-	const result = await bound.all<T>();
+	const result = await bound.all<T>({ consistency });
 
 	return result.results ?? [];
 }
@@ -119,7 +123,13 @@ export async function readFirst<T = Record<string, unknown>>(
 ): Promise<T | null> {
 	const { consistency = 'strong' } = options;
 
-	const stmt = db.prepare(query);
+	// D1 read replicas use Sessions API: withSession()
+	const sessionParam = consistency === 'strong' ? 'first-primary' : 'first-unconstrained';
+
+	// @ts-expect-error - D1 types may not include withSession yet
+	const session = typeof db.withSession === 'function' ? db.withSession(sessionParam) : db;
+
+	const stmt = session.prepare(query);
 	const bound = params.length > 0 ? stmt.bind(...params) : stmt;
 
 	// @ts-expect-error - D1 types may not include consistency yet

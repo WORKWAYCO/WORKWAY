@@ -649,6 +649,7 @@ export class AuthenticatedHTTPClient extends BaseHTTPClient {
 	 *
 	 * Proactive: If token is expiring soon, refresh BEFORE making request
 	 * Reactive: If 401 received, refresh and retry (fallback)
+	 * Rate limiting: If 429 received, wait for Retry-After and retry
 	 */
 	protected override async request(
 		method: string,
@@ -662,6 +663,31 @@ export class AuthenticatedHTTPClient extends BaseHTTPClient {
 		}
 
 		const response = await super.request(method, path, options);
+
+		// Handle 429 Rate Limited with Retry-After header
+		if (response.status === 429 && !isRetry) {
+			const retryAfter = response.headers.get('Retry-After');
+			// Parse Retry-After: can be seconds (integer) or HTTP date
+			let delayMs = 1000; // Default 1 second if header is missing
+			if (retryAfter) {
+				const seconds = parseInt(retryAfter, 10);
+				if (!isNaN(seconds)) {
+					// Retry-After is in seconds
+					delayMs = seconds * 1000;
+				} else {
+					// Try parsing as HTTP date
+					const date = Date.parse(retryAfter);
+					if (!isNaN(date)) {
+						delayMs = Math.max(0, date - Date.now());
+					}
+				}
+			}
+			// Cap the delay at 60 seconds to avoid very long waits
+			delayMs = Math.min(delayMs, 60000);
+			await new Promise(resolve => setTimeout(resolve, delayMs));
+			// Retry the request once after waiting
+			return this.request(method, path, options, true);
+		}
 
 		// Reactive refresh: handle 401 Unauthorized as fallback
 		if (response.status === 401 && !isRetry && this.tokenRefresh) {
