@@ -764,3 +764,46 @@ export async function createNotionVideoPage(params: {
 
 	return { url: pageUrl };
 }
+
+// ============================================================================
+// CONCURRENT PROCESSING
+// ============================================================================
+
+/**
+ * Process items concurrently in batches
+ *
+ * Processes an array of items with controlled concurrency to avoid overwhelming
+ * APIs while maximizing throughput.
+ *
+ * @param items - Array of items to process
+ * @param concurrency - Maximum number of concurrent operations (default: 3)
+ * @param processFn - Async function to process each item
+ * @returns Array of results in the same order as input items
+ *
+ * @example
+ * ```typescript
+ * const results = await processConcurrently(
+ *   videos,
+ *   3,
+ *   async (video) => await processVideo(video)
+ * );
+ * ```
+ */
+export async function processConcurrently<T, R>(
+	items: T[],
+	concurrency: number,
+	processFn: (item: T, index: number) => Promise<R>
+): Promise<R[]> {
+	const results: R[] = [];
+
+	// Process items in batches of `concurrency` size
+	for (let i = 0; i < items.length; i += concurrency) {
+		const batch = items.slice(i, i + concurrency);
+		const batchResults = await Promise.all(
+			batch.map((item, batchIndex) => processFn(item, i + batchIndex))
+		);
+		results.push(...batchResults);
+	}
+
+	return results;
+}

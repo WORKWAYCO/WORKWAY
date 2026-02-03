@@ -46,6 +46,7 @@ import {
 	checkVideoExistsInNotion,
 	appendBlocksInBatches,
 	createNotionVideoPage,
+	processConcurrently,
 	// YouTube Data API functions (uses API key, no user OAuth required)
 	fetchPlaylistItems,
 	fetchVideoDetails,
@@ -207,6 +208,12 @@ export default defineWorkflow({
 			default: 'Published',
 			description: 'Notion database property for publish date',
 		},
+		max_concurrent_videos: {
+			type: 'number',
+			label: 'Concurrent Videos',
+			default: 3,
+			description: 'Number of videos to process simultaneously (1-10)',
+		},
 	},
 
 	// Cron trigger - polls playlist for new videos
@@ -226,6 +233,7 @@ export default defineWorkflow({
 			notion_url_property = 'URL',
 			notion_channel_property = 'Channel',
 			notion_date_property = 'Published',
+			max_concurrent_videos = 3,
 		} = inputs;
 
 		// Extract playlist ID from URL if needed
@@ -291,78 +299,81 @@ export default defineWorkflow({
 			};
 		}
 
-		// Process each new video
-		const results: Array<{ videoId: string; notionUrl?: string; error?: string; skipped?: boolean }> = [];
+		// Process videos concurrently with controlled concurrency
+		// Clamp concurrency between 1 and 10 to prevent overwhelming APIs
+		const concurrency = Math.max(1, Math.min(10, max_concurrent_videos));
 
-		for (const item of newVideos) {
-			try {
-				// Fetch video details via YouTube Data API
-				const videoResult = await fetchVideoDetails(item.videoId);
-				if (!videoResult.success || !videoResult.data) {
-					results.push({
-						videoId: item.videoId,
-						error: videoResult.error || 'Failed to fetch video details',
-					});
-					continue;
-				}
-
-				const video = videoResult.data;
-
-				// Fetch transcript if enabled (via Android client + timedtext API)
-				let transcript: TranscriptData | null = null;
-				if (include_transcript) {
-					const transcriptResult = await fetchTranscript(video.id, transcript_language);
-					if (transcriptResult.success && transcriptResult.data) {
-						transcript = transcriptResult.data;
+		const results = await processConcurrently(
+			newVideos,
+			concurrency,
+			async (item, index) => {
+				try {
+					// Fetch video details via YouTube Data API
+					const videoResult = await fetchVideoDetails(item.videoId);
+					if (!videoResult.success || !videoResult.data) {
+						return {
+							videoId: item.videoId,
+							error: videoResult.error || 'Failed to fetch video details',
+						};
 					}
-					// Graceful degradation: continue without transcript if unavailable
-				}
 
-				// Create Notion page (includes duplicate check)
-				const notionPage = await createNotionVideoPage({
-					video: {
-						id: video.id,
-						title: video.title,
-						description: video.description,
-						publishedAt: video.publishedAt,
-						channelTitle: video.channelTitle,
-						thumbnailUrl: video.thumbnailUrl,
-						duration: video.duration,
-						viewCount: video.viewCount,
-					},
-					transcript,
-					databaseId: notion_database_id,
-					propertyNames: {
-						title: notion_title_property,
-						url: notion_url_property,
-						channel: notion_channel_property,
-						date: notion_date_property,
-					},
-					integrations,
-				});
+					const video = videoResult.data;
 
-				// Mark as processed (even if skipped due to duplicate)
-				state.processedVideoIds.push(video.id);
+					// Fetch transcript if enabled (via Android client + timedtext API)
+					let transcript: TranscriptData | null = null;
+					if (include_transcript) {
+						const transcriptResult = await fetchTranscript(video.id, transcript_language);
+						if (transcriptResult.success && transcriptResult.data) {
+							transcript = transcriptResult.data;
+						}
+						// Graceful degradation: continue without transcript if unavailable
+					}
 
-				if (notionPage?.skipped) {
-					results.push({
-						videoId: video.id,
-						skipped: true,
+					// Create Notion page (includes duplicate check)
+					const notionPage = await createNotionVideoPage({
+						video: {
+							id: video.id,
+							title: video.title,
+							description: video.description,
+							publishedAt: video.publishedAt,
+							channelTitle: video.channelTitle,
+							thumbnailUrl: video.thumbnailUrl,
+							duration: video.duration,
+							viewCount: video.viewCount,
+						},
+						transcript,
+						databaseId: notion_database_id,
+						propertyNames: {
+							title: notion_title_property,
+							url: notion_url_property,
+							channel: notion_channel_property,
+							date: notion_date_property,
+						},
+						integrations,
 					});
-				} else {
-					results.push({
-						videoId: video.id,
-						notionUrl: notionPage?.url,
-					});
+
+					// Mark as processed (even if skipped due to duplicate)
+					state.processedVideoIds.push(video.id);
+
+					if (notionPage?.skipped) {
+						return {
+							videoId: video.id,
+							skipped: true,
+						};
+					} else {
+						return {
+							videoId: video.id,
+							notionUrl: notionPage?.url,
+						};
+					}
+				} catch (error) {
+					return {
+						videoId: item.videoId,
+						error: error instanceof Error ? error.message : 'Unknown error',
+					};
 				}
-			} catch (error) {
-				results.push({
-					videoId: item.videoId,
-					error: error instanceof Error ? error.message : 'Unknown error',
-				});
-				// Continue processing other videos
 			}
-		}
+		);
 
 		// Update state
 		state.lastChecked = new Date().toISOString();
