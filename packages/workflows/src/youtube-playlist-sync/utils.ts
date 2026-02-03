@@ -145,10 +145,17 @@ export async function fetchPlaylistItems(playlistId: string): Promise<ScrapePlay
 			const data = await response.json();
 
 			// Navigate through InnerTube response structure
+			// Android client uses singleColumnBrowseResultsRenderer (mobile layout)
+			// Web client uses twoColumnBrowseResultsRenderer (desktop layout)
 			const contents =
+				// Mobile layout (Android client)
+				data?.contents?.singleColumnBrowseResultsRenderer?.tabs?.[0]?.tabRenderer?.content
+					?.sectionListRenderer?.contents?.[0]?.playlistVideoListRenderer?.contents ||
+				// Desktop layout (Web client) - fallback
 				data?.contents?.twoColumnBrowseResultsRenderer?.tabs?.[0]?.tabRenderer?.content
 					?.sectionListRenderer?.contents?.[0]?.itemSectionRenderer?.contents?.[0]
 					?.playlistVideoListRenderer?.contents ||
+				// Continuation responses
 				data?.onResponseReceivedActions?.[0]?.appendContinuationItemsAction?.continuationItems;
 
 			if (!Array.isArray(contents)) {
