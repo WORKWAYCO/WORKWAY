@@ -99,7 +99,7 @@ export default defineWorkflow({
 	},
 
 	integrations: [
-		{ service: 'zoom', scopes: ['meeting:read', 'recording:read', 'clip:read'] },
+		{ service: 'zoom', scopes: ['meeting:read', 'recording:read', 'clips:read'] },
 		{ service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
 		{ service: 'slack', scopes: ['send_messages', 'read_channels'] },
 		{ service: 'hubspot', scopes: ['crm.objects.deals.read', 'crm.objects.deals.write', 'crm.objects.contacts.read'], optional: true },

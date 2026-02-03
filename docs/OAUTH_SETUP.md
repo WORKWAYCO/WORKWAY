@@ -263,7 +263,7 @@ Uses the same Google OAuth as Gmail. You can request both scopes in a single OAu
    ```
    meeting:read
    recording:read
-   clip:read
+   clips:read
    user:read
    ```
 
@@ -872,7 +872,7 @@ const OAUTH_PROVIDERS = {
     clientSecret: env.ZOOM_CLIENT_SECRET,
     authorizeUrl: 'https://zoom.us/oauth/authorize',
     tokenUrl: 'https://zoom.us/oauth/token',
-    scopes: ['meeting:read', 'recording:read', 'clip:read'],
+    scopes: ['meeting:read', 'recording:read', 'clips:read'],
   },
   typeform: {
     clientId: env.TYPEFORM_CLIENT_ID,

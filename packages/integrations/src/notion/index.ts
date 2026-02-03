@@ -174,7 +174,7 @@ export interface NotionBlock {
 export interface NotionConfig {
 	/** Integration token or OAuth access token */
 	accessToken: string;
-	/** Notion API version (default: '2022-06-28') */
+	/** Notion API version (default: '2025-09-03') */
 	notionVersion?: string;
 	/** Optional: Override API endpoint (for testing) */
 	apiUrl?: string;
@@ -290,7 +290,7 @@ export class Notion extends BaseAPIClient {
 			apiUrl: config.apiUrl || 'https://api.notion.com/v1',
 			timeout: config.timeout,
 		});
-		this.notionVersion = config.notionVersion || '2022-06-28';
+		this.notionVersion = config.notionVersion || '2025-09-03';
 	}
 
 	/** Get Notion-specific headers */

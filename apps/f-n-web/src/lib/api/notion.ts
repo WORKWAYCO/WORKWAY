@@ -4,7 +4,7 @@
  */
 
 const NOTION_API_URL = 'https://api.notion.com/v1';
-const NOTION_VERSION = '2022-06-28';
+const NOTION_VERSION = '2025-09-03';
 
 export interface NotionDatabase {
 	id: string;
@@ -33,7 +33,8 @@ export interface NotionClient {
 export function createNotionClient(accessToken: string): NotionClient {
 	async function request<T>(
 		endpoint: string,
-		options: RequestInit = {}
+		options: RequestInit = {},
+		isRetry = false
 	): Promise<T> {
 		const response = await fetch(`${NOTION_API_URL}${endpoint}`, {
 			...options,
@@ -44,6 +45,22 @@ export function createNotionClient(accessToken: string): NotionClient {
 				...options.headers
 			}
 		});
+
+		// Handle 429 Rate Limited with Retry-After header
+		if (response.status === 429 && !isRetry) {
+			const retryAfter = response.headers.get('Retry-After');
+			let delayMs = 1000; // Default 1 second
+			if (retryAfter) {
+				const seconds = parseInt(retryAfter, 10);
+				if (!isNaN(seconds)) {
+					delayMs = seconds * 1000;
+				}
+			}
+			// Cap at 60 seconds
+			delayMs = Math.min(delayMs, 60000);
+			await new Promise(resolve => setTimeout(resolve, delayMs));
+			return request<T>(endpoint, options, true);
+		}
 
 		if (!response.ok) {
 			const error = await response.json().catch(() => ({})) as { message?: string };
@@ -96,11 +113,15 @@ export function createNotionClient(accessToken: string): NotionClient {
 				batches.push(children.slice(i, i + 100));
 			}
 
-			for (const batch of batches) {
+			for (let i = 0; i < batches.length; i++) {
 				await request(`/blocks/${pageId}/children`, {
 					method: 'PATCH',
-					body: JSON.stringify({ children: batch })
+					body: JSON.stringify({ children: batches[i] })
 				});
+				// Rate limiting: 350ms delay between batches (Notion allows 3 req/s)
+				if (i < batches.length - 1) {
+					await new Promise(resolve => setTimeout(resolve, 350));
+				}
 			}
 		}
 	};

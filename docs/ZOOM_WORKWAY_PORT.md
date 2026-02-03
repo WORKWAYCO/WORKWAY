@@ -118,8 +118,8 @@ zoom/
 
 **OAuth Scopes Required**:
 ```
-clip:read:list_user_clips
-clip:read:clip
+clips:read:list_user_clips
+clips:read:clip
 meeting:read:list_meetings
 recording:read:list_recordings
 recording:read:download_recording

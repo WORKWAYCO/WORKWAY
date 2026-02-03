@@ -138,7 +138,7 @@ Uses Zoom OAuth API for transcript access. Fully automatic, no manual interventi
 
 ```typescript
 integrations: [
-  { service: 'zoom', scopes: ['meeting:read', 'recording:read', 'clip:read'] },
+  { service: 'zoom', scopes: ['meeting:read', 'recording:read', 'clips:read'] },
   { service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
   { service: 'slack', scopes: ['send_messages', 'read_channels'] },
   // ... optional integrations
@@ -215,7 +215,7 @@ export default defineWorkflow({
 
   // Required integrations
   integrations: [
-    { service: 'zoom', scopes: ['meeting:read', 'recording:read', 'clip:read'] },
+    { service: 'zoom', scopes: ['meeting:read', 'recording:read', 'clips:read'] },
     { service: 'notion', scopes: ['read_pages', 'write_pages', 'read_databases'] },
     { service: 'slack', scopes: ['send_messages', 'read_channels'] },
     { service: 'gmail', scopes: ['compose'], optional: true },

@@ -70,7 +70,7 @@ Automated meeting documentation for Zoom users. Runs daily or on webhook to:
 ### Zoom OAuth
 
 ```
-Scopes: meeting:read, recording:read, clip:read
+Scopes: meeting:read, recording:read, clips:read
 
 Endpoints used:
 - GET /users/me/meetings           # List meetings
