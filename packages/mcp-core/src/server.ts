@@ -103,6 +103,7 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
     serverInfo: {
       name: config.name,
       version: config.version,
+      icon: config.icon,
     },
     capabilities: config.capabilities || {
       tools: { listChanged: true },
@@ -120,6 +121,7 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
     serverInfo: {
       name: config.name,
       version: config.version,
+      icon: config.icon,
     },
     capabilities: config.capabilities || {
       tools: { listChanged: true },
@@ -154,6 +156,7 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
             serverInfo: {
               name: config.name,
               version: config.version,
+              ...(config.icon && { icon: config.icon }),
             },
             capabilities: config.capabilities || {
               tools: { listChanged: true },

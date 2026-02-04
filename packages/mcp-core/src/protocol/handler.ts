@@ -22,6 +22,7 @@ export interface ProtocolHandlerConfig<TEnv extends BaseMCPEnv> {
   serverInfo: {
     name: string;
     version: string;
+    icon?: string;
   };
   capabilities: {
     tools?: { listChanged?: boolean };

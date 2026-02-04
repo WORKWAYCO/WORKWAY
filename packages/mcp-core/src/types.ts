@@ -151,6 +151,10 @@ export interface MCPServerConfig<TEnv extends BaseMCPEnv = MCPEnv> {
   version: string;
   /** Server description */
   description?: string;
+  /** Server icon as data URI (base64 SVG or PNG) */
+  icon?: string;
+  /** Base URL for the MCP server */
+  baseUrl?: string;
   /** MCP capabilities */
   capabilities?: MCPCapabilities;
   /** Tools provided by this server */

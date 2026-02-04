@@ -27,10 +27,14 @@ import type { Env } from './types';
 // Create MCP Server with Construction Tools
 // ============================================================================
 
+// WORKWAY icon: black rounded square with white "W" construction mark
+const WORKWAY_ICON = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHZpZXdCb3g9IjAgMCAzMiAzMiIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KICA8cmVjdCB3aWR0aD0iMzIiIGhlaWdodD0iMzIiIHJ4PSI2IiBmaWxsPSIjMDAwMDAwIi8+CiAgPHBhdGggZD0iTTYgMTBMMTAgMjJMMTYgMTRMMjIgMjJMMjYgMTAiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIyLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4K';
+
 const mcpServer = createMCPServer<Env>({
   name: 'workway-construction-mcp',
   version: '0.1.0',
   description: 'The Automation Layer - AI-native workflow automation for construction',
+  icon: WORKWAY_ICON,
   baseUrl: MCP_BASE_URL,
   allowedOrigins: ALLOWED_ORIGINS,
   capabilities: {
