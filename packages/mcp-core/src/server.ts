@@ -67,10 +67,20 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
   }));
   
   // ============================================================================
-  // Health & Info
+  // Health & Info (Root requires auth - triggers OAuth flow)
   // ============================================================================
   
   app.get('/', (c) => {
+    // Check for Authorization header - if missing, return 401 to trigger OAuth
+    const authHeader = c.req.header('Authorization');
+    if (!authHeader) {
+      return c.json({
+        error: 'invalid_token',
+        error_description: 'Missing or invalid access token',
+      }, 401);
+    }
+    
+    // If token present, return server info
     return c.json({
       api: config.name,
       version: config.version,
