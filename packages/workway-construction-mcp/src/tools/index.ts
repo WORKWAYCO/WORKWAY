@@ -19,6 +19,7 @@ export { notificationTools } from './notifications';
 export { templateTools } from './templates';
 export { debuggingTools } from './debugging';
 export { skillTools } from './skills';
+export { seederTools } from './seeder';
 
 import { workflowTools } from './workflow';
 import { procoreTools } from './procore';
@@ -26,6 +27,7 @@ import { notificationTools } from './notifications';
 import { templateTools } from './templates';
 import { debuggingTools } from './debugging';
 import { skillTools } from './skills';
+import { seederTools } from './seeder';
 
 /**
  * All tools combined for MCP registration
@@ -43,6 +45,8 @@ export const allTools = {
   ...debuggingTools,
   // Intelligence Layer Skills
   ...skillTools,
+  // Test data seeding
+  ...seederTools,
 };
 
 /**
@@ -99,6 +103,13 @@ export const toolCategories = {
     'workway_skill_draft_rfi',
     'workway_skill_daily_log_summary',
     'workway_skill_submittal_review',
+  ],
+  // === TEST DATA SEEDING ===
+  seeder: [
+    'workway_seed_rfis',
+    'workway_seed_daily_logs',
+    'workway_seed_all',
+    'workway_get_sample_data',
   ],
 };
 
