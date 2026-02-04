@@ -1,0 +1,327 @@
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
+
+/* ==========================================================================
+   WORKWAY Construction - Design System Extensions
+   Monochromatic design with restrained emerald accent
+   ========================================================================== */
+
+:root {
+  /* Page Layout */
+  --page-padding-x: var(--space-md);
+  --page-padding-y: var(--space-xl);
+  --section-gap: var(--space-2xl);
+  --max-width-content: 1200px;
+  --max-width-narrow: 720px;
+  
+  /* Glass Effects */
+  --glass-blur: 48px;
+  --glass-saturation: 130%;
+  --glass-bg: rgba(0, 0, 0, 0.65);
+  --glass-bg-hover: rgba(0, 0, 0, 0.72);
+  --glass-border: rgba(255, 255, 255, 0.1);
+  --glass-border-hover: rgba(255, 255, 255, 0.2);
+}
+
+/* ==========================================================================
+   Base Styles
+   ========================================================================== */
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-feature-settings: "kern" 1, "liga" 1, "calt" 1;
+  min-height: 100vh;
+}
+
+/* ==========================================================================
+   Typography - Monochromatic hierarchy via opacity
+   ========================================================================== */
+
+h1 {
+  font-size: var(--text-display-xl);
+  font-weight: 600;
+  line-height: var(--leading-tightest);
+  letter-spacing: var(--tracking-tighter);
+  color: var(--color-fg-primary);
+}
+
+h2 {
+  font-size: var(--text-h2);
+  font-weight: 600;
+  line-height: var(--leading-tighter);
+  color: var(--color-fg-primary);
+}
+
+h3 {
+  font-size: var(--text-h3);
+  font-weight: 600;
+  line-height: var(--leading-tight);
+  color: var(--color-fg-primary);
+}
+
+p {
+  font-size: var(--text-body);
+  line-height: var(--leading-relaxed);
+  color: var(--color-fg-secondary);
+}
+
+/* ==========================================================================
+   Glass Card - Monochromatic with white glow on hover
+   ========================================================================== */
+
+.card-glass {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturation));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  transition: 
+    border-color var(--duration-standard) var(--ease-standard),
+    transform var(--duration-standard) var(--ease-standard),
+    box-shadow var(--duration-standard) var(--ease-standard),
+    background var(--duration-standard) var(--ease-standard);
+}
+
+.card-glass:hover {
+  border-color: var(--glass-border-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+  background: var(--glass-bg-hover);
+}
+
+/* ==========================================================================
+   Buttons - Primary (emerald) / Secondary (monochrome)
+   ========================================================================== */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  font-weight: 500;
+  border-radius: var(--radius-lg);
+  transition: all var(--duration-standard) var(--ease-standard);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* PRIMARY: Emerald - Use ONLY for main CTA */
+.btn-primary {
+  background: var(--color-success);
+  color: #000;
+  border: none;
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* SECONDARY: Monochrome glass - Default for most buttons */
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--color-fg-primary);
+  border: 1px solid var(--glass-border);
+}
+
+.btn-secondary:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--glass-border-hover);
+}
+
+/* GHOST: Text only */
+.btn-ghost {
+  background: transparent;
+  color: var(--color-fg-muted);
+  border: none;
+}
+
+.btn-ghost:hover {
+  color: var(--color-fg-primary);
+}
+
+/* ==========================================================================
+   Badge - Monochrome default (NOT emerald)
+   ========================================================================== */
+
+.badge {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.8125rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--glass-border);
+  color: var(--color-fg-secondary);
+}
+
+/* Accent badge - ONLY for critical announcements */
+.badge-accent {
+  background: rgba(52, 211, 153, 0.1);
+  border-color: rgba(52, 211, 153, 0.3);
+  color: var(--color-success);
+}
+
+/* ==========================================================================
+   Step Numbers - Emerald allowed (progress indication)
+   ========================================================================== */
+
+.step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  background: rgba(52, 211, 153, 0.15);
+  color: var(--color-success);
+  font-weight: 600;
+  font-size: 0.875rem;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   Icon Containers - Monochrome (white/opacity, NOT emerald)
+   ========================================================================== */
+
+.icon-container {
+  width: 2.5rem;
+  height: 2.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  color: var(--color-fg-tertiary);
+  transition: 
+    background var(--duration-hover) var(--ease-standard),
+    border-color var(--duration-hover) var(--ease-standard);
+}
+
+.card-glass:hover .icon-container {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--glass-border-hover);
+}
+
+/* ==========================================================================
+   Grid Background - Subtle monochrome pattern
+   ========================================================================== */
+
+.bg-grid {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 64px 64px;
+}
+
+.bg-grid-fade {
+  background-image: 
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%, black 80%, transparent);
+}
+
+/* ==========================================================================
+   Animations
+   ========================================================================== */
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-in {
+  animation: fadeInUp 0.6s var(--ease-standard) forwards;
+  opacity: 0;
+}
+
+.animate-delay-1 { animation-delay: 0.1s; }
+.animate-delay-2 { animation-delay: 0.2s; }
+.animate-delay-3 { animation-delay: 0.3s; }
+.animate-delay-4 { animation-delay: 0.4s; }
+
+/* ==========================================================================
+   Shimmer Button Effect - For primary CTA only
+   ========================================================================== */
+
+.btn-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-shimmer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 200%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  animation: shimmer 2s linear infinite;
+}
+
+@keyframes shimmer {
+  from { transform: translateX(0); }
+  to { transform: translateX(50%); }
+}
+
+/* ==========================================================================
+   Page Container
+   ========================================================================== */
+
+.page-container {
+  max-width: var(--max-width-content);
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: var(--page-padding-x);
+  padding-right: var(--page-padding-x);
+}
+
+/* ==========================================================================
+   Selection
+   ========================================================================== */
+
+::selection {
+  background: var(--color-fg-primary);
+  color: var(--color-bg-pure);
+}
+
+/* ==========================================================================
+   Scrollbar
+   ========================================================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-default);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border-emphasis);
+}

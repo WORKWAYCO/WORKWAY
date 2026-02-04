@@ -60,19 +60,68 @@ app.use('*', cors({
 // ============================================================================
 
 /**
- * WORKWAY landing page - The Automation Layer for Construction
+ * Root route - returns API info and redirects to Pages site
  */
 app.get('/', (c) => {
+  return c.json({
+    api: 'workway-construction-mcp',
+    version: '0.1.0',
+    docs: 'https://construction-web.pages.dev/docs',
+    dashboard: `${MCP_BASE_URL}/dashboard`,
+    mcp: `${MCP_BASE_URL}/mcp`,
+  });
+});
+
+// Landing page HTML removed - now served by Pages site at construction-web.pages.dev
+
+/**
+ * Documentation route - redirects to Pages site
+ */
+app.get('/docs', (c) => {
+  return c.redirect('https://construction-web.pages.dev/docs', 302);
+});
+
+/**
+ * Dashboard API - returns JSON data for dashboard
+ */
+app.get('/api/dashboard', async (c) => {
+  const workflows = await c.env.DB.prepare(`
+    SELECT w.*, 
+           (SELECT COUNT(*) FROM workflow_actions WHERE workflow_id = w.id) as action_count,
+           (SELECT COUNT(*) FROM executions WHERE workflow_id = w.id) as execution_count
+    FROM workflows w
+    ORDER BY w.updated_at DESC
+    LIMIT 50
+  `).all<any>();
+
+  return c.json({
+    workflows: workflows.results || [],
+    templates: [
+      { id: 'rfi_overdue_alert', name: 'RFI Overdue Alert', category: 'rfi' },
+      { id: 'weekly_project_summary', name: 'Weekly Project Summary', category: 'reporting' },
+      { id: 'submittal_status_digest', name: 'Submittal Status Digest', category: 'submittal' },
+      { id: 'daily_log_reminder', name: 'Daily Log Reminder', category: 'daily_log' },
+      { id: 'new_rfi_notification', name: 'New RFI Notification', category: 'rfi' },
+      { id: 'submittal_approved_notification', name: 'Submittal Approved', category: 'submittal' },
+    ],
+    stats: {
+      totalWorkflows: workflows.results?.length || 0,
+      activeWorkflows: workflows.results?.filter((w: any) => w.status === 'active').length || 0,
+      totalExecutions: workflows.results?.reduce((sum: number, w: any) => sum + (w.execution_count || 0), 0) || 0,
+    },
+  });
+});
+
+/**
+ * Dashboard for workflow management
+ */
+app.get('/dashboard', async (c) => {
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WORKWAY - The Automation Layer for Construction</title>
-  <meta name="description" content="AI-powered workflow automation for construction. Connect your project data to intelligent automations that handle RFIs, submittals, daily logs, and more.">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Stack+Sans+Notch:wght@200..700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  <title>WORKWAY Dashboard</title>
   <style>
     :root {
       /* Background - Pure black hierarchy */
@@ -109,8 +158,45 @@ app.get('/', (c) => {
       /* Animation */
       --ease: cubic-bezier(0.4, 0.0, 0.2, 1);
       --duration: 200ms;
+      --duration-slow: 400ms;
+      /* Glass */
+      --glass-blur: 12px;
+      --glass-bg: rgba(0, 0, 0, 0.72);
+      --glass-border: rgba(255, 255, 255, 0.1);
     }
+    
+    /* Keyframe Animations - MagicUI inspired */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translate3d(0, 20px, 0); }
+      to { opacity: 1; transform: translate3d(0, 0, 0); }
+    }
+    @keyframes shinyText {
+      0%, 90%, 100% { background-position: calc(-100% - 80px) 0; }
+      30%, 60% { background-position: calc(100% + 80px) 0; }
+    }
+    @keyframes borderBeam {
+      0% { offset-distance: 0%; }
+      100% { offset-distance: 100%; }
+    }
+    @keyframes shimmerSlide {
+      0% { transform: translateX(-100%); }
+      100% { transform: translateX(100%); }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
+    }
+    @keyframes glow {
+      0%, 100% { box-shadow: 0 0 20px rgba(52, 211, 153, 0.3); }
+      50% { box-shadow: 0 0 40px rgba(52, 211, 153, 0.5); }
+    }
+    
     * { margin: 0; padding: 0; box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body { 
       font-family: var(--font-sans);
       font-optical-sizing: auto;
@@ -122,6 +208,136 @@ app.get('/', (c) => {
       color: var(--fg-primary);
       min-height: 100vh;
       line-height: 1.6;
+      overflow-x: hidden;
+    }
+    
+    /* Grid Background */
+    .bg-grid {
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+      background-size: 60px 60px;
+      background-position: center;
+    }
+    .bg-grid-fade {
+      position: fixed;
+      inset: 0;
+      background-image: 
+        linear-gradient(rgba(255, 255, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.025) 1px, transparent 1px);
+      background-size: 60px 60px;
+      mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 70%);
+      -webkit-mask-image: radial-gradient(ellipse 80% 50% at 50% 0%, black 30%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    /* Glass Morphism */
+    .glass {
+      backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+      -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(120%);
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+    }
+    .glass-card {
+      position: relative;
+      backdrop-filter: blur(16px) saturate(130%);
+      -webkit-backdrop-filter: blur(16px) saturate(130%);
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--border-default);
+      overflow: hidden;
+    }
+    .glass-card::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 50%);
+      pointer-events: none;
+    }
+    .glass-card::after {
+      content: '';
+      position: absolute;
+      top: 0; left: 0; right: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      pointer-events: none;
+    }
+    
+    /* Hover Effects */
+    .hover-lift {
+      transition: transform var(--duration) var(--ease), box-shadow var(--duration) var(--ease);
+    }
+    .hover-lift:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    }
+    .hover-glow:hover {
+      box-shadow: 0 0 30px rgba(52, 211, 153, 0.2);
+    }
+    
+    /* Shiny Text Effect */
+    .shiny-text {
+      background: linear-gradient(90deg, var(--fg-primary) 40%, var(--accent) 50%, var(--fg-primary) 60%);
+      background-size: 200% 100%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      -webkit-text-fill-color: transparent;
+      animation: shinyText 6s ease-in-out infinite;
+    }
+    
+    /* Border Beam Effect */
+    .border-beam {
+      position: relative;
+      overflow: hidden;
+    }
+    .border-beam::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: inherit;
+      padding: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      animation: shimmerSlide 3s linear infinite;
+    }
+    
+    /* Shimmer Button */
+    .btn-shimmer {
+      position: relative;
+      overflow: hidden;
+    }
+    .btn-shimmer::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+      animation: shimmerSlide 2s ease-in-out infinite;
+    }
+    
+    /* Fade In Animation Classes */
+    .animate-in {
+      animation: fadeInUp 0.6s var(--ease) forwards;
+      opacity: 0;
+    }
+    .delay-1 { animation-delay: 0.1s; }
+    .delay-2 { animation-delay: 0.2s; }
+    .delay-3 { animation-delay: 0.3s; }
+    .delay-4 { animation-delay: 0.4s; }
+    .delay-5 { animation-delay: 0.5s; }
+    
+    /* Reduced Motion */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+      }
     }
     .container { max-width: 1100px; margin: 0 auto; padding: 0 var(--space-md); }
     
@@ -447,218 +663,12 @@ app.get('/', (c) => {
   </footer>
 </body>
 </html>`;
-  
   return c.html(html);
 });
 
-/**
- * Documentation page
- */
-app.get('/docs', (c) => {
-  const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Documentation - WORKWAY</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Stack+Sans+Notch:wght@200..700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-  <style>
-    :root { 
-      --bg-pure: #000000; --bg-elevated: #0a0a0a; --bg-surface: #111111;
-      --fg-primary: #ffffff; --fg-secondary: rgba(255,255,255,0.8); --fg-tertiary: rgba(255,255,255,0.6); --fg-muted: rgba(255,255,255,0.4);
-      --border-default: rgba(255,255,255,0.1); --border-emphasis: rgba(255,255,255,0.2);
-      --accent: #34d399; --accent-muted: rgba(52,211,153,0.15);
-      --font-sans: 'Stack Sans Notch', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-      --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, monospace;
-      --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px;
-      --space-sm: 1rem; --space-md: 1.618rem; --space-lg: 2.618rem;
-      --ease: cubic-bezier(0.4, 0.0, 0.2, 1); --duration: 200ms;
-    }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: var(--font-sans); font-optical-sizing: auto; -webkit-font-smoothing: antialiased; background: var(--bg-pure); color: var(--fg-primary); line-height: 1.6; letter-spacing: -0.01em; }
-    .container { max-width: 900px; margin: 0 auto; padding: 0 var(--space-md); }
-    .header { padding: var(--space-sm) 0; border-bottom: 1px solid var(--border-default); position: sticky; top: 0; background: var(--bg-pure); z-index: 100; }
-    .header-inner { display: flex; justify-content: space-between; align-items: center; }
-    .logo { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--fg-primary); }
-    .logo-icon { width: 24px; height: 24px; background: var(--accent); border-radius: var(--radius-sm); }
-    .nav { display: flex; gap: 24px; }
-    .nav a { color: var(--fg-tertiary); text-decoration: none; font-size: 14px; transition: color var(--duration) var(--ease); }
-    .nav a:hover { color: var(--fg-primary); }
-    .content { padding: var(--space-lg) 0; }
-    h1 { font-size: clamp(2rem, 4vw, 2.5rem); font-weight: 700; margin-bottom: var(--space-sm); letter-spacing: -0.025em; }
-    h2 { font-size: clamp(1.25rem, 2vw, 1.5rem); font-weight: 600; margin: var(--space-lg) 0 var(--space-sm); padding-top: var(--space-md); border-top: 1px solid var(--border-default); letter-spacing: -0.02em; }
-    h3 { font-size: 18px; font-weight: 600; margin: var(--space-md) 0 12px; }
-    p { color: var(--fg-tertiary); margin-bottom: var(--space-sm); }
-    code { font-family: var(--font-mono); font-size: 14px; background: var(--bg-elevated); padding: 2px 6px; border-radius: var(--radius-sm); }
-    pre { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-sm); overflow-x: auto; margin: var(--space-sm) 0; }
-    pre code { background: none; padding: 0; }
-    .endpoint { background: var(--bg-elevated); border: 1px solid var(--border-default); border-radius: var(--radius-md); padding: var(--space-sm); margin: var(--space-sm) 0; }
-    .endpoint-method { display: inline-block; padding: 2px 8px; background: var(--accent); color: var(--bg-pure); border-radius: var(--radius-sm); font-size: 12px; font-weight: 600; margin-right: 8px; }
-    .endpoint-method.post { background: #60a5fa; }
-    .endpoint-path { font-family: var(--font-mono); font-size: 14px; }
-    ul { margin: var(--space-sm) 0; padding-left: 24px; color: var(--fg-tertiary); }
-    li { margin: 8px 0; }
-    .footer { padding: var(--space-md) 0; border-top: 1px solid var(--border-default); text-align: center; color: var(--fg-muted); font-size: 14px; }
-    .footer a { color: var(--fg-muted); text-decoration: none; transition: color var(--duration) var(--ease); }
-    .footer a:hover { color: var(--fg-primary); }
-  </style>
-</head>
-<body>
-  <header class="header">
-    <div class="container header-inner">
-      <a href="/" class="logo"><div class="logo-icon"></div>WORKWAY</a>
-      <nav class="nav">
-        <a href="/docs">Docs</a>
-        <a href="/dashboard">Dashboard</a>
-        <a href="${MCP_BASE_URL}/mcp">API</a>
-      </nav>
-    </div>
-  </header>
-
-  <main class="content">
-    <div class="container">
-      <h1>Getting Started</h1>
-      <p>WORKWAY is an AI-native automation layer for construction. Connect your AI agent to Procore in minutes.</p>
-
-      <h2>Quick Start</h2>
-      
-      <h3>1. Configure Your MCP Client</h3>
-      <p>Add the Procore MCP server to your AI client configuration:</p>
-      <pre><code>{
-  "mcpServers": {
-    "procore": {
-      "url": "${MCP_BASE_URL}/mcp"
-    }
-  }
-}</code></pre>
-
-      <h3>2. Connect to Procore</h3>
-      <p>Your AI can now use the <code>workway_connect_procore</code> tool to authenticate:</p>
-      <pre><code>// Ask your AI:
-"Connect to Procore so I can access project data"
-
-// The AI will return an authorization URL
-// Click it to complete OAuth authentication</code></pre>
-
-      <h3>3. Start Querying</h3>
-      <p>Once connected, your AI has access to all Procore data:</p>
-      <pre><code>// Example prompts:
-"List all my Procore projects"
-"Show me overdue RFIs"
-"Get the latest submittals for project 12345"
-"Create a weekly summary workflow"</code></pre>
-
-      <h2>API Endpoints</h2>
-      
-      <div class="endpoint">
-        <span class="endpoint-method">GET</span>
-        <span class="endpoint-path">/mcp</span>
-        <p style="margin-top: 8px; margin-bottom: 0;">Server info and capabilities</p>
-      </div>
-
-      <div class="endpoint">
-        <span class="endpoint-method">GET</span>
-        <span class="endpoint-path">/mcp/tools</span>
-        <p style="margin-top: 8px; margin-bottom: 0;">List all available tools</p>
-      </div>
-
-      <div class="endpoint">
-        <span class="endpoint-method post">POST</span>
-        <span class="endpoint-path">/mcp/tools/{tool_name}</span>
-        <p style="margin-top: 8px; margin-bottom: 0;">Execute a tool</p>
-      </div>
-
-      <div class="endpoint">
-        <span class="endpoint-method">GET</span>
-        <span class="endpoint-path">/mcp/resources</span>
-        <p style="margin-top: 8px; margin-bottom: 0;">List available resources</p>
-      </div>
-
-      <h2>Authentication</h2>
-      <p>WORKWAY uses OAuth 2.0 for Procore authentication. When you call <code>workway_connect_procore</code>, you'll receive an authorization URL. After completing the OAuth flow, your tokens are securely stored and automatically refreshed.</p>
-      
-      <h3>Security Features</h3>
-      <ul>
-        <li><strong>Token Encryption</strong> - All tokens encrypted with AES-256-GCM</li>
-        <li><strong>User Isolation</strong> - Each user's tokens stored separately</li>
-        <li><strong>Automatic Refresh</strong> - Tokens refreshed before expiration</li>
-        <li><strong>Secure Storage</strong> - Cloudflare D1 with encryption at rest</li>
-      </ul>
-
-      <h2>Workflow Templates</h2>
-      <p>Pre-built templates for common construction automations:</p>
-      <ul>
-        <li><strong>rfi_overdue_alert</strong> - Daily notifications for overdue RFIs</li>
-        <li><strong>weekly_project_summary</strong> - Monday morning project digest</li>
-        <li><strong>submittal_status_digest</strong> - Daily submittal status report</li>
-        <li><strong>daily_log_reminder</strong> - Afternoon reminder to submit daily logs</li>
-        <li><strong>new_rfi_notification</strong> - Instant alerts when RFIs are created</li>
-        <li><strong>submittal_approved_notification</strong> - Alerts when submittals are approved</li>
-      </ul>
-
-      <h2>Rate Limits</h2>
-      <p>The MCP server respects Procore's rate limits:</p>
-      <ul>
-        <li>3,600 requests per minute</li>
-        <li>100,000 requests per day</li>
-      </ul>
-
-      <h2>Support</h2>
-      <p>Questions? Issues?</p>
-      <ul>
-        <li>Email: <a href="mailto:support@workway.co" style="color: var(--accent);">support@workway.co</a></li>
-        <li>GitHub: <a href="https://github.com/WORKWAYCO/WORKWAY" style="color: var(--accent);">WORKWAYCO/WORKWAY</a></li>
-      </ul>
-    </div>
-  </main>
-
-  <footer class="footer">
-    <div class="container">
-      <p>© 2026 <a href="https://workway.co">WORKWAY</a> · Built on Cloudflare</p>
-    </div>
-  </footer>
-</body>
-</html>`;
-  return c.html(html);
-});
-
-/**
- * Dashboard API - returns JSON data for dashboard
- */
-app.get('/api/dashboard', async (c) => {
-  const workflows = await c.env.DB.prepare(`
-    SELECT w.*, 
-           (SELECT COUNT(*) FROM workflow_actions WHERE workflow_id = w.id) as action_count,
-           (SELECT COUNT(*) FROM executions WHERE workflow_id = w.id) as execution_count
-    FROM workflows w
-    ORDER BY w.updated_at DESC
-    LIMIT 50
-  `).all<any>();
-
-  return c.json({
-    workflows: workflows.results || [],
-    templates: [
-      { id: 'rfi_overdue_alert', name: 'RFI Overdue Alert', category: 'rfi' },
-      { id: 'weekly_project_summary', name: 'Weekly Project Summary', category: 'reporting' },
-      { id: 'submittal_status_digest', name: 'Submittal Status Digest', category: 'submittal' },
-      { id: 'daily_log_reminder', name: 'Daily Log Reminder', category: 'daily_log' },
-      { id: 'new_rfi_notification', name: 'New RFI Notification', category: 'rfi' },
-      { id: 'submittal_approved_notification', name: 'Submittal Approved', category: 'submittal' },
-    ],
-    stats: {
-      totalWorkflows: workflows.results?.length || 0,
-      activeWorkflows: workflows.results?.filter((w: any) => w.status === 'active').length || 0,
-      totalExecutions: workflows.results?.reduce((sum: number, w: any) => sum + (w.execution_count || 0), 0) || 0,
-    },
-  });
-});
-
-/**
- * Dashboard for workflow management
- */
-app.get('/dashboard', async (c) => {
+// ============================================================================
+// MCP Protocol Endpoints
+// ============================================================================
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>

@@ -34,6 +34,7 @@ export const ALLOWED_ORIGINS = [
   'https://workway.co',
   'https://app.workway.co',
   'https://api.workway.co',
+  'https://construction-web.pages.dev',
   // Local development
   'http://localhost:3000',
   'http://localhost:5173',
