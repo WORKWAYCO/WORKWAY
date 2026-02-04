@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import type { Env, ToolResult } from '../types';
+import type { Env, ToolResult, MCPToolSet } from '../types';
 import { MCP_BASE_URL } from '../lib/config';
 
 // ============================================================================
@@ -315,7 +315,7 @@ const templates: Record<string, WorkflowTemplate> = {
 // Template Tools
 // ============================================================================
 
-export const templateTools = {
+export const templateTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   // workway_list_templates
   // --------------------------------------------------------------------------

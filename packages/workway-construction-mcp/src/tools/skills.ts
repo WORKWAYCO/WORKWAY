@@ -13,7 +13,7 @@
  */
 
 import { z } from 'zod';
-import type { Env, ToolResult } from '../types';
+import type { Env, ToolResult, MCPToolSet } from '../types';
 import { procoreTools } from './procore';
 
 // ============================================================================
@@ -28,15 +28,14 @@ interface LLMRequest {
 
 async function callLLM(env: Env, request: LLMRequest): Promise<string> {
   // Use Cloudflare Workers AI
-  // @ts-ignore - Workers AI binding
   if (env.AI) {
-    const response = await env.AI.run('@cf/meta/llama-3.1-8b-instruct', {
+    const response = await (env.AI as any).run('@cf/meta/llama-3.1-8b-instruct', {
       messages: [
         ...(request.systemPrompt ? [{ role: 'system', content: request.systemPrompt }] : []),
         { role: 'user', content: request.prompt },
       ],
       max_tokens: request.maxTokens || 1024,
-    });
+    }) as { response?: string };
     return response.response || '';
   }
   
@@ -48,7 +47,7 @@ async function callLLM(env: Env, request: LLMRequest): Promise<string> {
 // Skill: draft_rfi
 // ============================================================================
 
-export const skillTools = {
+export const skillTools: MCPToolSet = {
   /**
    * Draft RFI Skill
    * 

@@ -6,7 +6,9 @@
  */
 
 import { z } from 'zod';
-import type { Env, ToolResult } from '../types';
+import type { Env, ToolResult, MCPToolSet } from '../types';
+
+type EmailTemplateKey = 'rfi_overdue_alert' | 'submittal_status' | 'daily_summary' | 'workflow_error' | 'generic';
 
 // ============================================================================
 // Email Templates
@@ -131,7 +133,7 @@ const emailTemplates = {
 // Notification Tools
 // ============================================================================
 
-export const notificationTools = {
+export const notificationTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   // workway_send_email
   // --------------------------------------------------------------------------
@@ -153,13 +155,14 @@ export const notificationTools = {
       message_id: z.string().optional(),
       error: z.string().optional(),
     }),
-    execute: async (input: z.infer<typeof notificationTools.send_email.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: { to: string; subject?: string; template?: EmailTemplateKey; data?: Record<string, unknown>; from_name?: string }, env: Env): Promise<ToolResult> => {
       try {
         if (!env.RESEND_API_KEY) {
           throw new Error('Email service not configured. Set RESEND_API_KEY.');
         }
         
-        const template = emailTemplates[input.template || 'generic'];
+        const templateKey = (input.template || 'generic') as EmailTemplateKey;
+        const template = emailTemplates[templateKey];
         const subject = input.subject || template.subject;
         const html = template.html(input.data || {});
         
@@ -247,7 +250,7 @@ export const notificationTools = {
               }]),
               ...(input.fields && input.fields.length > 0 ? [{
                 type: 'section',
-                fields: input.fields.map(f => ({
+                fields: input.fields.map((f: { title: string; value: string }) => ({
                   type: 'mrkdwn',
                   text: `*${f.title}*\n${f.value}`,
                 })),

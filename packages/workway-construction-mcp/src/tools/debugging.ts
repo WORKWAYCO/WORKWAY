@@ -17,7 +17,7 @@
  */
 
 import { z } from 'zod';
-import type { Env, DiagnosisResult, UnstuckGuidance, LogEntry, ToolResult } from '../types';
+import type { Env, DiagnosisResult, UnstuckGuidance, LogEntry, ToolResult, MCPToolSet } from '../types';
 
 // ============================================================================
 // Atlas-Aligned Types for Observability
@@ -73,7 +73,7 @@ const ExecutionTrace = z.object({
 // Tool Definitions
 // ============================================================================
 
-export const debuggingTools = {
+export const debuggingTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   // workway_diagnose
   // --------------------------------------------------------------------------

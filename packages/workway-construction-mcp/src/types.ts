@@ -152,6 +152,13 @@ export interface ProcoreSubmittal {
 // MCP Tool Types
 // ============================================================================
 
+/**
+ * Loose tool set type that works with the varying tool definitions
+ * The actual type checking happens at runtime via zod schemas
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type MCPToolSet = Record<string, any>;
+
 export interface ToolResult<T = unknown> {
   success: boolean;
   data?: T;
@@ -171,6 +178,12 @@ export interface DiagnosisResult {
   fixParams?: Record<string, unknown>;
   confidence: number;
   logs: LogEntry[];
+  severity?: 'low' | 'medium' | 'high';
+  atlasAnalysis?: {
+    aiTasksInvolved: string[];
+    humanTasksRequired?: string[];
+    failurePoint: string;
+  };
 }
 
 export interface LogEntry {
@@ -190,6 +203,12 @@ export interface UnstuckGuidance {
   }[];
   example?: string;
   documentationUrl?: string;
+  atlasContext?: {
+    aiTasks: string[];
+    humanTasks: string[];
+    constraints: string[];
+    touchpoints: string[];
+  };
 }
 
 // ============================================================================

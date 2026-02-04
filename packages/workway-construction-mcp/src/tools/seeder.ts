@@ -11,7 +11,7 @@
  */
 
 import { z } from 'zod';
-import type { Env, ToolResult } from '../types';
+import type { Env, ToolResult, MCPToolSet } from '../types';
 import { procoreTools } from './procore';
 
 // ============================================================================
@@ -161,7 +161,7 @@ const MANPOWER_ENTRIES = [
 // Seeder Tools
 // ============================================================================
 
-export const seederTools = {
+export const seederTools: MCPToolSet = {
   /**
    * Seed RFIs
    */

@@ -51,8 +51,8 @@ export const ALLOWED_ORIGINS = [
 export function isAllowedOrigin(origin: string | null): boolean {
   if (!origin) return false;
   
-  // In development, allow all origins
-  if (process.env.NODE_ENV === 'development') return true;
+  // Allow localhost in any environment for development
+  if (origin.startsWith('http://localhost:')) return true;
   
   return ALLOWED_ORIGINS.includes(origin);
 }

@@ -16,41 +16,37 @@ export interface SSESession {
 /**
  * Create an SSE endpoint handler for Remote MCP Protocol
  * 
- * @param getEnv - Function to get KV namespace from context
- * @returns Hono handler for /sse endpoint
+ * Matches the pattern used by working MCP servers like OUTERFIELDS:
+ * - GET /sse returns SSE stream with keep-alive pings
+ * - POST /sse handles JSON-RPC messages (handled separately)
  */
 export function createSSEHandler<TEnv extends BaseMCPEnv>() {
   return (c: Context<{ Bindings: TEnv }>) => {
-    // Generate a session ID for this connection
-    const sessionId = crypto.randomUUID();
-    const origin = new URL(c.req.url).origin;
-    const messageEndpoint = `${origin}/message?sessionId=${sessionId}`;
+    const encoder = new TextEncoder();
     
     // Create readable stream for SSE
     const stream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        
-        // Store session in KV
-        await c.env.KV.put(`sse_session:${sessionId}`, 'active', {
-          expirationTtl: 3600, // 1 hour
-        });
-        
-        // Send endpoint event (tells client where to POST messages)
-        const endpointEvent = `event: endpoint\ndata: ${messageEndpoint}\n\n`;
-        controller.enqueue(encoder.encode(endpointEvent));
-        
-        // Send initial message event
-        const initMessage = {
-          jsonrpc: '2.0',
-          method: 'notifications/initialized',
-        };
-        const messageEvent = `event: message\ndata: ${JSON.stringify(initMessage)}\n\n`;
-        controller.enqueue(encoder.encode(messageEvent));
+      start(controller) {
+        // Send initial comment to establish connection
+        controller.enqueue(encoder.encode(': connected\n\n'));
         
         // Keep connection alive with periodic pings
-        // Note: In Cloudflare Workers, long-running connections are limited
-        // The client should reconnect if the connection drops
+        const keepAlive = setInterval(() => {
+          try {
+            controller.enqueue(encoder.encode(': ping\n\n'));
+          } catch {
+            // Stream closed, cleanup
+            clearInterval(keepAlive);
+          }
+        }, 15000);
+        
+        // Store cleanup function
+        (controller as any).cleanup = () => clearInterval(keepAlive);
+      },
+      cancel(controller) {
+        if ((controller as any).cleanup) {
+          (controller as any).cleanup();
+        }
       },
     });
     
@@ -61,7 +57,8 @@ export function createSSEHandler<TEnv extends BaseMCPEnv>() {
         'Connection': 'keep-alive',
         'Access-Control-Allow-Origin': '*',
         'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-        'Access-Control-Allow-Headers': 'Content-Type',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, Accept',
+        'Access-Control-Max-Age': '86400',
       },
     });
   };

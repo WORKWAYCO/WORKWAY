@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod';
-import type { Env, ProcoreProject, ProcoreRFI, ProcoreDailyLog, ProcoreSubmittal, ToolResult } from '../types';
+import type { Env, ProcoreProject, ProcoreRFI, ProcoreDailyLog, ProcoreSubmittal, ToolResult, MCPToolSet } from '../types';
 import { decrypt, encrypt } from '../lib/crypto';
 import { 
   OAUTH_CALLBACK_URL, 
@@ -156,7 +156,7 @@ async function refreshProcoreToken(
 // Tool Definitions
 // ============================================================================
 
-export const procoreTools = {
+export const procoreTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   // workway_connect_procore
   // --------------------------------------------------------------------------

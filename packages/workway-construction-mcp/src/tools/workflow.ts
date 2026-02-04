@@ -5,14 +5,14 @@
  */
 
 import { z } from 'zod';
-import type { Env, Workflow, WorkflowAction, ToolResult } from '../types';
+import type { Env, Workflow, WorkflowAction, ToolResult, MCPToolSet } from '../types';
 import { MCP_BASE_URL, WEBHOOK_BASE_URL } from '../lib/config';
 
 // ============================================================================
 // Tool Definitions
 // ============================================================================
 
-export const workflowTools = {
+export const workflowTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   // workway_create_workflow
   // --------------------------------------------------------------------------

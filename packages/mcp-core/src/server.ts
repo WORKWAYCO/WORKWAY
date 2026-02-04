@@ -93,9 +93,27 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
   
   // ============================================================================
   // Remote MCP Protocol (SSE Transport)
+  // Claude expects both GET (stream) and POST (JSON-RPC) on /sse
   // ============================================================================
   
   app.get('/sse', createSSEHandler<TEnv>());
+  app.options('/sse', createMessageCORSHandler());
+  app.post('/sse', createMessageHandler<TEnv>({
+    serverInfo: {
+      name: config.name,
+      version: config.version,
+    },
+    capabilities: config.capabilities || {
+      tools: { listChanged: true },
+      resources: { subscribe: false, listChanged: true },
+      prompts: { listChanged: false },
+    },
+    tools: config.tools,
+    resources: config.resources,
+    tierLimits,
+  }));
+  
+  // Legacy /message endpoint (keep for backwards compatibility)
   app.options('/message', createMessageCORSHandler());
   app.post('/message', createMessageHandler<TEnv>({
     serverInfo: {

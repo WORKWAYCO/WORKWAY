@@ -16,7 +16,6 @@ import type {
   UsageResult,
 } from '../types';
 import { checkUsage, incrementUsage } from '../metering/usage';
-import { validateSession } from '../transport/sse';
 
 export interface ProtocolHandlerConfig<TEnv extends BaseMCPEnv> {
   serverInfo: {
@@ -38,23 +37,14 @@ export interface ProtocolHandlerConfig<TEnv extends BaseMCPEnv> {
 
 /**
  * Create the message handler for Remote MCP Protocol
+ * 
+ * Stateless handler - matches OUTERFIELDS pattern where POST /sse
+ * handles JSON-RPC without session management.
  */
 export function createMessageHandler<TEnv extends BaseMCPEnv>(
   config: ProtocolHandlerConfig<TEnv>
 ) {
   return async (c: Context<{ Bindings: TEnv }>) => {
-    const sessionId = c.req.query('sessionId');
-    
-    if (!sessionId) {
-      return c.json({ error: 'Missing sessionId' }, 400);
-    }
-    
-    // Verify session exists
-    const isValid = await validateSession(c, sessionId);
-    if (!isValid) {
-      return c.json({ error: 'Invalid or expired session' }, 401);
-    }
-    
     try {
       const message = await c.req.json() as JsonRpcRequest;
       const response = await handleMessage(c, message, config);
@@ -62,12 +52,12 @@ export function createMessageHandler<TEnv extends BaseMCPEnv>(
     } catch (error) {
       return c.json({
         jsonrpc: '2.0',
-        id: undefined,
+        id: null,
         error: {
           code: -32700,
           message: 'Parse error',
         },
-      } satisfies JsonRpcResponse, 400);
+      }, 400);
     }
   };
 }
