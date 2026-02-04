@@ -31,6 +31,8 @@ import { seederTools } from './seeder';
 
 /**
  * All tools combined for MCP registration
+ * 
+ * Note: seederTools excluded from production - dev/test only
  */
 export const allTools = {
   // Workflow lifecycle
@@ -45,8 +47,7 @@ export const allTools = {
   ...debuggingTools,
   // Intelligence Layer Skills
   ...skillTools,
-  // Test data seeding
-  ...seederTools,
+  // seederTools excluded - use seederTools directly for dev/test
 };
 
 /**
