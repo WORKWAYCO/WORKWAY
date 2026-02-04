@@ -202,6 +202,46 @@ export interface OAuthToken {
 }
 
 // ============================================================================
+// Usage Metering Types
+// ============================================================================
+
+export type UserTier = 'anonymous' | 'free' | 'pro' | 'enterprise';
+
+export interface User {
+  id: string;
+  email?: string;
+  tier: UserTier;
+  runs_this_month: number;
+  monthly_run_limit: number;
+  billing_cycle_start: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface UsageResult {
+  exceeded: boolean;
+  runs: number;
+  limit: number;
+  tier: UserTier;
+  cycleStart?: string;
+  daysUntilReset?: number;
+  userId?: string;
+}
+
+export interface AnonymousUsage {
+  runs: number;
+  first_seen: string;
+}
+
+// Tier limits
+export const TIER_LIMITS: Record<UserTier, number> = {
+  anonymous: 50,      // Total lifetime runs
+  free: 500,          // Per month
+  pro: 5000,          // Per month
+  enterprise: -1,     // Unlimited (-1 means no limit)
+};
+
+// ============================================================================
 // RFI Outcome Types (for learning)
 // ============================================================================
 
