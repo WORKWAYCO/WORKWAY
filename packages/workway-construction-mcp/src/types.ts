@@ -15,6 +15,8 @@ export interface Env {
   COOKIE_ENCRYPTION_KEY: string;
   RESEND_API_KEY?: string;  // For email notifications
   ENVIRONMENT: string;
+  // Intelligence Layer: Workers AI for Skills
+  AI?: Ai;  // Cloudflare Workers AI binding
 }
 
 // ============================================================================

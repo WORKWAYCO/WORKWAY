@@ -2,10 +2,15 @@
  * WORKWAY Construction MCP Tools
  * 
  * All tools exposed by the MCP server, organized by category:
+ * 
+ * AUTOMATION LAYER (MCP):
  * - Workflow: Create, configure, deploy, test workflows
  * - Procore: Connect and interact with Procore API
  * - Notifications: Email and Slack notifications
  * - Debugging: Diagnose issues, get unstuck, observe executions
+ * 
+ * INTELLIGENCE LAYER (Skills):
+ * - Skills: AI-powered tools that produce outcomes (draft_rfi, daily_log_summary, etc.)
  */
 
 export { workflowTools } from './workflow';
@@ -13,12 +18,14 @@ export { procoreTools } from './procore';
 export { notificationTools } from './notifications';
 export { templateTools } from './templates';
 export { debuggingTools } from './debugging';
+export { skillTools } from './skills';
 
 import { workflowTools } from './workflow';
 import { procoreTools } from './procore';
 import { notificationTools } from './notifications';
 import { templateTools } from './templates';
 import { debuggingTools } from './debugging';
+import { skillTools } from './skills';
 
 /**
  * All tools combined for MCP registration
@@ -26,7 +33,7 @@ import { debuggingTools } from './debugging';
 export const allTools = {
   // Workflow lifecycle
   ...workflowTools,
-  // Procore integration
+  // Procore integration (Automation Layer)
   ...procoreTools,
   // Notifications
   ...notificationTools,
@@ -34,12 +41,19 @@ export const allTools = {
   ...templateTools,
   // Debugging & observability
   ...debuggingTools,
+  // Intelligence Layer Skills
+  ...skillTools,
 };
 
 /**
  * Tool names organized by category (for documentation)
+ * 
+ * Two layers:
+ * - AUTOMATION LAYER: MCP tools for connectivity (procore, workflow, etc.)
+ * - INTELLIGENCE LAYER: AI Skills that produce outcomes (draft_rfi, etc.)
  */
 export const toolCategories = {
+  // === AUTOMATION LAYER (MCP) ===
   workflow: [
     'workway_create_workflow',
     'workway_configure_trigger',
@@ -79,6 +93,12 @@ export const toolCategories = {
     'workway_diagnose',
     'workway_get_unstuck',
     'workway_observe_execution',
+  ],
+  // === INTELLIGENCE LAYER (Skills) ===
+  skills: [
+    'workway_skill_draft_rfi',
+    'workway_skill_daily_log_summary',
+    'workway_skill_submittal_review',
   ],
 };
 

@@ -86,6 +86,16 @@ pnpm dev
 | `workway_get_unstuck` | Get guidance when stuck |
 | `workway_observe_execution` | Detailed execution trace |
 
+### Intelligence Layer Skills (AI-Powered)
+
+| Skill | Description | Atlas Task |
+|-------|-------------|------------|
+| `workway_skill_draft_rfi` | Draft professional RFIs from question intent | generate |
+| `workway_skill_daily_log_summary` | Summarize logs into executive reports | summarize |
+| `workway_skill_submittal_review` | Review submittals and flag compliance issues | classify |
+
+**Skills vs Tools**: Tools connect and retrieve data (Automation Layer). Skills use AI to produce outcomes (Intelligence Layer). Skills always require human review before action.
+
 ## Pain Points Addressed
 
 Based on industry research:
@@ -131,6 +141,68 @@ pnpm deploy
 
 # Apply migrations to production
 pnpm migrate:remote
+```
+
+## Example: Draft an RFI (Intelligence Layer)
+
+```
+User: "I need to ask about the concrete mix design for the foundation"
+
+Claude (with WORKWAY MCP):
+
+1. workway_skill_draft_rfi({
+     project_id: 12345,
+     question_intent: "Confirm concrete mix design for foundation meets 4000 PSI requirement",
+     spec_section: "03 30 00 - Cast-in-Place Concrete",
+     drawing_reference: "S-101",
+     priority: "high"
+   })
+
+Response:
+{
+  "draft": {
+    "subject": "RFI: Concrete Mix Design Confirmation - 03 30 00",
+    "question_body": "Per specification section 03 30 00 and structural drawing S-101, 
+     please confirm the concrete mix design for foundation pours meets the specified 
+     4000 PSI minimum compressive strength requirement at 28 days...",
+    "suggested_response_format": "Written confirmation with mix design submittal reference",
+    "impact_statement": "Foundation pour scheduled for next week - expedited response requested",
+    "references": ["03 30 00", "S-101"]
+  },
+  "confidence": 0.85,
+  "review_notes": ["Ready for human review"],
+  "ready_to_submit": false
+}
+
+→ User reviews draft, then: workway_create_procore_rfi({ ... draft fields ... })
+```
+
+## Example: Weekly Summary (Intelligence Layer)
+
+```
+User: "Give me a summary of this week's activity"
+
+Claude (with WORKWAY MCP):
+
+1. workway_skill_daily_log_summary({
+     project_id: 12345,
+     format: "executive",
+     include_recommendations: true
+   })
+
+Response:
+{
+  "summary": {
+    "period": "2026-01-27 to 2026-02-02",
+    "executive_summary": "Strong progress on foundation work with 892 total manhours. 
+     One weather delay on Tuesday impacted concrete pour schedule.",
+    "key_metrics": { "total_manhours": 892, "average_crew_size": 24, "weather_days_lost": 0.5 },
+    "notable_events": ["Foundation pour completed Phase 1", "Steel delivery confirmed for Monday"],
+    "weather_impact": "Rain on Tuesday caused 4-hour delay",
+    "delays": [{ "date": "2026-01-28", "description": "Rain delay", "impact": "4 hours" }],
+    "recommendations": ["Schedule makeup pour for Saturday", "Confirm steel erection crew availability"]
+  }
+}
 ```
 
 ## Example: RFI Automation Workflow
