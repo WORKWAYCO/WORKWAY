@@ -162,23 +162,24 @@ export const procoreTools = {
   // --------------------------------------------------------------------------
   connect_procore: {
     name: 'workway_connect_procore',
-    description: `Initiate OAuth connection to Procore. Returns an authorization URL that the user needs to visit to grant access.
+    description: `Initiate OAuth connection to Procore. Returns an authorization URL and a unique connection_id.
+
+**IMPORTANT**: Save the \`connection_id\` returned - you'll need it for all future Procore tool calls.
 
 **Environment Options:**
 - \`production\` - Connect to live Procore (api.procore.com)
-- \`sandbox\` - Connect to Procore developer sandbox (sandbox.procore.com)
-
-The environment is stored with your token, so you can have production users and sandbox users on the same MCP server.`,
+- \`sandbox\` - Connect to Procore developer sandbox (sandbox.procore.com)`,
     inputSchema: z.object({
       company_id: z.string().optional()
         .describe('Procore company ID (if known)'),
-      user_id: z.string().optional().default('default')
-        .describe('User identifier for token isolation (default: "default")'),
+      connection_id: z.string().optional()
+        .describe('Your existing connection ID (if reconnecting). Leave empty to generate a new one.'),
       environment: z.enum(['production', 'sandbox']).optional().default('production')
         .describe('Procore environment: "production" for live, "sandbox" for testing'),
     }),
     outputSchema: z.object({
       authorization_url: z.string(),
+      connection_id: z.string(),
       instructions: z.string(),
       status: z.enum(['pending', 'connected', 'expired']),
       environment: z.string(),
@@ -186,6 +187,9 @@ The environment is stored with your token, so you can have production users and 
     execute: async (input: z.infer<typeof procoreTools.connect_procore.inputSchema>, env: Env): Promise<ToolResult> => {
       const procoreEnv = input.environment || 'production';
       const urls = getProcoreUrls(procoreEnv);
+      
+      // Generate or use existing connection ID
+      const connectionId = input.connection_id || `ww_${crypto.randomUUID().replace(/-/g, '').slice(0, 16)}`;
       
       // Get the correct client ID for this environment
       const clientId = procoreEnv === 'sandbox' 
@@ -202,11 +206,11 @@ The environment is stored with your token, so you can have production users and 
       // Generate secure state token
       const state = generateSecureToken(32);
       
-      // Store state for CSRF protection (includes environment choice)
+      // Store state for CSRF protection (includes connection_id)
       await env.KV.put(`oauth_state:${state}`, JSON.stringify({
         provider: 'procore',
         companyId: input.company_id,
-        userId: input.user_id || 'default',
+        userId: connectionId, // Store as userId for backward compatibility
         environment: procoreEnv,
         createdAt: new Date().toISOString(),
       }), { expirationTtl: 600 }); // 10 minutes
@@ -222,9 +226,9 @@ The environment is stored with your token, so you can have production users and 
         success: true,
         data: {
           authorizationUrl: authUrl.toString(),
-          instructions: `Visit the authorization URL to connect your Procore ${procoreEnv} account. After authorizing, you'll be redirected back and the connection will be complete.`,
+          connection_id: connectionId,
+          instructions: `⚠️ SAVE THIS: Your connection ID is "${connectionId}". You'll need this for all Procore tools.\n\nVisit the authorization URL to connect your Procore ${procoreEnv} account.`,
           status: 'pending',
-          userId: input.user_id || 'default',
           environment: procoreEnv,
         },
       };
@@ -238,8 +242,8 @@ The environment is stored with your token, so you can have production users and 
     name: 'workway_check_procore_connection',
     description: 'Check if Procore is connected and the token is valid. Returns connection status, user info, and available scopes.',
     inputSchema: z.object({
-      user_id: z.string().optional().default('default')
-        .describe('User identifier for token lookup'),
+      connection_id: z.string().optional()
+        .describe('Your WORKWAY connection ID from workway_connect_procore'),
     }),
     outputSchema: z.object({
       connected: z.boolean(),
@@ -255,7 +259,7 @@ The environment is stored with your token, so you can have production users and 
       }).optional(),
     }),
     execute: async (input: z.infer<typeof procoreTools.check_procore_connection.inputSchema>, env: Env): Promise<ToolResult> => {
-      const userId = input.user_id || 'default';
+      const userId = input.connection_id || 'default';
       
       const token = await env.DB.prepare(`
         SELECT * FROM oauth_tokens WHERE provider = 'procore' AND user_id = ? LIMIT 1
@@ -311,8 +315,8 @@ The environment is stored with your token, so you can have production users and 
     name: 'workway_list_procore_companies',
     description: 'List all companies the user has access to in Procore. Use this to find company IDs.',
     inputSchema: z.object({
-      user_id: z.string().optional().default('default')
-        .describe('User identifier for token lookup'),
+      connection_id: z.string().optional()
+        .describe('Your WORKWAY connection ID from workway_connect_procore'),
     }),
     outputSchema: z.object({
       companies: z.array(z.object({
@@ -324,7 +328,7 @@ The environment is stored with your token, so you can have production users and 
     }),
     execute: async (input: z.infer<typeof procoreTools.list_procore_companies.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
-        const userId = input.user_id || 'default';
+        const userId = input.connection_id || 'default';
         
         // Companies endpoint doesn't require company ID header
         const token = await env.DB.prepare(`
@@ -385,8 +389,8 @@ The environment is stored with your token, so you can have production users and 
         .describe('Filter by Procore company ID'),
       active_only: z.boolean().optional().default(true)
         .describe('Only return active projects'),
-      user_id: z.string().optional().default('default')
-        .describe('User identifier for token lookup'),
+      connection_id: z.string().optional()
+        .describe('Your WORKWAY connection ID from workway_connect_procore'),
     }),
     outputSchema: z.object({
       projects: z.array(z.object({
@@ -404,7 +408,7 @@ The environment is stored with your token, so you can have production users and 
     execute: async (input: z.infer<typeof procoreTools.list_procore_projects.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         // Get company ID from token
-        const userId = input.user_id || 'default';
+        const userId = input.connection_id || 'default';
         const token = await env.DB.prepare(`
           SELECT company_id FROM oauth_tokens WHERE provider = 'procore' AND user_id = ? LIMIT 1
         `).bind(userId).first<any>();
@@ -476,8 +480,8 @@ The environment is stored with your token, so you can have production users and 
         .describe('Filter by RFI status'),
       limit: z.number().optional().default(50)
         .describe('Maximum number of RFIs to return'),
-      user_id: z.string().optional().default('default')
-        .describe('User identifier for token lookup'),
+      connection_id: z.string().optional()
+        .describe('Your WORKWAY connection ID from workway_connect_procore'),
     }),
     outputSchema: z.object({
       rfis: z.array(z.object({
@@ -504,7 +508,7 @@ The environment is stored with your token, so you can have production users and 
           url += `&filters[status]=${input.status}`;
         }
 
-        const rfis = await procoreRequest<ProcoreRFI[]>(env, url, {}, input.user_id || 'default');
+        const rfis = await procoreRequest<ProcoreRFI[]>(env, url, {}, input.connection_id || 'default');
 
         // Calculate stats
         const openCount = rfis.filter(r => r.status === 'open').length;
@@ -558,8 +562,8 @@ The environment is stored with your token, so you can have production users and 
       end_date: z.string().optional()
         .describe('End date (YYYY-MM-DD)'),
       limit: z.number().optional().default(30),
-      user_id: z.string().optional().default('default')
-        .describe('User identifier for token lookup'),
+      connection_id: z.string().optional()
+        .describe('Your WORKWAY connection ID from workway_connect_procore'),
     }),
     outputSchema: z.object({
       daily_logs: z.array(z.object({
@@ -585,7 +589,7 @@ The environment is stored with your token, so you can have production users and 
         // Procore daily logs uses filters[start_date] and filters[end_date]
         const url = `/projects/${input.project_id}/daily_logs?filters[start_date]=${startDate}&filters[end_date]=${endDate}`;
 
-        const response = await procoreRequest<any>(env, url, {}, input.user_id || 'default');
+        const response = await procoreRequest<any>(env, url, {}, input.connection_id || 'default');
 
         // Procore returns categorized logs (weather_logs, manpower_logs, etc.)
         return {
@@ -623,8 +627,8 @@ The environment is stored with your token, so you can have production users and 
       status: z.enum(['pending', 'approved', 'rejected', 'all']).optional().default('all')
         .describe('Filter by submittal status'),
       limit: z.number().optional().default(50),
-      user_id: z.string().optional().default('default')
-        .describe('User identifier for token lookup'),
+      connection_id: z.string().optional()
+        .describe('Your WORKWAY connection ID from workway_connect_procore'),
     }),
     outputSchema: z.object({
       submittals: z.array(z.object({
@@ -650,7 +654,7 @@ The environment is stored with your token, so you can have production users and 
           url += `&filters[status]=${input.status}`;
         }
 
-        const submittals = await procoreRequest<ProcoreSubmittal[]>(env, url, {}, input.user_id || 'default');
+        const submittals = await procoreRequest<ProcoreSubmittal[]>(env, url, {}, input.connection_id || 'default');
 
         const now = new Date();
         const pendingCount = submittals.filter(s => s.status === 'pending').length;
@@ -697,7 +701,7 @@ The environment is stored with your token, so you can have production users and 
       project_id: z.number().describe('Procore project ID'),
       album_id: z.number().optional().describe('Filter by specific album ID'),
       limit: z.number().optional().default(50).describe('Maximum number of photos to return'),
-      user_id: z.string().optional().default('default').describe('User identifier for token lookup'),
+      connection_id: z.string().optional().describe('Your WORKWAY connection ID'),
     }),
     outputSchema: z.object({
       photos: z.array(z.object({
@@ -720,7 +724,7 @@ The environment is stored with your token, so you can have production users and 
           url += `&filters[image_category_id]=${input.album_id}`;
         }
 
-        const photos = await procoreRequest<any[]>(env, url, {}, input.user_id || 'default');
+        const photos = await procoreRequest<any[]>(env, url, {}, input.connection_id || 'default');
 
         return {
           success: true,
@@ -758,7 +762,7 @@ The environment is stored with your token, so you can have production users and 
       project_id: z.number().describe('Procore project ID'),
       folder_id: z.number().optional().describe('Filter by specific folder ID'),
       limit: z.number().optional().default(50).describe('Maximum number of documents to return'),
-      user_id: z.string().optional().default('default').describe('User identifier for token lookup'),
+      connection_id: z.string().optional().describe('Your WORKWAY connection ID'),
     }),
     outputSchema: z.object({
       documents: z.array(z.object({
@@ -786,7 +790,7 @@ The environment is stored with your token, so you can have production users and 
           url += `&filters[parent_id]=${input.folder_id}`;
         }
 
-        const documents = await procoreRequest<any[]>(env, url, {}, input.user_id || 'default');
+        const documents = await procoreRequest<any[]>(env, url, {}, input.connection_id || 'default');
 
         const files = documents.filter(d => d.document_type === 'file');
         const folders = documents.filter(d => d.document_type === 'folder' && !d.is_recycle_bin);
@@ -833,7 +837,7 @@ The environment is stored with your token, so you can have production users and 
       status: z.enum(['all', 'in_progress', 'completed', 'not_started']).optional().default('all')
         .describe('Filter by task status'),
       limit: z.number().optional().default(100).describe('Maximum number of tasks to return'),
-      user_id: z.string().optional().default('default').describe('User identifier for token lookup'),
+      connection_id: z.string().optional().describe('Your WORKWAY connection ID'),
     }),
     outputSchema: z.object({
       tasks: z.array(z.object({
@@ -859,7 +863,7 @@ The environment is stored with your token, so you can have production users and 
       try {
         let url = `/projects/${input.project_id}/schedule/tasks?per_page=${input.limit}`;
         
-        const tasks = await procoreRequest<any[]>(env, url, {}, input.user_id || 'default');
+        const tasks = await procoreRequest<any[]>(env, url, {}, input.connection_id || 'default');
 
         const now = new Date();
         let filteredTasks = tasks;
@@ -928,7 +932,7 @@ The environment is stored with your token, so you can have production users and 
       assignee_id: z.number().optional().describe('User ID to assign the RFI to'),
       due_date: z.string().optional().describe('Due date (YYYY-MM-DD)'),
       priority: z.enum(['low', 'normal', 'high']).optional().default('normal'),
-      user_id: z.string().optional().default('default').describe('User identifier for token lookup'),
+      connection_id: z.string().optional().describe('Your WORKWAY connection ID'),
     }),
     outputSchema: z.object({
       id: z.number(),
@@ -961,7 +965,7 @@ The environment is stored with your token, so you can have production users and 
             method: 'POST',
             body: JSON.stringify(rfiData),
           },
-          input.user_id || 'default'
+          input.connection_id || 'default'
         );
 
         return {
@@ -992,7 +996,7 @@ The environment is stored with your token, so you can have production users and 
     description: 'Debug tool to test raw Procore API calls. Returns full response details.',
     inputSchema: z.object({
       path: z.string().describe('API path to call (e.g., /projects, /companies/123/projects)'),
-      user_id: z.string().optional().default('default'),
+      connection_id: z.string().optional().describe('Your WORKWAY connection ID'),
     }),
     outputSchema: z.object({
       status: z.number(),
@@ -1001,7 +1005,7 @@ The environment is stored with your token, so you can have production users and 
     }),
     execute: async (input: z.infer<typeof procoreTools.debug_procore_api.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
-        const userId = input.user_id || 'default';
+        const userId = input.connection_id || 'default';
         const token = await env.DB.prepare(`
           SELECT access_token, company_id, environment FROM oauth_tokens 
           WHERE provider = 'procore' AND user_id = ? LIMIT 1
@@ -1072,7 +1076,7 @@ The environment is stored with your token, so you can have production users and 
         'photos.create',
       ]).describe('Type of event to listen for'),
       workflow_id: z.string().describe('Workflow ID to trigger when event fires'),
-      user_id: z.string().optional().default('default'),
+      connection_id: z.string().optional().describe('Your WORKWAY connection ID'),
     }),
     outputSchema: z.object({
       webhook_id: z.number(),
@@ -1101,7 +1105,7 @@ The environment is stored with your token, so you can have production users and 
             method: 'POST',
             body: JSON.stringify(webhookData),
           },
-          input.user_id || 'default'
+          input.connection_id || 'default'
         );
 
         // Store webhook reference in our DB
@@ -1207,7 +1211,7 @@ The environment is stored with your token, so you can have production users and 
     inputSchema: z.object({
       webhook_id: z.string().describe('Webhook subscription ID'),
       project_id: z.number().describe('Procore project ID'),
-      user_id: z.string().optional().default('default'),
+      connection_id: z.string().optional().describe('Your WORKWAY connection ID'),
     }),
     outputSchema: z.object({
       deleted: z.boolean(),
@@ -1229,7 +1233,7 @@ The environment is stored with your token, so you can have production users and 
             env,
             `/projects/${input.project_id}/webhooks/hooks/${webhook.procore_hook_id}`,
             { method: 'DELETE' },
-            input.user_id || 'default'
+            input.connection_id || 'default'
           );
         } catch (e) {
           // Continue even if Procore delete fails
