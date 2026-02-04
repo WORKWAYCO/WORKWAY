@@ -51,6 +51,208 @@ const mcpServer = createMCPServer<Env>({
 
 const app = new Hono<{ Bindings: Env }>();
 
+// ============================================================================
+// OAuth 2.0 Authorization Server (for Claude Cowork)
+// ============================================================================
+
+/**
+ * OAuth 2.0 Authorization Server Metadata (RFC 8414)
+ * Required for Claude to discover auth endpoints
+ * Endpoints MUST be at root level per MCP spec
+ */
+app.get('/.well-known/oauth-authorization-server', (c) => {
+  return c.json({
+    issuer: MCP_BASE_URL,
+    authorization_endpoint: `${MCP_BASE_URL}/authorize`,
+    token_endpoint: `${MCP_BASE_URL}/token`,
+    registration_endpoint: `${MCP_BASE_URL}/register`,
+    response_types_supported: ['code'],
+    response_modes_supported: ['query'],
+    grant_types_supported: ['authorization_code', 'refresh_token'],
+    token_endpoint_auth_methods_supported: ['none'],
+    code_challenge_methods_supported: ['S256', 'plain'],
+    scopes_supported: ['mcp:tools', 'mcp:resources'],
+  });
+});
+
+/**
+ * Dynamic Client Registration (RFC 7591)
+ * Claude registers itself as an OAuth client
+ */
+app.post('/register', async (c) => {
+  const body = await c.req.json() as {
+    client_name?: string;
+    redirect_uris?: string[];
+  };
+  
+  // Generate a client ID for this registration
+  const clientId = `ww_client_${crypto.randomUUID().replace(/-/g, '')}`;
+  
+  // Store client registration in KV
+  await c.env.KV.put(`oauth_client:${clientId}`, JSON.stringify({
+    client_name: body.client_name || 'Unknown Client',
+    redirect_uris: body.redirect_uris || [],
+    created_at: new Date().toISOString(),
+  }), {
+    expirationTtl: 365 * 24 * 60 * 60, // 1 year
+  });
+  
+  return c.json({
+    client_id: clientId,
+    client_name: body.client_name,
+    redirect_uris: body.redirect_uris,
+    token_endpoint_auth_method: 'none',
+  }, 201);
+});
+
+/**
+ * Authorization Endpoint (MCP spec requires /authorize)
+ * Generates an auth code for the client
+ */
+app.get('/authorize', async (c) => {
+  const clientId = c.req.query('client_id');
+  const redirectUri = c.req.query('redirect_uri');
+  const state = c.req.query('state');
+  const codeChallenge = c.req.query('code_challenge');
+  const codeChallengeMethod = c.req.query('code_challenge_method');
+  
+  if (!clientId || !redirectUri) {
+    return c.json({ error: 'invalid_request', error_description: 'Missing client_id or redirect_uri' }, 400);
+  }
+  
+  // Generate authorization code
+  const code = crypto.randomUUID();
+  
+  // Store auth code with PKCE challenge
+  await c.env.KV.put(`oauth_code:${code}`, JSON.stringify({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    code_challenge: codeChallenge,
+    code_challenge_method: codeChallengeMethod,
+    created_at: new Date().toISOString(),
+  }), {
+    expirationTtl: 600, // 10 minutes
+  });
+  
+  // Redirect back with code
+  const redirect = new URL(redirectUri);
+  redirect.searchParams.set('code', code);
+  if (state) redirect.searchParams.set('state', state);
+  
+  return c.redirect(redirect.toString(), 302);
+});
+
+/**
+ * Token Endpoint (MCP spec requires /token)
+ * Exchanges auth code for access token
+ */
+app.post('/token', async (c) => {
+  const body = await c.req.parseBody() as {
+    grant_type: string;
+    code?: string;
+    redirect_uri?: string;
+    client_id?: string;
+    code_verifier?: string;
+    refresh_token?: string;
+  };
+  
+  if (body.grant_type === 'authorization_code') {
+    const code = body.code;
+    if (!code) {
+      return c.json({ error: 'invalid_request', error_description: 'Missing code' }, 400);
+    }
+    
+    // Retrieve and delete auth code
+    const codeData = await c.env.KV.get(`oauth_code:${code}`, 'json') as {
+      client_id: string;
+      redirect_uri: string;
+      code_challenge?: string;
+      code_challenge_method?: string;
+    } | null;
+    
+    if (!codeData) {
+      return c.json({ error: 'invalid_grant', error_description: 'Invalid or expired code' }, 400);
+    }
+    
+    await c.env.KV.delete(`oauth_code:${code}`);
+    
+    // Verify PKCE if provided
+    if (codeData.code_challenge && body.code_verifier) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(body.code_verifier);
+      const hash = await crypto.subtle.digest('SHA-256', data);
+      const calculatedChallenge = btoa(String.fromCharCode(...new Uint8Array(hash)))
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_')
+        .replace(/=/g, '');
+      
+      if (calculatedChallenge !== codeData.code_challenge) {
+        return c.json({ error: 'invalid_grant', error_description: 'Invalid code_verifier' }, 400);
+      }
+    }
+    
+    // Generate tokens
+    const accessToken = `ww_at_${crypto.randomUUID().replace(/-/g, '')}`;
+    const refreshToken = `ww_rt_${crypto.randomUUID().replace(/-/g, '')}`;
+    
+    // Store access token
+    await c.env.KV.put(`oauth_access_token:${accessToken}`, JSON.stringify({
+      client_id: codeData.client_id,
+      created_at: new Date().toISOString(),
+    }), {
+      expirationTtl: 3600, // 1 hour
+    });
+    
+    // Store refresh token
+    await c.env.KV.put(`oauth_refresh_token:${refreshToken}`, JSON.stringify({
+      client_id: codeData.client_id,
+      created_at: new Date().toISOString(),
+    }), {
+      expirationTtl: 30 * 24 * 60 * 60, // 30 days
+    });
+    
+    return c.json({
+      access_token: accessToken,
+      token_type: 'Bearer',
+      expires_in: 3600,
+      refresh_token: refreshToken,
+    });
+  }
+  
+  if (body.grant_type === 'refresh_token') {
+    const refreshToken = body.refresh_token;
+    if (!refreshToken) {
+      return c.json({ error: 'invalid_request', error_description: 'Missing refresh_token' }, 400);
+    }
+    
+    const tokenData = await c.env.KV.get(`oauth_refresh_token:${refreshToken}`, 'json') as {
+      client_id: string;
+    } | null;
+    
+    if (!tokenData) {
+      return c.json({ error: 'invalid_grant', error_description: 'Invalid refresh token' }, 400);
+    }
+    
+    // Generate new access token
+    const accessToken = `ww_at_${crypto.randomUUID().replace(/-/g, '')}`;
+    
+    await c.env.KV.put(`oauth_access_token:${accessToken}`, JSON.stringify({
+      client_id: tokenData.client_id,
+      created_at: new Date().toISOString(),
+    }), {
+      expirationTtl: 3600,
+    });
+    
+    return c.json({
+      access_token: accessToken,
+      token_type: 'Bearer',
+      expires_in: 3600,
+    });
+  }
+  
+  return c.json({ error: 'unsupported_grant_type' }, 400);
+});
+
 // Mount the MCP server
 app.route('/', mcpServer);
 
