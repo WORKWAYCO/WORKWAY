@@ -490,13 +490,119 @@ app.get('/oauth/callback', async (c) => {
   // Clean up state
   await c.env.KV.delete(`oauth_state:${state}`);
 
-  return c.json({
-    success: true,
-    message: `Procore ${procoreEnv} connected successfully!`,
-    userId: stateData.userId,
-    environment: procoreEnv,
-    expiresAt,
-  });
+  // Return beautiful success page
+  const successHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connected to Procore - WORKWAY</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a0a;
+      color: #fafafa;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      text-align: center;
+      padding: 3rem;
+      max-width: 480px;
+    }
+    .checkmark {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: #22c55e;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto 2rem;
+      animation: pop 0.3s ease-out;
+    }
+    .checkmark svg {
+      width: 40px;
+      height: 40px;
+      stroke: white;
+      stroke-width: 3;
+      fill: none;
+    }
+    @keyframes pop {
+      0% { transform: scale(0); }
+      50% { transform: scale(1.1); }
+      100% { transform: scale(1); }
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+    }
+    .subtitle {
+      color: #a1a1aa;
+      margin-bottom: 2rem;
+      line-height: 1.5;
+    }
+    .connection-id {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 2rem;
+    }
+    .connection-id label {
+      font-size: 0.75rem;
+      color: #71717a;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+    .connection-id code {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 1rem;
+      color: #f97316;
+    }
+    .note {
+      font-size: 0.875rem;
+      color: #71717a;
+      line-height: 1.5;
+    }
+    .env-badge {
+      display: inline-block;
+      padding: 0.25rem 0.75rem;
+      background: ${procoreEnv === 'sandbox' ? '#854d0e' : '#166534'};
+      color: ${procoreEnv === 'sandbox' ? '#fef08a' : '#bbf7d0'};
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="checkmark">
+      <svg viewBox="0 0 24 24">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <h1>Connected to Procore</h1>
+    <p class="subtitle">Your Procore account is now linked. You can close this window and return to Claude.</p>
+    <div class="connection-id">
+      <label>Your Connection ID</label>
+      <code>${stateData.userId}</code>
+    </div>
+    <p class="note">Use this ID with WORKWAY tools in Claude to access your Procore data.</p>
+    <span class="env-badge">${procoreEnv === 'sandbox' ? 'Sandbox' : 'Production'}</span>
+  </div>
+</body>
+</html>`;
+
+  return c.html(successHtml);
 });
 
 // ============================================================================
