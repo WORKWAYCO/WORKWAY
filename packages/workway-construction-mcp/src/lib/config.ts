@@ -8,9 +8,9 @@
 
 /**
  * Base URL for the MCP server
- * Custom domain: mcp.workway.co
+ * Custom domain: construction.mcp.workway.co
  */
-export const MCP_BASE_URL = 'https://mcp.workway.co';
+export const MCP_BASE_URL = 'https://construction.mcp.workway.co';
 
 /**
  * OAuth callback URL (must match Procore app configuration)
@@ -34,6 +34,7 @@ export const ALLOWED_ORIGINS = [
   'https://workway.co',
   'https://www.workway.co',
   'https://mcp.workway.co',
+  'https://construction.mcp.workway.co',
   'https://app.workway.co',
   'https://api.workway.co',
   'https://construction-web.pages.dev',

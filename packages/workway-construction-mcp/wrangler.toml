@@ -9,7 +9,7 @@ workers_dev = true
 
 # Custom domain for production
 routes = [
-  { pattern = "mcp.workway.co", custom_domain = true }
+  { pattern = "construction.mcp.workway.co", custom_domain = true }
 ]
 
 # D1 Database
