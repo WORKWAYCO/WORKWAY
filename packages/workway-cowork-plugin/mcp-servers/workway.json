@@ -1,0 +1,54 @@
+{
+  "name": "workway",
+  "description": "WORKWAY Construction MCP - AI-native construction workflow automation",
+  "transport": "http",
+  "url": "https://mcp.workway.co/mcp",
+  "documentation": "https://workway.co/docs/mcp",
+  "authentication": {
+    "type": "bearer",
+    "envVar": "WORKWAY_API_KEY",
+    "instructions": "Get your API key from https://workway.co/dashboard"
+  },
+  "tools": [
+    {
+      "name": "workway_get_action_queue",
+      "description": "Get prioritized action items from the Command Center"
+    },
+    {
+      "name": "workway_list_projects",
+      "description": "List all Procore projects you have access to"
+    },
+    {
+      "name": "workway_get_rfis",
+      "description": "Get RFIs for a project"
+    },
+    {
+      "name": "workway_create_rfi",
+      "description": "Create a new RFI in Procore"
+    },
+    {
+      "name": "workway_get_daily_logs",
+      "description": "Get daily logs for a project"
+    },
+    {
+      "name": "workway_get_submittals",
+      "description": "Get submittals for a project"
+    },
+    {
+      "name": "workway_get_change_orders",
+      "description": "Get change orders for a project"
+    },
+    {
+      "name": "workway_get_project_health",
+      "description": "Get health metrics for a project"
+    },
+    {
+      "name": "workway_create_workflow",
+      "description": "Create a new automation workflow"
+    },
+    {
+      "name": "workway_deploy",
+      "description": "Deploy a workflow to production"
+    }
+  ]
+}

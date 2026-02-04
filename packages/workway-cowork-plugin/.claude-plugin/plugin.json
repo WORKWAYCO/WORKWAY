@@ -1,0 +1,27 @@
+{
+  "name": "WORKWAY Construction",
+  "version": "1.0.0",
+  "description": "AI-native construction workflow automation powered by WORKWAY. Includes the Command Center for prioritized action items, Procore integration, and construction-specific skills.",
+  "author": "WORKWAY",
+  "homepage": "https://workway.co",
+  "repository": "https://github.com/workway-co/cowork-plugin",
+  "license": "MIT",
+  "skills": [
+    "construction-pm",
+    "rfi-management",
+    "daily-reporting"
+  ],
+  "commands": [
+    "action-queue",
+    "project-health"
+  ],
+  "mcpServers": [
+    "workway"
+  ],
+  "tags": [
+    "construction",
+    "procore",
+    "project-management",
+    "automation"
+  ]
+}
