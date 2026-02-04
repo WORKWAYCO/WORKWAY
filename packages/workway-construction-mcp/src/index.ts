@@ -359,7 +359,126 @@ app.get('/api/usage', async (c) => {
 });
 
 // ============================================================================
-// MCP Protocol Endpoints
+// API Key Management
+// ============================================================================
+
+/**
+ * Generate an API key for the current user
+ * Anonymous users get a temporary key tied to their fingerprint
+ * Authenticated users get a persistent key
+ */
+app.post('/api/keys', async (c) => {
+  const user = await getUserFromToken(c);
+  
+  if (!user) {
+    // Anonymous user - generate temporary key tied to fingerprint
+    const fingerprint = generateFingerprint(c);
+    const key = `ww_anon_${crypto.randomUUID().replace(/-/g, '')}`;
+    
+    // Store key -> fingerprint mapping with 90 day expiration
+    await c.env.KV.put(`api_key:${key}`, fingerprint, {
+      expirationTtl: 90 * 24 * 60 * 60, // 90 days in seconds
+    });
+    
+    return c.json({
+      apiKey: key,
+      tier: 'anonymous',
+      expiresIn: '90 days',
+    });
+  }
+  
+  // Authenticated user - generate persistent key
+  const key = `ww_${crypto.randomUUID().replace(/-/g, '')}`;
+  
+  // Store key -> userId mapping (no expiration for authenticated users)
+  await c.env.KV.put(`api_key:${key}`, user.id);
+  
+  // Also store user -> key mapping so we can revoke later
+  const userKeysKey = `user_keys:${user.id}`;
+  const existingKeys = await c.env.KV.get<string[]>(userKeysKey, 'json') || [];
+  existingKeys.push(key);
+  await c.env.KV.put(userKeysKey, JSON.stringify(existingKeys));
+  
+  return c.json({
+    apiKey: key,
+    tier: user.tier,
+    userId: user.id,
+  });
+});
+
+/**
+ * Revoke an API key for the current user
+ */
+app.delete('/api/keys', async (c) => {
+  const user = await getUserFromToken(c);
+  
+  if (!user) {
+    // Anonymous user - revoke by fingerprint
+    const fingerprint = generateFingerprint(c);
+    
+    // We can't easily look up keys by fingerprint, so just return success
+    // The key will expire naturally anyway
+    return c.json({
+      success: true,
+      message: 'Anonymous keys will expire automatically',
+    });
+  }
+  
+  // Authenticated user - revoke all their keys
+  const userKeysKey = `user_keys:${user.id}`;
+  const existingKeys = await c.env.KV.get<string[]>(userKeysKey, 'json') || [];
+  
+  // Delete all keys
+  for (const key of existingKeys) {
+    await c.env.KV.delete(`api_key:${key}`);
+  }
+  
+  // Clear the user's key list
+  await c.env.KV.delete(userKeysKey);
+  
+  return c.json({
+    success: true,
+    keysRevoked: existingKeys.length,
+  });
+});
+
+/**
+ * Revoke a specific API key
+ */
+app.delete('/api/keys/:key', async (c) => {
+  const keyToRevoke = c.req.param('key');
+  const user = await getUserFromToken(c);
+  
+  // Verify the key belongs to this user (or is anonymous)
+  const keyOwner = await c.env.KV.get(`api_key:${keyToRevoke}`);
+  
+  if (!keyOwner) {
+    return c.json({ error: 'Key not found' }, 404);
+  }
+  
+  if (user && keyOwner !== user.id) {
+    return c.json({ error: 'Unauthorized' }, 403);
+  }
+  
+  // Delete the key
+  await c.env.KV.delete(`api_key:${keyToRevoke}`);
+  
+  // Remove from user's key list if authenticated
+  if (user) {
+    const userKeysKey = `user_keys:${user.id}`;
+    const existingKeys = await c.env.KV.get<string[]>(userKeysKey, 'json') || [];
+    const updatedKeys = existingKeys.filter(k => k !== keyToRevoke);
+    await c.env.KV.put(userKeysKey, JSON.stringify(updatedKeys));
+  }
+  
+  return c.json({
+    success: true,
+    keyRevoked: keyToRevoke,
+  });
+});
+
+// ============================================================================
+// MCP Protocol Endpoints (REST)
 // ============================================================================
 
 /**
@@ -376,6 +495,254 @@ app.get('/mcp', (c) => {
       prompts: { listChanged: false },
     },
   });
+});
+
+// ============================================================================
+// Remote MCP Protocol (SSE Transport for Claude Cowork)
+// ============================================================================
+
+/**
+ * SSE endpoint for Remote MCP Protocol
+ * Claude Cowork connects here to receive messages and get the message endpoint
+ */
+app.get('/sse', (c) => {
+  // Generate a session ID for this connection
+  const sessionId = crypto.randomUUID();
+  const messageEndpoint = new URL(c.req.url).origin + `/message?sessionId=${sessionId}`;
+  
+  // Create readable stream for SSE
+  const stream = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder();
+      
+      // Store session in KV
+      await c.env.KV.put(`sse_session:${sessionId}`, 'active', {
+        expirationTtl: 3600, // 1 hour
+      });
+      
+      // Send endpoint event (tells client where to POST messages)
+      const endpointEvent = `event: endpoint\ndata: ${messageEndpoint}\n\n`;
+      controller.enqueue(encoder.encode(endpointEvent));
+      
+      // Send initial message event
+      const initMessage = {
+        jsonrpc: '2.0',
+        method: 'notifications/initialized',
+      };
+      const messageEvent = `event: message\ndata: ${JSON.stringify(initMessage)}\n\n`;
+      controller.enqueue(encoder.encode(messageEvent));
+      
+      // Keep connection alive with periodic pings
+      // Note: In Cloudflare Workers, long-running connections are limited
+      // The client should reconnect if the connection drops
+    },
+  });
+  
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+    },
+  });
+});
+
+/**
+ * CORS preflight for message endpoint
+ */
+app.options('/message', (c) => {
+  return new Response(null, {
+    status: 204,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+      'Access-Control-Max-Age': '86400',
+    },
+  });
+});
+
+/**
+ * Message endpoint for Remote MCP Protocol
+ * Claude Cowork sends JSON-RPC messages here
+ */
+app.post('/message', async (c) => {
+  const sessionId = c.req.query('sessionId');
+  
+  if (!sessionId) {
+    return c.json({ error: 'Missing sessionId' }, 400);
+  }
+  
+  // Verify session exists
+  const session = await c.env.KV.get(`sse_session:${sessionId}`);
+  if (!session) {
+    return c.json({ error: 'Invalid or expired session' }, 401);
+  }
+  
+  try {
+    const message = await c.req.json() as {
+      jsonrpc: string;
+      id?: string | number;
+      method: string;
+      params?: Record<string, unknown>;
+    };
+    
+    // Handle JSON-RPC methods
+    let result: unknown;
+    
+    switch (message.method) {
+      case 'initialize':
+        result = {
+          protocolVersion: '2024-11-05',
+          serverInfo: {
+            name: 'workway-construction-mcp',
+            version: '0.1.0',
+          },
+          capabilities: {
+            tools: { listChanged: true },
+            resources: { subscribe: false, listChanged: true },
+            prompts: { listChanged: false },
+          },
+        };
+        break;
+        
+      case 'tools/list':
+        const tools = Object.values(allTools).map(tool => ({
+          name: tool.name,
+          description: tool.description,
+          inputSchema: tool.inputSchema,
+        }));
+        result = { tools };
+        break;
+        
+      case 'tools/call': {
+        const params = message.params as { name: string; arguments?: Record<string, unknown> };
+        const toolName = params?.name;
+        const toolArgs = params?.arguments || {};
+        
+        const tool = Object.values(allTools).find(t => t.name === toolName);
+        if (!tool) {
+          return c.json({
+            jsonrpc: '2.0',
+            id: message.id,
+            error: {
+              code: -32602,
+              message: `Unknown tool: ${toolName}`,
+            },
+          });
+        }
+        
+        // Check usage limits
+        const usage = await checkUsage(c);
+        if (usage.exceeded) {
+          return c.json({
+            jsonrpc: '2.0',
+            id: message.id,
+            error: {
+              code: -32000,
+              message: usage.tier === 'anonymous' 
+                ? 'Free tier limit reached. Sign up at workway.co for more runs.'
+                : `Monthly limit of ${usage.limit} runs exceeded.`,
+            },
+          });
+        }
+        
+        // Execute tool
+        try {
+          const input = tool.inputSchema.parse(toolArgs);
+          const toolResult = await tool.execute(input as any, c.env);
+          
+          // Increment usage
+          await incrementUsage(c);
+          
+          result = {
+            content: [
+              {
+                type: 'text',
+                text: JSON.stringify(toolResult.data || toolResult, null, 2),
+              },
+            ],
+            isError: !toolResult.success,
+          };
+        } catch (execError) {
+          result = {
+            content: [
+              {
+                type: 'text',
+                text: `Error: ${execError instanceof Error ? execError.message : 'Unknown error'}`,
+              },
+            ],
+            isError: true,
+          };
+        }
+        break;
+      }
+        
+      case 'resources/list':
+        const resources = listResources();
+        result = { resources };
+        break;
+        
+      case 'resources/read': {
+        const resourceParams = message.params as { uri: string };
+        const content = await fetchResource(resourceParams?.uri, c.env);
+        if (content === null) {
+          return c.json({
+            jsonrpc: '2.0',
+            id: message.id,
+            error: {
+              code: -32602,
+              message: `Resource not found: ${resourceParams?.uri}`,
+            },
+          });
+        }
+        result = {
+          contents: [
+            {
+              uri: resourceParams?.uri,
+              mimeType: 'application/json',
+              text: JSON.stringify(content, null, 2),
+            },
+          ],
+        };
+        break;
+      }
+        
+      case 'prompts/list':
+        result = { prompts: [] };
+        break;
+        
+      default:
+        return c.json({
+          jsonrpc: '2.0',
+          id: message.id,
+          error: {
+            code: -32601,
+            message: `Method not found: ${message.method}`,
+          },
+        });
+    }
+    
+    // Return JSON-RPC response
+    return c.json({
+      jsonrpc: '2.0',
+      id: message.id,
+      result,
+    });
+    
+  } catch (error) {
+    return c.json({
+      jsonrpc: '2.0',
+      id: null,
+      error: {
+        code: -32700,
+        message: 'Parse error',
+      },
+    }, 400);
+  }
 });
 
 /**
