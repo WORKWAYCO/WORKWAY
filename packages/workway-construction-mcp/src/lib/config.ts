@@ -1,0 +1,111 @@
+/**
+ * Configuration constants for WORKWAY Construction MCP
+ */
+
+// ============================================================================
+// Deployment Configuration
+// ============================================================================
+
+/**
+ * Base URL for the MCP server
+ * Update this when deploying to a different domain
+ */
+export const MCP_BASE_URL = 'https://workway-construction-mcp.half-dozen.workers.dev';
+
+/**
+ * OAuth callback URL (must match Procore app configuration)
+ */
+export const OAUTH_CALLBACK_URL = `${MCP_BASE_URL}/oauth/callback`;
+
+/**
+ * Webhook base URL for workflow triggers
+ */
+export const WEBHOOK_BASE_URL = `${MCP_BASE_URL}/webhooks`;
+
+// ============================================================================
+// CORS Configuration
+// ============================================================================
+
+/**
+ * Allowed origins for CORS
+ * Add your frontend domains here
+ */
+export const ALLOWED_ORIGINS = [
+  'https://workway.co',
+  'https://app.workway.co',
+  'https://api.workway.co',
+  // Local development
+  'http://localhost:3000',
+  'http://localhost:5173',
+  // Claude Desktop and other MCP clients
+  'https://claude.ai',
+];
+
+/**
+ * Check if an origin is allowed
+ */
+export function isAllowedOrigin(origin: string | null): boolean {
+  if (!origin) return false;
+  
+  // In development, allow all origins
+  if (process.env.NODE_ENV === 'development') return true;
+  
+  return ALLOWED_ORIGINS.includes(origin);
+}
+
+// ============================================================================
+// OAuth Configuration
+// ============================================================================
+
+// Set to true to use sandbox endpoints (for development/testing)
+// Set to false for production
+export const USE_SANDBOX = false;
+
+// Procore OAuth endpoints
+export const PROCORE_AUTH_URL = USE_SANDBOX 
+  ? 'https://login-sandbox.procore.com/oauth/authorize'
+  : 'https://login.procore.com/oauth/authorize';
+
+export const PROCORE_TOKEN_URL = USE_SANDBOX
+  ? 'https://login-sandbox.procore.com/oauth/token'
+  : 'https://login.procore.com/oauth/token';
+
+export const PROCORE_API_BASE = USE_SANDBOX
+  ? 'https://sandbox.procore.com/rest/v1.0'
+  : 'https://api.procore.com/rest/v1.0';
+
+/**
+ * OAuth state TTL in seconds (10 minutes)
+ */
+export const OAUTH_STATE_TTL = 600;
+
+/**
+ * PKCE state TTL in seconds (10 minutes)
+ */
+export const PKCE_TTL = 600;
+
+// ============================================================================
+// Security Configuration
+// ============================================================================
+
+/**
+ * Token encryption is required in production
+ */
+export const REQUIRE_TOKEN_ENCRYPTION = true;
+
+/**
+ * Minimum token refresh buffer (5 minutes before expiration)
+ */
+export const TOKEN_REFRESH_BUFFER_MS = 5 * 60 * 1000;
+
+// ============================================================================
+// Rate Limiting
+// ============================================================================
+
+/**
+ * Procore API rate limits
+ */
+export const PROCORE_RATE_LIMIT = {
+  requestsPerMinute: 3600,
+  requestsPerDay: 100000,
+};

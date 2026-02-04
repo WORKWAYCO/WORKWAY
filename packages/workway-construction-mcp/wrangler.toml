@@ -1,0 +1,34 @@
+name = "workway-construction-mcp"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+account_id = "5c3e9cf4d55ce171b844fad0931607f9"
+
+# D1 Database
+[[d1_databases]]
+binding = "DB"
+database_name = "workway-construction"
+database_id = "79db6a83-9368-4d8b-8c99-9070329a3c6d"
+
+# KV for OAuth tokens and cache
+[[kv_namespaces]]
+binding = "KV"
+id = "a5fa4c4a6c5c46739cc3e8ed841cb237"
+
+# Durable Objects for workflow state
+[[durable_objects.bindings]]
+name = "WORKFLOW_STATE"
+class_name = "WorkflowState"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["WorkflowState"]
+
+# Environment variables
+[vars]
+ENVIRONMENT = "development"
+
+# Secrets (set via wrangler secret put)
+# PROCORE_CLIENT_ID
+# PROCORE_CLIENT_SECRET
+# COOKIE_ENCRYPTION_KEY
