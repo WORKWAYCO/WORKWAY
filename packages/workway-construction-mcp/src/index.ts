@@ -22,8 +22,9 @@ import { encrypt, decrypt } from './lib/crypto';
 import { 
   ALLOWED_ORIGINS, 
   OAUTH_CALLBACK_URL, 
-  PROCORE_TOKEN_URL,
   MCP_BASE_URL,
+  getProcoreUrls,
+  type ProcoreEnvironment,
 } from './lib/config';
 
 // Tier limits
@@ -574,6 +575,7 @@ app.get('/oauth/callback', async (c) => {
     provider: string;
     companyId?: string;
     userId: string;
+    environment?: ProcoreEnvironment;
     createdAt: string;
   } | null;
   
@@ -596,16 +598,28 @@ app.get('/oauth/callback', async (c) => {
     }, 400);
   }
 
+  // Get environment-specific URLs and credentials
+  const procoreEnv = stateData.environment || 'production';
+  const urls = getProcoreUrls(procoreEnv);
+  
+  // Use sandbox credentials if connecting to sandbox
+  const clientId = procoreEnv === 'sandbox'
+    ? (c.env.PROCORE_SANDBOX_CLIENT_ID || c.env.PROCORE_CLIENT_ID)
+    : c.env.PROCORE_CLIENT_ID;
+  const clientSecret = procoreEnv === 'sandbox'
+    ? (c.env.PROCORE_SANDBOX_CLIENT_SECRET || c.env.PROCORE_CLIENT_SECRET)
+    : c.env.PROCORE_CLIENT_SECRET;
+
   // Exchange code for token (using form-urlencoded as per OAuth 2.0 spec)
   const tokenBody = new URLSearchParams({
     grant_type: 'authorization_code',
     code,
-    client_id: c.env.PROCORE_CLIENT_ID,
-    client_secret: c.env.PROCORE_CLIENT_SECRET,
+    client_id: clientId,
+    client_secret: clientSecret,
     redirect_uri: OAUTH_CALLBACK_URL,
   });
 
-  const tokenResponse = await fetch(PROCORE_TOKEN_URL, {
+  const tokenResponse = await fetch(urls.tokenUrl, {
     method: 'POST',
     headers: { 
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -616,13 +630,15 @@ app.get('/oauth/callback', async (c) => {
   if (!tokenResponse.ok) {
     const errorText = await tokenResponse.text();
     console.error('Token exchange failed:', tokenResponse.status, errorText);
-    console.error('Token URL:', PROCORE_TOKEN_URL);
+    console.error('Token URL:', urls.tokenUrl);
+    console.error('Environment:', procoreEnv);
     console.error('Client ID:', c.env.PROCORE_CLIENT_ID?.substring(0, 10) + '...');
     return c.json({ 
       error: 'token_exchange_failed',
       message: `Failed to exchange authorization code for token: ${errorText}`,
       code: 'OAUTH_TOKEN_EXCHANGE_FAILED',
       status: tokenResponse.status,
+      environment: procoreEnv,
     }, 400);
   }
 
@@ -660,11 +676,11 @@ app.get('/oauth/callback', async (c) => {
     DELETE FROM oauth_tokens WHERE provider = 'procore' AND user_id = ?
   `).bind(stateData.userId).run();
 
-  // Store encrypted token with user isolation
+  // Store encrypted token with user isolation and environment
   const tokenId = crypto.randomUUID();
   await c.env.DB.prepare(`
-    INSERT INTO oauth_tokens (id, provider, user_id, access_token, refresh_token, expires_at, company_id, created_at)
-    VALUES (?, 'procore', ?, ?, ?, ?, ?, ?)
+    INSERT INTO oauth_tokens (id, provider, user_id, access_token, refresh_token, expires_at, company_id, environment, created_at)
+    VALUES (?, 'procore', ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     tokenId,
     stateData.userId,
@@ -672,6 +688,7 @@ app.get('/oauth/callback', async (c) => {
     encryptedRefreshToken,
     expiresAt,
     stateData.companyId || null,
+    procoreEnv,
     new Date().toISOString()
   ).run();
 
@@ -681,8 +698,9 @@ app.get('/oauth/callback', async (c) => {
   // Return success
   return c.json({
     success: true,
-    message: 'Procore connected successfully!',
+    message: `Procore ${procoreEnv} connected successfully!`,
     userId: stateData.userId,
+    environment: procoreEnv,
     expiresAt,
   });
 });

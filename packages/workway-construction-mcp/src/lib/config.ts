@@ -58,22 +58,36 @@ export function isAllowedOrigin(origin: string | null): boolean {
 // OAuth Configuration
 // ============================================================================
 
-// Set to true to use sandbox endpoints (for development/testing)
-// Set to false for production
-export const USE_SANDBOX = false;
+/**
+ * Procore environment URLs
+ * Users choose sandbox vs production when connecting
+ */
+export const PROCORE_ENVIRONMENTS = {
+  production: {
+    authUrl: 'https://login.procore.com/oauth/authorize',
+    tokenUrl: 'https://login.procore.com/oauth/token',
+    apiBase: 'https://api.procore.com/rest/v1.0',
+  },
+  sandbox: {
+    authUrl: 'https://login-sandbox.procore.com/oauth/authorize',
+    tokenUrl: 'https://login-sandbox.procore.com/oauth/token',
+    apiBase: 'https://sandbox.procore.com/rest/v1.0',
+  },
+} as const;
 
-// Procore OAuth endpoints
-export const PROCORE_AUTH_URL = USE_SANDBOX 
-  ? 'https://login-sandbox.procore.com/oauth/authorize'
-  : 'https://login.procore.com/oauth/authorize';
+export type ProcoreEnvironment = keyof typeof PROCORE_ENVIRONMENTS;
 
-export const PROCORE_TOKEN_URL = USE_SANDBOX
-  ? 'https://login-sandbox.procore.com/oauth/token'
-  : 'https://login.procore.com/oauth/token';
+/**
+ * Get Procore URLs for a given environment
+ */
+export function getProcoreUrls(env: ProcoreEnvironment = 'production') {
+  return PROCORE_ENVIRONMENTS[env];
+}
 
-export const PROCORE_API_BASE = USE_SANDBOX
-  ? 'https://sandbox.procore.com/rest/v1.0'
-  : 'https://api.procore.com/rest/v1.0';
+// Legacy exports for backward compatibility (default to production)
+export const PROCORE_AUTH_URL = PROCORE_ENVIRONMENTS.production.authUrl;
+export const PROCORE_TOKEN_URL = PROCORE_ENVIRONMENTS.production.tokenUrl;
+export const PROCORE_API_BASE = PROCORE_ENVIRONMENTS.production.apiBase;
 
 /**
  * OAuth state TTL in seconds (10 minutes)

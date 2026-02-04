@@ -12,11 +12,10 @@ import type { Env, ProcoreProject, ProcoreRFI, ProcoreDailyLog, ProcoreSubmittal
 import { decrypt, encrypt } from '../lib/crypto';
 import { 
   OAUTH_CALLBACK_URL, 
-  PROCORE_AUTH_URL, 
-  PROCORE_TOKEN_URL,
-  PROCORE_API_BASE,
   TOKEN_REFRESH_BUFFER_MS,
   MCP_BASE_URL,
+  getProcoreUrls,
+  type ProcoreEnvironment,
 } from '../lib/config';
 import { generateCodeVerifier, generateCodeChallenge, generateSecureToken } from '../lib/crypto';
 
@@ -39,6 +38,10 @@ async function procoreRequest<T>(
     throw new Error('Not connected to Procore. Use workway_connect_procore first.');
   }
 
+  // Get the correct API base for this user's environment
+  const procoreEnv = (token.environment || 'production') as ProcoreEnvironment;
+  const urls = getProcoreUrls(procoreEnv);
+
   // Check if token needs refresh
   if (token.expires_at) {
     const expiresAt = new Date(token.expires_at);
@@ -46,7 +49,7 @@ async function procoreRequest<T>(
     
     if (needsRefresh && token.refresh_token) {
       // Refresh the token
-      const refreshedToken = await refreshProcoreToken(env, token, userId);
+      const refreshedToken = await refreshProcoreToken(env, token, userId, procoreEnv);
       token.access_token = refreshedToken.access_token;
     } else if (needsRefresh) {
       throw new Error('Procore token expired. Please reconnect.');
@@ -56,7 +59,7 @@ async function procoreRequest<T>(
   // Decrypt the access token
   const accessToken = await decrypt(token.access_token, env.COOKIE_ENCRYPTION_KEY);
 
-  const response = await fetch(`${PROCORE_API_BASE}${path}`, {
+  const response = await fetch(`${urls.apiBase}${path}`, {
     ...options,
     headers: {
       'Authorization': `Bearer ${accessToken}`,
@@ -91,19 +94,29 @@ async function procoreRequest<T>(
 async function refreshProcoreToken(
   env: Env,
   token: any,
-  userId: string
+  userId: string,
+  procoreEnv: ProcoreEnvironment = 'production'
 ): Promise<{ access_token: string }> {
   // Decrypt refresh token
   const refreshToken = await decrypt(token.refresh_token, env.COOKIE_ENCRYPTION_KEY);
+  const urls = getProcoreUrls(procoreEnv);
   
-  const response = await fetch(PROCORE_TOKEN_URL, {
+  // Use the correct credentials for this environment
+  const clientId = procoreEnv === 'sandbox'
+    ? (env.PROCORE_SANDBOX_CLIENT_ID || env.PROCORE_CLIENT_ID)
+    : env.PROCORE_CLIENT_ID;
+  const clientSecret = procoreEnv === 'sandbox'
+    ? (env.PROCORE_SANDBOX_CLIENT_SECRET || env.PROCORE_CLIENT_SECRET)
+    : env.PROCORE_CLIENT_SECRET;
+  
+  const response = await fetch(urls.tokenUrl, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
-      client_id: env.PROCORE_CLIENT_ID,
-      client_secret: env.PROCORE_CLIENT_SECRET,
+      client_id: clientId,
+      client_secret: clientSecret,
     }),
   });
 
@@ -149,33 +162,58 @@ export const procoreTools = {
   // --------------------------------------------------------------------------
   connect_procore: {
     name: 'workway_connect_procore',
-    description: 'Initiate OAuth connection to Procore. Returns an authorization URL that the user needs to visit to grant access. Uses PKCE for enhanced security.',
+    description: `Initiate OAuth connection to Procore. Returns an authorization URL that the user needs to visit to grant access.
+
+**Environment Options:**
+- \`production\` - Connect to live Procore (api.procore.com)
+- \`sandbox\` - Connect to Procore developer sandbox (sandbox.procore.com)
+
+The environment is stored with your token, so you can have production users and sandbox users on the same MCP server.`,
     inputSchema: z.object({
       company_id: z.string().optional()
         .describe('Procore company ID (if known)'),
       user_id: z.string().optional().default('default')
         .describe('User identifier for token isolation (default: "default")'),
+      environment: z.enum(['production', 'sandbox']).optional().default('production')
+        .describe('Procore environment: "production" for live, "sandbox" for testing'),
     }),
     outputSchema: z.object({
       authorization_url: z.string(),
       instructions: z.string(),
       status: z.enum(['pending', 'connected', 'expired']),
+      environment: z.string(),
     }),
     execute: async (input: z.infer<typeof procoreTools.connect_procore.inputSchema>, env: Env): Promise<ToolResult> => {
+      const procoreEnv = input.environment || 'production';
+      const urls = getProcoreUrls(procoreEnv);
+      
+      // Get the correct client ID for this environment
+      const clientId = procoreEnv === 'sandbox' 
+        ? (env.PROCORE_SANDBOX_CLIENT_ID || env.PROCORE_CLIENT_ID)
+        : env.PROCORE_CLIENT_ID;
+      
+      if (procoreEnv === 'sandbox' && !env.PROCORE_SANDBOX_CLIENT_ID) {
+        return {
+          success: false,
+          error: 'Sandbox credentials not configured. Set PROCORE_SANDBOX_CLIENT_ID and PROCORE_SANDBOX_CLIENT_SECRET.',
+        };
+      }
+      
       // Generate secure state token
       const state = generateSecureToken(32);
       
-      // Store state for CSRF protection (PKCE disabled - Procore may not support it)
+      // Store state for CSRF protection (includes environment choice)
       await env.KV.put(`oauth_state:${state}`, JSON.stringify({
         provider: 'procore',
         companyId: input.company_id,
         userId: input.user_id || 'default',
+        environment: procoreEnv,
         createdAt: new Date().toISOString(),
       }), { expirationTtl: 600 }); // 10 minutes
       
-      // Build authorization URL (without PKCE for now)
-      const authUrl = new URL(PROCORE_AUTH_URL);
-      authUrl.searchParams.set('client_id', env.PROCORE_CLIENT_ID);
+      // Build authorization URL using environment-specific auth endpoint and client ID
+      const authUrl = new URL(urls.authUrl);
+      authUrl.searchParams.set('client_id', clientId);
       authUrl.searchParams.set('redirect_uri', OAUTH_CALLBACK_URL);
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('state', state);
@@ -184,9 +222,10 @@ export const procoreTools = {
         success: true,
         data: {
           authorizationUrl: authUrl.toString(),
-          instructions: `Visit the authorization URL to connect your Procore account. After authorizing, you'll be redirected back and the connection will be complete.`,
+          instructions: `Visit the authorization URL to connect your Procore ${procoreEnv} account. After authorizing, you'll be redirected back and the connection will be complete.`,
           status: 'pending',
           userId: input.user_id || 'default',
+          environment: procoreEnv,
         },
       };
     },
@@ -289,7 +328,7 @@ export const procoreTools = {
         
         // Companies endpoint doesn't require company ID header
         const token = await env.DB.prepare(`
-          SELECT access_token, expires_at, refresh_token FROM oauth_tokens 
+          SELECT access_token, expires_at, refresh_token, environment FROM oauth_tokens 
           WHERE provider = 'procore' AND user_id = ? LIMIT 1
         `).bind(userId).first<any>();
         
@@ -298,8 +337,10 @@ export const procoreTools = {
         }
         
         const accessToken = await decrypt(token.access_token, env.COOKIE_ENCRYPTION_KEY);
+        const procoreEnv = (token.environment || 'production') as ProcoreEnvironment;
+        const urls = getProcoreUrls(procoreEnv);
         
-        const response = await fetch(`${PROCORE_API_BASE}/companies`, {
+        const response = await fetch(`${urls.apiBase}/companies`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -962,7 +1003,7 @@ export const procoreTools = {
       try {
         const userId = input.user_id || 'default';
         const token = await env.DB.prepare(`
-          SELECT access_token, company_id FROM oauth_tokens 
+          SELECT access_token, company_id, environment FROM oauth_tokens 
           WHERE provider = 'procore' AND user_id = ? LIMIT 1
         `).bind(userId).first<any>();
         
@@ -971,8 +1012,10 @@ export const procoreTools = {
         }
         
         const accessToken = await decrypt(token.access_token, env.COOKIE_ENCRYPTION_KEY);
+        const procoreEnv = (token.environment || 'production') as ProcoreEnvironment;
+        const urls = getProcoreUrls(procoreEnv);
         
-        const response = await fetch(`${PROCORE_API_BASE}${input.path}`, {
+        const response = await fetch(`${urls.apiBase}${input.path}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -999,8 +1042,9 @@ export const procoreTools = {
             status: response.status,
             headers: responseHeaders,
             body,
-            requestPath: `${PROCORE_API_BASE}${input.path}`,
+            requestPath: `${urls.apiBase}${input.path}`,
             companyIdUsed: token.company_id,
+            environment: procoreEnv,
           },
         };
       } catch (error) {

@@ -10,8 +10,12 @@ export interface Env {
   DB: D1Database;
   KV: KVNamespace;
   WORKFLOW_STATE: DurableObjectNamespace;
+  // Production Procore credentials
   PROCORE_CLIENT_ID: string;
   PROCORE_CLIENT_SECRET: string;
+  // Sandbox Procore credentials (separate app registration required)
+  PROCORE_SANDBOX_CLIENT_ID?: string;
+  PROCORE_SANDBOX_CLIENT_SECRET?: string;
   COOKIE_ENCRYPTION_KEY: string;
   RESEND_API_KEY?: string;  // For email notifications
   ENVIRONMENT: string;
