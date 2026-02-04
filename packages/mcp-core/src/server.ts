@@ -12,6 +12,7 @@
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { BaseMCPEnv, MCPServerConfig, UserTier, User } from './types';
 import { createSSEHandler, createMessageCORSHandler } from './transport/sse';
 import { createMessageHandler } from './protocol/handler';
@@ -166,7 +167,7 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
           const toolsList = Object.values(config.tools).map((tool: any) => ({
             name: tool.name,
             description: tool.description,
-            inputSchema: tool.inputSchema,
+            inputSchema: zodToJsonSchema(tool.inputSchema, { target: 'openApi3' }),
           }));
           result = { tools: toolsList };
           break;

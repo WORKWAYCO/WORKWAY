@@ -16,6 +16,7 @@ import type {
   UsageResult,
 } from '../types';
 import { checkUsage, incrementUsage } from '../metering/usage';
+import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export interface ProtocolHandlerConfig<TEnv extends BaseMCPEnv> {
   serverInfo: {
@@ -85,7 +86,7 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
       const tools = Object.values(config.tools).map(tool => ({
         name: tool.name,
         description: tool.description,
-        inputSchema: tool.inputSchema,
+        inputSchema: zodToJsonSchema(tool.inputSchema, { target: 'openApi3' }),
       }));
       result = { tools };
       break;
