@@ -96,7 +96,8 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
       const toolName = params?.name;
       const toolArgs = params?.arguments || {};
       
-      const tool = config.tools[toolName];
+      // Find tool by name property (not object key)
+      const tool = Object.values(config.tools).find(t => t.name === toolName);
       if (!tool) {
         return {
           jsonrpc: '2.0',

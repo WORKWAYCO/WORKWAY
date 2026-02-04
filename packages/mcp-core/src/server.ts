@@ -177,7 +177,8 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
           const toolName = params?.name;
           const toolArgs = params?.arguments || {};
           
-          const tool = config.tools[toolName];
+          // Find tool by name property (not object key)
+          const tool = Object.values(config.tools).find((t: any) => t.name === toolName);
           if (!tool) {
             return c.json({
               jsonrpc: '2.0',
