@@ -18,6 +18,7 @@
   "dependencies": {
     "@cloudflare/workers-oauth-provider": "^0.0.5",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@workway/mcp-core": "workspace:*",
     "hono": "^4.0.0",
     "zod": "^3.22.0"
   },

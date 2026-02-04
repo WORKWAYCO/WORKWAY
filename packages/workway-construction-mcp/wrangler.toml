@@ -4,6 +4,14 @@ compatibility_date = "2024-12-01"
 compatibility_flags = ["nodejs_compat"]
 account_id = "5c3e9cf4d55ce171b844fad0931607f9"
 
+# Keep workers.dev URL for development/testing
+workers_dev = true
+
+# Custom domain for production
+routes = [
+  { pattern = "mcp.workway.co", custom_domain = true }
+]
+
 # D1 Database
 [[d1_databases]]
 binding = "DB"

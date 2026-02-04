@@ -2,13 +2,13 @@
  * WORKWAY Construction MCP Types
  */
 
+import type { BaseMCPEnv } from '@workway/mcp-core';
+
 // ============================================================================
 // Environment Bindings
 // ============================================================================
 
-export interface Env {
-  DB: D1Database;
-  KV: KVNamespace;
+export interface Env extends BaseMCPEnv {
   WORKFLOW_STATE: DurableObjectNamespace;
   // Production Procore credentials
   PROCORE_CLIENT_ID: string;

@@ -3,6 +3,6 @@
  */
 
 export { ProcoreClient, ProcoreError } from './procore-client';
-export * from './db';
-export * from './crypto';
+export { generateId } from './db';
+export { encrypt, decrypt } from './crypto';
 export * from './config';
