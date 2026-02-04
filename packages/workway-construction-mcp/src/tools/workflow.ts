@@ -6,6 +6,7 @@
 
 import { z } from 'zod';
 import type { Env, Workflow, WorkflowAction, ToolResult } from '../types';
+import { MCP_BASE_URL, WEBHOOK_BASE_URL } from '../lib/config';
 
 // ============================================================================
 // Tool Definitions
@@ -60,7 +61,7 @@ export const workflowTools = {
       ).run();
       
       const webhookUrl = input.trigger_type === 'webhook' 
-        ? `https://workway-construction-mcp.half-dozen.workers.dev/webhooks/${id}`
+        ? `${WEBHOOK_BASE_URL}/${id}`
         : undefined;
       
       let nextStep = 'Call workway_configure_trigger to set up when the workflow runs';
@@ -140,7 +141,7 @@ export const workflowTools = {
         data: {
           success: true,
           triggerConfig,
-          webhookUrl: input.source ? `https://workway-construction-mcp.half-dozen.workers.dev/webhooks/${input.workflow_id}` : undefined,
+          webhookUrl: input.source ? `${WEBHOOK_BASE_URL}/${input.workflow_id}` : undefined,
           nextStep: 'Call workway_add_action to add workflow steps',
         },
       };
@@ -293,7 +294,7 @@ export const workflowTools = {
           success: true,
           deploymentId,
           webhookUrl: workflow.trigger_type === 'webhook' 
-            ? `https://workway-construction-mcp.half-dozen.workers.dev/webhooks/${input.workflow_id}`
+            ? `${WEBHOOK_BASE_URL}/${input.workflow_id}`
             : undefined,
           validationErrors: [],
           status: 'deployed',

@@ -56,11 +56,11 @@ app.use('*', cors({
 }));
 
 // ============================================================================
-// Landing Page
+// Landing Page - Procore MCP
 // ============================================================================
 
 /**
- * Landing page for Procore app listing
+ * MCP-focused landing page for developers and AI builders
  */
 app.get('/', (c) => {
   const html = `<!DOCTYPE html>
@@ -68,165 +68,499 @@ app.get('/', (c) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>WORKWAY for Procore - AI-Powered Construction Automation</title>
+  <title>Procore MCP - AI-Native Interface for Construction Data</title>
+  <meta name="description" content="Connect Claude, GPT, or any AI to Procore. 30+ MCP tools for RFIs, Submittals, Daily Logs, and Documents.">
   <style>
+    :root {
+      --background: #09090b;
+      --foreground: #fafafa;
+      --muted: #a1a1aa;
+      --border: #27272a;
+      --accent: #f97316;
+      --card: #18181b;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      color: white;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+      background: var(--background);
+      color: var(--foreground);
       min-height: 100vh;
+      line-height: 1.6;
     }
-    .container { max-width: 1200px; margin: 0 auto; padding: 40px 20px; }
-    .hero { text-align: center; padding: 80px 0; }
-    .logo { font-size: 48px; font-weight: 700; margin-bottom: 16px; }
-    .logo span { color: #f97316; }
-    .tagline { font-size: 24px; color: #94a3b8; margin-bottom: 32px; }
-    .cta { 
+    .container { max-width: 1000px; margin: 0 auto; padding: 0 24px; }
+    
+    /* Header */
+    .header { 
+      padding: 16px 0; 
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--background);
+      z-index: 100;
+    }
+    .header-inner { display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
+    .logo-icon { width: 24px; height: 24px; background: var(--accent); border-radius: 6px; }
+    .nav { display: flex; gap: 24px; }
+    .nav a { color: var(--muted); text-decoration: none; font-size: 14px; transition: color 0.2s; }
+    .nav a:hover { color: var(--foreground); }
+    
+    /* Hero */
+    .hero { padding: 80px 0 60px; text-align: center; }
+    .badge { 
       display: inline-block;
-      background: #f97316;
-      color: white;
-      padding: 16px 32px;
-      border-radius: 8px;
-      text-decoration: none;
-      font-weight: 600;
-      font-size: 18px;
-      transition: transform 0.2s, box-shadow 0.2s;
+      padding: 6px 12px;
+      background: rgba(249, 115, 22, 0.1);
+      border: 1px solid rgba(249, 115, 22, 0.3);
+      border-radius: 20px;
+      font-size: 13px;
+      color: var(--accent);
+      margin-bottom: 24px;
     }
-    .cta:hover { transform: translateY(-2px); box-shadow: 0 10px 40px rgba(249, 115, 22, 0.3); }
+    .hero h1 { 
+      font-size: 48px; 
+      font-weight: 700; 
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+      background: linear-gradient(to right, var(--foreground), var(--muted));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero h1 span { color: var(--accent); -webkit-text-fill-color: var(--accent); }
+    .hero-sub { font-size: 20px; color: var(--muted); max-width: 600px; margin: 0 auto 32px; }
+    .hero-buttons { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn { 
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: var(--foreground); color: var(--background); }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-secondary { background: var(--card); color: var(--foreground); border: 1px solid var(--border); }
+    .btn-secondary:hover { border-color: var(--muted); }
     
-    .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 32px; margin: 80px 0; }
-    .feature { background: rgba(255,255,255,0.05); border-radius: 16px; padding: 32px; }
-    .feature-icon { font-size: 40px; margin-bottom: 16px; }
-    .feature h3 { font-size: 20px; margin-bottom: 12px; }
-    .feature p { color: #94a3b8; line-height: 1.6; }
-    
-    .integrations { text-align: center; padding: 60px 0; }
-    .integrations h2 { font-size: 32px; margin-bottom: 40px; }
-    .integration-logos { display: flex; justify-content: center; gap: 48px; flex-wrap: wrap; }
-    .integration-logo { 
-      background: white; 
-      padding: 20px 40px; 
+    /* Code Block */
+    .code-hero { 
+      margin: 48px auto 0;
+      max-width: 700px;
+      background: var(--card);
+      border: 1px solid var(--border);
       border-radius: 12px;
+      overflow: hidden;
+    }
+    .code-header { 
+      padding: 12px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .code-tabs { display: flex; gap: 16px; }
+    .code-tab { font-size: 13px; color: var(--muted); cursor: pointer; }
+    .code-tab.active { color: var(--foreground); }
+    .code-content { padding: 20px; font-family: 'SF Mono', Consolas, monospace; font-size: 13px; line-height: 1.7; overflow-x: auto; }
+    .code-content .comment { color: #6b7280; }
+    .code-content .string { color: #a5d6ff; }
+    .code-content .keyword { color: #ff7b72; }
+    .code-content .function { color: #d2a8ff; }
+    
+    /* Features */
+    .features { padding: 80px 0; }
+    .features h2 { font-size: 32px; font-weight: 600; margin-bottom: 48px; text-align: center; }
+    .feature-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+    .feature-card { 
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: var(--muted); }
+    .feature-icon { 
+      width: 40px; height: 40px;
+      background: rgba(249, 115, 22, 0.1);
+      border-radius: 8px;
       display: flex;
       align-items: center;
-      gap: 12px;
-      font-weight: 600;
-      color: #1a1a2e;
-    }
-    
-    .how-it-works { padding: 60px 0; }
-    .how-it-works h2 { font-size: 32px; text-align: center; margin-bottom: 48px; }
-    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 32px; }
-    .step { text-align: center; }
-    .step-number { 
-      width: 48px; height: 48px; 
-      background: #f97316; 
-      border-radius: 50%; 
-      display: inline-flex; 
-      align-items: center; 
       justify-content: center;
-      font-weight: 700;
-      font-size: 20px;
       margin-bottom: 16px;
+      font-size: 20px;
     }
-    .step h4 { font-size: 18px; margin-bottom: 8px; }
-    .step p { color: #94a3b8; }
+    .feature-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+    .feature-card p { font-size: 14px; color: var(--muted); }
     
-    .footer { text-align: center; padding: 40px 0; color: #64748b; }
-    .footer a { color: #f97316; text-decoration: none; }
+    /* Tools Section */
+    .tools { padding: 80px 0; border-top: 1px solid var(--border); }
+    .tools h2 { font-size: 32px; font-weight: 600; margin-bottom: 16px; text-align: center; }
+    .tools-sub { text-align: center; color: var(--muted); margin-bottom: 48px; }
+    .tool-categories { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+    .tool-category { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 24px; }
+    .tool-category h3 { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.05em; }
+    .tool-list { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tool-item { 
+      font-size: 13px;
+      font-family: 'SF Mono', Consolas, monospace;
+      padding: 4px 10px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 4px;
+      color: var(--muted);
+    }
+    
+    /* CTA */
+    .cta-section { padding: 80px 0; text-align: center; border-top: 1px solid var(--border); }
+    .cta-section h2 { font-size: 32px; font-weight: 600; margin-bottom: 16px; }
+    .cta-section p { color: var(--muted); margin-bottom: 32px; }
+    
+    /* Footer */
+    .footer { 
+      padding: 32px 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+      color: var(--muted);
+      font-size: 14px;
+    }
+    .footer a { color: var(--muted); text-decoration: none; }
+    .footer a:hover { color: var(--foreground); }
+    .footer-links { display: flex; justify-content: center; gap: 24px; margin-bottom: 16px; }
+    
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 32px; }
+      .feature-grid { grid-template-columns: 1fr; }
+      .tool-categories { grid-template-columns: 1fr; }
+      .nav { display: none; }
+    }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="hero">
-      <div class="logo">WORK<span>WAY</span></div>
-      <p class="tagline">AI-Powered Automation for Construction Projects</p>
-      <a href="https://developers.procore.com" class="cta">Install from Procore Marketplace</a>
+  <header class="header">
+    <div class="container header-inner">
+      <div class="logo">
+        <div class="logo-icon"></div>
+        Procore MCP
+      </div>
+      <nav class="nav">
+        <a href="/docs">Docs</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="https://github.com/WORKWAYCO/WORKWAY" target="_blank">GitHub</a>
+      </nav>
     </div>
-    
-    <div class="features">
-      <div class="feature">
-        <div class="feature-icon">📋</div>
-        <h3>Automated RFI Tracking</h3>
-        <p>Never miss an overdue RFI again. Get automatic notifications when RFIs need attention, with smart prioritization based on project impact.</p>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="container">
+        <div class="badge">Model Context Protocol</div>
+        <h1>The AI Interface for <span>Procore</span></h1>
+        <p class="hero-sub">Connect Claude, GPT, or any AI agent to construction project data. 30+ tools for RFIs, Submittals, Daily Logs, and Documents.</p>
+        <div class="hero-buttons">
+          <a href="/docs" class="btn btn-primary">Get Started</a>
+          <a href="${MCP_BASE_URL}/mcp" class="btn btn-secondary">API Reference</a>
+        </div>
+        
+        <div class="code-hero">
+          <div class="code-header">
+            <div class="code-tabs">
+              <span class="code-tab active">claude_desktop_config.json</span>
+            </div>
+          </div>
+          <div class="code-content">
+<span class="comment">// Add to your MCP servers</span>
+{
+  <span class="string">"mcpServers"</span>: {
+    <span class="string">"procore"</span>: {
+      <span class="string">"url"</span>: <span class="string">"${MCP_BASE_URL}/mcp"</span>
+    }
+  }
+}
+          </div>
+        </div>
       </div>
-      <div class="feature">
-        <div class="feature-icon">📊</div>
-        <h3>Daily Summary Reports</h3>
-        <p>Receive AI-generated project summaries every morning. Track progress, identify blockers, and stay informed without digging through data.</p>
+    </section>
+
+    <section class="features">
+      <div class="container">
+        <h2>Why Procore MCP?</h2>
+        <div class="feature-grid">
+          <div class="feature-card">
+            <div class="feature-icon">🔌</div>
+            <h3>Universal AI Access</h3>
+            <p>Works with Claude, GPT, Gemini, and any MCP-compatible AI. One integration, all models.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">⚡</div>
+            <h3>Edge-Native</h3>
+            <p>Runs on Cloudflare Workers. Sub-100ms responses globally. No cold starts.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔒</div>
+            <h3>Secure by Default</h3>
+            <p>OAuth 2.0, encrypted tokens, user-level isolation. Enterprise-ready from day one.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📋</div>
+            <h3>Full Procore Coverage</h3>
+            <p>RFIs, Submittals, Daily Logs, Documents, Photos, Schedule. Everything your AI needs.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">🔄</div>
+            <h3>Pre-Built Workflows</h3>
+            <p>Templates for common automations. RFI alerts, weekly summaries, submittal tracking.</p>
+          </div>
+          <div class="feature-card">
+            <div class="feature-icon">📊</div>
+            <h3>Observable</h3>
+            <p>Execution logs, diagnostics, and error tracking. Know exactly what your AI is doing.</p>
+          </div>
+        </div>
       </div>
-      <div class="feature">
-        <div class="feature-icon">🔔</div>
-        <h3>Smart Notifications</h3>
-        <p>Route alerts to the right people via email or Slack. Customize notification rules based on project, event type, and severity.</p>
+    </section>
+
+    <section class="tools">
+      <div class="container">
+        <h2>30+ MCP Tools</h2>
+        <p class="tools-sub">Everything you need to build AI-powered construction workflows</p>
+        <div class="tool-categories">
+          <div class="tool-category">
+            <h3>Procore</h3>
+            <div class="tool-list">
+              <span class="tool-item">connect_procore</span>
+              <span class="tool-item">list_projects</span>
+              <span class="tool-item">get_rfis</span>
+              <span class="tool-item">get_submittals</span>
+              <span class="tool-item">get_daily_logs</span>
+              <span class="tool-item">get_documents</span>
+              <span class="tool-item">get_photos</span>
+              <span class="tool-item">create_rfi</span>
+              <span class="tool-item">create_webhook</span>
+            </div>
+          </div>
+          <div class="tool-category">
+            <h3>Workflows</h3>
+            <div class="tool-list">
+              <span class="tool-item">create_workflow</span>
+              <span class="tool-item">add_action</span>
+              <span class="tool-item">configure_trigger</span>
+              <span class="tool-item">deploy</span>
+              <span class="tool-item">test</span>
+              <span class="tool-item">list_templates</span>
+              <span class="tool-item">create_from_template</span>
+            </div>
+          </div>
+          <div class="tool-category">
+            <h3>Notifications</h3>
+            <div class="tool-list">
+              <span class="tool-item">send_email</span>
+              <span class="tool-item">send_slack</span>
+              <span class="tool-item">notify</span>
+              <span class="tool-item">configure_notifications</span>
+              <span class="tool-item">alert_workflow_error</span>
+            </div>
+          </div>
+          <div class="tool-category">
+            <h3>Debugging</h3>
+            <div class="tool-list">
+              <span class="tool-item">diagnose</span>
+              <span class="tool-item">get_unstuck</span>
+              <span class="tool-item">observe_execution</span>
+              <span class="tool-item">debug_procore_api</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="feature">
-        <div class="feature-icon">📄</div>
-        <h3>Submittal Monitoring</h3>
-        <p>Track submittal status automatically. Get alerts for pending reviews, approaching deadlines, and approval bottlenecks.</p>
+    </section>
+
+    <section class="cta-section">
+      <div class="container">
+        <h2>Ready to build?</h2>
+        <p>Start automating construction workflows with AI in minutes.</p>
+        <div class="hero-buttons">
+          <a href="/docs" class="btn btn-primary">Read the Docs</a>
+          <a href="/dashboard" class="btn btn-secondary">Open Dashboard</a>
+        </div>
       </div>
-      <div class="feature">
-        <div class="feature-icon">🤖</div>
-        <h3>AI-Native Design</h3>
-        <p>Built for AI agents from the ground up. Works seamlessly with Claude, GPT, and other AI assistants to automate complex workflows.</p>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer-links">
+        <a href="/docs">Documentation</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="https://github.com/WORKWAYCO/WORKWAY" target="_blank">GitHub</a>
+        <a href="mailto:support@workway.co">Support</a>
       </div>
-      <div class="feature">
-        <div class="feature-icon">🔒</div>
-        <h3>Enterprise Security</h3>
-        <p>OAuth 2.0 authentication, encrypted token storage, and user-level permissions. Your data stays secure and compliant.</p>
-      </div>
+      <p>Powered by <a href="https://workway.co">WORKWAY</a> · Built on Cloudflare</p>
     </div>
-    
-    <div class="how-it-works">
-      <h2>How It Works</h2>
-      <div class="steps">
-        <div class="step">
-          <div class="step-number">1</div>
-          <h4>Install the App</h4>
-          <p>Add WORKWAY from the Procore App Management section using your Company Admin account.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">2</div>
-          <h4>Connect Your Account</h4>
-          <p>Authenticate with OAuth to securely link your Procore projects.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">3</div>
-          <h4>Configure Workflows</h4>
-          <p>Set up automated workflows for RFI tracking, daily summaries, and notifications.</p>
-        </div>
-        <div class="step">
-          <div class="step-number">4</div>
-          <h4>Automate & Relax</h4>
-          <p>Let AI handle the routine tasks while you focus on building.</p>
-        </div>
-      </div>
-    </div>
-    
-    <div class="integrations">
-      <h2>Powered By</h2>
-      <div class="integration-logos">
-        <div class="integration-logo">
-          <span style="color: #f97316;">●</span> Procore
-        </div>
-        <div class="integration-logo">
-          <span style="color: #f97316;">●</span> Cloudflare
-        </div>
-        <div class="integration-logo">
-          <span style="color: #f97316;">●</span> MCP Protocol
-        </div>
-      </div>
-    </div>
-    
-    <div class="footer">
-      <p>Built by <a href="https://halfdozen.co">Half Dozen</a> · <a href="mailto:support@workway.co">Contact Support</a></p>
-      <p style="margin-top: 8px;">App Version Key: 39b684c3-af8c-433e-8e19-6bc359312448</p>
-    </div>
-  </div>
+  </footer>
 </body>
 </html>`;
   
+  return c.html(html);
+});
+
+/**
+ * Documentation page
+ */
+app.get('/docs', (c) => {
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Documentation - Procore MCP</title>
+  <style>
+    :root { --background: #09090b; --foreground: #fafafa; --muted: #a1a1aa; --border: #27272a; --accent: #f97316; --card: #18181b; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--background); color: var(--foreground); line-height: 1.6; }
+    .container { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+    .header { padding: 16px 0; border-bottom: 1px solid var(--border); position: sticky; top: 0; background: var(--background); z-index: 100; }
+    .header-inner { display: flex; justify-content: space-between; align-items: center; }
+    .logo { font-size: 18px; font-weight: 600; display: flex; align-items: center; gap: 8px; text-decoration: none; color: var(--foreground); }
+    .logo-icon { width: 24px; height: 24px; background: var(--accent); border-radius: 6px; }
+    .nav { display: flex; gap: 24px; }
+    .nav a { color: var(--muted); text-decoration: none; font-size: 14px; }
+    .nav a:hover { color: var(--foreground); }
+    .content { padding: 48px 0; }
+    h1 { font-size: 36px; font-weight: 700; margin-bottom: 16px; }
+    h2 { font-size: 24px; font-weight: 600; margin: 48px 0 16px; padding-top: 24px; border-top: 1px solid var(--border); }
+    h3 { font-size: 18px; font-weight: 600; margin: 32px 0 12px; }
+    p { color: var(--muted); margin-bottom: 16px; }
+    code { font-family: 'SF Mono', Consolas, monospace; font-size: 14px; background: var(--card); padding: 2px 6px; border-radius: 4px; }
+    pre { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; overflow-x: auto; margin: 16px 0; }
+    pre code { background: none; padding: 0; }
+    .endpoint { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: 16px; margin: 16px 0; }
+    .endpoint-method { display: inline-block; padding: 2px 8px; background: #22c55e; color: var(--background); border-radius: 4px; font-size: 12px; font-weight: 600; margin-right: 8px; }
+    .endpoint-method.post { background: #3b82f6; }
+    .endpoint-path { font-family: 'SF Mono', Consolas, monospace; font-size: 14px; }
+    ul { margin: 16px 0; padding-left: 24px; color: var(--muted); }
+    li { margin: 8px 0; }
+    .footer { padding: 32px 0; border-top: 1px solid var(--border); text-align: center; color: var(--muted); font-size: 14px; }
+    .footer a { color: var(--muted); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    <div class="container header-inner">
+      <a href="/" class="logo"><div class="logo-icon"></div>Procore MCP</a>
+      <nav class="nav">
+        <a href="/docs">Docs</a>
+        <a href="/dashboard">Dashboard</a>
+        <a href="${MCP_BASE_URL}/mcp">API</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="content">
+    <div class="container">
+      <h1>Getting Started</h1>
+      <p>Procore MCP is an AI-native interface for construction project data. Connect your AI agent to Procore in minutes.</p>
+
+      <h2>Quick Start</h2>
+      
+      <h3>1. Configure Your MCP Client</h3>
+      <p>Add the Procore MCP server to your AI client configuration:</p>
+      <pre><code>{
+  "mcpServers": {
+    "procore": {
+      "url": "${MCP_BASE_URL}/mcp"
+    }
+  }
+}</code></pre>
+
+      <h3>2. Connect to Procore</h3>
+      <p>Your AI can now use the <code>workway_connect_procore</code> tool to authenticate:</p>
+      <pre><code>// Ask your AI:
+"Connect to Procore so I can access project data"
+
+// The AI will return an authorization URL
+// Click it to complete OAuth authentication</code></pre>
+
+      <h3>3. Start Querying</h3>
+      <p>Once connected, your AI has access to all Procore data:</p>
+      <pre><code>// Example prompts:
+"List all my Procore projects"
+"Show me overdue RFIs"
+"Get the latest submittals for project 12345"
+"Create a weekly summary workflow"</code></pre>
+
+      <h2>API Endpoints</h2>
+      
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-path">/mcp</span>
+        <p style="margin-top: 8px; margin-bottom: 0;">Server info and capabilities</p>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-path">/mcp/tools</span>
+        <p style="margin-top: 8px; margin-bottom: 0;">List all available tools</p>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method post">POST</span>
+        <span class="endpoint-path">/mcp/tools/{tool_name}</span>
+        <p style="margin-top: 8px; margin-bottom: 0;">Execute a tool</p>
+      </div>
+
+      <div class="endpoint">
+        <span class="endpoint-method">GET</span>
+        <span class="endpoint-path">/mcp/resources</span>
+        <p style="margin-top: 8px; margin-bottom: 0;">List available resources</p>
+      </div>
+
+      <h2>Authentication</h2>
+      <p>Procore MCP uses OAuth 2.0 for authentication. When you call <code>workway_connect_procore</code>, you'll receive an authorization URL. After completing the OAuth flow, your tokens are securely stored and automatically refreshed.</p>
+      
+      <h3>Security Features</h3>
+      <ul>
+        <li><strong>Token Encryption</strong> - All tokens encrypted with AES-256-GCM</li>
+        <li><strong>User Isolation</strong> - Each user's tokens stored separately</li>
+        <li><strong>Automatic Refresh</strong> - Tokens refreshed before expiration</li>
+        <li><strong>Secure Storage</strong> - Cloudflare D1 with encryption at rest</li>
+      </ul>
+
+      <h2>Workflow Templates</h2>
+      <p>Pre-built templates for common construction automations:</p>
+      <ul>
+        <li><strong>rfi_overdue_alert</strong> - Daily notifications for overdue RFIs</li>
+        <li><strong>weekly_project_summary</strong> - Monday morning project digest</li>
+        <li><strong>submittal_status_digest</strong> - Daily submittal status report</li>
+        <li><strong>daily_log_reminder</strong> - Afternoon reminder to submit daily logs</li>
+        <li><strong>new_rfi_notification</strong> - Instant alerts when RFIs are created</li>
+        <li><strong>submittal_approved_notification</strong> - Alerts when submittals are approved</li>
+      </ul>
+
+      <h2>Rate Limits</h2>
+      <p>The MCP server respects Procore's rate limits:</p>
+      <ul>
+        <li>3,600 requests per minute</li>
+        <li>100,000 requests per day</li>
+      </ul>
+
+      <h2>Support</h2>
+      <p>Questions? Issues?</p>
+      <ul>
+        <li>Email: <a href="mailto:support@workway.co" style="color: var(--accent);">support@workway.co</a></li>
+        <li>GitHub: <a href="https://github.com/WORKWAYCO/WORKWAY" style="color: var(--accent);">WORKWAYCO/WORKWAY</a></li>
+      </ul>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      <p>Powered by <a href="https://workway.co">WORKWAY</a> · Built on Cloudflare</p>
+    </div>
+  </footer>
+</body>
+</html>`;
   return c.html(html);
 });
 
