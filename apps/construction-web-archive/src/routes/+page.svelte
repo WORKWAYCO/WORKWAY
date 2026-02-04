@@ -33,18 +33,22 @@
 </script>
 
 <svelte:head>
-  <title>WORKWAY - The Automation Layer for Construction</title>
+  <title>WORKWAY Construction MCP - AI-Powered Procore Automation</title>
   <meta
     name="description"
-    content="AI-powered workflow automation for construction. Connect your project data to intelligent automations that handle RFIs, submittals, daily logs, and more."
+    content="MCP server for construction automation. 41 tools + AI Skills for Procore. Draft RFIs, summarize daily logs, review submittals. Works with Claude Desktop and Codex."
   />
-  <meta property="og:title" content="WORKWAY - The Automation Layer for Construction" />
+  <meta name="keywords" content="MCP, Model Context Protocol, Procore, construction automation, RFI, submittals, daily logs, Claude Desktop, AI construction" />
+  <meta property="og:title" content="WORKWAY Construction MCP - AI-Powered Procore Automation" />
   <meta
     property="og:description"
-    content="AI-powered workflow automation for construction. Connect your project data to intelligent automations that handle RFIs, submittals, daily logs, and more."
+    content="MCP server for construction automation. 41 tools + AI Skills for Procore. Draft RFIs, summarize daily logs, review submittals. Works with Claude Desktop and Codex."
   />
   <meta property="og:type" content="website" />
   <meta property="og:url" content="https://construction.workway.co" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="WORKWAY Construction MCP" />
+  <meta name="twitter:description" content="41 MCP tools + AI Skills for Procore automation. Works with Claude Desktop, Codex, and any MCP client." />
 </svelte:head>
 
 <Header />
@@ -199,8 +203,72 @@
     </div>
   </OutcomeSection>
 
+  <!-- Live Demo Section -->
+  <OutcomeSection label="See it work" class="bg-black/20">
+    <div class="text-center max-w-2xl mx-auto mb-12">
+      <h2 class="text-3xl md:text-4xl font-semibold mb-4">From intent to RFI in seconds</h2>
+      <p class="text-lg text-white/60">Describe what you need to ask. AI generates a professional RFI.</p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+      <!-- Input -->
+      <ScrollReveal delay={0}>
+        <TiltGlass padding="1.5rem" maxTilt={3} glareOpacity={0.05} class="h-full">
+          <div>
+            <div class="flex items-center gap-2 mb-4">
+              <div class="w-3 h-3 rounded-full bg-red-500/60"></div>
+              <div class="w-3 h-3 rounded-full bg-yellow-500/60"></div>
+              <div class="w-3 h-3 rounded-full bg-green-500/60"></div>
+              <span class="text-xs font-mono text-white/40 ml-2">Your input</span>
+            </div>
+            <div class="space-y-3 text-sm">
+              <div class="p-3 bg-white/5 rounded border border-white/10">
+                <span class="text-white/40 text-xs block mb-1">question_intent</span>
+                <span class="text-white">"Waterproofing membrane overlap doesn't match specs"</span>
+              </div>
+              <div class="p-3 bg-white/5 rounded border border-white/10">
+                <span class="text-white/40 text-xs block mb-1">spec_section</span>
+                <span class="text-white">"07 10 00"</span>
+              </div>
+              <div class="p-3 bg-white/5 rounded border border-white/10">
+                <span class="text-white/40 text-xs block mb-1">drawing_reference</span>
+                <span class="text-white">"A-401"</span>
+              </div>
+            </div>
+          </div>
+        </TiltGlass>
+      </ScrollReveal>
+
+      <!-- Output -->
+      <ScrollReveal delay={STAGGER.fast}>
+        <LiquidGlass padding="1.5rem" intensity="medium" class="h-full border border-[#34d399]/20">
+          <div>
+            <div class="flex items-center gap-2 mb-4">
+              <Sparkles class="w-4 h-4 text-[#34d399]" />
+              <span class="text-xs font-mono text-[#34d399]">AI-generated RFI</span>
+            </div>
+            <div class="space-y-3 text-sm">
+              <div>
+                <span class="text-white/40 text-xs block mb-1">Subject</span>
+                <span class="text-white text-base font-medium">Clarification on Waterproofing Membrane Overlap (Spec Section 07 10 00)</span>
+              </div>
+              <div>
+                <span class="text-white/40 text-xs block mb-1">Question</span>
+                <span class="text-white/80 text-sm">The waterproofing membrane overlap shown in the details (Drawing A-401) does not match the specification requirements outlined in Section 07 10 00. Specifically, the detail drawing appears to show a 6-inch overlap, whereas the specification calls for a 12-inch overlap...</span>
+              </div>
+              <div>
+                <span class="text-white/40 text-xs block mb-1">Impact Statement</span>
+                <span class="text-white/60 text-sm">Clarification is urgently needed to avoid potential delays in material ordering and subsequent waterproofing work.</span>
+              </div>
+            </div>
+          </div>
+        </LiquidGlass>
+      </ScrollReveal>
+    </div>
+  </OutcomeSection>
+
   <!-- Two-Layer Architecture Section -->
-  <OutcomeSection label="Architecture" class="bg-black/20">
+  <OutcomeSection label="Architecture">
     <div class="text-center max-w-2xl mx-auto mb-16">
       <h2 class="text-3xl md:text-4xl font-semibold mb-4">Two layers. One outcome.</h2>
       <p class="text-lg text-white/60">MCP for connectivity. Skills for intelligence.</p>
@@ -245,7 +313,7 @@
               </li>
               <li class="flex items-start gap-2">
                 <Check class="w-4 h-4 text-white/40 mt-0.5 shrink-0" />
-                <span><strong>15+ MCP tools</strong> — RFIs, daily logs, submittals, schedule</span>
+                <span><strong>41 MCP tools</strong> — RFIs, daily logs, submittals, schedule, workflows</span>
               </li>
               <li class="flex items-start gap-2">
                 <Check class="w-4 h-4 text-white/40 mt-0.5 shrink-0" />
@@ -323,6 +391,49 @@
         </div>
       {/each}
     </div>
+  </OutcomeSection>
+
+  <!-- For Developers Section -->
+  <OutcomeSection label="For developers" class="bg-black/20">
+    <div class="text-center max-w-2xl mx-auto mb-12">
+      <h2 class="text-3xl md:text-4xl font-semibold mb-4">Add to any MCP client</h2>
+      <p class="text-lg text-white/60">One endpoint. 41 tools. Works with Claude Desktop, Codex, or any MCP-compatible tool.</p>
+    </div>
+
+    <ScrollReveal>
+      <div class="max-w-3xl mx-auto">
+        <TiltGlass padding="0" maxTilt={2} glareOpacity={0.05}>
+          <div class="p-6">
+            <div class="flex items-center justify-between mb-4">
+              <span class="text-xs font-mono text-white/40">claude_desktop_config.json</span>
+              <Badge variant="default" class="text-xs">Copy to clipboard</Badge>
+            </div>
+            <pre class="text-sm font-mono text-[#34d399] overflow-x-auto"><code>{`{
+  "mcpServers": {
+    "workway-construction": {
+      "url": "https://workway-construction-mcp.half-dozen.workers.dev/mcp",
+      "transport": "sse"
+    }
+  }
+}`}</code></pre>
+          </div>
+        </TiltGlass>
+        
+        <div class="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          {#each [
+            { count: '41', label: 'MCP Tools' },
+            { count: '7', label: 'Categories' },
+            { count: '3', label: 'AI Skills' },
+            { count: '∞', label: 'Workflows' },
+          ] as stat}
+            <div class="p-4">
+              <div class="text-2xl font-bold text-white">{stat.count}</div>
+              <div class="text-xs text-white/40">{stat.label}</div>
+            </div>
+          {/each}
+        </div>
+      </div>
+    </ScrollReveal>
   </OutcomeSection>
 
   <!-- CTA Section -->
