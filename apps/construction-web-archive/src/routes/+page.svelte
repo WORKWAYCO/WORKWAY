@@ -85,10 +85,10 @@
       <ScrollReveal delay={STAGGER.fast * 4}>
         <div class="flex flex-wrap gap-6 md:gap-8 pt-8 border-t border-white/10">
           {#each [
-            '30+ automation tools',
-            'AI-native architecture',
-            'Enterprise security',
-            'Sub-100ms response'
+            'MCP-native (Claude, Codex)',
+            'AI Skills for RFIs & Logs',
+            'Procore sandbox + production',
+            'Workers AI powered'
           ] as point}
             <div class="flex items-center gap-3 text-white/60 text-sm">
               <div class="w-5 h-5 rounded bg-white/5 border border-white/10 flex items-center justify-center">
@@ -176,14 +176,14 @@
 
   <!-- How It Works Section -->
   <OutcomeSection label="How it works" centered>
-    <h2 class="text-3xl md:text-4xl font-semibold mb-4">Three steps to automated workflows</h2>
-    <p class="text-lg text-white/60 mb-16">Connect, configure, automate.</p>
+    <h2 class="text-3xl md:text-4xl font-semibold mb-4">MCP-first, Skills-second</h2>
+    <p class="text-lg text-white/60 mb-16">Connectivity earns trust. Intelligence delivers value.</p>
 
     <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12 text-left">
       {#each [
-        { num: '1', icon: Link, title: 'Connect', desc: 'Link your Procore account with secure OAuth. Your data stays yours.' },
-        { num: '2', icon: Settings, title: 'Configure', desc: 'Use pre-built templates or create custom workflows with natural language.' },
-        { num: '3', icon: Zap, title: 'Automate', desc: 'Workflows run automatically. Get notified via email or Slack when things need attention.' },
+        { num: '1', icon: Link, title: 'Connect via MCP', desc: 'Secure OAuth to Procore. Works with Claude Desktop, Codex, or any MCP-compatible tool.' },
+        { num: '2', icon: Sparkles, title: 'Use AI Skills', desc: 'draft_rfi, daily_log_summary, submittal_review. AI produces outcomes, not just data.' },
+        { num: '3', icon: HardHat, title: 'Human reviews', desc: 'Skills flag issues and draft responses. You approve before anything is submitted.' },
       ] as step, i}
         <ScrollReveal delay={STAGGER.fast * i} class="text-center">
           <div class="w-12 h-12 rounded-full bg-[#34d399] text-black font-bold text-xl flex items-center justify-center mx-auto mb-4">
@@ -199,8 +199,68 @@
     </div>
   </OutcomeSection>
 
+  <!-- Two-Layer Architecture Section -->
+  <OutcomeSection label="Architecture" class="bg-black/20">
+    <div class="text-center max-w-2xl mx-auto mb-16">
+      <h2 class="text-3xl md:text-4xl font-semibold mb-4">Two layers. One outcome.</h2>
+      <p class="text-lg text-white/60">MCP for connectivity. Skills for intelligence.</p>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+      <!-- Intelligence Layer -->
+      <ScrollReveal delay={0}>
+        <LiquidGlass padding="2rem" intensity="medium" class="h-full border border-[#34d399]/20">
+          <div>
+            <Badge variant="default" class="mb-4 bg-[#34d399]/10 text-[#34d399] border-[#34d399]/20">Intelligence Layer</Badge>
+            <h3 class="text-xl font-semibold mb-3">AI Skills that produce outcomes</h3>
+            <ul class="space-y-2 text-white/60 text-sm">
+              <li class="flex items-start gap-2">
+                <Check class="w-4 h-4 text-[#34d399] mt-0.5 shrink-0" />
+                <span><strong>draft_rfi</strong> — AI generates professional RFIs from your intent</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <Check class="w-4 h-4 text-[#34d399] mt-0.5 shrink-0" />
+                <span><strong>daily_log_summary</strong> — Executive reports from daily logs</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <Check class="w-4 h-4 text-[#34d399] mt-0.5 shrink-0" />
+                <span><strong>submittal_review</strong> — Flag compliance issues automatically</span>
+              </li>
+            </ul>
+            <p class="text-white/40 text-xs mt-4">Powered by Cloudflare Workers AI</p>
+          </div>
+        </LiquidGlass>
+      </ScrollReveal>
+
+      <!-- Automation Layer -->
+      <ScrollReveal delay={STAGGER.fast}>
+        <TiltGlass padding="2rem" maxTilt={4} glareOpacity={0.08} class="h-full">
+          <div>
+            <Badge variant="default" class="mb-4">Automation Layer (MCP)</Badge>
+            <h3 class="text-xl font-semibold mb-3">Universal connectivity via MCP</h3>
+            <ul class="space-y-2 text-white/60 text-sm">
+              <li class="flex items-start gap-2">
+                <Check class="w-4 h-4 text-white/40 mt-0.5 shrink-0" />
+                <span><strong>Procore OAuth</strong> — Secure connection to sandbox & production</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <Check class="w-4 h-4 text-white/40 mt-0.5 shrink-0" />
+                <span><strong>15+ MCP tools</strong> — RFIs, daily logs, submittals, schedule</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <Check class="w-4 h-4 text-white/40 mt-0.5 shrink-0" />
+                <span><strong>Works everywhere</strong> — Claude Desktop, Codex, any MCP client</span>
+              </li>
+            </ul>
+            <p class="text-white/40 text-xs mt-4">Model Context Protocol standard</p>
+          </div>
+        </TiltGlass>
+      </ScrollReveal>
+    </div>
+  </OutcomeSection>
+
   <!-- Capabilities Section -->
-  <OutcomeSection label="Capabilities" class="bg-black/20">
+  <OutcomeSection label="Capabilities">
     <div class="text-center max-w-2xl mx-auto mb-16">
       <h2 class="text-3xl md:text-4xl font-semibold mb-4">Built for construction teams</h2>
       <p class="text-lg text-white/60">Every feature designed around how you actually work</p>
@@ -208,12 +268,12 @@
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {#each [
-        { icon: Bell, title: 'RFI Overdue Alerts', desc: 'Automatic notifications when RFIs need attention. Never miss a deadline.' },
-        { icon: ClipboardCheck, title: 'Submittal Monitoring', desc: 'Track approval status and get alerts for pending reviews and bottlenecks.' },
-        { icon: BarChart3, title: 'Weekly Summaries', desc: 'AI-generated project digests delivered every Monday morning.' },
-        { icon: FileEdit, title: 'Daily Log Reminders', desc: 'Afternoon prompts to ensure daily logs are submitted on time.' },
-        { icon: Zap, title: 'Instant Notifications', desc: 'Real-time alerts for new RFIs, approved submittals, and document uploads.' },
-        { icon: Wrench, title: 'Custom Workflows', desc: 'Build any automation you need. If you can describe it, WORKWAY can run it.' },
+        { icon: Sparkles, title: 'AI-Drafted RFIs', desc: 'Describe what you need to ask. AI generates a professional RFI with spec references.' },
+        { icon: BarChart3, title: 'Executive Summaries', desc: 'Daily logs transformed into weekly reports. Metrics, events, recommendations.' },
+        { icon: ClipboardCheck, title: 'Submittal Triage', desc: 'Automatic compliance review. Critical items flagged. Pattern analysis included.' },
+        { icon: Bell, title: 'Smart Notifications', desc: 'Get alerted when RFIs are overdue, submittals need review, or data is missing.' },
+        { icon: HardHat, title: 'Construction-Native', desc: 'CSI MasterFormat specs, real drawing references, industry terminology.' },
+        { icon: Wrench, title: 'MCP Compatible', desc: 'Works with Claude Desktop, Codex, or any tool that supports MCP.' },
       ] as cap, i}
         <ScrollReveal delay={STAGGER.fast * i}>
           <TiltGlass padding="1.5rem" maxTilt={4} glareOpacity={0.08} class="h-full">

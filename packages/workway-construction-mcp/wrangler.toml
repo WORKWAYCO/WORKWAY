@@ -24,6 +24,10 @@ class_name = "WorkflowState"
 tag = "v1"
 new_classes = ["WorkflowState"]
 
+# Workers AI for Intelligence Layer Skills
+[ai]
+binding = "AI"
+
 # Environment variables
 [vars]
 ENVIRONMENT = "development"
