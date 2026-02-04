@@ -38,7 +38,7 @@
         Dashboard
       </a>
       <a
-        href="https://github.com"
+        href="https://github.com/WORKWAYCO/WORKWAY"
         target="_blank"
         rel="noopener noreferrer"
         class="text-fg-secondary hover:text-fg-primary transition-colors duration-150 flex items-center gap-1"
@@ -49,7 +49,7 @@
     </div>
 
     <!-- Primary CTA -->
-    <Button variant="primary" href="/get-started">
+    <Button variant="primary" href="/docs">
       Get Started
     </Button>
   </nav>
