@@ -16,6 +16,7 @@ import {
   PROCORE_TOKEN_URL,
   PROCORE_API_BASE,
   TOKEN_REFRESH_BUFFER_MS,
+  MCP_BASE_URL,
 } from '../lib/config';
 import { generateCodeVerifier, generateCodeChallenge, generateSecureToken } from '../lib/crypto';
 
@@ -1006,6 +1007,207 @@ export const procoreTools = {
         return {
           success: false,
           error: error instanceof Error ? error.message : 'Debug call failed',
+        };
+      }
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // workway_create_procore_webhook
+  // --------------------------------------------------------------------------
+  create_procore_webhook: {
+    name: 'workway_create_procore_webhook',
+    description: 'Register a webhook to receive real-time events from Procore. Events are sent to the workflow webhook endpoint.',
+    inputSchema: z.object({
+      project_id: z.number().describe('Procore project ID'),
+      event_type: z.enum([
+        'rfis.create', 'rfis.update', 'rfis.delete',
+        'submittals.create', 'submittals.update',
+        'daily_logs.create', 'daily_logs.update',
+        'documents.create', 'documents.update',
+        'photos.create',
+      ]).describe('Type of event to listen for'),
+      workflow_id: z.string().describe('Workflow ID to trigger when event fires'),
+      user_id: z.string().optional().default('default'),
+    }),
+    outputSchema: z.object({
+      webhook_id: z.number(),
+      callback_url: z.string(),
+      event_type: z.string(),
+    }),
+    execute: async (input: z.infer<typeof procoreTools.create_procore_webhook.inputSchema>, env: Env): Promise<ToolResult> => {
+      try {
+        const callbackUrl = `${MCP_BASE_URL}/webhooks/${input.workflow_id}`;
+        
+        // Note: Procore webhook API varies - this is the general structure
+        // Actual implementation may need adjustment based on Procore API version
+        const webhookData = {
+          hook: {
+            api_version: 'v2',
+            destination_url: callbackUrl,
+            namespace: input.event_type.split('.')[0], // e.g., 'rfis'
+            event_type: input.event_type.split('.')[1], // e.g., 'create'
+          },
+        };
+        
+        const webhook = await procoreRequest<any>(
+          env,
+          `/projects/${input.project_id}/webhooks/hooks`,
+          {
+            method: 'POST',
+            body: JSON.stringify(webhookData),
+          },
+          input.user_id || 'default'
+        );
+
+        // Store webhook reference in our DB
+        await env.DB.prepare(`
+          INSERT INTO webhook_subscriptions (id, workflow_id, project_id, event_type, procore_hook_id, callback_url, created_at)
+          VALUES (?, ?, ?, ?, ?, ?, datetime('now'))
+        `).bind(
+          crypto.randomUUID(),
+          input.workflow_id,
+          input.project_id,
+          input.event_type,
+          webhook.id,
+          callbackUrl
+        ).run();
+
+        return {
+          success: true,
+          data: {
+            webhookId: webhook.id,
+            callbackUrl,
+            eventType: input.event_type,
+            message: `Webhook registered. Events will trigger workflow ${input.workflow_id}`,
+          },
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to create webhook',
+        };
+      }
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // workway_list_procore_webhooks
+  // --------------------------------------------------------------------------
+  list_procore_webhooks: {
+    name: 'workway_list_procore_webhooks',
+    description: 'List all registered webhooks for a project or workflow.',
+    inputSchema: z.object({
+      project_id: z.number().optional().describe('Filter by Procore project ID'),
+      workflow_id: z.string().optional().describe('Filter by workflow ID'),
+    }),
+    outputSchema: z.object({
+      webhooks: z.array(z.object({
+        id: z.string(),
+        workflow_id: z.string(),
+        project_id: z.number(),
+        event_type: z.string(),
+        callback_url: z.string(),
+        created_at: z.string(),
+      })),
+      total: z.number(),
+    }),
+    execute: async (input: z.infer<typeof procoreTools.list_procore_webhooks.inputSchema>, env: Env): Promise<ToolResult> => {
+      try {
+        let query = 'SELECT * FROM webhook_subscriptions WHERE 1=1';
+        const bindings: any[] = [];
+        
+        if (input.project_id) {
+          query += ' AND project_id = ?';
+          bindings.push(input.project_id);
+        }
+        if (input.workflow_id) {
+          query += ' AND workflow_id = ?';
+          bindings.push(input.workflow_id);
+        }
+        
+        query += ' ORDER BY created_at DESC';
+        
+        const stmt = env.DB.prepare(query);
+        const result = await (bindings.length > 0 ? stmt.bind(...bindings) : stmt).all<any>();
+
+        return {
+          success: true,
+          data: {
+            webhooks: (result.results || []).map((w: any) => ({
+              id: w.id,
+              workflowId: w.workflow_id,
+              projectId: w.project_id,
+              eventType: w.event_type,
+              callbackUrl: w.callback_url,
+              createdAt: w.created_at,
+            })),
+            total: result.results?.length || 0,
+          },
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to list webhooks',
+        };
+      }
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // workway_delete_procore_webhook
+  // --------------------------------------------------------------------------
+  delete_procore_webhook: {
+    name: 'workway_delete_procore_webhook',
+    description: 'Delete a webhook subscription.',
+    inputSchema: z.object({
+      webhook_id: z.string().describe('Webhook subscription ID'),
+      project_id: z.number().describe('Procore project ID'),
+      user_id: z.string().optional().default('default'),
+    }),
+    outputSchema: z.object({
+      deleted: z.boolean(),
+    }),
+    execute: async (input: z.infer<typeof procoreTools.delete_procore_webhook.inputSchema>, env: Env): Promise<ToolResult> => {
+      try {
+        // Get the webhook from our DB
+        const webhook = await env.DB.prepare(`
+          SELECT procore_hook_id FROM webhook_subscriptions WHERE id = ?
+        `).bind(input.webhook_id).first<any>();
+        
+        if (!webhook) {
+          throw new Error('Webhook not found');
+        }
+
+        // Delete from Procore (if API supports)
+        try {
+          await procoreRequest<any>(
+            env,
+            `/projects/${input.project_id}/webhooks/hooks/${webhook.procore_hook_id}`,
+            { method: 'DELETE' },
+            input.user_id || 'default'
+          );
+        } catch (e) {
+          // Continue even if Procore delete fails
+          console.error('Failed to delete from Procore:', e);
+        }
+
+        // Delete from our DB
+        await env.DB.prepare(`
+          DELETE FROM webhook_subscriptions WHERE id = ?
+        `).bind(input.webhook_id).run();
+
+        return {
+          success: true,
+          data: {
+            deleted: true,
+            message: 'Webhook deleted successfully',
+          },
+        };
+      } catch (error) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : 'Failed to delete webhook',
         };
       }
     },

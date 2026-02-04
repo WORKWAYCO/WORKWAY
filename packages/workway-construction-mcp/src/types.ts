@@ -13,6 +13,7 @@ export interface Env {
   PROCORE_CLIENT_ID: string;
   PROCORE_CLIENT_SECRET: string;
   COOKIE_ENCRYPTION_KEY: string;
+  RESEND_API_KEY?: string;  // For email notifications
   ENVIRONMENT: string;
 }
 

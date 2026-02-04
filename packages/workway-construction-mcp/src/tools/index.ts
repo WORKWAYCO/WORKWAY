@@ -4,15 +4,20 @@
  * All tools exposed by the MCP server, organized by category:
  * - Workflow: Create, configure, deploy, test workflows
  * - Procore: Connect and interact with Procore API
+ * - Notifications: Email and Slack notifications
  * - Debugging: Diagnose issues, get unstuck, observe executions
  */
 
 export { workflowTools } from './workflow';
 export { procoreTools } from './procore';
+export { notificationTools } from './notifications';
+export { templateTools } from './templates';
 export { debuggingTools } from './debugging';
 
 import { workflowTools } from './workflow';
 import { procoreTools } from './procore';
+import { notificationTools } from './notifications';
+import { templateTools } from './templates';
 import { debuggingTools } from './debugging';
 
 /**
@@ -23,6 +28,10 @@ export const allTools = {
   ...workflowTools,
   // Procore integration
   ...procoreTools,
+  // Notifications
+  ...notificationTools,
+  // Templates
+  ...templateTools,
   // Debugging & observability
   ...debuggingTools,
 };
@@ -43,10 +52,28 @@ export const toolCategories = {
   procore: [
     'workway_connect_procore',
     'workway_check_procore_connection',
+    'workway_list_procore_companies',
     'workway_list_procore_projects',
     'workway_get_procore_rfis',
     'workway_get_procore_daily_logs',
     'workway_get_procore_submittals',
+    'workway_get_procore_photos',
+    'workway_get_procore_documents',
+    'workway_get_procore_schedule',
+    'workway_create_procore_rfi',
+  ],
+  notifications: [
+    'workway_send_email',
+    'workway_send_slack',
+    'workway_notify',
+    'workway_configure_notifications',
+    'workway_alert_workflow_error',
+    'workway_configure_error_alerts',
+  ],
+  templates: [
+    'workway_list_templates',
+    'workway_create_from_template',
+    'workway_get_template',
   ],
   debugging: [
     'workway_diagnose',
