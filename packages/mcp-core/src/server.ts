@@ -110,7 +110,172 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
   }));
   
   // ============================================================================
-  // REST MCP Protocol
+  // Streamable HTTP Transport (POST /mcp)
+  // Primary transport for Claude - JSON-RPC over HTTP
+  // ============================================================================
+  
+  app.post('/mcp', async (c) => {
+    try {
+      const message = await c.req.json() as {
+        jsonrpc: string;
+        id?: string | number;
+        method: string;
+        params?: Record<string, unknown>;
+      };
+      
+      let result: unknown;
+      
+      switch (message.method) {
+        case 'initialize':
+          result = {
+            protocolVersion: '2024-11-05',
+            serverInfo: {
+              name: config.name,
+              version: config.version,
+            },
+            capabilities: config.capabilities || {
+              tools: { listChanged: true },
+              resources: { subscribe: false, listChanged: true },
+              prompts: { listChanged: false },
+            },
+          };
+          break;
+          
+        case 'tools/list':
+          const toolsList = Object.values(config.tools).map((tool: any) => ({
+            name: tool.name,
+            description: tool.description,
+            inputSchema: tool.inputSchema,
+          }));
+          result = { tools: toolsList };
+          break;
+          
+        case 'tools/call': {
+          const params = message.params as { name: string; arguments?: Record<string, unknown> };
+          const toolName = params?.name;
+          const toolArgs = params?.arguments || {};
+          
+          const tool = config.tools[toolName];
+          if (!tool) {
+            return c.json({
+              jsonrpc: '2.0',
+              id: message.id,
+              error: {
+                code: -32602,
+                message: `Unknown tool: ${toolName}`,
+              },
+            });
+          }
+          
+          // Check usage limits
+          const usage = await metering.checkUsage(c);
+          if (usage.exceeded) {
+            return c.json({
+              jsonrpc: '2.0',
+              id: message.id,
+              error: {
+                code: -32000,
+                message: usage.tier === 'anonymous' 
+                  ? 'Free tier limit reached. Sign up at workway.co for more runs.'
+                  : `Monthly limit of ${usage.limit} runs exceeded.`,
+              },
+            });
+          }
+          
+          try {
+            const input = tool.inputSchema.parse(toolArgs);
+            const toolResult = await tool.execute(input, c.env);
+            await metering.incrementUsage(c);
+            
+            result = {
+              content: [
+                {
+                  type: 'text',
+                  text: JSON.stringify(toolResult.data || toolResult, null, 2),
+                },
+              ],
+              isError: !toolResult.success,
+            };
+          } catch (execError) {
+            result = {
+              content: [
+                {
+                  type: 'text',
+                  text: `Error: ${execError instanceof Error ? execError.message : 'Unknown error'}`,
+                },
+              ],
+              isError: true,
+            };
+          }
+          break;
+        }
+          
+        case 'resources/list':
+          const resourcesList = config.resources?.list() || [];
+          result = { resources: resourcesList };
+          break;
+          
+        case 'resources/read': {
+          const resourceParams = message.params as { uri: string };
+          if (!config.resources) {
+            return c.json({
+              jsonrpc: '2.0',
+              id: message.id,
+              error: { code: -32602, message: 'Resources not supported' },
+            });
+          }
+          
+          const content = await config.resources.fetch(resourceParams?.uri, c.env);
+          if (content === null) {
+            return c.json({
+              jsonrpc: '2.0',
+              id: message.id,
+              error: { code: -32602, message: `Resource not found: ${resourceParams?.uri}` },
+            });
+          }
+          result = {
+            contents: [{
+              uri: resourceParams?.uri,
+              mimeType: 'application/json',
+              text: JSON.stringify(content, null, 2),
+            }],
+          };
+          break;
+        }
+          
+        case 'prompts/list':
+          result = { prompts: [] };
+          break;
+          
+        case 'notifications/initialized':
+          // Client notification - just acknowledge
+          return c.json({ jsonrpc: '2.0', id: message.id, result: {} });
+          
+        default:
+          return c.json({
+            jsonrpc: '2.0',
+            id: message.id,
+            error: { code: -32601, message: `Method not found: ${message.method}` },
+          });
+      }
+      
+      return c.json({
+        jsonrpc: '2.0',
+        id: message.id,
+        result,
+      });
+      
+    } catch (error) {
+      return c.json({
+        jsonrpc: '2.0',
+        id: null,
+        error: { code: -32700, message: 'Parse error' },
+      }, 400);
+    }
+  });
+  
+  // ============================================================================
+  // REST MCP Protocol (GET /mcp for info)
   // ============================================================================
   
   app.get('/mcp', (c) => {
