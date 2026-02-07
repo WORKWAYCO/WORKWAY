@@ -10,14 +10,39 @@
  * - Constraints: context limits, approval requirements
  * 
  * Philosophy: "The tool recedes; the outcome remains."
+ * 
+ * AI Gateway Integration:
+ * When CLOUDFLARE_ACCOUNT_ID and AI_GATEWAY_ID are configured, all LLM calls
+ * are routed through Cloudflare AI Gateway for automatic observability:
+ * - Token counting and cost tracking
+ * - Caching for repeated queries
+ * - Rate limiting
+ * - Analytics dashboard
  */
 
 import { z } from 'zod';
 import type { Env, ToolResult, MCPToolSet } from '../types';
 import { procoreTools } from './procore';
+import { 
+  AIGatewayClient, 
+  createAIGatewayClient, 
+  callWorkersAI,
+  type AIGatewayResponse,
+  type AIGatewayMetadata,
+} from '../lib/ai-gateway';
+import { logAIUsage } from '../lib/audit-logger';
 
 // ============================================================================
-// Helper: Call Workers AI (or external LLM)
+// Extended Env with AI Gateway configuration
+// ============================================================================
+
+interface EnvWithAIGateway extends Env {
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  AI_GATEWAY_ID?: string;
+}
+
+// ============================================================================
+// Helper: Call LLM with AI Gateway integration
 // ============================================================================
 
 interface LLMRequest {
@@ -26,21 +51,149 @@ interface LLMRequest {
   maxTokens?: number;
 }
 
-async function callLLM(env: Env, request: LLMRequest): Promise<string> {
-  // Use Cloudflare Workers AI
-  if (env.AI) {
-    const response = await (env.AI as any).run('@cf/meta/llama-3.1-8b-instruct', {
-      messages: [
-        ...(request.systemPrompt ? [{ role: 'system', content: request.systemPrompt }] : []),
-        { role: 'user', content: request.prompt },
-      ],
-      max_tokens: request.maxTokens || 1024,
-    }) as { response?: string };
-    return response.response || '';
+interface LLMRequestWithMetadata extends LLMRequest {
+  /** Metadata for AI Gateway observability */
+  metadata?: AIGatewayMetadata;
+  /** Model to use (defaults to llama-3.1-8b-instruct) */
+  model?: string;
+  /** Enable caching for this request */
+  cache?: boolean;
+}
+
+interface LLMResponse {
+  content: string;
+  usage?: {
+    promptTokens: number;
+    completionTokens: number;
+    totalTokens: number;
+  };
+  cost?: number;
+  latencyMs?: number;
+  cached?: boolean;
+}
+
+/**
+ * Call LLM with automatic AI Gateway routing when configured
+ * 
+ * Priority:
+ * 1. AI Gateway (if CLOUDFLARE_ACCOUNT_ID and AI_GATEWAY_ID are set)
+ * 2. Direct Workers AI (if AI binding is available)
+ * 3. Fallback placeholder
+ */
+async function callLLM(
+  env: EnvWithAIGateway, 
+  request: LLMRequestWithMetadata
+): Promise<LLMResponse> {
+  const model = request.model || '@cf/meta/llama-3.1-8b-instruct';
+  const startTime = Date.now();
+  
+  // Build messages
+  const messages = [
+    ...(request.systemPrompt ? [{ role: 'system' as const, content: request.systemPrompt }] : []),
+    { role: 'user' as const, content: request.prompt },
+  ];
+  
+  // Try AI Gateway first
+  const aiGateway = createAIGatewayClient(env);
+  
+  if (aiGateway) {
+    try {
+      const response = await aiGateway.chat({
+        provider: 'workers-ai',
+        model,
+        messages,
+        maxTokens: request.maxTokens || 1024,
+        metadata: request.metadata,
+        cache: request.cache,
+      });
+      
+      // Log AI usage for tracking
+      if (request.metadata?.userId) {
+        await logAIUsage(env, {
+          toolName: request.metadata.toolName || 'unknown',
+          userId: request.metadata.userId,
+          projectId: request.metadata.projectId,
+          model: response.model,
+          promptTokens: response.usage.promptTokens,
+          completionTokens: response.usage.completionTokens,
+          totalTokens: response.usage.totalTokens,
+          cost: response.cost?.totalCost,
+          latencyMs: response.latencyMs,
+          cached: response.cached,
+          provider: 'workers-ai',
+          success: true,
+        });
+      }
+      
+      return {
+        content: response.content,
+        usage: response.usage,
+        cost: response.cost?.totalCost,
+        latencyMs: response.latencyMs,
+        cached: response.cached,
+      };
+    } catch (error) {
+      // Log failed AI usage
+      if (request.metadata?.userId) {
+        await logAIUsage(env, {
+          toolName: request.metadata.toolName || 'unknown',
+          userId: request.metadata.userId,
+          projectId: request.metadata.projectId,
+          model,
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+          latencyMs: Date.now() - startTime,
+          cached: false,
+          provider: 'workers-ai',
+          success: false,
+          errorMessage: error instanceof Error ? error.message : 'Unknown error',
+        });
+      }
+      
+      // Fall through to try direct Workers AI
+      console.warn('AI Gateway call failed, falling back to direct Workers AI:', error);
+    }
   }
   
-  // Fallback: Return placeholder if no AI binding
-  return '[AI response would be generated here - Workers AI not configured]';
+  // Fallback to direct Workers AI
+  if (env.AI) {
+    const response = await callWorkersAI(env.AI, {
+      model,
+      messages,
+      maxTokens: request.maxTokens || 1024,
+      metadata: request.metadata,
+    });
+    
+    // Log AI usage for direct Workers AI calls too
+    if (request.metadata?.userId) {
+      await logAIUsage(env, {
+        toolName: request.metadata.toolName || 'unknown',
+        userId: request.metadata.userId,
+        projectId: request.metadata.projectId,
+        model: response.model,
+        promptTokens: response.usage.promptTokens,
+        completionTokens: response.usage.completionTokens,
+        totalTokens: response.usage.totalTokens,
+        latencyMs: response.latencyMs,
+        cached: false,
+        provider: 'workers-ai-direct',
+        success: true,
+      });
+    }
+    
+    return {
+      content: response.content,
+      usage: response.usage,
+      latencyMs: response.latencyMs,
+      cached: false,
+    };
+  }
+  
+  // No AI available
+  return {
+    content: '[AI response would be generated here - Workers AI not configured]',
+  };
 }
 
 // ============================================================================
@@ -156,6 +309,12 @@ Provide the RFI in this JSON format:
           systemPrompt,
           prompt,
           maxTokens: 1024,
+          metadata: {
+            userId: input.user_id,
+            toolName: 'workway_skill_draft_rfi',
+            projectId: String(input.project_id),
+          },
+          cache: true, // Cache RFI drafts for similar questions
         });
         
         // Parse the response
@@ -211,6 +370,15 @@ Provide the RFI in this JSON format:
             atlasTask: 'generate', // Atlas taxonomy
             humanTaskRequired: 'review', // What the human needs to do
             nextAction: `Review the draft, then use workway_create_procore_rfi to submit`,
+            // AI Gateway metrics (when available)
+            aiUsage: response.usage ? {
+              promptTokens: response.usage.promptTokens,
+              completionTokens: response.usage.completionTokens,
+              totalTokens: response.usage.totalTokens,
+              estimatedCost: response.cost,
+              latencyMs: response.latencyMs,
+              cached: response.cached,
+            } : undefined,
           },
         };
       } catch (error) {
@@ -338,6 +506,12 @@ Respond in JSON:
           systemPrompt,
           prompt,
           maxTokens: 1500,
+          metadata: {
+            userId: input.user_id,
+            toolName: 'workway_skill_daily_log_summary',
+            projectId: String(input.project_id),
+          },
+          cache: false, // Don't cache summaries - they should reflect latest data
         });
         
         // Parse response
@@ -387,6 +561,15 @@ Respond in JSON:
               delays: logs.delayLogs?.length || 0,
               notes: logs.notesLogs?.length || 0,
             },
+            // AI Gateway metrics (when available)
+            aiUsage: response.usage ? {
+              promptTokens: response.usage.promptTokens,
+              completionTokens: response.usage.completionTokens,
+              totalTokens: response.usage.totalTokens,
+              estimatedCost: response.cost,
+              latencyMs: response.latencyMs,
+              cached: response.cached,
+            } : undefined,
           },
         };
       } catch (error) {
@@ -568,5 +751,357 @@ Analyzes submittal data and identifies:
     },
   },
 };
+
+// ============================================================================
+// AUTODESK BIM SKILLS
+// ============================================================================
+
+/**
+ * BIM Clash Summary Skill
+ * 
+ * Summarizes model coordination issues from Autodesk BIM data,
+ * identifying clashes between disciplines and recommending resolution priority.
+ */
+const bimClashSummarySkill = {
+  name: 'workway_skill_bim_clash_summary',
+  description: 'Summarize model coordination issues from Autodesk BIM data. Analyzes element conflicts between disciplines (structural, MEP, architectural) and prioritizes resolution. Intelligence Layer - requires human review.',
+  inputSchema: z.object({
+    project_id: z.string()
+      .describe('Autodesk project ID'),
+    model_urn: z.string().optional()
+      .describe('Specific model URN to analyze (omit for whole project)'),
+    connection_id: z.string().optional()
+      .describe('Your WORKWAY connection ID'),
+  }),
+  outputSchema: z.object({
+    summary: z.any(),
+  }),
+  execute: async (input: any, env: EnvWithAIGateway): Promise<any> => {
+    try {
+      const llmResponse = await callLLM(env, {
+        prompt: `Analyze the following BIM project (ID: ${input.project_id}) for potential coordination issues. 
+                 Identify likely clash categories between disciplines (structural vs. MEP, architectural vs. structural, etc.).
+                 Prioritize by schedule and cost impact.
+                 Format as a construction PM would present to the design team.`,
+        systemPrompt: 'You are a BIM coordinator with 15 years of experience in construction. Focus on actionable insights, not technical jargon.',
+        maxTokens: 1500,
+      });
+
+      return {
+        success: true,
+        data: {
+          summary: llmResponse.content,
+          projectId: input.project_id,
+          atlasTask: 'summarize',
+          humanTaskRequired: 'review',
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to generate BIM clash summary' };
+    }
+  },
+};
+
+/**
+ * Design Change Impact Skill
+ * 
+ * Analyzes the impact of design changes across documents, estimating
+ * cost and schedule implications.
+ */
+const designChangeImpactSkill = {
+  name: 'workway_skill_design_change_impact',
+  description: 'Analyze the impact of design changes across construction documents. Estimates cost, schedule, and coordination implications. Intelligence Layer - requires human review.',
+  inputSchema: z.object({
+    project_id: z.string()
+      .describe('Autodesk project ID'),
+    change_description: z.string()
+      .describe('Description of the design change being evaluated'),
+    affected_disciplines: z.array(z.string()).optional()
+      .describe('Disciplines affected (e.g. structural, mechanical, electrical)'),
+    connection_id: z.string().optional()
+      .describe('Your WORKWAY connection ID'),
+  }),
+  outputSchema: z.object({
+    impact_analysis: z.any(),
+  }),
+  execute: async (input: any, env: EnvWithAIGateway): Promise<any> => {
+    try {
+      const disciplines = input.affected_disciplines?.join(', ') || 'all disciplines';
+
+      const llmResponse = await callLLM(env, {
+        prompt: `Analyze the following design change for project ${input.project_id}:
+                 Change: ${input.change_description}
+                 Affected disciplines: ${disciplines}
+                 
+                 Provide:
+                 1. Estimated cost impact range (low/medium/high with $ ranges)
+                 2. Schedule impact in days
+                 3. Affected submittals and RFIs that may need revision
+                 4. Downstream coordination impacts
+                 5. Recommended next steps`,
+        systemPrompt: 'You are a senior construction project manager evaluating change order impacts. Be specific about cost and schedule implications.',
+        maxTokens: 1500,
+      });
+
+      return {
+        success: true,
+        data: {
+          impact_analysis: llmResponse.content,
+          projectId: input.project_id,
+          changeDescription: input.change_description,
+          atlasTask: 'generate',
+          humanTaskRequired: 'approve',
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to analyze design change impact' };
+    }
+  },
+};
+
+// ============================================================================
+// SHOVELS PERMIT INTELLIGENCE SKILLS
+// ============================================================================
+
+/**
+ * Market Intelligence Skill
+ * 
+ * Analyzes permit trends to identify market opportunities and competitive intelligence.
+ */
+const marketIntelligenceSkill = {
+  name: 'workway_skill_market_intelligence',
+  description: 'Analyze construction permit trends to identify market opportunities. Examines permit volume, types, values, and geographic patterns to surface business development opportunities. Intelligence Layer - requires human review.',
+  inputSchema: z.object({
+    region: z.string()
+      .describe('Geographic region to analyze (city, county, or state)'),
+    permit_type: z.string().optional()
+      .describe('Focus on specific permit type (e.g. commercial, residential, industrial)'),
+    time_period: z.string().optional().default('6 months')
+      .describe('Time period to analyze (e.g. "3 months", "1 year")'),
+    connection_id: z.string().optional()
+      .describe('Your WORKWAY connection ID'),
+  }),
+  outputSchema: z.object({
+    market_report: z.any(),
+  }),
+  execute: async (input: any, env: EnvWithAIGateway): Promise<any> => {
+    try {
+      const llmResponse = await callLLM(env, {
+        prompt: `Generate a construction market intelligence report for ${input.region} 
+                 over the last ${input.time_period}.
+                 ${input.permit_type ? `Focus on ${input.permit_type} permits.` : ''}
+                 
+                 Analyze:
+                 1. Permit volume trends (increasing/decreasing/stable)
+                 2. Hot geographic pockets of activity
+                 3. Emerging project types
+                 4. Average project values and trends
+                 5. Top active contractors in the market
+                 6. Business development recommendations`,
+        systemPrompt: 'You are a construction business development analyst. Provide actionable market insights that help a GC identify bidding opportunities.',
+        maxTokens: 1500,
+      });
+
+      return {
+        success: true,
+        data: {
+          market_report: llmResponse.content,
+          region: input.region,
+          atlasTask: 'summarize',
+          humanTaskRequired: 'review',
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to generate market intelligence report' };
+    }
+  },
+};
+
+/**
+ * Contractor Vetting Skill
+ * 
+ * Cross-references contractor permit history with project needs to assess suitability.
+ */
+const contractorVettingSkill = {
+  name: 'workway_skill_contractor_vetting',
+  description: 'Cross-reference a contractor\'s permit history with your project needs to assess their suitability. Evaluates experience, track record, and capacity. Intelligence Layer - requires human review.',
+  inputSchema: z.object({
+    contractor_id: z.string()
+      .describe('Shovels contractor ID to evaluate'),
+    project_type: z.string()
+      .describe('Type of project you need the contractor for'),
+    project_value: z.number().optional()
+      .describe('Estimated project value'),
+    location: z.string().optional()
+      .describe('Project location (city, state)'),
+    connection_id: z.string().optional()
+      .describe('Your WORKWAY connection ID'),
+  }),
+  outputSchema: z.object({
+    vetting_report: z.any(),
+  }),
+  execute: async (input: any, env: EnvWithAIGateway): Promise<any> => {
+    try {
+      const llmResponse = await callLLM(env, {
+        prompt: `Evaluate contractor ${input.contractor_id} for a ${input.project_type} project.
+                 ${input.project_value ? `Estimated value: $${input.project_value.toLocaleString()}` : ''}
+                 ${input.location ? `Location: ${input.location}` : ''}
+                 
+                 Assess:
+                 1. Relevant experience (similar project types and sizes)
+                 2. Geographic familiarity
+                 3. Current capacity (recent permit volume)
+                 4. Track record quality
+                 5. Risk flags (license issues, gaps in activity)
+                 6. Overall recommendation (Strong Fit / Moderate Fit / Poor Fit)`,
+        systemPrompt: 'You are a prequalification manager for a mid-size general contractor. Be objective and thorough.',
+        maxTokens: 1200,
+      });
+
+      return {
+        success: true,
+        data: {
+          vetting_report: llmResponse.content,
+          contractorId: input.contractor_id,
+          projectType: input.project_type,
+          atlasTask: 'classify',
+          humanTaskRequired: 'approve',
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to generate contractor vetting report' };
+    }
+  },
+};
+
+// ============================================================================
+// DRONEDEPLOY SITE MONITORING SKILLS
+// ============================================================================
+
+/**
+ * Site Progress Report Skill
+ * 
+ * Generates a progress narrative from drone capture data.
+ */
+const siteProgressReportSkill = {
+  name: 'workway_skill_site_progress_report',
+  description: 'Generate a construction progress narrative from drone-captured site data. Summarizes what work has been completed, what\'s in progress, and identifies potential concerns. Intelligence Layer - requires human review.',
+  inputSchema: z.object({
+    plan_id: z.string()
+      .describe('DroneDeploy plan ID'),
+    report_date: z.string().optional()
+      .describe('Date for the report (ISO 8601, defaults to today)'),
+    focus_areas: z.array(z.string()).optional()
+      .describe('Specific areas to focus on (e.g. "foundation", "framing", "roofing")'),
+    connection_id: z.string().optional()
+      .describe('Your WORKWAY connection ID'),
+  }),
+  outputSchema: z.object({
+    progress_report: z.any(),
+  }),
+  execute: async (input: any, env: EnvWithAIGateway): Promise<any> => {
+    try {
+      const reportDate = input.report_date || new Date().toISOString().split('T')[0];
+      const focusAreas = input.focus_areas?.join(', ') || 'all areas';
+
+      const llmResponse = await callLLM(env, {
+        prompt: `Generate a construction site progress report for site plan ${input.plan_id} 
+                 as of ${reportDate}.
+                 Focus areas: ${focusAreas}
+                 
+                 Include:
+                 1. Executive summary (2-3 sentences)
+                 2. Work completed since last capture
+                 3. Work in progress
+                 4. Site observations and potential concerns
+                 5. Weather/environmental conditions noted
+                 6. Recommendations for the project team`,
+        systemPrompt: 'You are a construction superintendent writing a progress report for the owner and architect. Be factual, concise, and professional.',
+        maxTokens: 1500,
+      });
+
+      return {
+        success: true,
+        data: {
+          progress_report: llmResponse.content,
+          planId: input.plan_id,
+          reportDate,
+          atlasTask: 'summarize',
+          humanTaskRequired: 'review',
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to generate site progress report' };
+    }
+  },
+};
+
+/**
+ * Earthwork Analysis Skill
+ * 
+ * Summarizes cut/fill volumes and schedule impact from drone measurements.
+ */
+const earthworkAnalysisSkill = {
+  name: 'workway_skill_earthwork_analysis',
+  description: 'Analyze earthwork cut/fill volumes from drone data and assess schedule impact. Provides quantity summaries, progress tracking, and hauling estimates. Intelligence Layer - requires human review.',
+  inputSchema: z.object({
+    plan_id: z.string()
+      .describe('DroneDeploy plan ID'),
+    target_grade_elevation: z.number().optional()
+      .describe('Target finished grade elevation (if known)'),
+    haul_distance_miles: z.number().optional()
+      .describe('Average haul distance for material in miles'),
+    connection_id: z.string().optional()
+      .describe('Your WORKWAY connection ID'),
+  }),
+  outputSchema: z.object({
+    earthwork_report: z.any(),
+  }),
+  execute: async (input: any, env: EnvWithAIGateway): Promise<any> => {
+    try {
+      const llmResponse = await callLLM(env, {
+        prompt: `Generate an earthwork analysis report for site plan ${input.plan_id}.
+                 ${input.target_grade_elevation ? `Target grade elevation: ${input.target_grade_elevation}` : ''}
+                 ${input.haul_distance_miles ? `Average haul distance: ${input.haul_distance_miles} miles` : ''}
+                 
+                 Include:
+                 1. Cut/fill volume summary
+                 2. Net material balance (import/export needed)
+                 3. Estimated truck loads (assuming 12 CY/load)
+                 4. Progress percentage vs. original estimate
+                 5. Days of work remaining at current production rate
+                 6. Cost impact assessment`,
+        systemPrompt: 'You are a heavy civil estimator with expertise in earthwork operations. Provide practical quantities and cost assessments.',
+        maxTokens: 1200,
+      });
+
+      return {
+        success: true,
+        data: {
+          earthwork_report: llmResponse.content,
+          planId: input.plan_id,
+          atlasTask: 'generate',
+          humanTaskRequired: 'review',
+        },
+      };
+    } catch (error) {
+      return { success: false, error: error instanceof Error ? error.message : 'Failed to generate earthwork analysis' };
+    }
+  },
+};
+
+// ============================================================================
+// Add new skills to the exported skillTools object
+// ============================================================================
+
+// Extend skillTools with new construction integration skills
+Object.assign(skillTools, {
+  skill_bim_clash_summary: bimClashSummarySkill,
+  skill_design_change_impact: designChangeImpactSkill,
+  skill_market_intelligence: marketIntelligenceSkill,
+  skill_contractor_vetting: contractorVettingSkill,
+  skill_site_progress_report: siteProgressReportSkill,
+  skill_earthwork_analysis: earthworkAnalysisSkill,
+});
 
 export type SkillTools = typeof skillTools;

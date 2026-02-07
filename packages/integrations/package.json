@@ -98,6 +98,42 @@
 		"./docusign": {
 			"types": "./dist/docusign/index.d.ts",
 			"import": "./dist/docusign/index.js"
+		},
+		"./autodesk": {
+			"types": "./dist/autodesk/index.d.ts",
+			"import": "./dist/autodesk/index.js"
+		},
+		"./shovels": {
+			"types": "./dist/shovels/index.d.ts",
+			"import": "./dist/shovels/index.js"
+		},
+		"./dronedeploy": {
+			"types": "./dist/dronedeploy/index.d.ts",
+			"import": "./dist/dronedeploy/index.js"
+		},
+		"./bluebeam": {
+			"types": "./dist/bluebeam/index.d.ts",
+			"import": "./dist/bluebeam/index.js"
+		},
+		"./bridgit-bench": {
+			"types": "./dist/bridgit-bench/index.d.ts",
+			"import": "./dist/bridgit-bench/index.js"
+		},
+		"./primavera-p6": {
+			"types": "./dist/primavera-p6/index.d.ts",
+			"import": "./dist/primavera-p6/index.js"
+		},
+		"./sage-intacct": {
+			"types": "./dist/sage-intacct/index.d.ts",
+			"import": "./dist/sage-intacct/index.js"
+		},
+		"./oracle-textura": {
+			"types": "./dist/oracle-textura/index.d.ts",
+			"import": "./dist/oracle-textura/index.js"
+		},
+		"./equipmentwatch": {
+			"types": "./dist/equipmentwatch/index.d.ts",
+			"import": "./dist/equipmentwatch/index.js"
 		}
 	},
 	"files": [
