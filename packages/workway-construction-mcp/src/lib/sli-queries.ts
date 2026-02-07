@@ -537,6 +537,52 @@ export const TIME_RANGES = {
 } as const;
 
 /**
+ * Get time boundaries for a given range string
+ */
+export function getTimeBoundaries(range: string): { startTime: string; endTime: string } {
+	const now = new Date();
+	let msAgo: number;
+
+	switch (range) {
+		case '1h':
+			msAgo = 60 * 60 * 1000;
+			break;
+		case '24h':
+			msAgo = 24 * 60 * 60 * 1000;
+			break;
+		case '7d':
+			msAgo = 7 * 24 * 60 * 60 * 1000;
+			break;
+		case '30d':
+			msAgo = 30 * 24 * 60 * 60 * 1000;
+			break;
+		default:
+			msAgo = 60 * 60 * 1000;
+	}
+
+	return {
+		startTime: new Date(now.getTime() - msAgo).toISOString(),
+		endTime: now.toISOString(),
+	};
+}
+
+/**
+ * Build a parameterized query string
+ */
+export function buildQuery(
+	query: string,
+	params?: Record<string, unknown>
+): string {
+	if (!params) return query;
+
+	let result = query;
+	for (const [key, value] of Object.entries(params)) {
+		result = result.replace(new RegExp(`\\$\\{${key}\\}`, 'g'), String(value ?? ''));
+	}
+	return result;
+}
+
+/**
  * Build GraphQL query variables
  */
 export function buildQueryVariables(
