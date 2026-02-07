@@ -328,7 +328,7 @@ wrangler d1 execute workway-construction --file=backup.sql
 
 1. **Pause all workflows:**
    ```bash
-   # Use workway_rollback tool for each workflow
+   # Use workway_rollback_workflow tool for each workflow
    # Or update database directly if needed
    ```
 

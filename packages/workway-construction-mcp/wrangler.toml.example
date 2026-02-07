@@ -1,0 +1,103 @@
+# WORKWAY Construction MCP - Wrangler Configuration Example
+#
+# Copy this file to wrangler.toml and fill in your values.
+# DO NOT commit wrangler.toml with real infrastructure IDs to version control.
+#
+# Setup instructions:
+# 1. Copy this file: cp wrangler.toml.example wrangler.toml
+# 2. Create D1 database: wrangler d1 create workway-construction
+# 3. Create KV namespace: wrangler kv:namespace create KV
+# 4. Update the IDs below with the values from step 2 & 3
+# 5. Set secrets: wrangler secret put PROCORE_CLIENT_ID
+#                 wrangler secret put PROCORE_CLIENT_SECRET
+#                 wrangler secret put COOKIE_ENCRYPTION_KEY
+
+name = "workway-construction-mcp"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+
+# YOUR CLOUDFLARE ACCOUNT ID
+# Find at: https://dash.cloudflare.com/ → Right sidebar → Account ID
+account_id = "YOUR_CLOUDFLARE_ACCOUNT_ID"
+
+# Keep workers.dev URL for development/testing
+workers_dev = true
+
+# Custom domain for production (uncomment and configure if needed)
+# routes = [
+#   { pattern = "construction.mcp.yourdomain.com", custom_domain = true }
+# ]
+
+# D1 Database
+# Create with: wrangler d1 create workway-construction
+# Copy the database_id from the output
+[[d1_databases]]
+binding = "DB"
+database_name = "workway-construction"
+database_id = "YOUR_D1_DATABASE_ID"
+
+# KV for OAuth tokens and cache
+# Create with: wrangler kv:namespace create KV
+# Copy the id from the output
+[[kv_namespaces]]
+binding = "KV"
+id = "YOUR_KV_NAMESPACE_ID"
+
+# Durable Objects for workflow state
+[[durable_objects.bindings]]
+name = "WORKFLOW_STATE"
+class_name = "WorkflowState"
+
+# Durable Object for Procore rate limiting
+[[durable_objects.bindings]]
+name = "PROCORE_RATE_LIMITER"
+class_name = "ProcoreRateLimiter"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["WorkflowState"]
+
+[[migrations]]
+tag = "v2"
+new_classes = ["ProcoreRateLimiter"]
+
+# Workers AI for Intelligence Layer Skills
+[ai]
+binding = "AI"
+
+# Environment variables
+[vars]
+ENVIRONMENT = "development"
+
+# Secrets (set via wrangler secret put)
+# These should NEVER be in this file - always use wrangler secret put
+#
+# Required secrets:
+# - PROCORE_CLIENT_ID: Your Procore OAuth app client ID
+# - PROCORE_CLIENT_SECRET: Your Procore OAuth app client secret
+# - COOKIE_ENCRYPTION_KEY: 32+ character random string for encrypting tokens
+#
+# Optional secrets:
+# - PROCORE_SANDBOX_CLIENT_ID: Procore sandbox app client ID (for testing)
+# - PROCORE_SANDBOX_CLIENT_SECRET: Procore sandbox app client secret
+# - RESEND_API_KEY: For email notifications
+
+# ============================================================================
+# Development Tips
+# ============================================================================
+#
+# Run migrations locally:
+#   wrangler d1 migrations apply workway-construction --local
+#
+# Run migrations on production:
+#   wrangler d1 migrations apply workway-construction --remote
+#
+# Start dev server:
+#   wrangler dev
+#
+# Deploy:
+#   wrangler deploy
+#
+# View logs:
+#   wrangler tail

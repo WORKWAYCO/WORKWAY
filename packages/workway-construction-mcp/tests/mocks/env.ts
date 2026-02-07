@@ -18,39 +18,37 @@ export function createMockEnv(options: MockEnvOptions = {}): Env {
   const kvData = options.kvData || {};
 
   // Mock D1 Database
+  // Supports both patterns:
+  // - prepare().first() (used by ProcoreClient)
+  // - prepare().bind().first() (used by other parts of the codebase)
   const mockDB = {
     prepare: (sql: string) => {
+      const firstFn = async <T>(): Promise<T | null> => {
+        const table = extractTableName(sql);
+        const rows = dbData[table] || [];
+        return (rows[0] as T) || null;
+      };
+      const allFn = async <T>(): Promise<{ results: T[] }> => {
+        const table = extractTableName(sql);
+        const rows = dbData[table] || [];
+        return { results: rows as T[] };
+      };
+      const runFn = async () => {
+        return { success: true, meta: {} };
+      };
+
       return {
         bind: (...params: any[]) => {
           return {
-            first: async <T>(): Promise<T | null> => {
-              const table = extractTableName(sql);
-              const rows = dbData[table] || [];
-              return (rows[0] as T) || null;
-            },
-            all: async <T>(): Promise<{ results: T[] }> => {
-              const table = extractTableName(sql);
-              const rows = dbData[table] || [];
-              return { results: rows as T[] };
-            },
-            run: async () => {
-              return { success: true, meta: {} };
-            },
+            first: firstFn,
+            all: allFn,
+            run: runFn,
           };
         },
-        first: async <T>(): Promise<T | null> => {
-          const table = extractTableName(sql);
-          const rows = dbData[table] || [];
-          return (rows[0] as T) || null;
-        },
-        all: async <T>(): Promise<{ results: T[] }> => {
-          const table = extractTableName(sql);
-          const rows = dbData[table] || [];
-          return { results: rows as T[] };
-        },
-        run: async () => {
-          return { success: true, meta: {} };
-        },
+        // Direct methods (used by ProcoreClient)
+        first: firstFn,
+        all: allFn,
+        run: runFn,
       };
     },
     batch: async (statements: any[]) => {

@@ -369,10 +369,10 @@ export const templateTools: MCPToolSet = {
   },
 
   // --------------------------------------------------------------------------
-  // workway_create_from_template
+  // workway_create_workflow_from_template
   // --------------------------------------------------------------------------
-  create_from_template: {
-    name: 'workway_create_from_template',
+  create_workflow_from_template: {
+    name: 'workway_create_workflow_from_template',
     description: 'Create a new workflow from a template. Provide template ID and variable values.',
     inputSchema: z.object({
       template_id: z.string().describe('Template ID (from workway_list_templates)'),
@@ -385,7 +385,7 @@ export const templateTools: MCPToolSet = {
       status: z.string(),
       actions_created: z.number(),
     }),
-    execute: async (input: z.infer<typeof templateTools.create_from_template.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof templateTools.create_workflow_from_template.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         const template = templates[input.template_id];
         if (!template) {
@@ -463,7 +463,7 @@ export const templateTools: MCPToolSet = {
             status: 'draft',
             actionsCreated: template.actions.length,
             templateUsed: template.id,
-            nextStep: 'Call workway_deploy to activate the workflow',
+            nextStep: 'Call workway_deploy_workflow to activate the workflow',
           },
         };
       } catch (error) {

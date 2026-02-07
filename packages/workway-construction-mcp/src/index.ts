@@ -7,6 +7,9 @@
  * - Procore OAuth integration
  * - Construction workflow tools (RFIs, daily logs, submittals)
  * - Webhook handling
+ * - Rate limiting (Procore: 3600 req/min)
+ * - Audit logging for security compliance
+ * - Distributed tracing with OpenTelemetry export
  */
 
 import { Hono } from 'hono';
@@ -21,7 +24,21 @@ import {
   getProcoreUrls,
   type ProcoreEnvironment,
 } from './lib/config';
+import { logOAuthCallback } from './lib/audit-logger';
+import { 
+  Tracer, 
+  type TracerConfig,
+} from './lib/tracing';
+import { 
+  exportSpans, 
+  exportToLangfuse, 
+  logSpansToConsole,
+} from './lib/otel-exporter';
 import type { Env } from './types';
+import observability from './routes/observability';
+
+// Re-export Durable Objects
+export { ProcoreRateLimiter } from './durable-objects/rate-limiter';
 
 // ============================================================================
 // Create MCP Server with Construction Tools
@@ -53,7 +70,117 @@ const mcpServer = createMCPServer<Env>({
 // Construction-Specific Routes
 // ============================================================================
 
-const app = new Hono<{ Bindings: Env }>();
+// Custom type for Hono context with tracing
+type Variables = {
+  tracer: Tracer;
+  traceId: string;
+};
+
+const app = new Hono<{ Bindings: Env; Variables: Variables }>();
+
+// ============================================================================
+// Distributed Tracing Middleware
+// ============================================================================
+
+/**
+ * Tracing middleware - adds distributed tracing to all requests
+ * 
+ * Features:
+ * - Parses incoming W3C Trace Context (traceparent header)
+ * - Creates new trace context if not present
+ * - Configurable sampling rate via TRACE_SAMPLING_RATE env var
+ * - Adds x-trace-id response header for correlation
+ * - Exports spans to OTLP endpoint or Langfuse if configured
+ */
+app.use('*', async (c, next) => {
+  // Parse sampling rate from env (default 10%)
+  const samplingRate = c.env.TRACE_SAMPLING_RATE 
+    ? parseFloat(c.env.TRACE_SAMPLING_RATE)
+    : 0.1;
+  
+  const tracerConfig: TracerConfig = {
+    serviceName: 'workway-construction-mcp',
+    samplingRate,
+    environment: c.env.ENVIRONMENT || 'development',
+  };
+  
+  // Create tracer from incoming request (parses traceparent if present)
+  const tracer = new Tracer(c.req.raw, tracerConfig);
+  
+  // Store tracer and trace ID in context for use by handlers
+  c.set('tracer', tracer);
+  c.set('traceId', tracer.traceId);
+  
+  // Start root span for the request
+  const url = new URL(c.req.url);
+  const rootSpan = tracer.startSpan('http.request', {
+    'http.method': c.req.method,
+    'http.url': url.pathname,
+    'http.host': url.host,
+    'http.user_agent': c.req.header('user-agent') || 'unknown',
+  });
+  
+  try {
+    // Process the request
+    await next();
+    
+    // Add response info to span
+    rootSpan.setAttributes({
+      'http.status_code': c.res.status,
+    });
+    rootSpan.end(c.res.status >= 400 ? 'error' : 'ok');
+  } catch (error) {
+    // Record error in span
+    rootSpan.setAttributes({
+      'error': true,
+      'error.type': error instanceof Error ? error.constructor.name : 'Error',
+      'error.message': error instanceof Error ? error.message : String(error),
+    });
+    rootSpan.end('error');
+    throw error;
+  } finally {
+    // Add trace ID to response headers
+    c.header('x-trace-id', tracer.traceId);
+    
+    // Export spans if sampling and configured
+    if (tracer.isSampled) {
+      // Fire and forget - don't block the response
+      exportTracingData(c.env, tracer).catch(err => {
+        console.error('[Tracing] Export error:', err);
+      });
+    }
+  }
+});
+
+/**
+ * Export tracing data to configured destinations
+ */
+async function exportTracingData(env: Env, tracer: Tracer): Promise<void> {
+  const spans = tracer.getSpans();
+  if (spans.length === 0) return;
+  
+  // Log to console in development
+  if (env.ENVIRONMENT === 'development') {
+    logSpansToConsole(spans);
+  }
+  
+  // Export to OTLP endpoint if configured
+  if (env.OTEL_EXPORTER_URL) {
+    await exportSpans(env.OTEL_EXPORTER_URL, tracer.toOTLP());
+  }
+  
+  // Export to Langfuse if configured
+  if (env.LANGFUSE_HOST && env.LANGFUSE_PUBLIC_KEY && env.LANGFUSE_SECRET_KEY) {
+    await exportToLangfuse(
+      {
+        host: env.LANGFUSE_HOST,
+        publicKey: env.LANGFUSE_PUBLIC_KEY,
+        secretKey: env.LANGFUSE_SECRET_KEY,
+      },
+      spans
+    );
+  }
+}
 
 // ============================================================================
 // OAuth 2.0 Authorization Server (for Claude Cowork)
@@ -260,6 +387,9 @@ app.post('/token', async (c) => {
 // Mount the MCP server
 app.route('/', mcpServer);
 
+// Mount observability dashboard API
+app.route('/observability', observability);
+
 // ============================================================================
 // Dashboard API (Construction-specific)
 // ============================================================================
@@ -305,6 +435,11 @@ app.get('/docs', (c) => {
 // ============================================================================
 
 app.get('/mcp/tools', (c) => {
+  const tracer = c.get('tracer');
+  const span = tracer.startSpan('mcp.list_tools', {
+    'mcp.operation': 'list_tools',
+  });
+  
   const tools = Object.values(allTools).map((tool: any) => ({
     name: tool.name,
     description: tool.description,
@@ -312,6 +447,9 @@ app.get('/mcp/tools', (c) => {
     outputSchema: tool.outputSchema,
   }));
 
+  span.setAttributes({ 'mcp.tool_count': tools.length });
+  span.end('ok');
+  
   return c.json({
     tools,
     categories: toolCategories,
@@ -361,6 +499,14 @@ app.get('/oauth/callback', async (c) => {
 
   if (error) {
     console.error('OAuth error:', error, errorDescription);
+    // Log OAuth error
+    await logOAuthCallback(c.env, {
+      userId: 'unknown',
+      success: false,
+      provider: 'procore',
+      errorMessage: errorDescription || error,
+      request: c.req.raw,
+    });
     return c.json({ 
       error: 'oauth_error',
       message: errorDescription || error,
@@ -491,8 +637,21 @@ app.get('/oauth/callback', async (c) => {
     new Date().toISOString()
   ).run();
 
+  // Invalidate KV token cache for this user (ensures fresh token is fetched)
+  await c.env.KV.delete(`procore_token:${stateData.userId}`);
+  await c.env.KV.delete(`procore_token:default`);
+
   // Clean up state
   await c.env.KV.delete(`oauth_state:${state}`);
+
+  // Log successful OAuth callback
+  await logOAuthCallback(c.env, {
+    userId: stateData.userId,
+    success: true,
+    provider: 'procore',
+    environment: procoreEnv,
+    request: c.req.raw,
+  });
 
   // Return beautiful success page
   const successHtml = `<!DOCTYPE html>

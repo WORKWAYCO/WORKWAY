@@ -3,9 +3,15 @@
  * 
  * Handles authentication, token refresh, and API requests to Procore.
  * Based on the BaseAPIClient pattern from WORKWAY integrations.
+ * 
+ * Features:
+ * - OAuth token management with KV caching
+ * - Automatic token refresh
+ * - Distributed tracing integration
  */
 
 import type { Env, OAuthToken } from '../types';
+import type { Tracer } from './tracing';
 
 const PROCORE_API_BASE = 'https://api.procore.com/rest/v1.0';
 const PROCORE_AUTH_BASE = 'https://login.procore.com';
@@ -13,22 +19,37 @@ const PROCORE_AUTH_BASE = 'https://login.procore.com';
 export interface ProcoreClientOptions {
   env: Env;
   companyId?: string;
+  /** Optional tracer for distributed tracing */
+  tracer?: Tracer;
 }
+
+// KV cache key prefix for OAuth tokens
+const TOKEN_CACHE_PREFIX = 'procore_token:';
+// Cache TTL in seconds (5 minutes - shorter than token expiry for safety)
+const TOKEN_CACHE_TTL = 300;
 
 export class ProcoreClient {
   private env: Env;
   private companyId?: string;
   private tokenCache: OAuthToken | null = null;
+  private tracer?: Tracer;
 
   constructor(options: ProcoreClientOptions) {
     this.env = options.env;
     this.companyId = options.companyId;
+    this.tracer = options.tracer;
   }
 
   /**
-   * Get current OAuth token, refreshing if needed
+   * Get current OAuth token with KV caching (10-30ms → <1ms for cached hits)
+   * 
+   * Cache strategy:
+   * 1. Check in-memory cache (fastest, same request)
+   * 2. Check KV cache (fast, <1ms, persists across requests)
+   * 3. Fallback to D1 database (10-30ms)
    */
-  async getToken(): Promise<OAuthToken> {
+  async getToken(userId: string = 'default'): Promise<OAuthToken> {
+    // Level 1: In-memory cache (same request)
     if (this.tokenCache) {
       const expiresAt = this.tokenCache.expiresAt 
         ? new Date(this.tokenCache.expiresAt)
@@ -40,7 +61,33 @@ export class ProcoreClient {
       }
     }
 
-    // Fetch from database
+    // Level 2: KV cache (persists across requests, <1ms)
+    const cacheKey = `${TOKEN_CACHE_PREFIX}${userId}`;
+    try {
+      const cached = await this.env.KV.get<{
+        id: string;
+        provider: string;
+        userId: string;
+        accessToken: string;
+        refreshToken?: string;
+        expiresAt?: string;
+        scopes?: string[];
+        createdAt: string;
+      }>(cacheKey, 'json');
+      
+      if (cached && cached.expiresAt) {
+        const expiresAt = new Date(cached.expiresAt);
+        // Only use cache if token is still valid with 5 min buffer
+        if (expiresAt.getTime() > Date.now() + 5 * 60 * 1000) {
+          this.tokenCache = cached;
+          return cached;
+        }
+      }
+    } catch {
+      // KV read failed, continue to database
+    }
+
+    // Level 3: Database (10-30ms)
     const token = await this.env.DB.prepare(`
       SELECT * FROM oauth_tokens WHERE provider = 'procore' LIMIT 1
     `).first<any>();
@@ -54,7 +101,7 @@ export class ProcoreClient {
     const needsRefresh = expiresAt && expiresAt.getTime() < Date.now() + 5 * 60 * 1000;
 
     if (needsRefresh && token.refresh_token) {
-      return await this.refreshToken(token);
+      return await this.refreshToken(token, userId);
     }
 
     if (needsRefresh && !token.refresh_token) {
@@ -72,13 +119,46 @@ export class ProcoreClient {
       createdAt: token.created_at,
     };
 
+    // Cache in KV for subsequent requests
+    await this.cacheToken(userId, this.tokenCache);
+
     return this.tokenCache;
   }
 
   /**
-   * Refresh the OAuth token
+   * Cache token in KV with TTL
    */
-  private async refreshToken(token: any): Promise<OAuthToken> {
+  private async cacheToken(userId: string, token: OAuthToken): Promise<void> {
+    const cacheKey = `${TOKEN_CACHE_PREFIX}${userId}`;
+    try {
+      await this.env.KV.put(cacheKey, JSON.stringify(token), {
+        expirationTtl: TOKEN_CACHE_TTL,
+      });
+    } catch {
+      // KV write failed, non-fatal - continue without caching
+    }
+  }
+
+  /**
+   * Invalidate KV cache for a user's token
+   */
+  async invalidateTokenCache(userId: string = 'default'): Promise<void> {
+    const cacheKey = `${TOKEN_CACHE_PREFIX}${userId}`;
+    this.tokenCache = null;
+    try {
+      await this.env.KV.delete(cacheKey);
+    } catch {
+      // KV delete failed, non-fatal
+    }
+  }
+
+  /**
+   * Refresh the OAuth token and invalidate cache
+   */
+  private async refreshToken(token: any, userId: string = 'default'): Promise<OAuthToken> {
+    // Invalidate cache before refresh
+    await this.invalidateTokenCache(userId);
+    
     const response = await fetch(`${PROCORE_AUTH_BASE}/oauth/token`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -124,15 +204,46 @@ export class ProcoreClient {
       createdAt: token.created_at,
     };
 
+    // Cache the new token
+    await this.cacheToken(userId, this.tokenCache);
+
     return this.tokenCache;
   }
 
   /**
    * Make an authenticated request to Procore API
+   * Includes distributed tracing if a tracer is configured
    */
   async request<T>(
     path: string,
     options: RequestInit = {}
+  ): Promise<T> {
+    // If tracer is available, wrap the request in a span
+    if (this.tracer) {
+      return this.tracer.withSpan(
+        'procore.api',
+        {
+          'http.method': (options.method || 'GET') as string,
+          'http.url': path,
+          'procore.company_id': this.companyId || 'unknown',
+        },
+        async (span) => {
+          return this.executeRequest<T>(path, options, span);
+        }
+      );
+    }
+    
+    // No tracer - execute request directly
+    return this.executeRequest<T>(path, options);
+  }
+  
+  /**
+   * Execute the actual HTTP request to Procore API
+   */
+  private async executeRequest<T>(
+    path: string,
+    options: RequestInit = {},
+    span?: { setAttributes: (attrs: Record<string, string | number | boolean>) => void }
   ): Promise<T> {
     const token = await this.getToken();
 
@@ -146,14 +257,37 @@ export class ProcoreClient {
     if (this.companyId) {
       headers['Procore-Company-Id'] = this.companyId;
     }
+    
+    // Add trace context headers for distributed tracing propagation
+    if (this.tracer) {
+      headers['traceparent'] = this.tracer.traceparent;
+    }
 
+    const startTime = Date.now();
     const response = await fetch(`${PROCORE_API_BASE}${path}`, {
       ...options,
       headers,
     });
+    const duration = Date.now() - startTime;
+    
+    // Add response attributes to span
+    if (span) {
+      span.setAttributes({
+        'http.status_code': response.status,
+        'http.response_time_ms': duration,
+      });
+    }
 
     if (!response.ok) {
       const error = await response.text();
+      
+      // Add error details to span
+      if (span) {
+        span.setAttributes({
+          'error': true,
+          'error.type': `HTTP_${response.status}`,
+        });
+      }
       
       if (response.status === 401) {
         // Token might be invalid, clear cache and retry once

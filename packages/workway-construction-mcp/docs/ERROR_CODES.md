@@ -2,244 +2,322 @@
 
 Complete reference for all error codes returned by the MCP server.
 
-## Error Response Format
+## Standard Error Response Format
 
-All errors follow this structure:
+All errors follow this consistent structure:
 
 ```json
 {
   "success": false,
-  "error": "Human-readable error message",
-  "error_code": "ERROR_CODE",
-  "details": {
-    "additional": "context"
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human-readable error message",
+    "details": {
+      "additional": "context"
+    },
+    "retryAfter": 60,
+    "httpStatus": 429
   }
 }
 ```
+
+### Response Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `success` | `boolean` | Always `false` for errors |
+| `error.code` | `string` | Machine-readable error code (see categories below) |
+| `error.message` | `string` | Human-readable error message |
+| `error.details` | `object` | Optional additional context |
+| `error.retryAfter` | `number` | Seconds to wait before retry (rate limits only) |
+| `error.httpStatus` | `number` | HTTP status code for REST API responses |
 
 ---
 
 ## Error Code Categories
 
-### Authentication & Authorization (1xxx)
+### Authentication Errors (AUTH_*)
 
-| Code | Message | Description | Solution |
-|------|---------|-------------|----------|
-| `AUTH_001` | Not connected to Procore | No OAuth token found | Call `workway_connect_procore` |
-| `AUTH_002` | Procore token expired | OAuth token has expired | Reconnect using `workway_connect_procore` |
-| `AUTH_003` | Invalid OAuth state | OAuth callback state mismatch | Retry OAuth flow |
-| `AUTH_004` | Insufficient scopes | Token missing required scopes | Reconnect with correct scopes |
-| `AUTH_005` | Token refresh failed | Automatic token refresh failed | Reconnect manually |
-
-**Example:**
-```json
-{
-  "success": false,
-  "error": "Not connected to Procore. Use workway_connect_procore first.",
-  "error_code": "AUTH_001"
-}
-```
-
----
-
-### Workflow Errors (2xxx)
-
-| Code | Message | Description | Solution |
-|------|---------|-------------|----------|
-| `WORKFLOW_001` | Workflow not found | Workflow ID doesn't exist | Check workflow ID or list workflows |
-| `WORKFLOW_002` | Workflow has no actions | Cannot deploy empty workflow | Add actions with `workway_add_action` |
-| `WORKFLOW_003` | Invalid trigger configuration | Trigger config missing required fields | Use `workway_configure_trigger` |
-| `WORKFLOW_004` | Workflow already deployed | Attempting to deploy active workflow | Use `workway_rollback` first if needed |
-| `WORKFLOW_005` | Invalid action type | Action type not recognized | Check supported action types |
-| `WORKFLOW_006` | Action configuration invalid | Action config missing required fields | Review action type documentation |
+| Code | HTTP | Description | Solution |
+|------|------|-------------|----------|
+| `AUTH_REQUIRED` | 401 | No OAuth token found | Call `workway_connect_procore` |
+| `AUTH_EXPIRED` | 401 | OAuth token has expired | Reconnect using `workway_connect_procore` |
+| `AUTH_INVALID` | 401 | Invalid or corrupted token | Reconnect using `workway_connect_procore` |
+| `AUTH_INSUFFICIENT_SCOPES` | 403 | Token missing required scopes | Reconnect with correct scopes |
+| `AUTH_REFRESH_FAILED` | 401 | Automatic token refresh failed | Reconnect manually |
 
 **Example:**
 ```json
 {
   "success": false,
-  "error": "Workflow must have at least one action",
-  "error_code": "WORKFLOW_002",
-  "details": {
-    "workflow_id": "550e8400-e29b-41d4-a716-446655440000"
+  "error": {
+    "code": "AUTH_REQUIRED",
+    "message": "Procore not connected. Use \"Connect my Procore account\" to authorize.",
+    "details": {
+      "userId": "default",
+      "tool": "workway_get_procore_rfis"
+    },
+    "httpStatus": 401
   }
 }
 ```
 
 ---
 
-### Procore API Errors (3xxx)
+### Procore Integration Errors (PROCORE_*)
 
-| Code | Message | Description | Solution |
-|------|---------|-------------|----------|
-| `PROCORE_001` | Procore API error | Generic Procore API failure | Check Procore API status |
-| `PROCORE_002` | Project not found | Procore project ID invalid | Verify project ID with `workway_list_procore_projects` |
-| `PROCORE_003` | Permission denied | Insufficient Procore permissions | Check Procore user permissions |
-| `PROCORE_004` | Rate limit exceeded | Too many Procore API requests | See [RATE_LIMITS.md](./RATE_LIMITS.md) |
-| `PROCORE_005` | Invalid project ID | Project ID format invalid | Use numeric project ID |
+| Code | HTTP | Description | Solution |
+|------|------|-------------|----------|
+| `PROCORE_NOT_CONNECTED` | 401 | No Procore connection | Call `workway_connect_procore` |
+| `PROCORE_AUTH_FAILED` | 401 | Procore rejected authentication | Reconnect using `workway_connect_procore` |
+| `PROCORE_RATE_LIMITED` | 429 | Too many API requests | Wait for `retryAfter` seconds |
+| `PROCORE_NOT_FOUND` | 404 | Resource not found in Procore | Check resource ID exists |
+| `PROCORE_FORBIDDEN` | 403 | Insufficient Procore permissions | Check Procore user permissions |
+| `PROCORE_API_ERROR` | 502 | Generic Procore API failure | Check Procore API status |
+| `PROCORE_SANDBOX_NOT_CONFIGURED` | 500 | Sandbox credentials not set | Configure sandbox environment variables |
+| `PROCORE_COMPANY_NOT_SET` | 400 | Company ID not set | Reconnect and select a company |
 
-**Example:**
+**Example (Rate Limit):**
 ```json
 {
   "success": false,
-  "error": "Procore API error: 404 - Project not found",
-  "error_code": "PROCORE_002",
-  "details": {
-    "project_id": 99999,
-    "procore_status": 404
+  "error": {
+    "code": "PROCORE_RATE_LIMITED",
+    "message": "Procore rate limit exceeded. Retry after 60 seconds.",
+    "retryAfter": 60,
+    "details": {
+      "remaining": 0,
+      "httpStatus": 429
+    },
+    "httpStatus": 429
   }
 }
 ```
 
 ---
 
-### Validation Errors (4xxx)
+### Workflow Errors (WORKFLOW_*)
 
-| Code | Message | Description | Solution |
-|------|---------|-------------|----------|
-| `VALIDATION_001` | Invalid parameter | Parameter validation failed | Check parameter format |
-| `VALIDATION_002` | Missing required parameter | Required parameter not provided | Provide all required parameters |
-| `VALIDATION_003` | Invalid cron expression | Cron schedule format invalid | Use valid cron syntax |
-| `VALIDATION_004` | Invalid date format | Date format incorrect | Use YYYY-MM-DD format |
-| `VALIDATION_005` | Invalid workflow ID format | Workflow ID format invalid | Use UUID format |
+| Code | HTTP | Description | Solution |
+|------|------|-------------|----------|
+| `WORKFLOW_NOT_FOUND` | 404 | Workflow ID doesn't exist | Check workflow ID or list workflows |
+| `WORKFLOW_INVALID` | 400 | Workflow configuration invalid | Review validation errors |
+| `WORKFLOW_NO_ACTIONS` | 400 | Cannot deploy empty workflow | Add actions with `workway_add_workflow_action` |
+| `WORKFLOW_NO_TRIGGER` | 400 | Workflow has no trigger | Use `workway_configure_workflow_trigger` |
+| `WORKFLOW_INVALID_TRIGGER` | 400 | Trigger config incomplete | Check trigger configuration |
+| `WORKFLOW_EXECUTION_FAILED` | 500 | Workflow failed during execution | Check execution logs |
+| `WORKFLOW_ALREADY_ACTIVE` | 409 | Workflow already deployed | Use `workway_rollback_workflow` first if needed |
 
 **Example:**
 ```json
 {
   "success": false,
-  "error": "Invalid cron expression: '0 9 * *'",
-  "error_code": "VALIDATION_003",
-  "details": {
-    "field": "cron_schedule",
-    "provided": "0 9 * *",
-    "expected_format": "minute hour day month weekday"
+  "error": {
+    "code": "WORKFLOW_INVALID",
+    "message": "Workflow validation failed: Workflow must have at least one action; Webhook trigger requires source and event_types configuration",
+    "details": {
+      "workflowId": "550e8400-e29b-41d4-a716-446655440000",
+      "validationErrors": [
+        "Workflow must have at least one action",
+        "Webhook trigger requires source and event_types configuration"
+      ]
+    },
+    "httpStatus": 400
   }
 }
 ```
 
 ---
 
-### Execution Errors (5xxx)
+### Validation Errors (VALIDATION_*)
 
-| Code | Message | Description | Solution |
-|------|---------|-------------|----------|
-| `EXECUTION_001` | Execution not found | Execution ID doesn't exist | Check execution ID |
-| `EXECUTION_002` | Execution timeout | Workflow execution exceeded time limit | Optimize workflow or break into steps |
-| `EXECUTION_003` | Action execution failed | Individual action failed | Use `workway_diagnose` for details |
-| `EXECUTION_004` | Workflow execution failed | Workflow failed during execution | Check execution logs |
+| Code | HTTP | Description | Solution |
+|------|------|-------------|----------|
+| `VALIDATION_FAILED` | 400 | Input validation failed | Check parameter format |
+| `INVALID_INPUT` | 400 | Parameter value invalid | Review input requirements |
+| `MISSING_REQUIRED_FIELD` | 400 | Required parameter not provided | Provide all required parameters |
+| `INVALID_CRON_EXPRESSION` | 400 | Cron schedule format invalid | Use valid cron syntax |
+| `INVALID_DATE_FORMAT` | 400 | Date format incorrect | Use YYYY-MM-DD format |
+| `INVALID_ID_FORMAT` | 400 | ID format invalid | Use correct ID format |
 
 **Example:**
 ```json
 {
   "success": false,
-  "error": "Action execution failed: procore.rfi.respond",
-  "error_code": "EXECUTION_003",
-  "details": {
-    "execution_id": "880e8400-e29b-41d4-a716-446655440003",
-    "action_id": "660e8400-e29b-41d4-a716-446655440001",
-    "action_type": "procore.rfi.respond",
-    "underlying_error": "RFI not found"
+  "error": {
+    "code": "VALIDATION_FAILED",
+    "message": "Invalid input: project_id is required",
+    "details": {
+      "issues": [
+        { "path": "project_id", "message": "Required" }
+      ]
+    },
+    "httpStatus": 400
   }
 }
 ```
 
 ---
 
-### System Errors (9xxx)
+### System Errors (SYSTEM_*)
 
-| Code | Message | Description | Solution |
-|------|---------|-------------|----------|
-| `SYSTEM_001` | Internal server error | Unexpected server error | Contact support |
-| `SYSTEM_002` | Database error | Database operation failed | Retry or contact support |
-| `SYSTEM_003` | Service unavailable | MCP server temporarily unavailable | Retry after delay |
-| `SYSTEM_004` | Configuration error | Server configuration invalid | Contact support |
+| Code | HTTP | Description | Solution |
+|------|------|-------------|----------|
+| `INTERNAL_ERROR` | 500 | Unexpected server error | Contact support |
+| `SERVICE_UNAVAILABLE` | 503 | MCP server temporarily unavailable | Retry after delay |
+| `DATABASE_ERROR` | 500 | Database operation failed | Retry or contact support |
+| `TIMEOUT` | 504 | Operation timed out | Retry with smaller scope |
+| `CONFIGURATION_ERROR` | 500 | Server configuration invalid | Contact support |
 
 **Example:**
 ```json
 {
   "success": false,
-  "error": "Internal server error",
-  "error_code": "SYSTEM_001",
-  "details": {
-    "request_id": "req-12345",
-    "timestamp": "2026-02-03T10:00:00Z"
+  "error": {
+    "code": "INTERNAL_ERROR",
+    "message": "An unexpected error occurred. Please try again.",
+    "httpStatus": 500
   }
 }
 ```
 
 ---
 
-## HTTP Status Codes
+### Webhook Errors (WEBHOOK_*)
 
-The MCP server uses standard HTTP status codes:
+| Code | HTTP | Description | Solution |
+|------|------|-------------|----------|
+| `WEBHOOK_NOT_FOUND` | 404 | Webhook subscription not found | Check webhook ID |
+| `WEBHOOK_CREATION_FAILED` | 500 | Failed to create webhook | Check permissions |
+
+---
+
+### Execution Errors (EXECUTION_*)
+
+| Code | HTTP | Description | Solution |
+|------|------|-------------|----------|
+| `EXECUTION_NOT_FOUND` | 404 | Execution ID doesn't exist | Check execution ID |
+| `EXECUTION_TIMEOUT` | 504 | Execution exceeded time limit | Optimize workflow |
+| `ACTION_EXECUTION_FAILED` | 500 | Individual action failed | Use `workway_diagnose_workflow` |
+
+---
+
+## HTTP Status Code Mapping
 
 | Status | Meaning | Common Error Codes |
 |--------|---------|-------------------|
 | `200` | Success | N/A |
-| `400` | Bad Request | `VALIDATION_*`, `WORKFLOW_*` |
-| `401` | Unauthorized | `AUTH_001`, `AUTH_002` |
-| `403` | Forbidden | `AUTH_004`, `PROCORE_003` |
-| `404` | Not Found | `WORKFLOW_001`, `PROCORE_002`, `EXECUTION_001` |
-| `429` | Too Many Requests | `PROCORE_004` |
-| `500` | Internal Server Error | `SYSTEM_*` |
-| `503` | Service Unavailable | `SYSTEM_003` |
+| `400` | Bad Request | `VALIDATION_*`, `WORKFLOW_INVALID`, `PROCORE_COMPANY_NOT_SET` |
+| `401` | Unauthorized | `AUTH_*`, `PROCORE_NOT_CONNECTED`, `PROCORE_AUTH_FAILED` |
+| `403` | Forbidden | `AUTH_INSUFFICIENT_SCOPES`, `PROCORE_FORBIDDEN` |
+| `404` | Not Found | `WORKFLOW_NOT_FOUND`, `PROCORE_NOT_FOUND`, `WEBHOOK_NOT_FOUND` |
+| `409` | Conflict | `WORKFLOW_ALREADY_ACTIVE` |
+| `429` | Too Many Requests | `PROCORE_RATE_LIMITED` |
+| `500` | Internal Server Error | `INTERNAL_ERROR`, `DATABASE_ERROR`, `CONFIGURATION_ERROR` |
+| `502` | Bad Gateway | `PROCORE_API_ERROR` |
+| `503` | Service Unavailable | `SERVICE_UNAVAILABLE` |
+| `504` | Gateway Timeout | `TIMEOUT`, `EXECUTION_TIMEOUT` |
 
 ---
 
 ## Error Handling Best Practices
 
-### 1. Always Check `success` Field
+### 1. Always Check the `success` Field
 
-```javascript
+```typescript
 const result = await callTool('workway_create_workflow', params);
 
 if (!result.success) {
-  // Handle error
-  console.error(`Error ${result.error_code}: ${result.error}`);
-  // Use error_code to determine recovery strategy
+  // Handle error using error.code for programmatic handling
+  console.error(`Error ${result.error.code}: ${result.error.message}`);
 }
 ```
 
 ### 2. Use Error Codes for Programmatic Handling
 
-```javascript
-switch (result.error_code) {
-  case 'AUTH_001':
+```typescript
+switch (result.error.code) {
+  case 'AUTH_REQUIRED':
+  case 'AUTH_EXPIRED':
+  case 'PROCORE_NOT_CONNECTED':
     // Redirect to OAuth flow
     await connectProcore();
     break;
-  case 'PROCORE_004':
+
+  case 'PROCORE_RATE_LIMITED':
     // Implement exponential backoff
-    await sleep(calculateBackoff(retryCount));
+    const retryAfter = result.error.retryAfter || 60;
+    await sleep(retryAfter * 1000);
     break;
-  case 'VALIDATION_002':
+
+  case 'VALIDATION_FAILED':
     // Show user-friendly validation message
-    showValidationError(result.details.field);
+    showValidationErrors(result.error.details?.issues);
+    break;
+
+  case 'WORKFLOW_NOT_FOUND':
+    // List available workflows
+    await listWorkflows();
     break;
 }
 ```
 
-### 3. Use `workway_diagnose` for Complex Issues
+### 3. Use `workway_diagnose_workflow` for Complex Issues
 
-```javascript
-if (result.error_code?.startsWith('EXECUTION_')) {
-  const diagnosis = await callTool('workway_diagnose', {
+```typescript
+if (result.error.code?.startsWith('WORKFLOW_') || 
+    result.error.code?.startsWith('EXECUTION_')) {
+  const diagnosis = await callTool('workway_diagnose_workflow', {
     workflow_id: workflowId,
-    symptom: 'action_failed',
+    symptom: 'execution_failed',
     execution_id: executionId
   });
   // Follow suggested_fix from diagnosis
 }
 ```
 
-### 4. Log Errors with Context
+### 4. Retry with Exponential Backoff
 
-```javascript
+```typescript
+async function callWithRetry(tool: string, params: any, maxRetries = 3) {
+  for (let attempt = 0; attempt < maxRetries; attempt++) {
+    const result = await callTool(tool, params);
+    
+    if (result.success) return result;
+    
+    // Don't retry on validation errors
+    if (result.error.code?.startsWith('VALIDATION_')) {
+      throw new Error(result.error.message);
+    }
+    
+    // Retry on rate limits and system errors
+    if (result.error.code === 'PROCORE_RATE_LIMITED') {
+      const delay = result.error.retryAfter || Math.pow(2, attempt) * 1000;
+      await sleep(delay * 1000);
+      continue;
+    }
+    
+    if (result.error.code?.startsWith('SYSTEM_')) {
+      const delay = Math.pow(2, attempt) * 1000;
+      await sleep(delay);
+      continue;
+    }
+    
+    throw new Error(result.error.message);
+  }
+}
+```
+
+### 5. Log Errors with Full Context
+
+```typescript
 logger.error('Tool execution failed', {
-  tool: 'workway_deploy',
-  error_code: result.error_code,
-  error: result.error,
-  details: result.details,
-  workflow_id: workflowId
+  tool: 'workway_deploy_workflow',
+  errorCode: result.error.code,
+  errorMessage: result.error.message,
+  errorDetails: result.error.details,
+  workflowId: workflowId,
+  httpStatus: result.error.httpStatus,
 });
 ```
 
@@ -252,8 +330,13 @@ logger.error('Tool execution failed', {
 **Error:**
 ```json
 {
-  "error_code": "AUTH_002",
-  "error": "Procore token expired. Please reconnect."
+  "success": false,
+  "error": {
+    "code": "AUTH_EXPIRED",
+    "message": "Procore token expired. Please reconnect using workway_connect_procore.",
+    "details": { "userId": "ww_abc123" },
+    "httpStatus": 401
+  }
 }
 ```
 
@@ -264,76 +347,80 @@ logger.error('Tool execution failed', {
 
 ---
 
-### Scenario 2: Workflow Deployment Failed
+### Scenario 2: Procore Rate Limit
 
 **Error:**
 ```json
 {
-  "error_code": "WORKFLOW_002",
-  "error": "Workflow must have at least one action",
-  "validation_errors": [
-    "Workflow must have at least one action",
-    "Webhook trigger requires source and event_types configuration"
-  ]
-}
-```
-
-**Solution:**
-1. Use `workway_add_action` to add actions
-2. Use `workway_configure_trigger` to configure trigger
-3. Retry `workway_deploy` with `dry_run: true` first
-
----
-
-### Scenario 3: Procore Rate Limit
-
-**Error:**
-```json
-{
-  "error_code": "PROCORE_004",
-  "error": "Rate limit exceeded",
-  "details": {
-    "retry_after": 60,
-    "limit": 100,
-    "remaining": 0
+  "success": false,
+  "error": {
+    "code": "PROCORE_RATE_LIMITED",
+    "message": "Procore rate limit exceeded. Retry after 60 seconds.",
+    "retryAfter": 60,
+    "details": { "remaining": 0 },
+    "httpStatus": 429
   }
 }
 ```
 
 **Solution:**
-1. Wait for `retry_after` seconds
-2. Implement exponential backoff
+1. Wait for `retryAfter` seconds
+2. Implement exponential backoff for subsequent requests
 3. Consider batching requests
 4. See [RATE_LIMITS.md](./RATE_LIMITS.md) for limits
 
 ---
 
-## Error Recovery Patterns
+### Scenario 3: Workflow Deployment Failed
 
-### Retry with Exponential Backoff
-
-```javascript
-async function callWithRetry(tool, params, maxRetries = 3) {
-  for (let attempt = 0; attempt < maxRetries; attempt++) {
-    const result = await callTool(tool, params);
-    
-    if (result.success) return result;
-    
-    // Don't retry on validation errors
-    if (result.error_code?.startsWith('VALIDATION_')) {
-      throw new Error(result.error);
-    }
-    
-    // Retry on rate limits and system errors
-    if (result.error_code === 'PROCORE_004' || result.error_code?.startsWith('SYSTEM_')) {
-      const delay = Math.pow(2, attempt) * 1000; // Exponential backoff
-      await sleep(delay);
-      continue;
-    }
-    
-    throw new Error(result.error);
+**Error:**
+```json
+{
+  "success": false,
+  "error": {
+    "code": "WORKFLOW_INVALID",
+    "message": "Workflow validation failed: Workflow must have at least one action",
+    "details": {
+      "workflowId": "550e8400-e29b-41d4-a716-446655440000",
+      "validationErrors": ["Workflow must have at least one action"]
+    },
+    "httpStatus": 400
   }
 }
+```
+
+**Solution:**
+1. Use `workway_add_workflow_action` to add actions
+2. Use `workway_configure_workflow_trigger` to configure trigger
+3. Retry `workway_deploy_workflow` with `dry_run: true` first
+
+---
+
+## TypeScript Error Classes
+
+The MCP server provides typed error classes for programmatic use:
+
+```typescript
+import {
+  WorkwayError,
+  AuthError,
+  ProcoreError,
+  WorkflowError,
+  ValidationError,
+  SystemError,
+  ExecutionError,
+  ErrorCode,
+} from '@workway/construction-mcp/lib/errors';
+
+// Create typed errors
+throw new ProcoreError(
+  ErrorCode.PROCORE_NOT_CONNECTED,
+  'Procore not connected.',
+  { details: { userId: 'default' } }
+);
+
+// Convert to response format
+const response = error.toResponse();
 ```
 
 ---
@@ -342,11 +429,11 @@ async function callWithRetry(tool, params, maxRetries = 3) {
 
 If you encounter an error not listed here:
 
-1. Use `workway_diagnose` to get detailed diagnosis
+1. Use `workway_diagnose_workflow` to get detailed diagnosis
 2. Check [TROUBLESHOOTING.md](./TROUBLESHOOTING.md) for common issues
-3. Review execution logs with `workway_observe_execution`
+3. Review execution logs with `workway_observe_workflow_execution`
 4. Contact support with:
-   - Error code
-   - Full error response
+   - Error code and full error response
    - Workflow ID (if applicable)
    - Execution ID (if applicable)
+   - Connection ID (if applicable)

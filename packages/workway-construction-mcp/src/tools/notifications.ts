@@ -135,10 +135,10 @@ const emailTemplates = {
 
 export const notificationTools: MCPToolSet = {
   // --------------------------------------------------------------------------
-  // workway_send_email
+  // workway_send_notification_email
   // --------------------------------------------------------------------------
-  send_email: {
-    name: 'workway_send_email',
+  send_notification_email: {
+    name: 'workway_send_notification_email',
     description: 'Send an email notification. Supports templates for common construction notifications (RFI alerts, submittal status, daily summaries).',
     inputSchema: z.object({
       to: z.string().email().describe('Recipient email address'),
@@ -206,10 +206,10 @@ export const notificationTools: MCPToolSet = {
   },
 
   // --------------------------------------------------------------------------
-  // workway_send_slack
+  // workway_send_notification_slack
   // --------------------------------------------------------------------------
-  send_slack: {
-    name: 'workway_send_slack',
+  send_notification_slack: {
+    name: 'workway_send_notification_slack',
     description: 'Send a Slack notification via webhook. Supports rich formatting with blocks.',
     inputSchema: z.object({
       webhook_url: z.string().url().describe('Slack incoming webhook URL'),
@@ -228,7 +228,7 @@ export const notificationTools: MCPToolSet = {
       sent: z.boolean(),
       error: z.string().optional(),
     }),
-    execute: async (input: z.infer<typeof notificationTools.send_slack.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof notificationTools.send_notification_slack.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         const payload: any = {
           text: input.message,
@@ -289,10 +289,10 @@ export const notificationTools: MCPToolSet = {
   },
 
   // --------------------------------------------------------------------------
-  // workway_notify
+  // workway_send_notification
   // --------------------------------------------------------------------------
-  notify: {
-    name: 'workway_notify',
+  send_notification: {
+    name: 'workway_send_notification',
     description: 'Send a notification through configured channels. Uses workflow notification settings to route to email and/or Slack.',
     inputSchema: z.object({
       workflow_id: z.string().describe('Workflow ID to get notification settings from'),
@@ -309,7 +309,7 @@ export const notificationTools: MCPToolSet = {
       channels_notified: z.array(z.string()),
       errors: z.array(z.string()).optional(),
     }),
-    execute: async (input: z.infer<typeof notificationTools.notify.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof notificationTools.send_notification.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         // Get workflow notification settings
         const workflow = await env.DB.prepare(`
@@ -335,7 +335,7 @@ export const notificationTools: MCPToolSet = {
         // Send email if configured
         if (notificationConfig.email && notificationConfig.emailTo) {
           try {
-            const emailResult = await notificationTools.send_email.execute({
+            const emailResult = await notificationTools.send_notification_email.execute({
               to: notificationConfig.emailTo,
               template: templateMap[input.event_type] as any,
               data: { ...input.data, title: input.title, message: input.message },
@@ -354,7 +354,7 @@ export const notificationTools: MCPToolSet = {
         // Send Slack if configured
         if (notificationConfig.slack && notificationConfig.slackWebhook) {
           try {
-            const slackResult = await notificationTools.send_slack.execute({
+            const slackResult = await notificationTools.send_notification_slack.execute({
               webhook_url: notificationConfig.slackWebhook,
               title: input.title,
               message: input.message,
@@ -393,10 +393,10 @@ export const notificationTools: MCPToolSet = {
   },
 
   // --------------------------------------------------------------------------
-  // workway_configure_notifications
+  // workway_configure_workflow_notifications
   // --------------------------------------------------------------------------
-  configure_notifications: {
-    name: 'workway_configure_notifications',
+  configure_workflow_notifications: {
+    name: 'workway_configure_workflow_notifications',
     description: 'Configure notification settings for a workflow (email addresses, Slack webhooks, etc.)',
     inputSchema: z.object({
       workflow_id: z.string().describe('Workflow ID'),
@@ -408,7 +408,7 @@ export const notificationTools: MCPToolSet = {
     outputSchema: z.object({
       updated: z.boolean(),
     }),
-    execute: async (input: z.infer<typeof notificationTools.configure_notifications.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof notificationTools.configure_workflow_notifications.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         // Get current config
         const workflow = await env.DB.prepare(`
@@ -455,10 +455,10 @@ export const notificationTools: MCPToolSet = {
   },
 
   // --------------------------------------------------------------------------
-  // workway_alert_workflow_error
+  // workway_send_workflow_error_alert
   // --------------------------------------------------------------------------
-  alert_workflow_error: {
-    name: 'workway_alert_workflow_error',
+  send_workflow_error_alert: {
+    name: 'workway_send_workflow_error_alert',
     description: 'Send an alert when a workflow execution fails. Automatically uses workflow notification settings.',
     inputSchema: z.object({
       workflow_id: z.string().describe('Workflow ID that failed'),
@@ -470,7 +470,7 @@ export const notificationTools: MCPToolSet = {
       alerted: z.boolean(),
       channels: z.array(z.string()),
     }),
-    execute: async (input: z.infer<typeof notificationTools.alert_workflow_error.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof notificationTools.send_workflow_error_alert.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         // Get workflow details
         const workflow = await env.DB.prepare(`
@@ -499,7 +499,7 @@ export const notificationTools: MCPToolSet = {
         // Send email alert if configured
         if (notificationConfig.email && notificationConfig.emailTo) {
           try {
-            await notificationTools.send_email.execute({
+            await notificationTools.send_notification_email.execute({
               to: notificationConfig.emailTo,
               template: 'workflow_error',
               data: errorData,
@@ -513,7 +513,7 @@ export const notificationTools: MCPToolSet = {
         // Send Slack alert if configured
         if (notificationConfig.slack && notificationConfig.slackWebhook) {
           try {
-            await notificationTools.send_slack.execute({
+            await notificationTools.send_notification_slack.execute({
               webhook_url: notificationConfig.slackWebhook,
               title: '⚠️ Workflow Failed',
               message: `*${workflow.name}* failed to execute`,
@@ -562,10 +562,10 @@ export const notificationTools: MCPToolSet = {
   },
 
   // --------------------------------------------------------------------------
-  // workway_configure_error_alerts
+  // workway_configure_global_alerts
   // --------------------------------------------------------------------------
-  configure_error_alerts: {
-    name: 'workway_configure_error_alerts',
+  configure_global_alerts: {
+    name: 'workway_configure_global_alerts',
     description: 'Configure global error alerting for workflow failures. Alerts go to admins when any workflow fails.',
     inputSchema: z.object({
       admin_email: z.string().email().optional().describe('Admin email for error alerts'),
@@ -578,7 +578,7 @@ export const notificationTools: MCPToolSet = {
     outputSchema: z.object({
       configured: z.boolean(),
     }),
-    execute: async (input: z.infer<typeof notificationTools.configure_error_alerts.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof notificationTools.configure_global_alerts.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         const config = {
           adminEmail: input.admin_email,

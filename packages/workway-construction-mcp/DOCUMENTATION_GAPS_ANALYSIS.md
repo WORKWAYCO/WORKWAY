@@ -42,7 +42,7 @@ This document identifies critical documentation gaps in the WORKWAY Construction
 **Current State:**
 - Error messages exist in code but not documented
 - No error code taxonomy
-- `workway_diagnose` tool exists but no guide on when/how to use it
+- `workway_diagnose_workflow` tool exists but no guide on when/how to use it
 - No common error scenarios documented
 
 **Impact:** Users hit errors without understanding how to resolve them

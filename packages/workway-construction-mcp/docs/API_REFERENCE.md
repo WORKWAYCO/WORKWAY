@@ -8,6 +8,7 @@ Complete reference for all MCP tools with examples and parameter documentation.
 - [Procore Integration Tools](#procore-integration-tools)
 - [Debugging & Observability Tools](#debugging--observability-tools)
 - [Common Patterns](#common-patterns)
+- [Observability API](#observability-api)
 
 ---
 
@@ -39,7 +40,7 @@ Create a new construction workflow. This is the first step in building any autom
   "workflow_id": "550e8400-e29b-41d4-a716-446655440000",
   "status": "draft",
   "webhook_url": "https://workway-construction-mcp.workers.dev/webhooks/550e8400-e29b-41d4-a716-446655440000",
-  "next_step": "Call workway_configure_trigger to set up the webhook source and events"
+  "next_step": "Call workway_configure_workflow_trigger to set up the webhook source and events"
 }
 ```
 
@@ -57,7 +58,7 @@ curl -X POST https://workway-construction-mcp.workers.dev/mcp/tools/workway_crea
 
 ---
 
-### `workway_configure_trigger`
+### `workway_configure_workflow_trigger`
 
 Configure the trigger for a workflow. For webhooks, specify the source and event types. For cron, specify the schedule.
 
@@ -94,13 +95,13 @@ Configure the trigger for a workflow. For webhooks, specify the source and event
     "event_types": ["rfi.created"],
     "webhook_url": "https://workway-construction-mcp.workers.dev/webhooks/550e8400-e29b-41d4-a716-446655440000"
   },
-  "next_step": "Call workway_add_action to add workflow steps"
+  "next_step": "Call workway_add_workflow_action to add workflow steps"
 }
 ```
 
 ---
 
-### `workway_add_action`
+### `workway_add_workflow_action`
 
 Add an action step to the workflow. Actions execute in sequence.
 
@@ -142,13 +143,13 @@ Add an action step to the workflow. Actions execute in sequence.
   "success": true,
   "action_id": "660e8400-e29b-41d4-a716-446655440001",
   "sequence": 1,
-  "next_step": "Add more actions with workway_add_action, or call workway_deploy to activate the workflow"
+  "next_step": "Add more actions with workway_add_workflow_action, or call workway_deploy_workflow to activate the workflow"
 }
 ```
 
 ---
 
-### `workway_deploy`
+### `workway_deploy_workflow`
 
 Deploy the workflow to production. Validates configuration before deploying.
 
@@ -189,7 +190,7 @@ Deploy the workflow to production. Validates configuration before deploying.
 
 ---
 
-### `workway_test`
+### `workway_test_workflow`
 
 Send a test event through the workflow and verify end-to-end execution.
 
@@ -266,7 +267,7 @@ List all workflows for this account. Filter by status if needed.
 
 ---
 
-### `workway_rollback`
+### `workway_rollback_workflow`
 
 Rollback to a previous working version of the workflow, or pause the workflow if having issues.
 
@@ -522,7 +523,7 @@ Get submittals from a Procore project.
 
 ## Debugging & Observability Tools
 
-### `workway_diagnose`
+### `workway_diagnose_workflow`
 
 Diagnose why a workflow isn't working.
 
@@ -583,7 +584,7 @@ Diagnose why a workflow isn't working.
 
 ---
 
-### `workway_get_unstuck`
+### `workway_get_workflow_guidance`
 
 Get guidance when you don't know how to proceed with workflow configuration.
 
@@ -620,7 +621,7 @@ Get guidance when you don't know how to proceed with workflow configuration.
     },
     {
       "step": 2,
-      "tool": "workway_configure_trigger",
+      "tool": "workway_configure_workflow_trigger",
       "params": {
         "source": "procore",
         "event_types": ["rfi.created"]
@@ -640,7 +641,7 @@ Get guidance when you don't know how to proceed with workflow configuration.
 
 ---
 
-### `workway_observe_execution`
+### `workway_observe_workflow_execution`
 
 Get detailed observability data for a workflow execution.
 
@@ -713,7 +714,7 @@ Get detailed observability data for a workflow execution.
 
 // 2. Configure trigger
 {
-  "tool": "workway_configure_trigger",
+  "tool": "workway_configure_workflow_trigger",
   "params": {
     "workflow_id": "<workflow_id>",
     "source": "procore",
@@ -723,7 +724,7 @@ Get detailed observability data for a workflow execution.
 
 // 3. Add AI search action
 {
-  "tool": "workway_add_action",
+  "tool": "workway_add_workflow_action",
   "params": {
     "workflow_id": "<workflow_id>",
     "action_type": "ai.search_similar_rfis",
@@ -736,7 +737,7 @@ Get detailed observability data for a workflow execution.
 
 // 4. Add AI generation action
 {
-  "tool": "workway_add_action",
+  "tool": "workway_add_workflow_action",
   "params": {
     "workflow_id": "<workflow_id>",
     "action_type": "ai.generate_rfi_response",
@@ -749,13 +750,278 @@ Get detailed observability data for a workflow execution.
 
 // 5. Deploy
 {
-  "tool": "workway_deploy",
+  "tool": "workway_deploy_workflow",
   "params": {
     "workflow_id": "<workflow_id>",
     "dry_run": false
   }
 }
 ```
+
+---
+
+## Observability API
+
+The observability API provides endpoints for monitoring agent health, metrics, and audit logs. These endpoints are protected by admin API key authentication.
+
+**Authentication:**
+All observability endpoints require a valid API key in the Authorization header:
+```
+Authorization: Bearer <OBSERVABILITY_API_KEY>
+```
+
+---
+
+### `GET /observability/health`
+
+System health check that verifies connectivity to all dependencies.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "checks": {
+    "database": { "status": "healthy", "latencyMs": 5 },
+    "procore": { "status": "healthy", "connections": 3 },
+    "aiGateway": { "status": "healthy" }
+  },
+  "timestamp": "2026-02-04T10:00:00Z"
+}
+```
+
+**Status Codes:**
+- `200 OK` - All systems healthy
+- `503 Service Unavailable` - One or more systems degraded
+
+---
+
+### `GET /observability/metrics/tools`
+
+Tool execution metrics including success rates and error breakdown.
+
+**Query Parameters:**
+- `range` (string, optional, default: `"1h"`) - Time range: `5m`, `15m`, `1h`, `6h`, `24h`, `7d`, `30d`
+- `tenant` (string, optional) - Filter by tenant/connection ID
+
+**Response:**
+```json
+{
+  "timeRange": "1h",
+  "metrics": {
+    "totalCalls": 150,
+    "successRate": 95.3,
+    "errorRate": 4.7,
+    "byTool": [
+      {
+        "name": "workway_list_procore_projects",
+        "calls": 45,
+        "successRate": 100,
+        "errorCount": 0,
+        "rateLimitedCount": 0
+      },
+      {
+        "name": "workway_get_procore_rfis",
+        "calls": 38,
+        "successRate": 92.1,
+        "errorCount": 3,
+        "rateLimitedCount": 0
+      }
+    ]
+  }
+}
+```
+
+---
+
+### `GET /observability/metrics/latency`
+
+Latency percentiles (p50, p95, p99) for tool executions.
+
+**Query Parameters:**
+- `range` (string, optional, default: `"1h"`) - Time range
+- `tool` (string, optional) - Filter by specific tool name
+
+**Response:**
+```json
+{
+  "timeRange": "1h",
+  "percentiles": {
+    "p50": 120,
+    "p95": 450,
+    "p99": 890
+  },
+  "byTool": [
+    {
+      "name": "workway_skill_draft_rfi",
+      "p50": 1200,
+      "p95": 2500,
+      "p99": 3800,
+      "avgLatency": 1450,
+      "maxLatency": 4200,
+      "sampleCount": 25
+    }
+  ]
+}
+```
+
+---
+
+### `GET /observability/metrics/ai`
+
+AI/Token usage metrics including cost attribution by model and tenant.
+
+**Query Parameters:**
+- `range` (string, optional, default: `"24h"`) - Time range
+- `tenant` (string, optional) - Filter by tenant/connection ID
+
+**Response:**
+```json
+{
+  "timeRange": "24h",
+  "usage": {
+    "totalTokens": 125000,
+    "promptTokens": 75000,
+    "completionTokens": 50000,
+    "totalCostUsd": 0.125,
+    "avgTokensPerRequest": 500,
+    "byModel": [
+      {
+        "model": "llama-3.1-8b-instant",
+        "tokens": 100000,
+        "promptTokens": 60000,
+        "completionTokens": 40000,
+        "cost": 0.10,
+        "requestCount": 200
+      }
+    ],
+    "byTenant": [
+      {
+        "tenantId": "ww_tenant_123",
+        "tokens": 50000,
+        "cost": 0.05,
+        "requestCount": 100
+      }
+    ]
+  }
+}
+```
+
+---
+
+### `GET /observability/metrics/errors`
+
+Error breakdown by tool and error type.
+
+**Query Parameters:**
+- `range` (string, optional, default: `"1h"`) - Time range
+
+**Response:**
+```json
+{
+  "timeRange": "1h",
+  "errors": {
+    "totalErrors": 12,
+    "rateLimitCount": 2,
+    "byTool": [
+      {
+        "name": "workway_get_procore_rfis",
+        "errors": 5,
+        "errorCodes": [
+          { "code": "PROCORE_AUTH_EXPIRED", "count": 3 },
+          { "code": "PROCORE_NOT_FOUND", "count": 2 }
+        ]
+      }
+    ],
+    "byErrorType": [
+      { "type": "PROCORE_AUTH_EXPIRED", "count": 3 },
+      { "type": "PROCORE_RATE_LIMITED", "count": 2 }
+    ]
+  }
+}
+```
+
+---
+
+### `GET /observability/audit-logs`
+
+Query audit logs with optional filters.
+
+**Query Parameters:**
+- `limit` (number, optional, default: `100`) - Max logs to return
+- `offset` (number, optional, default: `0`) - Pagination offset
+- `event_type` (string, optional) - Filter by event type: `tool_execution`, `oauth_callback`, `data_access`, etc.
+- `user_id` (string, optional) - Filter by user ID
+- `tool_name` (string, optional) - Filter by tool name
+
+**Response:**
+```json
+{
+  "logs": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "eventType": "tool_execution",
+      "userId": "ww_user_123",
+      "connectionId": "ww_conn_456",
+      "toolName": "workway_list_procore_projects",
+      "resourceType": "project",
+      "responseStatus": 200,
+      "durationMs": 145,
+      "createdAt": "2026-02-04T10:00:00Z"
+    }
+  ],
+  "pagination": {
+    "limit": 100,
+    "offset": 0,
+    "total": 1250,
+    "hasMore": true
+  }
+}
+```
+
+---
+
+### `GET /observability/status`
+
+Real-time status endpoint for dashboard polling.
+
+**Response:**
+```json
+{
+  "timestamp": "2026-02-04T10:00:00Z",
+  "status": "healthy",
+  "recentErrors": {
+    "count": 3,
+    "errors": [
+      {
+        "toolName": "workway_get_procore_rfis",
+        "errorCode": "PROCORE_AUTH_EXPIRED",
+        "lastOccurrence": "2026-02-04T09:55:00Z",
+        "count": 2
+      }
+    ]
+  },
+  "activeWorkflows": {
+    "count": 5,
+    "workflows": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "name": "RFI Auto-Response",
+        "status": "active",
+        "lastExecution": "2026-02-04T09:30:00Z"
+      }
+    ]
+  },
+  "rateLimitStatus": {
+    "isLimited": false,
+    "remaining": 3450
+  }
+}
+```
+
+**Status Values:**
+- `healthy` - All systems normal, less than 10 errors in the last hour
+- `warning` - Elevated error rate (10-50 errors in the last hour)
+- `critical` - High error rate (50+ errors in the last hour)
 
 ---
 

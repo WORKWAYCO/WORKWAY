@@ -3,12 +3,12 @@
  * 
  * Tests for workflow lifecycle tools:
  * - workway_create_workflow
- * - workway_configure_trigger
- * - workway_add_action
- * - workway_deploy
- * - workway_test
+ * - workway_configure_workflow_trigger
+ * - workway_add_workflow_action
+ * - workway_deploy_workflow
+ * - workway_test_workflow
  * - workway_list_workflows
- * - workway_rollback
+ * - workway_rollback_workflow
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -81,18 +81,18 @@ describe('workflowTools', () => {
         trigger_type: 'webhook' as const,
       };
       const webhookResult = await workflowTools.create_workflow.execute(webhookInput, env);
-      expect(webhookResult.data?.nextStep).toContain('configure_trigger');
+      expect(webhookResult.data?.nextStep).toContain('configure_workflow_trigger');
 
       const cronInput = {
         name: 'Cron Workflow',
         trigger_type: 'cron' as const,
       };
       const cronResult = await workflowTools.create_workflow.execute(cronInput, env);
-      expect(cronResult.data?.nextStep).toContain('add_action');
+      expect(cronResult.data?.nextStep).toContain('add_workflow_action');
     });
   });
 
-  describe('configure_trigger', () => {
+  describe('configure_workflow_trigger', () => {
     beforeEach(() => {
       // Setup: Create a workflow first
       mockDB.prepare = vi.fn((sql: string) => {
@@ -122,7 +122,7 @@ describe('workflowTools', () => {
         event_types: ['rfi.created', 'rfi.answered'],
       };
 
-      const result = await workflowTools.configure_trigger.execute(input, env);
+      const result = await workflowTools.configure_workflow_trigger.execute(input, env);
 
       expect(result.success).toBe(true);
       expect(result.data?.triggerConfig).toMatchObject({
@@ -139,7 +139,7 @@ describe('workflowTools', () => {
         timezone: 'America/Chicago',
       };
 
-      const result = await workflowTools.configure_trigger.execute(input, env);
+      const result = await workflowTools.configure_workflow_trigger.execute(input, env);
 
       expect(result.success).toBe(true);
       expect(result.data?.triggerConfig).toMatchObject({
@@ -153,19 +153,19 @@ describe('workflowTools', () => {
         workflow_id: 'workflow-123',
         source: 'procore' as const,
       };
-      const webhookResult = await workflowTools.configure_trigger.execute(webhookInput, env);
+      const webhookResult = await workflowTools.configure_workflow_trigger.execute(webhookInput, env);
       expect(webhookResult.success).toBe(true);
 
       const cronInput = {
         workflow_id: 'workflow-123',
         cron_schedule: '0 9 * * *',
       };
-      const cronResult = await workflowTools.configure_trigger.execute(cronInput, env);
+      const cronResult = await workflowTools.configure_workflow_trigger.execute(cronInput, env);
       expect(cronResult.success).toBe(true);
     });
   });
 
-  describe('add_action', () => {
+  describe('add_workflow_action', () => {
     beforeEach(() => {
       mockDB.prepare = vi.fn((sql: string) => {
         if (sql.includes('COUNT(*)')) {
@@ -200,12 +200,12 @@ describe('workflowTools', () => {
         },
       };
 
-      const result = await workflowTools.add_action.execute(input, env);
+      const result = await workflowTools.add_workflow_action.execute(input, env);
 
       expect(result.success).toBe(true);
       expect(result.data?.actionId).toBeDefined();
       expect(result.data?.sequence).toBe(3); // Existing 2 + 1
-      expect(result.data?.nextStep).toContain('add_action');
+      expect(result.data?.nextStep).toContain('add_workflow_action');
     });
 
     it('should add action with condition', async () => {
@@ -216,14 +216,14 @@ describe('workflowTools', () => {
         condition: "{{trigger.rfi.status}} == 'urgent'",
       };
 
-      const result = await workflowTools.add_action.execute(input, env);
+      const result = await workflowTools.add_workflow_action.execute(input, env);
 
       expect(result.success).toBe(true);
       expect(result.data?.actionId).toBeDefined();
     });
   });
 
-  describe('deploy', () => {
+  describe('deploy_workflow', () => {
     beforeEach(() => {
       mockDB.prepare = vi.fn((sql: string) => {
         if (sql.includes('SELECT * FROM workflows')) {
@@ -275,7 +275,7 @@ describe('workflowTools', () => {
         dry_run: false,
       };
 
-      const result = await workflowTools.deploy.execute(input, env);
+      const result = await workflowTools.deploy_workflow.execute(input, env);
 
       expect(result.success).toBe(true);
       expect(result.data?.status).toBe('deployed');
@@ -289,7 +289,7 @@ describe('workflowTools', () => {
         dry_run: true,
       };
 
-      const result = await workflowTools.deploy.execute(input, env);
+      const result = await workflowTools.deploy_workflow.execute(input, env);
 
       expect(result.success).toBe(true);
       expect(result.data?.status).toBe('validated');
@@ -322,7 +322,7 @@ describe('workflowTools', () => {
         dry_run: true,
       };
 
-      const result = await workflowTools.deploy.execute(input, env);
+      const result = await workflowTools.deploy_workflow.execute(input, env);
 
       expect(result.success).toBe(false);
       expect(result.data?.validationErrors).toContain('Workflow must have at least one action');
@@ -362,7 +362,7 @@ describe('workflowTools', () => {
         dry_run: true,
       };
 
-      const result = await workflowTools.deploy.execute(input, env);
+      const result = await workflowTools.deploy_workflow.execute(input, env);
 
       expect(result.success).toBe(false);
       expect(result.data?.validationErrors).toContain('Webhook trigger requires source and event_types configuration');
@@ -380,14 +380,14 @@ describe('workflowTools', () => {
         dry_run: false,
       };
 
-      const result = await workflowTools.deploy.execute(input, env);
+      const result = await workflowTools.deploy_workflow.execute(input, env);
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('not found');
     });
   });
 
-  describe('test', () => {
+  describe('test_workflow', () => {
     beforeEach(() => {
       mockDB.prepare = vi.fn((sql: string) => {
         if (sql.includes('SELECT * FROM workflows')) {
@@ -436,7 +436,7 @@ describe('workflowTools', () => {
         },
       };
 
-      const result = await workflowTools.test.execute(input, env);
+      const result = await workflowTools.test_workflow.execute(input, env);
 
       expect(result.success).toBe(true);
       expect(result.data?.executionId).toBeDefined();
@@ -447,7 +447,7 @@ describe('workflowTools', () => {
 
     it('should handle action failures', async () => {
       // Mock action execution failure
-      const result = await workflowTools.test.execute(
+      const result = await workflowTools.test_workflow.execute(
         {
           workflow_id: 'workflow-123',
         },
@@ -526,7 +526,7 @@ describe('workflowTools', () => {
     });
   });
 
-  describe('rollback', () => {
+  describe('rollback_workflow', () => {
     beforeEach(() => {
       mockDB.prepare = vi.fn((sql: string) => {
         if (sql.includes('UPDATE workflows')) {
@@ -550,7 +550,7 @@ describe('workflowTools', () => {
         action: 'pause' as const,
       };
 
-      const result = await workflowTools.rollback.execute(input, env);
+      const result = await workflowTools.rollback_workflow.execute(input, env);
 
       expect(result.success).toBe(true);
       expect(result.data?.newStatus).toBe('paused');
@@ -563,7 +563,7 @@ describe('workflowTools', () => {
         action: 'rollback' as const,
       };
 
-      const result = await workflowTools.rollback.execute(input, env);
+      const result = await workflowTools.rollback_workflow.execute(input, env);
 
       expect(result.success).toBe(true);
       expect(result.data?.newStatus).toBe('draft');

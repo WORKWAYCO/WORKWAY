@@ -5,10 +5,16 @@
  * project management platform.
  * 
  * Procore API Documentation: https://developers.procore.com/
+ * 
+ * Security Features:
+ * - Rate limiting: 3600 requests/minute via Durable Object
+ * - Audit logging: All tool executions logged for compliance
+ * - Token encryption: OAuth tokens encrypted at rest
  */
 
 import { z } from 'zod';
-import type { Env, ProcoreProject, ProcoreRFI, ProcoreDailyLog, ProcoreSubmittal, ToolResult, MCPToolSet } from '../types';
+import type { Env, ProcoreProject, ProcoreRFI, ProcoreDailyLog, ProcoreSubmittal, MCPToolSet } from '../types';
+import type { StandardResponse } from '../lib/errors';
 import { decrypt, encrypt } from '../lib/crypto';
 import { 
   OAUTH_CALLBACK_URL, 
@@ -18,6 +24,28 @@ import {
   type ProcoreEnvironment,
 } from '../lib/config';
 import { generateCodeVerifier, generateCodeChallenge, generateSecureToken } from '../lib/crypto';
+import { RateLimiterClient } from '../durable-objects/rate-limiter';
+import { 
+  logToolExecution, 
+  logTokenRefresh, 
+  logRateLimitExceeded,
+  logOAuthInitiate,
+  type ResourceType,
+} from '../lib/audit-logger';
+import {
+  ErrorCode,
+  ProcoreError,
+  AuthError,
+  success,
+  WorkwayError,
+} from '../lib/errors';
+import { handleError } from '../middleware/error-handler';
+import {
+  buildPaginationResult,
+  getPaginationParams,
+  buildProcorePaginationParams,
+  type PaginationResult,
+} from '../lib/pagination';
 
 // ============================================================================
 // Procore API Client Helper
@@ -29,13 +57,39 @@ async function procoreRequest<T>(
   options: RequestInit = {},
   userId: string = 'default'
 ): Promise<T> {
+  // Check rate limit before making request
+  const rateLimiter = new RateLimiterClient(env, userId);
+  const rateLimitResult = await rateLimiter.consume();
+  
+  if (!rateLimitResult.allowed) {
+    // Log rate limit exceeded
+    await logRateLimitExceeded(env, {
+      userId,
+      connectionId: userId,
+      retryAfter: rateLimitResult.retryAfter || 1,
+      remaining: rateLimitResult.remaining,
+    });
+    throw new ProcoreError(
+      ErrorCode.PROCORE_RATE_LIMITED,
+      `Procore rate limit exceeded. Retry after ${rateLimitResult.retryAfter} seconds.`,
+      {
+        retryAfter: rateLimitResult.retryAfter || 1,
+        details: { remaining: rateLimitResult.remaining },
+      }
+    );
+  }
+
   // Get OAuth token for specific user
   const token = await env.DB.prepare(`
     SELECT * FROM oauth_tokens WHERE provider = 'procore' AND user_id = ? LIMIT 1
   `).bind(userId).first<any>();
 
   if (!token) {
-    throw new Error('Not connected to Procore. Use workway_connect_procore first.');
+    throw new ProcoreError(
+      ErrorCode.PROCORE_NOT_CONNECTED,
+      'Procore not connected. Use "Connect my Procore account" to authorize.',
+      { details: { userId, tool: 'procoreRequest' } }
+    );
   }
 
   // Get the correct API base for this user's environment
@@ -52,7 +106,11 @@ async function procoreRequest<T>(
       const refreshedToken = await refreshProcoreToken(env, token, userId, procoreEnv);
       token.access_token = refreshedToken.access_token;
     } else if (needsRefresh) {
-      throw new Error('Procore token expired. Please reconnect.');
+      throw new AuthError(
+        ErrorCode.AUTH_EXPIRED,
+        'Procore token expired. Please reconnect using workway_connect_procore.',
+        { details: { userId } }
+      );
     }
   }
 
@@ -70,23 +128,49 @@ async function procoreRequest<T>(
   });
 
   if (!response.ok) {
-    const error = await response.text();
+    const errorText = await response.text();
     
     if (response.status === 401) {
-      throw new Error('Procore authentication failed. Please reconnect.');
+      throw new ProcoreError(
+        ErrorCode.PROCORE_AUTH_FAILED,
+        'Procore authentication failed. Please reconnect using workway_connect_procore.',
+        { details: { userId, httpStatus: 401 } }
+      );
     }
     if (response.status === 403) {
-      throw new Error(`Access denied (403): ${error}`);
+      throw new ProcoreError(
+        ErrorCode.PROCORE_FORBIDDEN,
+        'Access denied. Check your Procore permissions for this resource.',
+        { details: { userId, httpStatus: 403, path, response: errorText } }
+      );
+    }
+    if (response.status === 404) {
+      throw new ProcoreError(
+        ErrorCode.PROCORE_NOT_FOUND,
+        'Resource not found in Procore.',
+        { details: { userId, httpStatus: 404, path } }
+      );
     }
     if (response.status === 429) {
-      throw new Error('Rate limit exceeded. Please try again later.');
+      // Procore's own rate limit (shouldn't happen if our limiter is working)
+      throw new ProcoreError(
+        ErrorCode.PROCORE_RATE_LIMITED,
+        'Procore rate limit exceeded. Please try again later.',
+        { retryAfter: 60, details: { httpStatus: 429 } }
+      );
     }
     
-    throw new Error(`Procore API error: ${response.status} - ${error}`);
+    throw new ProcoreError(
+      ErrorCode.PROCORE_API_ERROR,
+      `Procore API error (${response.status}): ${errorText}`,
+      { details: { httpStatus: response.status, path, response: errorText } }
+    );
   }
 
   return response.json();
 }
+
+// ProcoreRateLimitError class removed - use ProcoreError from lib/errors.ts instead
 
 /**
  * Refresh an expired Procore token
@@ -121,7 +205,19 @@ async function refreshProcoreToken(
   });
 
   if (!response.ok) {
-    throw new Error('Token refresh failed. Please reconnect.');
+    // Log failed token refresh
+    await logTokenRefresh(env, {
+      userId,
+      connectionId: userId,
+      success: false,
+      provider: 'procore',
+      errorMessage: 'Token refresh failed',
+    });
+    throw new AuthError(
+      ErrorCode.AUTH_REFRESH_FAILED,
+      'Procore token refresh failed. Please reconnect using workway_connect_procore.',
+      { details: { userId, httpStatus: response.status } }
+    );
   }
 
   const newTokenData = await response.json() as any;
@@ -148,6 +244,14 @@ async function refreshProcoreToken(
     new Date().toISOString(),
     token.id
   ).run();
+
+  // Log successful token refresh
+  await logTokenRefresh(env, {
+    userId,
+    connectionId: userId,
+    success: true,
+    provider: 'procore',
+  });
 
   return { access_token: encryptedAccessToken };
 }
@@ -184,7 +288,8 @@ export const procoreTools: MCPToolSet = {
       status: z.enum(['pending', 'connected', 'expired']),
       environment: z.string(),
     }),
-    execute: async (input: z.infer<typeof procoreTools.connect_procore.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.connect_procore.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
+      const startTime = Date.now();
       const procoreEnv = input.environment || 'production';
       const urls = getProcoreUrls(procoreEnv);
       
@@ -197,10 +302,19 @@ export const procoreTools: MCPToolSet = {
         : env.PROCORE_CLIENT_ID;
       
       if (procoreEnv === 'sandbox' && !env.PROCORE_SANDBOX_CLIENT_ID) {
-        return {
+        await logToolExecution(env, {
+          toolName: 'workway_connect_procore',
+          userId: connectionId,
+          connectionId,
           success: false,
-          error: 'Sandbox credentials not configured. Set PROCORE_SANDBOX_CLIENT_ID and PROCORE_SANDBOX_CLIENT_SECRET.',
-        };
+          durationMs: Date.now() - startTime,
+          errorMessage: 'Sandbox credentials not configured',
+        });
+        return new ProcoreError(
+          ErrorCode.PROCORE_SANDBOX_NOT_CONFIGURED,
+          'Sandbox credentials not configured. Set PROCORE_SANDBOX_CLIENT_ID and PROCORE_SANDBOX_CLIENT_SECRET.',
+          { details: { environment: procoreEnv } }
+        ).toResponse();
       }
       
       // Generate secure state token
@@ -222,16 +336,21 @@ export const procoreTools: MCPToolSet = {
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('state', state);
       
-      return {
-        success: true,
-        data: {
-          authorizationUrl: authUrl.toString(),
-          connection_id: connectionId,
-          instructions: `⚠️ SAVE THIS: Your connection ID is "${connectionId}". You'll need this for all Procore tools.\n\nVisit the authorization URL to connect your Procore ${procoreEnv} account.`,
-          status: 'pending',
-          environment: procoreEnv,
-        },
-      };
+      // Log OAuth initiation
+      await logOAuthInitiate(env, {
+        userId: connectionId,
+        connectionId,
+        provider: 'procore',
+        environment: procoreEnv,
+      });
+      
+      return success({
+        authorizationUrl: authUrl.toString(),
+        connection_id: connectionId,
+        instructions: `⚠️ SAVE THIS: Your connection ID is "${connectionId}". You'll need this for all Procore tools.\n\nVisit the authorization URL to connect your Procore ${procoreEnv} account.`,
+        status: 'pending',
+        environment: procoreEnv,
+      });
     },
   },
 
@@ -258,7 +377,7 @@ export const procoreTools: MCPToolSet = {
         name: z.string(),
       }).optional(),
     }),
-    execute: async (input: z.infer<typeof procoreTools.check_procore_connection.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.check_procore_connection.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       const userId = input.connection_id || 'default';
       
       const token = await env.DB.prepare(`
@@ -266,14 +385,11 @@ export const procoreTools: MCPToolSet = {
       `).bind(userId).first<any>();
 
       if (!token) {
-        return {
-          success: true,
-          data: {
-            connected: false,
-            userId,
-            message: 'Not connected. Use workway_connect_procore to authenticate.',
-          },
-        };
+        return success({
+          connected: false,
+          userId,
+          message: 'Not connected. Use workway_connect_procore to authenticate.',
+        });
       }
 
       const isExpired = token.expires_at && new Date(token.expires_at) < new Date();
@@ -288,23 +404,20 @@ export const procoreTools: MCPToolSet = {
         // Ignore - just means we can't get user info
       }
 
-      return {
-        success: true,
-        data: {
-          connected: !isExpired,
-          tokenExpiresAt: token.expires_at,
-          needsRefresh: needsRefresh && !isExpired,
-          scopes: token.scopes ? JSON.parse(token.scopes) : [],
-          companyId: token.company_id,
-          lastUsed: token.updated_at,
-          userId,
-          procoreUser: procoreUser ? {
-            id: procoreUser.id,
-            login: procoreUser.login,
-            name: procoreUser.name,
-          } : null,
-        },
-      };
+      return success({
+        connected: !isExpired,
+        tokenExpiresAt: token.expires_at,
+        needsRefresh: needsRefresh && !isExpired,
+        scopes: token.scopes ? JSON.parse(token.scopes) : [],
+        companyId: token.company_id,
+        lastUsed: token.updated_at,
+        userId,
+        procoreUser: procoreUser ? {
+          id: procoreUser.id,
+          login: procoreUser.login,
+          name: procoreUser.name,
+        } : null,
+      });
     },
   },
 
@@ -313,10 +426,14 @@ export const procoreTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   list_procore_companies: {
     name: 'workway_list_procore_companies',
-    description: 'List all companies the user has access to in Procore. Use this to find company IDs.',
+    description: 'List all companies the user has access to in Procore. Use this to find company IDs. Supports pagination.',
     inputSchema: z.object({
       connection_id: z.string().optional()
         .describe('Your WORKWAY connection ID from workway_connect_procore'),
+      limit: z.number().min(1).max(100).default(50).optional()
+        .describe('Maximum number of companies to return (1-100, default 50)'),
+      offset: z.number().min(0).default(0).optional()
+        .describe('Number of companies to skip (default 0)'),
     }),
     outputSchema: z.object({
       companies: z.array(z.object({
@@ -324,11 +441,20 @@ export const procoreTools: MCPToolSet = {
         name: z.string(),
         is_active: z.boolean(),
       })),
-      total: z.number(),
+      pagination: z.object({
+        limit: z.number(),
+        offset: z.number(),
+        total: z.number(),
+        hasMore: z.boolean(),
+      }),
     }),
-    execute: async (input: z.infer<typeof procoreTools.list_procore_companies.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.list_procore_companies.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
         const userId = input.connection_id || 'default';
+        
+        // Build pagination params
+        const pagination = getPaginationParams({ limit: input.limit ?? 50, offset: input.offset });
+        const page = Math.floor(pagination.offset / pagination.limit) + 1;
         
         // Companies endpoint doesn't require company ID header
         const token = await env.DB.prepare(`
@@ -337,14 +463,18 @@ export const procoreTools: MCPToolSet = {
         `).bind(userId).first<any>();
         
         if (!token) {
-          throw new Error('Not connected to Procore. Use workway_connect_procore first.');
+          throw new ProcoreError(
+            ErrorCode.PROCORE_NOT_CONNECTED,
+            'Procore not connected. Use "Connect my Procore account" to authorize.',
+            { details: { userId, tool: 'workway_list_procore_companies' } }
+          );
         }
         
         const accessToken = await decrypt(token.access_token, env.COOKIE_ENCRYPTION_KEY);
         const procoreEnv = (token.environment || 'production') as ProcoreEnvironment;
         const urls = getProcoreUrls(procoreEnv);
         
-        const response = await fetch(`${urls.apiBase}/companies`, {
+        const response = await fetch(`${urls.apiBase}/companies?per_page=${pagination.limit}&page=${page}`, {
           headers: {
             'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
@@ -352,28 +482,37 @@ export const procoreTools: MCPToolSet = {
         });
         
         if (!response.ok) {
-          const error = await response.text();
-          throw new Error(`Procore API error: ${response.status} - ${error}`);
+          const errorText = await response.text();
+          throw new ProcoreError(
+            ErrorCode.PROCORE_API_ERROR,
+            `Procore API error (${response.status}): ${errorText}`,
+            { details: { httpStatus: response.status, path: '/companies' } }
+          );
         }
         
         const companies = await response.json() as any[];
 
-        return {
-          success: true,
-          data: {
-            companies: companies.map((c: any) => ({
-              id: c.id,
-              name: c.name,
-              is_active: c.is_active,
-            })),
-            total: companies.length,
+        // Estimate total and hasMore based on results
+        const hasMore = companies.length === pagination.limit;
+        const estimatedTotal = hasMore 
+          ? pagination.offset + pagination.limit + 1
+          : pagination.offset + companies.length;
+
+        return success({
+          companies: companies.map((c: any) => ({
+            id: c.id,
+            name: c.name,
+            is_active: c.is_active,
+          })),
+          pagination: {
+            limit: pagination.limit,
+            offset: pagination.offset,
+            total: estimatedTotal,
+            hasMore,
           },
-        };
+        });
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to list companies',
-        };
+        return handleError(error);
       }
     },
   },
@@ -383,7 +522,7 @@ export const procoreTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   list_procore_projects: {
     name: 'workway_list_procore_projects',
-    description: 'List all projects the user has access to in Procore. Use this to find project IDs for workflow configuration.',
+    description: 'List all projects the user has access to in Procore. Use this to find project IDs for workflow configuration. Supports pagination.',
     inputSchema: z.object({
       company_id: z.string().optional()
         .describe('Filter by Procore company ID'),
@@ -391,6 +530,10 @@ export const procoreTools: MCPToolSet = {
         .describe('Only return active projects'),
       connection_id: z.string().optional()
         .describe('Your WORKWAY connection ID from workway_connect_procore'),
+      limit: z.number().min(1).max(100).default(50).optional()
+        .describe('Maximum number of projects to return (1-100, default 50)'),
+      offset: z.number().min(0).default(0).optional()
+        .describe('Number of projects to skip (default 0)'),
     }),
     outputSchema: z.object({
       projects: z.array(z.object({
@@ -403,9 +546,14 @@ export const procoreTools: MCPToolSet = {
         state_code: z.string().optional(),
         active: z.boolean(),
       })),
-      total: z.number(),
+      pagination: z.object({
+        limit: z.number(),
+        offset: z.number(),
+        total: z.number(),
+        hasMore: z.boolean(),
+      }),
     }),
-    execute: async (input: z.infer<typeof procoreTools.list_procore_projects.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.list_procore_projects.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
         // Get company ID from token
         const userId = input.connection_id || 'default';
@@ -414,14 +562,25 @@ export const procoreTools: MCPToolSet = {
         `).bind(userId).first<any>();
         
         if (!token?.company_id) {
-          throw new Error('Company ID not set. Please reconnect to Procore.');
+          throw new ProcoreError(
+            ErrorCode.PROCORE_COMPANY_NOT_SET,
+            'Company ID not set. Please reconnect to Procore and select a company.',
+            { details: { userId, tool: 'workway_list_procore_projects' } }
+          );
         }
+        
+        // Build pagination params for Procore API
+        const pagination = getPaginationParams(input);
+        const paginationParams = buildProcorePaginationParams(input);
         
         // Try company-specific endpoint first, fall back to query params
         let projects: ProcoreProject[];
         try {
           // Method 1: Company-scoped endpoint
-          const queryParams = input.active_only ? '?filters[active]=true' : '';
+          let queryParams = `?${paginationParams}`;
+          if (input.active_only) {
+            queryParams += '&filters[active]=true';
+          }
           projects = await procoreRequest<ProcoreProject[]>(
             env,
             `/companies/${token.company_id}/projects${queryParams}`,
@@ -432,6 +591,10 @@ export const procoreTools: MCPToolSet = {
           // Method 2: Query param approach
           const queryParams = new URLSearchParams();
           queryParams.set('company_id', token.company_id);
+          // Add pagination
+          const { page, per_page } = { page: Math.floor(pagination.offset / pagination.limit) + 1, per_page: pagination.limit };
+          queryParams.set('page', page.toString());
+          queryParams.set('per_page', per_page.toString());
           if (input.active_only) {
             queryParams.set('filters[active]', 'true');
           }
@@ -442,28 +605,34 @@ export const procoreTools: MCPToolSet = {
             userId
           );
         }
+        
+        // Note: Procore doesn't return total count in response, so we estimate based on results
+        // If we got a full page, there's likely more
+        const hasMore = projects.length === pagination.limit;
+        const estimatedTotal = hasMore 
+          ? pagination.offset + pagination.limit + 1  // At least one more
+          : pagination.offset + projects.length;
 
-        return {
-          success: true,
-          data: {
-            projects: projects.map(p => ({
-              id: p.id,
-              name: p.name,
-              displayName: p.displayName,
-              projectNumber: p.projectNumber,
-              address: p.address,
-              city: p.city,
-              stateCode: p.stateCode,
-              active: p.active,
-            })),
-            total: projects.length,
+        return success({
+          projects: projects.map(p => ({
+            id: p.id,
+            name: p.name,
+            displayName: p.displayName,
+            projectNumber: p.projectNumber,
+            address: p.address,
+            city: p.city,
+            stateCode: p.stateCode,
+            active: p.active,
+          })),
+          pagination: {
+            limit: pagination.limit,
+            offset: pagination.offset,
+            total: estimatedTotal,
+            hasMore,
           },
-        };
+        });
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch projects',
-        };
+        return handleError(error);
       }
     },
   },
@@ -473,13 +642,15 @@ export const procoreTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   get_procore_rfis: {
     name: 'workway_get_procore_rfis',
-    description: 'Get RFIs (Requests for Information) from a Procore project. Useful for understanding RFI patterns and testing RFI automation workflows.',
+    description: 'Get RFIs (Requests for Information) from a Procore project. Useful for understanding RFI patterns and testing RFI automation workflows. Supports pagination.',
     inputSchema: z.object({
       project_id: z.number().describe('Procore project ID'),
       status: z.enum(['open', 'closed', 'all']).optional().default('open')
         .describe('Filter by RFI status'),
-      limit: z.number().optional().default(50)
-        .describe('Maximum number of RFIs to return'),
+      limit: z.number().min(1).max(100).default(30).optional()
+        .describe('Maximum number of RFIs to return (1-100, default 30)'),
+      offset: z.number().min(0).default(0).optional()
+        .describe('Number of RFIs to skip (default 0)'),
       connection_id: z.string().optional()
         .describe('Your WORKWAY connection ID from workway_connect_procore'),
     }),
@@ -495,22 +666,34 @@ export const procoreTools: MCPToolSet = {
         created_at: z.string(),
         response_time_days: z.number().optional(),
       })),
-      total: z.number(),
+      pagination: z.object({
+        limit: z.number(),
+        offset: z.number(),
+        total: z.number(),
+        hasMore: z.boolean(),
+      }),
       stats: z.object({
         open_count: z.number(),
         avg_response_time_days: z.number().optional(),
       }),
     }),
-    execute: async (input: z.infer<typeof procoreTools.get_procore_rfis.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.get_procore_rfis.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
+      const startTime = Date.now();
+      const userId = input.connection_id || 'default';
+      
       try {
-        let url = `/projects/${input.project_id}/rfis?per_page=${input.limit}`;
+        // Build pagination params
+        const pagination = getPaginationParams({ limit: input.limit ?? 30, offset: input.offset });
+        const page = Math.floor(pagination.offset / pagination.limit) + 1;
+        
+        let url = `/projects/${input.project_id}/rfis?per_page=${pagination.limit}&page=${page}`;
         if (input.status !== 'all') {
           url += `&filters[status]=${input.status}`;
         }
 
-        const rfis = await procoreRequest<ProcoreRFI[]>(env, url, {}, input.connection_id || 'default');
+        const rfis = await procoreRequest<ProcoreRFI[]>(env, url, {}, userId);
 
-        // Calculate stats
+        // Calculate stats from current page
         const openCount = rfis.filter(r => r.status === 'open').length;
         const responseTimes = rfis
           .filter(r => r.responseTime !== undefined)
@@ -519,32 +702,60 @@ export const procoreTools: MCPToolSet = {
           ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length
           : undefined;
 
-        return {
+        // Estimate total and hasMore based on results
+        const hasMore = rfis.length === pagination.limit;
+        const estimatedTotal = hasMore 
+          ? pagination.offset + pagination.limit + 1
+          : pagination.offset + rfis.length;
+
+        // Log successful tool execution
+        await logToolExecution(env, {
+          toolName: 'workway_get_procore_rfis',
+          userId,
+          connectionId: userId,
+          projectId: input.project_id.toString(),
+          resourceType: 'rfi',
           success: true,
-          data: {
-            rfis: rfis.map(r => ({
-              id: r.id,
-              number: r.number,
-              subject: r.subject,
-              status: r.status,
-              questionBody: r.questionBody,
-              answerBody: r.answerBody,
-              dueDate: r.dueDate,
-              createdAt: r.createdAt,
-              responseTimeDays: r.responseTime,
-            })),
-            total: rfis.length,
-            stats: {
-              openCount,
-              avgResponseTimeDays: avgResponseTime,
-            },
+          durationMs: Date.now() - startTime,
+          details: { count: rfis.length, status: input.status, page },
+        });
+
+        return success({
+          rfis: rfis.map(r => ({
+            id: r.id,
+            number: r.number,
+            subject: r.subject,
+            status: r.status,
+            questionBody: r.questionBody,
+            answerBody: r.answerBody,
+            dueDate: r.dueDate,
+            createdAt: r.createdAt,
+            responseTimeDays: r.responseTime,
+          })),
+          pagination: {
+            limit: pagination.limit,
+            offset: pagination.offset,
+            total: estimatedTotal,
+            hasMore,
           },
-        };
+          stats: {
+            openCount,
+            avgResponseTimeDays: avgResponseTime,
+          },
+        }, { executionTime: Date.now() - startTime });
       } catch (error) {
-        return {
+        // Log failed tool execution
+        await logToolExecution(env, {
+          toolName: 'workway_get_procore_rfis',
+          userId,
+          connectionId: userId,
+          projectId: input.project_id.toString(),
+          resourceType: 'rfi',
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch RFIs',
-        };
+          durationMs: Date.now() - startTime,
+          errorMessage: error instanceof WorkwayError ? error.message : 'Unknown error',
+        });
+        return handleError(error);
       }
     },
   },
@@ -554,37 +765,71 @@ export const procoreTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   get_procore_daily_logs: {
     name: 'workway_get_procore_daily_logs',
-    description: 'Get daily logs from a Procore project. Useful for understanding log patterns and testing daily log automation.',
+    description: 'Get daily logs from a Procore project. Useful for understanding log patterns and testing daily log automation. Supports date range filtering and pagination.',
     inputSchema: z.object({
       project_id: z.number().describe('Procore project ID'),
       start_date: z.string().optional()
-        .describe('Start date (YYYY-MM-DD)'),
+        .describe('Start date (YYYY-MM-DD) - defaults to 30 days ago'),
       end_date: z.string().optional()
-        .describe('End date (YYYY-MM-DD)'),
-      limit: z.number().optional().default(30),
+        .describe('End date (YYYY-MM-DD) - defaults to yesterday'),
+      limit: z.number().min(1).max(100).default(30).optional()
+        .describe('Maximum number of days to return (1-100, default 30)'),
+      offset: z.number().min(0).default(0).optional()
+        .describe('Number of days to skip from start_date (default 0)'),
       connection_id: z.string().optional()
         .describe('Your WORKWAY connection ID from workway_connect_procore'),
     }),
     outputSchema: z.object({
-      daily_logs: z.array(z.object({
-        id: z.number(),
-        log_date: z.string(),
-        status: z.string(),
-        weather_conditions: z.string().optional(),
-        temperature_high: z.number().optional(),
-        temperature_low: z.number().optional(),
-        notes: z.string().optional(),
-        manpower_count: z.number().optional(),
-      })),
-      total: z.number(),
+      date_range: z.object({
+        start_date: z.string(),
+        end_date: z.string(),
+      }),
+      weather_logs: z.array(z.any()),
+      manpower_logs: z.array(z.any()),
+      notes_logs: z.array(z.any()),
+      equipment_logs: z.array(z.any()),
+      safety_violation_logs: z.array(z.any()),
+      accident_logs: z.array(z.any()),
+      work_logs: z.array(z.any()),
+      delay_logs: z.array(z.any()),
+      pagination: z.object({
+        limit: z.number(),
+        offset: z.number(),
+        total_days_in_range: z.number(),
+        hasMore: z.boolean(),
+      }),
     }),
-    execute: async (input: z.infer<typeof procoreTools.get_procore_daily_logs.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.get_procore_daily_logs.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
+        const pagination = getPaginationParams({ limit: input.limit ?? 30, offset: input.offset });
+        
+        // Calculate date range based on pagination
         // Default to last 30 days if no dates provided
-        // Use yesterday as safe end date to avoid timezone issues
         const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-        const endDate = input.end_date && input.end_date <= yesterday ? input.end_date : yesterday;
-        const startDate = input.start_date || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const defaultStartDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        
+        // Base dates from input or defaults
+        const baseStartDate = input.start_date || defaultStartDate;
+        const baseEndDate = input.end_date && input.end_date <= yesterday ? input.end_date : yesterday;
+        
+        // Apply offset to start date
+        const startDateObj = new Date(baseStartDate);
+        startDateObj.setDate(startDateObj.getDate() + pagination.offset);
+        const startDate = startDateObj.toISOString().split('T')[0];
+        
+        // Calculate end date based on limit
+        const endDateObj = new Date(startDate);
+        endDateObj.setDate(endDateObj.getDate() + pagination.limit - 1);
+        // Don't go past the base end date
+        const calculatedEndDate = endDateObj.toISOString().split('T')[0];
+        const endDate = calculatedEndDate < baseEndDate ? calculatedEndDate : baseEndDate;
+        
+        // Calculate total days in the full range
+        const totalDaysInRange = Math.ceil(
+          (new Date(baseEndDate).getTime() - new Date(baseStartDate).getTime()) / (24 * 60 * 60 * 1000)
+        ) + 1;
+        
+        const hasMore = pagination.offset + pagination.limit < totalDaysInRange;
         
         // Procore daily logs uses filters[start_date] and filters[end_date]
         const url = `/projects/${input.project_id}/daily_logs?filters[start_date]=${startDate}&filters[end_date]=${endDate}`;
@@ -592,26 +837,26 @@ export const procoreTools: MCPToolSet = {
         const response = await procoreRequest<any>(env, url, {}, input.connection_id || 'default');
 
         // Procore returns categorized logs (weather_logs, manpower_logs, etc.)
-        return {
-          success: true,
-          data: {
-            dateRange: { startDate, endDate },
-            weatherLogs: response.weather_logs || [],
-            manpowerLogs: response.manpower_logs || [],
-            notesLogs: response.notes_logs || [],
-            equipmentLogs: response.equipment_logs || [],
-            safetyViolationLogs: response.safety_violation_logs || [],
-            accidentLogs: response.accident_logs || [],
-            workLogs: response.work_logs || [],
-            delayLogs: response.delay_logs || [],
-            totalLogTypes: Object.keys(response).filter(k => Array.isArray(response[k]) && response[k].length > 0).length,
+        return success({
+          dateRange: { startDate, endDate },
+          weatherLogs: response.weather_logs || [],
+          manpowerLogs: response.manpower_logs || [],
+          notesLogs: response.notes_logs || [],
+          equipmentLogs: response.equipment_logs || [],
+          safetyViolationLogs: response.safety_violation_logs || [],
+          accidentLogs: response.accident_logs || [],
+          workLogs: response.work_logs || [],
+          delayLogs: response.delay_logs || [],
+          totalLogTypes: Object.keys(response).filter(k => Array.isArray(response[k]) && response[k].length > 0).length,
+          pagination: {
+            limit: pagination.limit,
+            offset: pagination.offset,
+            totalDaysInRange,
+            hasMore,
           },
-        };
+        });
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch daily logs',
-        };
+        return handleError(error);
       }
     },
   },
@@ -621,12 +866,15 @@ export const procoreTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   get_procore_submittals: {
     name: 'workway_get_procore_submittals',
-    description: 'Get submittals from a Procore project. Useful for understanding submittal patterns and testing submittal tracking automation.',
+    description: 'Get submittals from a Procore project. Useful for understanding submittal patterns and testing submittal tracking automation. Supports pagination.',
     inputSchema: z.object({
       project_id: z.number().describe('Procore project ID'),
       status: z.enum(['pending', 'approved', 'rejected', 'all']).optional().default('all')
         .describe('Filter by submittal status'),
-      limit: z.number().optional().default(50),
+      limit: z.number().min(1).max(100).default(30).optional()
+        .describe('Maximum number of submittals to return (1-100, default 30)'),
+      offset: z.number().min(0).default(0).optional()
+        .describe('Number of submittals to skip (default 0)'),
       connection_id: z.string().optional()
         .describe('Your WORKWAY connection ID from workway_connect_procore'),
     }),
@@ -641,15 +889,24 @@ export const procoreTools: MCPToolSet = {
         ball_in_court: z.string().optional(),
         created_at: z.string(),
       })),
-      total: z.number(),
+      pagination: z.object({
+        limit: z.number(),
+        offset: z.number(),
+        total: z.number(),
+        hasMore: z.boolean(),
+      }),
       stats: z.object({
         pending_count: z.number(),
         overdue_count: z.number(),
       }),
     }),
-    execute: async (input: z.infer<typeof procoreTools.get_procore_submittals.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.get_procore_submittals.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
-        let url = `/projects/${input.project_id}/submittals?per_page=${input.limit}`;
+        // Build pagination params
+        const pagination = getPaginationParams({ limit: input.limit ?? 30, offset: input.offset });
+        const page = Math.floor(pagination.offset / pagination.limit) + 1;
+        
+        let url = `/projects/${input.project_id}/submittals?per_page=${pagination.limit}&page=${page}`;
         if (input.status !== 'all') {
           url += `&filters[status]=${input.status}`;
         }
@@ -662,31 +919,36 @@ export const procoreTools: MCPToolSet = {
           s.dueDate && new Date(s.dueDate) < now && s.status === 'pending'
         ).length;
 
-        return {
-          success: true,
-          data: {
-            submittals: submittals.map(s => ({
-              id: s.id,
-              number: s.number,
-              title: s.title,
-              status: s.status,
-              specSection: s.specSection,
-              dueDate: s.dueDate,
-              ballInCourt: s.ballInCourt,
-              createdAt: s.createdAt,
-            })),
-            total: submittals.length,
-            stats: {
-              pendingCount,
-              overdueCount,
-            },
+        // Estimate total and hasMore based on results
+        const hasMore = submittals.length === pagination.limit;
+        const estimatedTotal = hasMore 
+          ? pagination.offset + pagination.limit + 1
+          : pagination.offset + submittals.length;
+
+        return success({
+          submittals: submittals.map(s => ({
+            id: s.id,
+            number: s.number,
+            title: s.title,
+            status: s.status,
+            specSection: s.specSection,
+            dueDate: s.dueDate,
+            ballInCourt: s.ballInCourt,
+            createdAt: s.createdAt,
+          })),
+          pagination: {
+            limit: pagination.limit,
+            offset: pagination.offset,
+            total: estimatedTotal,
+            hasMore,
           },
-        };
+          stats: {
+            pendingCount,
+            overdueCount,
+          },
+        });
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch submittals',
-        };
+        return handleError(error);
       }
     },
   },
@@ -696,11 +958,14 @@ export const procoreTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   get_procore_photos: {
     name: 'workway_get_procore_photos',
-    description: 'Get photos from a Procore project. Useful for documentation and progress tracking automation.',
+    description: 'Get photos from a Procore project. Useful for documentation and progress tracking automation. Supports pagination.',
     inputSchema: z.object({
       project_id: z.number().describe('Procore project ID'),
       album_id: z.number().optional().describe('Filter by specific album ID'),
-      limit: z.number().optional().default(50).describe('Maximum number of photos to return'),
+      limit: z.number().min(1).max(100).default(50).optional()
+        .describe('Maximum number of photos to return (1-100, default 50)'),
+      offset: z.number().min(0).default(0).optional()
+        .describe('Number of photos to skip (default 0)'),
       connection_id: z.string().optional().describe('Your WORKWAY connection ID'),
     }),
     outputSchema: z.object({
@@ -715,39 +980,53 @@ export const procoreTools: MCPToolSet = {
         location: z.string().optional(),
         album_name: z.string().optional(),
       })),
-      total: z.number(),
+      pagination: z.object({
+        limit: z.number(),
+        offset: z.number(),
+        total: z.number(),
+        hasMore: z.boolean(),
+      }),
     }),
-    execute: async (input: z.infer<typeof procoreTools.get_procore_photos.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.get_procore_photos.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
-        let url = `/projects/${input.project_id}/images?per_page=${input.limit}`;
+        // Build pagination params
+        const pagination = getPaginationParams({ limit: input.limit ?? 50, offset: input.offset });
+        const page = Math.floor(pagination.offset / pagination.limit) + 1;
+        
+        let url = `/projects/${input.project_id}/images?per_page=${pagination.limit}&page=${page}`;
         if (input.album_id) {
           url += `&filters[image_category_id]=${input.album_id}`;
         }
 
         const photos = await procoreRequest<any[]>(env, url, {}, input.connection_id || 'default');
 
-        return {
-          success: true,
-          data: {
-            photos: photos.map(p => ({
-              id: p.id,
-              name: p.name || 'Untitled',
-              description: p.description,
-              imageUrl: p.url,
-              thumbnailUrl: p.thumbnail_url,
-              takenAt: p.taken_at,
-              uploadedAt: p.created_at,
-              location: p.location?.name,
-              albumName: p.image_category?.name,
-            })),
-            total: photos.length,
+        // Estimate total and hasMore based on results
+        const hasMore = photos.length === pagination.limit;
+        const estimatedTotal = hasMore 
+          ? pagination.offset + pagination.limit + 1
+          : pagination.offset + photos.length;
+
+        return success({
+          photos: photos.map(p => ({
+            id: p.id,
+            name: p.name || 'Untitled',
+            description: p.description,
+            imageUrl: p.url,
+            thumbnailUrl: p.thumbnail_url,
+            takenAt: p.taken_at,
+            uploadedAt: p.created_at,
+            location: p.location?.name,
+            albumName: p.image_category?.name,
+          })),
+          pagination: {
+            limit: pagination.limit,
+            offset: pagination.offset,
+            total: estimatedTotal,
+            hasMore,
           },
-        };
+        });
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch photos',
-        };
+        return handleError(error);
       }
     },
   },
@@ -757,11 +1036,14 @@ export const procoreTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   get_procore_documents: {
     name: 'workway_get_procore_documents',
-    description: 'Get documents from a Procore project. Useful for document tracking and compliance automation.',
+    description: 'Get documents from a Procore project. Useful for document tracking and compliance automation. Supports pagination.',
     inputSchema: z.object({
       project_id: z.number().describe('Procore project ID'),
       folder_id: z.number().optional().describe('Filter by specific folder ID'),
-      limit: z.number().optional().default(50).describe('Maximum number of documents to return'),
+      limit: z.number().min(1).max(100).default(50).optional()
+        .describe('Maximum number of documents to return (1-100, default 50)'),
+      offset: z.number().min(0).default(0).optional()
+        .describe('Number of documents to skip (default 0)'),
       connection_id: z.string().optional().describe('Your WORKWAY connection ID'),
     }),
     outputSchema: z.object({
@@ -780,12 +1062,21 @@ export const procoreTools: MCPToolSet = {
         name: z.string(),
         document_count: z.number().optional(),
       })),
-      total: z.number(),
+      pagination: z.object({
+        limit: z.number(),
+        offset: z.number(),
+        total: z.number(),
+        hasMore: z.boolean(),
+      }),
     }),
-    execute: async (input: z.infer<typeof procoreTools.get_procore_documents.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.get_procore_documents.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
+        // Build pagination params
+        const pagination = getPaginationParams({ limit: input.limit ?? 50, offset: input.offset });
+        const page = Math.floor(pagination.offset / pagination.limit) + 1;
+        
         // Use /documents endpoint which returns flat list of all files and folders
-        let url = `/projects/${input.project_id}/documents?per_page=${input.limit}`;
+        let url = `/projects/${input.project_id}/documents?per_page=${pagination.limit}&page=${page}`;
         if (input.folder_id) {
           url += `&filters[parent_id]=${input.folder_id}`;
         }
@@ -795,33 +1086,37 @@ export const procoreTools: MCPToolSet = {
         const files = documents.filter(d => d.document_type === 'file');
         const folders = documents.filter(d => d.document_type === 'folder' && !d.is_recycle_bin);
 
-        return {
-          success: true,
-          data: {
-            documents: files.map((d: any) => ({
-              id: d.id,
-              name: d.name,
-              documentType: d.document_type,
-              createdAt: d.created_at,
-              updatedAt: d.updated_at,
-              folderPath: d.name_with_path,
-              parentId: d.parent_id,
-            })),
-            folders: folders.map((f: any) => ({
-              id: f.id,
-              name: f.name,
-              path: f.name_with_path,
-              parentId: f.parent_id,
-            })),
-            total: files.length,
-            totalFolders: folders.length,
+        // Estimate total and hasMore based on results
+        const hasMore = documents.length === pagination.limit;
+        const estimatedTotal = hasMore 
+          ? pagination.offset + pagination.limit + 1
+          : pagination.offset + documents.length;
+
+        return success({
+          documents: files.map((d: any) => ({
+            id: d.id,
+            name: d.name,
+            documentType: d.document_type,
+            createdAt: d.created_at,
+            updatedAt: d.updated_at,
+            folderPath: d.name_with_path,
+            parentId: d.parent_id,
+          })),
+          folders: folders.map((f: any) => ({
+            id: f.id,
+            name: f.name,
+            path: f.name_with_path,
+            parentId: f.parent_id,
+          })),
+          pagination: {
+            limit: pagination.limit,
+            offset: pagination.offset,
+            total: estimatedTotal,
+            hasMore,
           },
-        };
+        });
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch documents',
-        };
+        return handleError(error);
       }
     },
   },
@@ -831,12 +1126,15 @@ export const procoreTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   get_procore_schedule: {
     name: 'workway_get_procore_schedule',
-    description: 'Get schedule tasks from a Procore project. Note: Requires Schedule tool to be enabled in the project. Useful for timeline tracking and schedule automation.',
+    description: 'Get schedule tasks from a Procore project. Note: Requires Schedule tool to be enabled in the project. Useful for timeline tracking and schedule automation. Supports pagination.',
     inputSchema: z.object({
       project_id: z.number().describe('Procore project ID'),
       status: z.enum(['all', 'in_progress', 'completed', 'not_started']).optional().default('all')
         .describe('Filter by task status'),
-      limit: z.number().optional().default(100).describe('Maximum number of tasks to return'),
+      limit: z.number().min(1).max(100).default(50).optional()
+        .describe('Maximum number of tasks to return (1-100, default 50)'),
+      offset: z.number().min(0).default(0).optional()
+        .describe('Number of tasks to skip (default 0)'),
       connection_id: z.string().optional().describe('Your WORKWAY connection ID'),
     }),
     outputSchema: z.object({
@@ -851,7 +1149,12 @@ export const procoreTools: MCPToolSet = {
         is_milestone: z.boolean().optional(),
         is_critical: z.boolean().optional(),
       })),
-      total: z.number(),
+      pagination: z.object({
+        limit: z.number(),
+        offset: z.number(),
+        total: z.number(),
+        hasMore: z.boolean(),
+      }),
       stats: z.object({
         completed_count: z.number(),
         in_progress_count: z.number(),
@@ -859,16 +1162,20 @@ export const procoreTools: MCPToolSet = {
         overdue_count: z.number(),
       }),
     }),
-    execute: async (input: z.infer<typeof procoreTools.get_procore_schedule.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.get_procore_schedule.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
-        let url = `/projects/${input.project_id}/schedule/tasks?per_page=${input.limit}`;
+        // Build pagination params
+        const pagination = getPaginationParams({ limit: input.limit ?? 50, offset: input.offset });
+        const page = Math.floor(pagination.offset / pagination.limit) + 1;
+        
+        let url = `/projects/${input.project_id}/schedule/tasks?per_page=${pagination.limit}&page=${page}`;
         
         const tasks = await procoreRequest<any[]>(env, url, {}, input.connection_id || 'default');
 
         const now = new Date();
         let filteredTasks = tasks;
         
-        // Apply status filter
+        // Apply status filter (note: filtering happens client-side after pagination from API)
         if (input.status !== 'all') {
           filteredTasks = tasks.filter(t => {
             if (input.status === 'completed') return t.percent_complete === 100;
@@ -878,7 +1185,7 @@ export const procoreTools: MCPToolSet = {
           });
         }
 
-        // Calculate stats
+        // Calculate stats from current page
         const completedCount = tasks.filter(t => t.percent_complete === 100).length;
         const inProgressCount = tasks.filter(t => t.percent_complete > 0 && t.percent_complete < 100).length;
         const notStartedCount = tasks.filter(t => t.percent_complete === 0 || t.percent_complete == null).length;
@@ -886,35 +1193,40 @@ export const procoreTools: MCPToolSet = {
           t.finish_date && new Date(t.finish_date) < now && t.percent_complete < 100
         ).length;
 
-        return {
-          success: true,
-          data: {
-            tasks: filteredTasks.map(t => ({
-              id: t.id,
-              name: t.name,
-              startDate: t.start_date,
-              finishDate: t.finish_date,
-              percentComplete: t.percent_complete,
-              status: t.percent_complete === 100 ? 'completed' : 
-                      t.percent_complete > 0 ? 'in_progress' : 'not_started',
-              assignedTo: t.resource_name,
-              isMilestone: t.is_milestone,
-              isCritical: t.is_critical_path,
-            })),
-            total: filteredTasks.length,
-            stats: {
-              completedCount,
-              inProgressCount,
-              notStartedCount,
-              overdueCount,
-            },
+        // Estimate total and hasMore based on results
+        const hasMore = tasks.length === pagination.limit;
+        const estimatedTotal = hasMore 
+          ? pagination.offset + pagination.limit + 1
+          : pagination.offset + tasks.length;
+
+        return success({
+          tasks: filteredTasks.map(t => ({
+            id: t.id,
+            name: t.name,
+            startDate: t.start_date,
+            finishDate: t.finish_date,
+            percentComplete: t.percent_complete,
+            status: t.percent_complete === 100 ? 'completed' : 
+                    t.percent_complete > 0 ? 'in_progress' : 'not_started',
+            assignedTo: t.resource_name,
+            isMilestone: t.is_milestone,
+            isCritical: t.is_critical_path,
+          })),
+          pagination: {
+            limit: pagination.limit,
+            offset: pagination.offset,
+            total: estimatedTotal,
+            hasMore,
           },
-        };
+          stats: {
+            completedCount,
+            inProgressCount,
+            notStartedCount,
+            overdueCount,
+          },
+        });
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to fetch schedule',
-        };
+        return handleError(error);
       }
     },
   },
@@ -941,7 +1253,10 @@ export const procoreTools: MCPToolSet = {
       status: z.string(),
       created_at: z.string(),
     }),
-    execute: async (input: z.infer<typeof procoreTools.create_procore_rfi.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.create_procore_rfi.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
+      const startTime = Date.now();
+      const userId = input.connection_id || 'default';
+      
       try {
         const rfiData: any = {
           rfi: {
@@ -965,34 +1280,56 @@ export const procoreTools: MCPToolSet = {
             method: 'POST',
             body: JSON.stringify(rfiData),
           },
-          input.connection_id || 'default'
+          userId
         );
 
-        return {
+        // Log successful RFI creation
+        await logToolExecution(env, {
+          toolName: 'workway_create_procore_rfi',
+          userId,
+          connectionId: userId,
+          projectId: input.project_id.toString(),
+          resourceType: 'rfi',
+          resourceId: rfi.id.toString(),
           success: true,
-          data: {
-            id: rfi.id,
-            number: rfi.number,
-            subject: rfi.subject,
-            status: rfi.status,
-            createdAt: rfi.created_at,
-            message: `RFI #${rfi.number} created successfully`,
+          durationMs: Date.now() - startTime,
+          details: { 
+            rfiNumber: rfi.number, 
+            subject: input.subject,
+            priority: input.priority,
           },
-        };
+        });
+
+        return success({
+          id: rfi.id,
+          number: rfi.number,
+          subject: rfi.subject,
+          status: rfi.status,
+          createdAt: rfi.created_at,
+          message: `RFI #${rfi.number} created successfully`,
+        }, { executionTime: Date.now() - startTime });
       } catch (error) {
-        return {
+        // Log failed RFI creation
+        await logToolExecution(env, {
+          toolName: 'workway_create_procore_rfi',
+          userId,
+          connectionId: userId,
+          projectId: input.project_id.toString(),
+          resourceType: 'rfi',
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to create RFI',
-        };
+          durationMs: Date.now() - startTime,
+          errorMessage: error instanceof WorkwayError ? error.message : 'Unknown error',
+        });
+        return handleError(error);
       }
     },
   },
 
   // --------------------------------------------------------------------------
-  // workway_debug_procore_api (temporary debug tool)
+  // workway_test_procore_api (debug/test tool)
   // --------------------------------------------------------------------------
-  debug_procore_api: {
-    name: 'workway_debug_procore_api',
+  test_procore_api: {
+    name: 'workway_test_procore_api',
     description: 'Debug tool to test raw Procore API calls. Returns full response details.',
     inputSchema: z.object({
       path: z.string().describe('API path to call (e.g., /projects, /companies/123/projects)'),
@@ -1003,7 +1340,7 @@ export const procoreTools: MCPToolSet = {
       headers: z.record(z.string()),
       body: z.any(),
     }),
-    execute: async (input: z.infer<typeof procoreTools.debug_procore_api.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.test_procore_api.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
         const userId = input.connection_id || 'default';
         const token = await env.DB.prepare(`
@@ -1012,7 +1349,11 @@ export const procoreTools: MCPToolSet = {
         `).bind(userId).first<any>();
         
         if (!token) {
-          throw new Error('Not connected to Procore');
+          throw new ProcoreError(
+            ErrorCode.PROCORE_NOT_CONNECTED,
+            'Procore not connected. Use "Connect my Procore account" to authorize.',
+            { details: { userId, tool: 'workway_test_procore_api' } }
+          );
         }
         
         const accessToken = await decrypt(token.access_token, env.COOKIE_ENCRYPTION_KEY);
@@ -1040,22 +1381,16 @@ export const procoreTools: MCPToolSet = {
           body = text;
         }
         
-        return {
-          success: true,
-          data: {
-            status: response.status,
-            headers: responseHeaders,
-            body,
-            requestPath: `${urls.apiBase}${input.path}`,
-            companyIdUsed: token.company_id,
-            environment: procoreEnv,
-          },
-        };
+        return success({
+          status: response.status,
+          headers: responseHeaders,
+          body,
+          requestPath: `${urls.apiBase}${input.path}`,
+          companyIdUsed: token.company_id,
+          environment: procoreEnv,
+        });
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Debug call failed',
-        };
+        return handleError(error);
       }
     },
   },
@@ -1083,7 +1418,7 @@ export const procoreTools: MCPToolSet = {
       callback_url: z.string(),
       event_type: z.string(),
     }),
-    execute: async (input: z.infer<typeof procoreTools.create_procore_webhook.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.create_procore_webhook.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
         const callbackUrl = `${MCP_BASE_URL}/webhooks/${input.workflow_id}`;
         
@@ -1121,20 +1456,14 @@ export const procoreTools: MCPToolSet = {
           callbackUrl
         ).run();
 
-        return {
-          success: true,
-          data: {
-            webhookId: webhook.id,
-            callbackUrl,
-            eventType: input.event_type,
-            message: `Webhook registered. Events will trigger workflow ${input.workflow_id}`,
-          },
-        };
+        return success({
+          webhookId: webhook.id,
+          callbackUrl,
+          eventType: input.event_type,
+          message: `Webhook registered. Events will trigger workflow ${input.workflow_id}`,
+        });
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to create webhook',
-        };
+        return handleError(error);
       }
     },
   },
@@ -1144,10 +1473,14 @@ export const procoreTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   list_procore_webhooks: {
     name: 'workway_list_procore_webhooks',
-    description: 'List all registered webhooks for a project or workflow.',
+    description: 'List all registered webhooks for a project or workflow. Supports pagination.',
     inputSchema: z.object({
       project_id: z.number().optional().describe('Filter by Procore project ID'),
       workflow_id: z.string().optional().describe('Filter by workflow ID'),
+      limit: z.number().min(1).max(100).default(50).optional()
+        .describe('Maximum number of webhooks to return (1-100, default 50)'),
+      offset: z.number().min(0).default(0).optional()
+        .describe('Number of webhooks to skip (default 0)'),
     }),
     outputSchema: z.object({
       webhooks: z.array(z.object({
@@ -1158,46 +1491,55 @@ export const procoreTools: MCPToolSet = {
         callback_url: z.string(),
         created_at: z.string(),
       })),
-      total: z.number(),
+      pagination: z.object({
+        limit: z.number(),
+        offset: z.number(),
+        total: z.number(),
+        hasMore: z.boolean(),
+      }),
     }),
-    execute: async (input: z.infer<typeof procoreTools.list_procore_webhooks.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.list_procore_webhooks.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
-        let query = 'SELECT * FROM webhook_subscriptions WHERE 1=1';
-        const bindings: any[] = [];
+        const pagination = getPaginationParams({ limit: input.limit ?? 50, offset: input.offset });
+        
+        // Build WHERE clause
+        let whereClause = 'WHERE 1=1';
+        const whereBindings: any[] = [];
         
         if (input.project_id) {
-          query += ' AND project_id = ?';
-          bindings.push(input.project_id);
+          whereClause += ' AND project_id = ?';
+          whereBindings.push(input.project_id);
         }
         if (input.workflow_id) {
-          query += ' AND workflow_id = ?';
-          bindings.push(input.workflow_id);
+          whereClause += ' AND workflow_id = ?';
+          whereBindings.push(input.workflow_id);
         }
         
-        query += ' ORDER BY created_at DESC';
+        // Get total count
+        const countQuery = `SELECT COUNT(*) as total FROM webhook_subscriptions ${whereClause}`;
+        const countStmt = env.DB.prepare(countQuery);
+        const countResult = await (whereBindings.length > 0 ? countStmt.bind(...whereBindings) : countStmt).first<{ total: number }>();
+        const total = countResult?.total || 0;
         
+        // Get paginated results
+        const query = `SELECT * FROM webhook_subscriptions ${whereClause} ORDER BY created_at DESC LIMIT ? OFFSET ?`;
+        const allBindings = [...whereBindings, pagination.limit, pagination.offset];
         const stmt = env.DB.prepare(query);
-        const result = await (bindings.length > 0 ? stmt.bind(...bindings) : stmt).all<any>();
+        const result = await stmt.bind(...allBindings).all<any>();
 
-        return {
-          success: true,
-          data: {
-            webhooks: (result.results || []).map((w: any) => ({
-              id: w.id,
-              workflowId: w.workflow_id,
-              projectId: w.project_id,
-              eventType: w.event_type,
-              callbackUrl: w.callback_url,
-              createdAt: w.created_at,
-            })),
-            total: result.results?.length || 0,
-          },
-        };
+        return success({
+          webhooks: (result.results || []).map((w: any) => ({
+            id: w.id,
+            workflowId: w.workflow_id,
+            projectId: w.project_id,
+            eventType: w.event_type,
+            callbackUrl: w.callback_url,
+            createdAt: w.created_at,
+          })),
+          pagination: buildPaginationResult(pagination.limit, pagination.offset, total),
+        });
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to list webhooks',
-        };
+        return handleError(error);
       }
     },
   },
@@ -1216,7 +1558,7 @@ export const procoreTools: MCPToolSet = {
     outputSchema: z.object({
       deleted: z.boolean(),
     }),
-    execute: async (input: z.infer<typeof procoreTools.delete_procore_webhook.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof procoreTools.delete_procore_webhook.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
         // Get the webhook from our DB
         const webhook = await env.DB.prepare(`
@@ -1224,7 +1566,11 @@ export const procoreTools: MCPToolSet = {
         `).bind(input.webhook_id).first<any>();
         
         if (!webhook) {
-          throw new Error('Webhook not found');
+          throw new WorkwayError(
+            ErrorCode.WEBHOOK_NOT_FOUND,
+            'Webhook not found. Check the webhook ID and try again.',
+            { details: { webhookId: input.webhook_id } }
+          );
         }
 
         // Delete from Procore (if API supports)
@@ -1245,18 +1591,12 @@ export const procoreTools: MCPToolSet = {
           DELETE FROM webhook_subscriptions WHERE id = ?
         `).bind(input.webhook_id).run();
 
-        return {
-          success: true,
-          data: {
-            deleted: true,
-            message: 'Webhook deleted successfully',
-          },
-        };
+        return success({
+          deleted: true,
+          message: 'Webhook deleted successfully',
+        });
       } catch (error) {
-        return {
-          success: false,
-          error: error instanceof Error ? error.message : 'Failed to delete webhook',
-        };
+        return handleError(error);
       }
     },
   },

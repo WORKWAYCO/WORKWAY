@@ -300,7 +300,7 @@ After connecting Procore:
 3. **Create your first workflow:**
    - See [API_REFERENCE.md](./API_REFERENCE.md) for examples
    - Start with RFI automation workflow
-   - Test with `workway_test` before deploying
+   - Test with `workway_test_workflow` before deploying
 
 ---
 
@@ -319,7 +319,7 @@ If you encounter issues not covered here:
 
 1. Check [TROUBLESHOOTING.md](./TROUBLESHOOTING.md)
 2. Review [ERROR_CODES.md](./ERROR_CODES.md)
-3. Use `workway_diagnose` tool for automated diagnosis
+3. Use `workway_diagnose_workflow` tool for automated diagnosis
 4. Contact support with:
    - Procore app configuration (screenshot)
    - Error messages

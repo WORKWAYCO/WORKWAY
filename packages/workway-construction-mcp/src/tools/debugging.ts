@@ -75,10 +75,10 @@ const ExecutionTrace = z.object({
 
 export const debuggingTools: MCPToolSet = {
   // --------------------------------------------------------------------------
-  // workway_diagnose
+  // workway_diagnose_workflow
   // --------------------------------------------------------------------------
-  diagnose: {
-    name: 'workway_diagnose',
+  diagnose_workflow: {
+    name: 'workway_diagnose_workflow',
     description: `Diagnose why a workflow isn't working. Call this when:
 - Deployment fails
 - Webhooks don't fire
@@ -126,7 +126,7 @@ Returns structured diagnosis with root cause, suggested fix, and execution logs.
         failure_point: z.string().optional(),
       }).optional().describe('AI Interaction Atlas analysis of the failure'),
     }),
-    execute: async (input: z.infer<typeof debuggingTools.diagnose.inputSchema>, env: Env): Promise<ToolResult<DiagnosisResult>> => {
+    execute: async (input: z.infer<typeof debuggingTools.diagnose_workflow.inputSchema>, env: Env): Promise<ToolResult<DiagnosisResult>> => {
       const logs: LogEntry[] = [];
       let diagnosis = '';
       let rootCause = '';
@@ -174,15 +174,15 @@ Returns structured diagnosis with root cause, suggested fix, and execution logs.
             diagnosis = 'Workflow has no actions configured';
             rootCause = 'Empty workflow - at least one action is required';
             affectedComponent = 'config';
-            suggestedFix = 'Add at least one action using workway_add_action';
-            fixTool = 'workway_add_action';
+            suggestedFix = 'Add at least one action using workway_add_workflow_action';
+            fixTool = 'workway_add_workflow_action';
             confidence = 0.95;
           } else if (!workflow.trigger_config && workflow.trigger_type === 'webhook') {
             diagnosis = 'Webhook trigger not configured';
             rootCause = 'Missing trigger configuration for webhook-based workflow';
             affectedComponent = 'trigger';
             suggestedFix = 'Configure the webhook trigger with source and event types';
-            fixTool = 'workway_configure_trigger';
+            fixTool = 'workway_configure_workflow_trigger';
             confidence = 0.9;
           }
           break;
@@ -197,7 +197,7 @@ Returns structured diagnosis with root cause, suggested fix, and execution logs.
             rootCause = 'Webhook source not configured';
             affectedComponent = 'trigger';
             suggestedFix = 'Configure the webhook source (e.g., procore)';
-            fixTool = 'workway_configure_trigger';
+            fixTool = 'workway_configure_workflow_trigger';
             confidence = 0.85;
           } else if (triggerConfig.source === 'procore') {
             rootCause = 'Procore webhook may not be registered or project access missing';
@@ -328,10 +328,10 @@ Returns structured diagnosis with root cause, suggested fix, and execution logs.
   },
 
   // --------------------------------------------------------------------------
-  // workway_get_unstuck
+  // workway_get_workflow_guidance
   // --------------------------------------------------------------------------
-  get_unstuck: {
-    name: 'workway_get_unstuck',
+  get_workflow_guidance: {
+    name: 'workway_get_workflow_guidance',
     description: `When you don't know how to proceed with workflow configuration. Describe your goal and what went wrong - this tool will guide you through the next steps.
 
 Use this when:
@@ -360,7 +360,7 @@ Use this when:
         recommended_pattern: z.string().optional(),
       }).optional(),
     }),
-    execute: async (input: z.infer<typeof debuggingTools.get_unstuck.inputSchema>, env: Env): Promise<ToolResult<UnstuckGuidance>> => {
+    execute: async (input: z.infer<typeof debuggingTools.get_workflow_guidance.inputSchema>, env: Env): Promise<ToolResult<UnstuckGuidance>> => {
       const goalLower = input.goal.toLowerCase();
       
       // Pattern matching for common construction workflow goals
@@ -392,7 +392,7 @@ This follows the Atlas pattern: ai.classify → ai.generate → human.review →
           },
           {
             step: 2,
-            tool: 'workway_configure_trigger',
+            tool: 'workway_configure_workflow_trigger',
             params: {
               source: 'procore',
               event_types: ['rfi.created'],
@@ -401,7 +401,7 @@ This follows the Atlas pattern: ai.classify → ai.generate → human.review →
           },
           {
             step: 3,
-            tool: 'workway_add_action',
+            tool: 'workway_add_workflow_action',
             params: {
               action_type: 'ai.search_similar_rfis',
               config: {
@@ -413,7 +413,7 @@ This follows the Atlas pattern: ai.classify → ai.generate → human.review →
           },
           {
             step: 4,
-            tool: 'workway_add_action',
+            tool: 'workway_add_workflow_action',
             params: {
               action_type: 'ai.generate_rfi_response',
               config: {
@@ -425,7 +425,7 @@ This follows the Atlas pattern: ai.classify → ai.generate → human.review →
           },
           {
             step: 5,
-            tool: 'workway_add_action',
+            tool: 'workway_add_workflow_action',
             params: {
               action_type: 'procore.rfi.add_response',
               config: {
@@ -468,7 +468,7 @@ Atlas pattern: ai.extract → ai.summarize → human.review → system.execute`;
           },
           {
             step: 2,
-            tool: 'workway_configure_trigger',
+            tool: 'workway_configure_workflow_trigger',
             params: {
               cron_schedule: '0 17 * * 1-5',
               timezone: 'America/Chicago',
@@ -477,7 +477,7 @@ Atlas pattern: ai.extract → ai.summarize → human.review → system.execute`;
           },
           {
             step: 3,
-            tool: 'workway_add_action',
+            tool: 'workway_add_workflow_action',
             params: {
               action_type: 'ai.extract_from_photos',
               config: {
@@ -488,7 +488,7 @@ Atlas pattern: ai.extract → ai.summarize → human.review → system.execute`;
           },
           {
             step: 4,
-            tool: 'workway_add_action',
+            tool: 'workway_add_workflow_action',
             params: {
               action_type: 'ai.generate_daily_log',
               config: {
@@ -529,7 +529,7 @@ Atlas pattern: ai.verify → ai.predict → system.notify → human.escalate`;
           },
           {
             step: 2,
-            tool: 'workway_configure_trigger',
+            tool: 'workway_configure_workflow_trigger',
             params: {
               source: 'procore',
               event_types: ['submittal.created', 'submittal.updated'],
@@ -585,10 +585,10 @@ What specific outcome are you trying to achieve?`;
   },
 
   // --------------------------------------------------------------------------
-  // workway_observe_execution
+  // workway_observe_workflow_execution
   // --------------------------------------------------------------------------
-  observe_execution: {
-    name: 'workway_observe_execution',
+  observe_workflow_execution: {
+    name: 'workway_observe_workflow_execution',
     description: `Get detailed observability data for a workflow execution. Shows the full trace of AI tasks, human tasks, and system operations with Atlas-aligned categorization.
 
 Use this to understand:
@@ -624,7 +624,7 @@ Use this to understand:
         constraints_hit: z.array(z.string()),
       }),
     }),
-    execute: async (input: z.infer<typeof debuggingTools.observe_execution.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof debuggingTools.observe_workflow_execution.inputSchema>, env: Env): Promise<ToolResult> => {
       const execution = await env.DB.prepare(`
         SELECT e.*, w.name as workflow_name
         FROM executions e

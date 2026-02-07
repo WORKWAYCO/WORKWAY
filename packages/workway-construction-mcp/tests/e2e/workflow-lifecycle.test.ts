@@ -164,7 +164,7 @@ describe('E2E: Workflow Lifecycle', () => {
     expect(dbState.workflows).toHaveLength(1);
 
     // Step 2: Configure trigger
-    const configureResult = await workflowTools.configure_trigger.execute(
+    const configureResult = await workflowTools.configure_workflow_trigger.execute(
       {
         workflow_id: workflowId,
         source: 'procore',
@@ -178,7 +178,7 @@ describe('E2E: Workflow Lifecycle', () => {
     expect(workflow.trigger_config).toBeDefined();
 
     // Step 3: Add actions
-    const action1Result = await workflowTools.add_action.execute(
+    const action1Result = await workflowTools.add_workflow_action.execute(
       {
         workflow_id: workflowId,
         action_type: 'ai.search_similar_rfis',
@@ -190,7 +190,7 @@ describe('E2E: Workflow Lifecycle', () => {
     expect(action1Result.success).toBe(true);
     expect(dbState.workflow_actions).toHaveLength(1);
 
-    const action2Result = await workflowTools.add_action.execute(
+    const action2Result = await workflowTools.add_workflow_action.execute(
       {
         workflow_id: workflowId,
         action_type: 'procore.rfi.respond',
@@ -203,7 +203,7 @@ describe('E2E: Workflow Lifecycle', () => {
     expect(dbState.workflow_actions).toHaveLength(2);
 
     // Step 4: Deploy workflow
-    const deployResult = await workflowTools.deploy.execute(
+    const deployResult = await workflowTools.deploy_workflow.execute(
       {
         workflow_id: workflowId,
         dry_run: false,
@@ -216,7 +216,7 @@ describe('E2E: Workflow Lifecycle', () => {
     expect(dbState.workflows[0].status).toBe('active');
 
     // Step 5: Test workflow
-    const testResult = await workflowTools.test.execute(
+    const testResult = await workflowTools.test_workflow.execute(
       {
         workflow_id: workflowId,
         test_payload: {
@@ -245,7 +245,7 @@ describe('E2E: Workflow Lifecycle', () => {
 
     workflowId = createResult.data!.id as string;
 
-    await workflowTools.add_action.execute(
+    await workflowTools.add_workflow_action.execute(
       {
         workflow_id: workflowId,
         action_type: 'test.action',
@@ -254,7 +254,7 @@ describe('E2E: Workflow Lifecycle', () => {
       env
     );
 
-    await workflowTools.deploy.execute(
+    await workflowTools.deploy_workflow.execute(
       {
         workflow_id: workflowId,
         dry_run: false,
@@ -265,7 +265,7 @@ describe('E2E: Workflow Lifecycle', () => {
     expect(dbState.workflows[0].status).toBe('active');
 
     // Rollback to draft
-    const rollbackResult = await workflowTools.rollback.execute(
+    const rollbackResult = await workflowTools.rollback_workflow.execute(
       {
         workflow_id: workflowId,
         action: 'rollback',
@@ -289,7 +289,7 @@ describe('E2E: Workflow Lifecycle', () => {
     workflowId = createResult.data!.id as string;
 
     // Try to deploy without actions (should fail)
-    const deployResult = await workflowTools.deploy.execute(
+    const deployResult = await workflowTools.deploy_workflow.execute(
       {
         workflow_id: workflowId,
         dry_run: true,

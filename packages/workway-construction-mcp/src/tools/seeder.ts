@@ -165,8 +165,8 @@ export const seederTools: MCPToolSet = {
   /**
    * Seed RFIs
    */
-  seed_rfis: {
-    name: 'workway_seed_rfis',
+  seed_test_rfis: {
+    name: 'workway_seed_test_rfis',
     description: `Seed realistic RFI test data into a Procore project.
 
 Creates 5-8 RFIs with:
@@ -189,7 +189,7 @@ Use this to test the Intelligence Layer Skills like draft_rfi and daily_log_summ
       })),
       total: z.number(),
     }),
-    execute: async (input: z.infer<typeof seederTools.seed_rfis.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof seederTools.seed_test_rfis.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         const count = Math.min(input.count || 5, SAMPLE_RFIS.length);
         const created: any[] = [];
@@ -241,8 +241,8 @@ Use this to test the Intelligence Layer Skills like draft_rfi and daily_log_summ
    * Note: Procore's daily log API is more complex - this creates the structure
    * but may need adjustment based on actual API capabilities
    */
-  seed_daily_logs: {
-    name: 'workway_seed_daily_logs',
+  seed_test_daily_logs: {
+    name: 'workway_seed_test_daily_logs',
     description: `Seed realistic daily log test data into a Procore project.
 
 Creates 7 days of daily logs with:
@@ -265,7 +265,7 @@ Note: Uses Procore's daily log API which requires specific permissions.`,
       })),
       total: z.number(),
     }),
-    execute: async (input: z.infer<typeof seederTools.seed_daily_logs.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof seederTools.seed_test_daily_logs.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         const days = Math.min(input.days || 7, 14);
         const created: any[] = [];
@@ -284,7 +284,7 @@ Note: Uses Procore's daily log API which requires specific permissions.`,
           // Attempt to create via Procore API
           // Note: Daily log creation API varies by Procore version
           try {
-            const result = await procoreTools.debug_procore_api.execute({
+            const result = await procoreTools.test_procore_api.execute({
               path: `/projects/${input.project_id}/daily_logs`,
               user_id: input.user_id,
             }, env);
@@ -333,8 +333,8 @@ Note: Uses Procore's daily log API which requires specific permissions.`,
   /**
    * Seed all test data
    */
-  seed_all: {
-    name: 'workway_seed_all',
+  seed_test_data: {
+    name: 'workway_seed_test_data',
     description: `Seed a complete set of realistic construction test data.
 
 Creates:
@@ -352,17 +352,17 @@ Perfect for setting up a demo environment to test the Intelligence Layer Skills.
       daily_logs_created: z.number(),
       summary: z.string(),
     }),
-    execute: async (input: z.infer<typeof seederTools.seed_all.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof seederTools.seed_test_data.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         // Seed RFIs
-        const rfiResult = await seederTools.seed_rfis.execute({
+        const rfiResult = await seederTools.seed_test_rfis.execute({
           project_id: input.project_id,
           count: 5,
           user_id: input.user_id,
         }, env);
         
         // Seed Daily Logs
-        const logResult = await seederTools.seed_daily_logs.execute({
+        const logResult = await seederTools.seed_test_daily_logs.execute({
           project_id: input.project_id,
           days: 7,
           user_id: input.user_id,
@@ -400,8 +400,8 @@ Perfect for setting up a demo environment to test the Intelligence Layer Skills.
   /**
    * Get sample data (for manual entry or reference)
    */
-  get_sample_data: {
-    name: 'workway_get_sample_data',
+  get_test_sample_data: {
+    name: 'workway_get_test_sample_data',
     description: `Get realistic construction sample data without creating anything in Procore.
 
 Returns templates for:
@@ -422,7 +422,7 @@ Useful for manual data entry or understanding the data patterns.`,
       }).optional(),
       submittals: z.array(z.any()).optional(),
     }),
-    execute: async (input: z.infer<typeof seederTools.get_sample_data.inputSchema>, env: Env): Promise<ToolResult> => {
+    execute: async (input: z.infer<typeof seederTools.get_test_sample_data.inputSchema>, env: Env): Promise<ToolResult> => {
       const result: any = {};
       
       if (input.data_type === 'rfis' || input.data_type === 'all') {
@@ -445,7 +445,7 @@ Useful for manual data entry or understanding the data patterns.`,
         success: true,
         data: {
           ...result,
-          usage: 'Copy this data to manually create entries in Procore, or use workway_seed_rfis to auto-create.',
+          usage: 'Copy this data to manually create entries in Procore, or use workway_seed_test_rfis to auto-create.',
         },
       };
     },

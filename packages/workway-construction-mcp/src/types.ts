@@ -10,6 +10,7 @@ import type { BaseMCPEnv } from '@workway/mcp-core';
 
 export interface Env extends BaseMCPEnv {
   WORKFLOW_STATE: DurableObjectNamespace;
+  PROCORE_RATE_LIMITER: DurableObjectNamespace;  // Rate limiter for Procore API
   // Production Procore credentials
   PROCORE_CLIENT_ID: string;
   PROCORE_CLIENT_SECRET: string;
@@ -21,6 +22,28 @@ export interface Env extends BaseMCPEnv {
   ENVIRONMENT: string;
   // Intelligence Layer: Workers AI for Skills
   AI?: Ai;  // Cloudflare Workers AI binding
+  // Agent Observability: Analytics Engine for metrics
+  AGENT_METRICS?: AnalyticsEngineDataset;  // Agent metrics dataset
+  // Observability dashboard API key (for admin access)
+  OBSERVABILITY_API_KEY?: string;
+  
+  // Distributed Tracing Configuration
+  /** OpenTelemetry exporter URL (e.g., https://otel-collector.example.com/v1/traces) */
+  OTEL_EXPORTER_URL?: string;
+  /** Trace sampling rate (0.0 to 1.0, default 0.1 = 10%) */
+  TRACE_SAMPLING_RATE?: string;
+  /** Langfuse host URL */
+  LANGFUSE_HOST?: string;
+  /** Langfuse public key */
+  LANGFUSE_PUBLIC_KEY?: string;
+  /** Langfuse secret key */
+  LANGFUSE_SECRET_KEY?: string;
+  
+  // AI Gateway Configuration (for LLM observability)
+  /** Cloudflare Account ID (required for AI Gateway routing) */
+  CLOUDFLARE_ACCOUNT_ID?: string;
+  /** AI Gateway name (default: workway-mcp) */
+  AI_GATEWAY_ID?: string;
 }
 
 // ============================================================================

@@ -211,7 +211,7 @@ await env.DB.prepare(`
 1. Delete workflow data:
    ```json
    {
-     "tool": "workway_rollback",
+     "tool": "workway_rollback_workflow",
      "params": {
        "workflow_id": "...",
        "action": "rollback"

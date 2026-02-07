@@ -8,6 +8,7 @@
  * - workway_get_procore_rfis
  * - workway_get_procore_daily_logs
  * - workway_get_procore_submittals
+ * - workway_test_procore_api
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';

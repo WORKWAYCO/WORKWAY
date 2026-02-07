@@ -101,12 +101,12 @@ tools/
 
 1. **Workflow Lifecycle:**
    - `workway_create_workflow`
-   - `workway_configure_trigger`
-   - `workway_add_action`
-   - `workway_deploy`
-   - `workway_test`
+   - `workway_configure_workflow_trigger`
+   - `workway_add_workflow_action`
+   - `workway_deploy_workflow`
+   - `workway_test_workflow`
    - `workway_list_workflows`
-   - `workway_rollback`
+   - `workway_rollback_workflow`
 
 2. **Procore Integration:**
    - `workway_connect_procore`
@@ -117,9 +117,9 @@ tools/
    - `workway_get_procore_submittals`
 
 3. **Debugging & Observability:**
-   - `workway_diagnose`
-   - `workway_get_unstuck`
-   - `workway_observe_execution`
+   - `workway_diagnose_workflow`
+   - `workway_get_workflow_guidance`
+   - `workway_observe_workflow_execution`
 
 ---
 
@@ -211,7 +211,7 @@ tools/
 ```
 Client                    MCP Server              Procore API
   │                          │                        │
-  │── workway_deploy ────────>│                        │
+  │── workway_deploy_workflow >│                        │
   │                          │                        │
   │                          │── Validate config     │
   │                          │                        │
@@ -296,17 +296,17 @@ Client                    MCP Server              Procore API
    └─> Insert into workflows table
    └─> Return workflow_id
 
-2. workway_configure_trigger
+2. workway_configure_workflow_trigger
    └─> Update workflows table
    └─> Store trigger config (JSON)
    └─> Generate webhook URL (if webhook)
 
-3. workway_add_action
+3. workway_add_workflow_action
    └─> Get action sequence number
    └─> Insert into workflow_actions table
    └─> Return action_id
 
-4. workway_deploy
+4. workway_deploy_workflow
    └─> Validate workflow config
    └─> Check required fields
    └─> Update status to 'active'
@@ -370,9 +370,9 @@ Client                    MCP Server              Procore API
 
 ### Debugging Tools
 
-- **workway_diagnose** - Automated diagnosis
-- **workway_observe_execution** - Detailed traces
-- **workway_get_unstuck** - Guidance system
+- **workway_diagnose_workflow** - Automated diagnosis
+- **workway_observe_workflow_execution** - Detailed traces
+- **workway_get_workflow_guidance** - Guidance system
 
 ### AI Interaction Atlas
 
