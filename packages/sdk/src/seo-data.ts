@@ -8,9 +8,9 @@
  * Voice: CREATE SOMETHING Canon — specificity over generality.
  *
  * IMPORTANT: Pricing in this file uses only provable claims:
- * - Platform fee: $0.05 (light) / $0.25 (heavy) per execution
+ * - Platform fee: $0.01 per execution (flat rate)
  * - Developer pricing: Set by developers (variable)
- * - Claims like "$0.15/meeting" are EXAMPLES, not guarantees
+ * - All per-run costs are $0.01 (flat rate)
  *
  * All prices marked with (platform fee) or (example) for clarity.
  */
@@ -41,7 +41,7 @@ export const corePages = {
 				'@type': 'Offer',
 				price: '0',
 				priceCurrency: 'USD',
-				description: 'Pay per execution. $0.05-$0.25 per workflow run.',
+				description: 'Pay per execution. $0.01 per workflow run.',
 			},
 		},
 		faq: [
@@ -53,7 +53,7 @@ export const corePages = {
 			{
 				question: 'How much does WORKWAY cost?',
 				answer:
-					'WORKWAY uses pay-per-execution pricing. Each workflow run costs $0.05-$0.25 depending on complexity. No monthly fees. No per-seat pricing. A meeting summary costs $0.15. A payment notification costs $0.10.',
+					'WORKWAY uses pay-per-execution pricing. Each workflow run costs $0.01. No monthly fees. No per-seat pricing. No complexity tiers. Flat rate for everything.',
 			},
 			{
 				question: 'Is my data secure with WORKWAY?',
@@ -104,7 +104,7 @@ export const corePages = {
 			{
 				question: 'How much can developers earn on WORKWAY?',
 				answer:
-					'Developers keep 85% of every workflow execution. At $0.15/execution with 10,000 monthly runs, that\'s $1,275/month. Top developers earn $3,000+/month from a single workflow. Average time to first sale: 12 days.',
+					'Developers earn a 70% revenue share from every workflow execution. At $0.01/run, volume drives revenue. The flat rate removes complexity — build great workflows, let volume work for you.',
 			},
 			{
 				question: 'What technology does WORKWAY use?',
@@ -139,7 +139,7 @@ export const outcomeFramePages = {
 		slug: 'after-meetings',
 		title: 'Zoom to Notion Automation - Meeting Notes That Write Themselves | WORKWAY',
 		description:
-			'Automatically sync Zoom meetings to Notion. AI-generated summaries, action items, and follow-ups. $0.15/meeting. Setup in 90 seconds.',
+			'Automatically sync Zoom meetings to Notion. AI-generated summaries, action items, and follow-ups. $0.01/meeting. Setup in 90 seconds.',
 		h1: 'After your meeting ends, everything updates.',
 		subhead: 'Notion page created. Slack summary posted. Tasks in Linear. You did nothing.',
 		keywords: [
@@ -162,7 +162,7 @@ export const outcomeFramePages = {
 			{
 				question: 'How do I automatically sync Zoom meetings to Notion?',
 				answer:
-					"Install WORKWAY's Meeting Intelligence workflow. Connect your Zoom and Notion accounts via OAuth (takes 90 seconds). Every completed Zoom meeting automatically creates a Notion page with the full transcript, AI-generated summary, action items, and follow-ups. Cost: $0.15 per meeting.",
+					"Install WORKWAY's Meeting Intelligence workflow. Connect your Zoom and Notion accounts via OAuth (takes 90 seconds). Every completed Zoom meeting automatically creates a Notion page with the full transcript, AI-generated summary, action items, and follow-ups. Cost: $0.01 per run.",
 			},
 			{
 				question: 'Can I get Zoom transcripts in Slack?',
@@ -182,7 +182,7 @@ export const outcomeFramePages = {
 		slug: 'when-payments-arrive',
 		title: 'Stripe to Notion Automation - Payments That Track Themselves | WORKWAY',
 		description:
-			'Automatically log Stripe payments to Notion. Real-time revenue tracking, invoice generation, and team notifications. $0.10/payment.',
+			'Automatically log Stripe payments to Notion. Real-time revenue tracking, invoice generation, and team notifications. $0.01/payment.',
 		h1: 'When payments arrive, everything updates.',
 		subhead: 'Notion database updated. Slack notification sent. You didn\'t check Stripe.',
 		keywords: [
@@ -198,12 +198,12 @@ export const outcomeFramePages = {
 			{
 				question: 'How do I automatically log Stripe payments to Notion?',
 				answer:
-					"Install WORKWAY's Stripe to Notion workflow. Connect Stripe and Notion via OAuth. Every payment automatically creates a row in your Notion database with amount, customer, date, and status. $0.10/payment.",
+					"Install WORKWAY's Stripe to Notion workflow. Connect Stripe and Notion via OAuth. Every payment automatically creates a row in your Notion database with amount, customer, date, and status. $0.01/payment.",
 			},
 			{
 				question: 'Can I get Stripe payment notifications in Slack?',
 				answer:
-					"Yes. WORKWAY's Revenue Radar posts payment alerts to Slack in real-time. Includes customer name, amount, and product. Also updates HubSpot deals if connected. $0.10/payment.",
+					"Yes. WORKWAY's Revenue Radar posts payment alerts to Slack in real-time. Includes customer name, amount, and product. Also updates HubSpot deals if connected. $0.01/payment.",
 			},
 		],
 	},
@@ -253,7 +253,7 @@ export const outcomeFramePages = {
 			{
 				question: 'How do I automate daily standups?',
 				answer:
-					"Install WORKWAY's Standup Bot. It compiles yesterday's activity from Slack, Linear, and GitHub, then posts a summary to your team channel every morning at your chosen time. $0.05/day.",
+					"Install WORKWAY's Standup Bot. It compiles yesterday's activity from Slack, Linear, and GitHub, then posts a summary to your team channel every morning at your chosen time. $0.01/day.",
 			},
 		],
 	},
@@ -277,7 +277,7 @@ export const outcomeFramePages = {
 			{
 				question: 'How do I automate weekly productivity reports?',
 				answer:
-					"Install WORKWAY's Weekly Productivity Digest. It compiles tasks completed, time tracked, and goals met from Todoist, then posts a summary to Slack every Monday. $0.05/week.",
+					"Install WORKWAY's Weekly Productivity Digest. It compiles tasks completed, time tracked, and goals met from Todoist, then posts a summary to Slack every Monday. $0.01/week.",
 			},
 		],
 	},
@@ -301,7 +301,7 @@ export const outcomeFramePages = {
 			{
 				question: 'How do I automate client onboarding?',
 				answer:
-					"Install WORKWAY's Client Onboarding workflow. When a Stripe payment is received, it automatically creates a Todoist project with onboarding tasks, notifies your team in Slack, and logs the new client to Notion. $0.15/client.",
+					"Install WORKWAY's Client Onboarding workflow. When a Stripe payment is received, it automatically creates a Todoist project with onboarding tasks, notifies your team in Slack, and logs the new client to Notion. $0.01/client.",
 			},
 		],
 	},
@@ -349,7 +349,7 @@ export const outcomeFramePages = {
 			{
 				question: 'How do I automatically sync Google Sheets to Airtable?',
 				answer:
-					"Install WORKWAY's Spreadsheet Sync workflow. Changes in your Google Sheet automatically update the corresponding Airtable base. Works both ways. $0.05/sync.",
+					"Install WORKWAY's Spreadsheet Sync workflow. Changes in your Google Sheet automatically update the corresponding Airtable base. Works both ways. $0.01/sync.",
 			},
 		],
 	},
@@ -369,7 +369,7 @@ export const outcomeFramePages = {
 			{
 				question: 'How do I automatically sync Dribbble to Notion?',
 				answer:
-					"Install WORKWAY's Design Portfolio Sync. Every new Dribbble shot automatically creates a Notion page with the image, description, and stats. Also posts to Slack if enabled. $0.05/shot.",
+					"Install WORKWAY's Design Portfolio Sync. Every new Dribbble shot automatically creates a Notion page with the image, description, and stats. Also posts to Slack if enabled. $0.01/shot.",
 			},
 		],
 	},
@@ -389,7 +389,7 @@ export const outcomeFramePages = {
 			{
 				question: 'How do I automatically log Calendly meetings to Notion?',
 				answer:
-					"Install WORKWAY's Scheduling Autopilot. Every Calendly booking creates a Notion page with attendee info, meeting type, and notes section. Also sends a Slack notification. $0.05/booking.",
+					"Install WORKWAY's Scheduling Autopilot. Every Calendly booking creates a Notion page with attendee info, meeting type, and notes section. Also sends a Slack notification. $0.01/booking.",
 			},
 		],
 	},
@@ -409,7 +409,7 @@ export const outcomeFramePages = {
 			{
 				question: 'How do I automatically send Typeform responses to Notion?',
 				answer:
-					"Install WORKWAY's Form Response Hub. Every Typeform submission creates a Notion database entry with all fields mapped. Works with Airtable too. $0.05/response.",
+					"Install WORKWAY's Form Response Hub. Every Typeform submission creates a Notion database entry with all fields mapped. Works with Airtable too. $0.01/response.",
 			},
 		],
 	},
@@ -429,7 +429,7 @@ export const outcomeFramePages = {
 			{
 				question: 'How do I get HubSpot deal notifications in Slack?',
 				answer:
-					"Install WORKWAY's Deal Tracker. When a HubSpot deal moves stages, it posts to Slack with deal value and stage. Closed-won deals get celebrated. $0.05/update.",
+					"Install WORKWAY's Deal Tracker. When a HubSpot deal moves stages, it posts to Slack with deal value and stage. Closed-won deals get celebrated. $0.01/update.",
 			},
 		],
 	},
@@ -469,7 +469,7 @@ export const outcomeFramePages = {
 			{
 				question: 'How do I automatically route support tickets in Slack?',
 				answer:
-					"Install WORKWAY's Support Ticket Router. Messages in your support channel are AI-classified and routed to the right team channel (billing, technical, sales). $0.05/ticket.",
+					"Install WORKWAY's Support Ticket Router. Messages in your support channel are AI-classified and routed to the right team channel (billing, technical, sales). $0.01/ticket.",
 			},
 		],
 	},
@@ -484,13 +484,13 @@ export const integrationPairPages = {
 		path: '/connect/zoom/notion',
 		title: 'Zoom to Notion Integration — Automatic Meeting Notes | WORKWAY',
 		description:
-			'Connect Zoom to Notion in 90 seconds. Every meeting automatically creates a Notion page with transcript, AI summary, and action items. From $0.25/meeting (heavy tier).',
+			'Connect Zoom to Notion in 90 seconds. Every meeting automatically creates a Notion page with transcript, AI summary, and action items. $0.01/meeting.',
 		h1: 'Zoom + Notion, connected.',
 		subhead: 'Every meeting → Notion page. Transcript, summary, action items. You did nothing.',
 		from: 'Zoom',
 		to: 'Notion',
 		workflowId: 'meeting-intelligence',
-		price: 'From $0.25/meeting (heavy tier — AI + multiple APIs)',
+		price: '$0.01/meeting',
 		setupTime: '90 seconds',
 		keywords: [
 			'zoom notion integration',
@@ -515,12 +515,12 @@ export const integrationPairPages = {
 		],
 		vsManual: {
 			manual: 'Watch recording (45 min) + Write notes (15 min) = 60 min/meeting',
-			workway: '0 min/meeting + from $0.25',
+			workway: '0 min/meeting + $0.01',
 			weeklyComparison: {
 				meetings: 10,
 				manualHours: 10,
 				workwayHours: 0,
-				workwayCost: 2.5, // 10 × $0.25 minimum
+				workwayCost: 0.1, // 10 × $0.01
 			},
 		},
 	},
@@ -549,13 +549,13 @@ export const integrationPairPages = {
 		path: '/connect/stripe/notion',
 		title: 'Stripe to Notion Integration - Payments That Log Themselves | WORKWAY',
 		description:
-			'Automatically log Stripe payments to Notion. Real-time revenue tracking in your workspace. $0.10/payment.',
+			'Automatically log Stripe payments to Notion. Real-time revenue tracking in your workspace. $0.01/payment.',
 		h1: 'Stripe + Notion, connected.',
 		subhead: 'Payment received → Notion row created. Amount, customer, date, status.',
 		from: 'Stripe',
 		to: 'Notion',
 		workflowId: 'stripe-to-notion',
-		price: '$0.10/payment',
+		price: '$0.01/payment',
 		setupTime: '90 seconds',
 		keywords: [
 			'stripe notion integration',
@@ -569,13 +569,13 @@ export const integrationPairPages = {
 		path: '/connect/stripe/slack',
 		title: 'Stripe to Slack Integration - Payment Alerts in Slack | WORKWAY',
 		description:
-			'Get instant Slack notifications when Stripe payments arrive. Customer name, amount, product. $0.10/payment.',
+			'Get instant Slack notifications when Stripe payments arrive. Customer name, amount, product. $0.01/payment.',
 		h1: 'Stripe + Slack, connected.',
 		subhead: 'Payment arrives → Slack notification. Customer, amount, product. Celebrate in real-time.',
 		from: 'Stripe',
 		to: 'Slack',
 		workflowId: 'revenue-radar',
-		price: '$0.10/payment',
+		price: '$0.01/payment',
 		setupTime: '60 seconds',
 		keywords: [
 			'stripe slack integration',
@@ -588,13 +588,13 @@ export const integrationPairPages = {
 		path: '/connect/calendly/notion',
 		title: 'Calendly to Notion Integration - Meetings That Log Themselves | WORKWAY',
 		description:
-			'Automatically log Calendly bookings to Notion. Attendee info, meeting type, notes section ready. $0.05/booking.',
+			'Automatically log Calendly bookings to Notion. Attendee info, meeting type, notes section ready. $0.01/booking.',
 		h1: 'Calendly + Notion, connected.',
 		subhead: 'Meeting booked → Notion page created. Attendee, type, notes section ready.',
 		from: 'Calendly',
 		to: 'Notion',
 		workflowId: 'scheduling-autopilot',
-		price: '$0.05/booking',
+		price: '$0.01/booking',
 		setupTime: '60 seconds',
 		keywords: [
 			'calendly notion integration',
@@ -607,13 +607,13 @@ export const integrationPairPages = {
 		path: '/connect/calendly/slack',
 		title: 'Calendly to Slack Integration - Booking Notifications in Slack | WORKWAY',
 		description:
-			'Get instant Slack notifications when Calendly meetings are booked. Attendee, time, meeting type. $0.05/booking.',
+			'Get instant Slack notifications when Calendly meetings are booked. Attendee, time, meeting type. $0.01/booking.',
 		h1: 'Calendly + Slack, connected.',
 		subhead: 'Meeting booked → Slack notification. Attendee, time, type.',
 		from: 'Calendly',
 		to: 'Slack',
 		workflowId: 'scheduling-autopilot',
-		price: '$0.05/booking',
+		price: '$0.01/booking',
 		setupTime: '60 seconds',
 		keywords: [
 			'calendly slack integration',
@@ -645,13 +645,13 @@ export const integrationPairPages = {
 		path: '/connect/hubspot/slack',
 		title: 'HubSpot to Slack Integration - Deal Alerts in Slack | WORKWAY',
 		description:
-			'Get instant Slack notifications when HubSpot deals progress. Stage changes, closed-won celebrations, pipeline visibility. $0.05/update.',
+			'Get instant Slack notifications when HubSpot deals progress. Stage changes, closed-won celebrations, pipeline visibility. $0.01/update.',
 		h1: 'HubSpot + Slack, connected.',
 		subhead: 'Deal moves → Slack notification. Stage, value, rep. Celebrate wins together.',
 		from: 'HubSpot',
 		to: 'Slack',
 		workflowId: 'deal-tracker',
-		price: '$0.05/update',
+		price: '$0.01/update',
 		setupTime: '60 seconds',
 		keywords: [
 			'hubspot slack integration',
@@ -664,13 +664,13 @@ export const integrationPairPages = {
 		path: '/connect/hubspot/notion',
 		title: 'HubSpot to Notion Integration - Deals That Document Themselves | WORKWAY',
 		description:
-			'Automatically log HubSpot deal activity to Notion. Pipeline history, deal notes, stage progression. $0.05/update.',
+			'Automatically log HubSpot deal activity to Notion. Pipeline history, deal notes, stage progression. $0.01/update.',
 		h1: 'HubSpot + Notion, connected.',
 		subhead: 'Deal progresses → Notion updated. Full pipeline history in your workspace.',
 		from: 'HubSpot',
 		to: 'Notion',
 		workflowId: 'deal-tracker',
-		price: '$0.05/update',
+		price: '$0.01/update',
 		setupTime: '90 seconds',
 		keywords: [
 			'hubspot notion integration',
@@ -702,13 +702,13 @@ export const integrationPairPages = {
 		path: '/connect/typeform/notion',
 		title: 'Typeform to Notion Integration - Responses That Organize Themselves | WORKWAY',
 		description:
-			'Automatically log Typeform responses to Notion databases. All fields mapped, no manual entry. $0.05/response.',
+			'Automatically log Typeform responses to Notion databases. All fields mapped, no manual entry. $0.01/response.',
 		h1: 'Typeform + Notion, connected.',
 		subhead: 'Form submitted → Notion row created. All fields mapped. Zero data entry.',
 		from: 'Typeform',
 		to: 'Notion',
 		workflowId: 'form-response-hub',
-		price: '$0.05/response',
+		price: '$0.01/response',
 		setupTime: '60 seconds',
 		keywords: [
 			'typeform notion integration',
@@ -721,13 +721,13 @@ export const integrationPairPages = {
 		path: '/connect/typeform/airtable',
 		title: 'Typeform to Airtable Integration - Forms That Fill Databases | WORKWAY',
 		description:
-			'Automatically sync Typeform responses to Airtable. Fields mapped, records created, no CSV exports. $0.05/response.',
+			'Automatically sync Typeform responses to Airtable. Fields mapped, records created, no CSV exports. $0.01/response.',
 		h1: 'Typeform + Airtable, connected.',
 		subhead: 'Form submitted → Airtable record created. Fields mapped automatically.',
 		from: 'Typeform',
 		to: 'Airtable',
 		workflowId: 'form-response-hub',
-		price: '$0.05/response',
+		price: '$0.01/response',
 		setupTime: '60 seconds',
 		keywords: [
 			'typeform airtable integration',
@@ -740,13 +740,13 @@ export const integrationPairPages = {
 		path: '/connect/linear/slack',
 		title: 'Linear to Slack Integration - Sprint Updates in Slack | WORKWAY',
 		description:
-			'Automatic daily sprint progress in Slack. Issues completed, blockers flagged, velocity tracked. $0.05/day.',
+			'Automatic daily sprint progress in Slack. Issues completed, blockers flagged, velocity tracked. $0.01/day.',
 		h1: 'Linear + Slack, connected.',
 		subhead: 'Every morning → Sprint progress in Slack. Completed, in-progress, blocked.',
 		from: 'Linear',
 		to: 'Slack',
 		workflowId: 'sprint-progress-tracker',
-		price: '$0.05/day',
+		price: '$0.01/day',
 		setupTime: '60 seconds',
 		keywords: ['linear slack integration', 'linear to slack automation', 'sprint updates slack'],
 	},
@@ -755,13 +755,13 @@ export const integrationPairPages = {
 		path: '/connect/linear/notion',
 		title: 'Linear to Notion Integration - Sprints That Document Themselves | WORKWAY',
 		description:
-			'Automatically log Linear sprint history to Notion. Velocity trends, completed issues, retrospective data. $0.05/sync.',
+			'Automatically log Linear sprint history to Notion. Velocity trends, completed issues, retrospective data. $0.01/sync.',
 		h1: 'Linear + Notion, connected.',
 		subhead: 'Sprint ends → Notion updated. History, velocity, issues logged.',
 		from: 'Linear',
 		to: 'Notion',
 		workflowId: 'sprint-progress-tracker',
-		price: '$0.05/sync',
+		price: '$0.01/sync',
 		setupTime: '90 seconds',
 		keywords: [
 			'linear notion integration',
@@ -774,13 +774,13 @@ export const integrationPairPages = {
 		path: '/connect/todoist/slack',
 		title: 'Todoist to Slack Integration - Productivity Insights in Slack | WORKWAY',
 		description:
-			'Weekly productivity digest from Todoist to Slack. Tasks completed, goals met, streaks maintained. $0.05/week.',
+			'Weekly productivity digest from Todoist to Slack. Tasks completed, goals met, streaks maintained. $0.01/week.',
 		h1: 'Todoist + Slack, connected.',
 		subhead: 'Every Monday → Productivity digest in Slack. Tasks done, goals met.',
 		from: 'Todoist',
 		to: 'Slack',
 		workflowId: 'weekly-productivity-digest',
-		price: '$0.05/week',
+		price: '$0.01/week',
 		setupTime: '60 seconds',
 		keywords: [
 			'todoist slack integration',
@@ -812,13 +812,13 @@ export const integrationPairPages = {
 		path: '/connect/airtable/slack',
 		title: 'Airtable to Slack Integration - Content Reminders in Slack | WORKWAY',
 		description:
-			'Daily content calendar reminders from Airtable to Slack. Never miss a publishing deadline. $0.05/day.',
+			'Daily content calendar reminders from Airtable to Slack. Never miss a publishing deadline. $0.01/day.',
 		h1: 'Airtable + Slack, connected.',
 		subhead: 'Every morning → Content reminders in Slack. What\'s due today, what\'s coming up.',
 		from: 'Airtable',
 		to: 'Slack',
 		workflowId: 'content-calendar',
-		price: '$0.05/day',
+		price: '$0.01/day',
 		setupTime: '60 seconds',
 		keywords: [
 			'airtable slack integration',
@@ -831,13 +831,13 @@ export const integrationPairPages = {
 		path: '/connect/dribbble/notion',
 		title: 'Dribbble to Notion Integration - Portfolio That Updates Itself | WORKWAY',
 		description:
-			'Automatically sync Dribbble shots to Notion. Image, description, stats. Your portfolio manages itself. $0.05/shot.',
+			'Automatically sync Dribbble shots to Notion. Image, description, stats. Your portfolio manages itself. $0.01/shot.',
 		h1: 'Dribbble + Notion, connected.',
 		subhead: 'New shot published → Notion page created. Image, description, stats synced.',
 		from: 'Dribbble',
 		to: 'Notion',
 		workflowId: 'design-portfolio-sync',
-		price: '$0.05/shot',
+		price: '$0.01/shot',
 		setupTime: '60 seconds',
 		keywords: ['dribbble notion integration', 'dribbble to notion automation', 'portfolio sync notion'],
 	},
@@ -846,13 +846,13 @@ export const integrationPairPages = {
 		path: '/connect/dribbble/slack',
 		title: 'Dribbble to Slack Integration - New Work Announced in Slack | WORKWAY',
 		description:
-			'Automatically share new Dribbble shots to Slack. Team celebrates, feedback flows. $0.05/shot.',
+			'Automatically share new Dribbble shots to Slack. Team celebrates, feedback flows. $0.01/shot.',
 		h1: 'Dribbble + Slack, connected.',
 		subhead: 'New shot published → Slack notification. Team sees, feedback flows.',
 		from: 'Dribbble',
 		to: 'Slack',
 		workflowId: 'design-portfolio-sync',
-		price: '$0.05/shot',
+		price: '$0.01/shot',
 		setupTime: '60 seconds',
 		keywords: ['dribbble slack integration', 'dribbble to slack automation', 'share dribbble slack'],
 	},
@@ -861,13 +861,13 @@ export const integrationPairPages = {
 		path: '/connect/notion/slack',
 		title: 'Notion to Slack Integration - Team Digest in Slack | WORKWAY',
 		description:
-			'Daily team activity digest from Notion to Slack. Who updated what, decisions made, docs changed. $0.05/day.',
+			'Daily team activity digest from Notion to Slack. Who updated what, decisions made, docs changed. $0.01/day.',
 		h1: 'Notion + Slack, connected.',
 		subhead: 'Every morning → Team digest in Slack. Updates, changes, activity summarized.',
 		from: 'Notion',
 		to: 'Slack',
 		workflowId: 'team-digest',
-		price: '$0.05/day',
+		price: '$0.01/day',
 		setupTime: '60 seconds',
 		keywords: ['notion slack integration', 'notion to slack automation', 'team digest slack'],
 	},
@@ -876,13 +876,13 @@ export const integrationPairPages = {
 		path: '/connect/notion/stripe',
 		title: 'Notion to Stripe Integration - Projects That Invoice Themselves | WORKWAY',
 		description:
-			'Automatically generate Stripe invoices from Notion projects. Project complete → Invoice sent. $0.15/invoice.',
+			'Automatically generate Stripe invoices from Notion projects. Project complete → Invoice sent. $0.01/invoice.',
 		h1: 'Notion + Stripe, connected.',
 		subhead: 'Project marked complete → Stripe invoice generated. Client billed automatically.',
 		from: 'Notion',
 		to: 'Stripe',
 		workflowId: 'invoice-generator',
-		price: '$0.15/invoice',
+		price: '$0.01/invoice',
 		setupTime: '90 seconds',
 		keywords: [
 			'notion stripe integration',
@@ -895,13 +895,13 @@ export const integrationPairPages = {
 		path: '/connect/google-sheets/airtable',
 		title: 'Google Sheets to Airtable Integration - Spreadsheets That Sync | WORKWAY',
 		description:
-			'Automatically sync Google Sheets to Airtable. Changes flow both ways, no manual imports. $0.05/sync.',
+			'Automatically sync Google Sheets to Airtable. Changes flow both ways, no manual imports. $0.01/sync.',
 		h1: 'Google Sheets + Airtable, connected.',
 		subhead: 'Sheet updated → Airtable synced. Two-way sync, zero manual work.',
 		from: 'Google Sheets',
 		to: 'Airtable',
 		workflowId: 'spreadsheet-sync',
-		price: '$0.05/sync',
+		price: '$0.01/sync',
 		setupTime: '90 seconds',
 		keywords: [
 			'google sheets airtable integration',
@@ -914,13 +914,13 @@ export const integrationPairPages = {
 		path: '/connect/stripe/todoist',
 		title: 'Stripe to Todoist Integration - Payments That Create Tasks | WORKWAY',
 		description:
-			'Automatically create Todoist onboarding tasks when Stripe payments arrive. Client onboarding on autopilot. $0.15/client.',
+			'Automatically create Todoist onboarding tasks when Stripe payments arrive. Client onboarding on autopilot. $0.01/client.',
 		h1: 'Stripe + Todoist, connected.',
 		subhead: 'Payment received → Onboarding tasks created. Client journey starts itself.',
 		from: 'Stripe',
 		to: 'Todoist',
 		workflowId: 'client-onboarding',
-		price: '$0.15/client',
+		price: '$0.01/client',
 		setupTime: '90 seconds',
 		keywords: [
 			'stripe todoist integration',
@@ -933,13 +933,13 @@ export const integrationPairPages = {
 		path: '/connect/stripe/hubspot',
 		title: 'Stripe to HubSpot Integration - Deals That Close Themselves | WORKWAY',
 		description:
-			'Automatically update HubSpot deals when Stripe payments arrive. Deal closed-won, revenue logged. $0.10/payment.',
+			'Automatically update HubSpot deals when Stripe payments arrive. Deal closed-won, revenue logged. $0.01/payment.',
 		h1: 'Stripe + HubSpot, connected.',
 		subhead: 'Payment received → HubSpot deal closed. Revenue logged automatically.',
 		from: 'Stripe',
 		to: 'HubSpot',
 		workflowId: 'revenue-radar',
-		price: '$0.10/payment',
+		price: '$0.01/payment',
 		setupTime: '90 seconds',
 		keywords: [
 			'stripe hubspot integration',
@@ -952,13 +952,13 @@ export const integrationPairPages = {
 		path: '/connect/slack/routing',
 		title: 'Slack Ticket Routing - Support That Routes Itself | WORKWAY',
 		description:
-			'AI-powered ticket routing within Slack. Messages classified and routed to the right team channel. $0.05/ticket.',
+			'AI-powered ticket routing within Slack. Messages classified and routed to the right team channel. $0.01/ticket.',
 		h1: 'Slack support, routed automatically.',
 		subhead: 'Message received → AI classified → Routed to right team. Zero manual triage.',
 		from: 'Slack',
 		to: 'Slack',
 		workflowId: 'support-ticket-router',
-		price: '$0.05/ticket',
+		price: '$0.01/ticket',
 		setupTime: '60 seconds',
 		keywords: [
 			'slack ticket routing',

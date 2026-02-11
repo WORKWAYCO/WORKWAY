@@ -3,73 +3,35 @@
  *
  * Single source of truth for all pricing-related constants across the platform.
  *
+ * MODEL: Flat 1¢ per run. No tiers, no complexity levels.
+ * WORKWAY sells Cloudflare execution, not LLM inference.
+ *
  * Philosophy: Weniger, aber besser (Less, but better)
- * - One place to update prices
+ * - One price to understand
  * - No scattered magic numbers
- * - Type-safe pricing tiers
+ * - Type-safe pricing
  *
  * @example
  * ```typescript
- * import { WORKFLOW_PRICING } from '@workwayco/sdk/pricing-constants';
+ * import { EXECUTION_PRICING, PRICING_DEFAULTS } from '@workwayco/sdk/pricing-constants';
  *
- * pricing: {
- *   model: 'freemium',
- *   pricePerMonth: WORKFLOW_PRICING.TIER_BASIC,
- *   trialDays: PRICING_DEFAULTS.TRIAL_DAYS,
- * }
+ * const costPerRun = EXECUTION_PRICING.PER_RUN; // $0.01
+ * const freeRuns = PRICING_DEFAULTS.FREE_EXECUTIONS; // 100
  * ```
  */
 
 // =============================================================================
-// WORKFLOW PRICING TIERS
+// EXECUTION PRICING
 // =============================================================================
 
 /**
- * Standard workflow pricing tiers (monthly subscription)
+ * Per-execution pricing
  *
- * These tiers represent market-tested price points for different workflow complexity levels.
- */
-export const WORKFLOW_PRICING = {
-	/** Free tier - simple, high-volume workflows */
-	TIER_FREE: 0,
-
-	/** Basic tier - simple workflows with basic integrations */
-	TIER_BASIC: 9,
-
-	/** Standard tier - moderate complexity workflows */
-	TIER_STANDARD: 15,
-
-	/** Professional tier - advanced workflows with multiple integrations */
-	TIER_PROFESSIONAL: 19,
-
-	/** Premium tier - complex workflows with industry-specific logic */
-	TIER_PREMIUM: 29,
-
-	/** Enterprise tier - industry-specific workflows (dental, construction, real estate) */
-	TIER_ENTERPRISE_LOW: 39,
-	TIER_ENTERPRISE_MID: 49,
-	TIER_ENTERPRISE_HIGH: 79,
-	TIER_ENTERPRISE_PREMIUM: 99,
-} as const;
-
-// =============================================================================
-// USAGE-BASED PRICING
-// =============================================================================
-
-/**
- * Per-execution pricing for usage-based workflows
- *
- * Used for agentic workflows or AI-heavy executions where per-run costs vary.
+ * Flat 1¢ per run for all workflow types.
  */
 export const EXECUTION_PRICING = {
-	/** Standard per-execution price for agentic workflows */
-	AGENTIC_WORKFLOW: 0.1, // $0.10 per execution
-
-	/** AI-heavy workflow execution */
-	AI_WORKFLOW: 0.15, // $0.15 per execution
-
-	/** Simple automation execution */
-	SIMPLE_AUTOMATION: 0.05, // $0.05 per execution
+	/** Standard per-execution price — flat rate for all workflows */
+	PER_RUN: 0.01, // $0.01 per execution
 } as const;
 
 // =============================================================================
@@ -80,14 +42,8 @@ export const EXECUTION_PRICING = {
  * Default pricing configuration values
  */
 export const PRICING_DEFAULTS = {
-	/** Standard trial period (days) */
-	TRIAL_DAYS: 14,
-
-	/** Free tier execution limit (per month) */
-	FREE_EXECUTIONS: 50,
-
-	/** Freemium execution limit before paid tier kicks in */
-	FREEMIUM_EXECUTIONS: 50,
+	/** Free executions on signup */
+	FREE_EXECUTIONS: 100,
 } as const;
 
 // =============================================================================
@@ -146,11 +102,6 @@ export const AI_MODEL_COSTS = {
 // =============================================================================
 
 /**
- * Type representing a workflow pricing tier
- */
-export type WorkflowPricingTier = (typeof WORKFLOW_PRICING)[keyof typeof WORKFLOW_PRICING];
-
-/**
  * Type representing execution pricing
  */
 export type ExecutionPrice = (typeof EXECUTION_PRICING)[keyof typeof EXECUTION_PRICING];
@@ -158,21 +109,6 @@ export type ExecutionPrice = (typeof EXECUTION_PRICING)[keyof typeof EXECUTION_P
 /**
  * Helper function to get pricing description
  */
-export function getPricingDescription(pricePerMonth: number, trialDays: number = PRICING_DEFAULTS.TRIAL_DAYS): string {
-	if (pricePerMonth === WORKFLOW_PRICING.TIER_FREE) {
-		return 'Free forever';
-	}
-
-	const tier =
-		pricePerMonth === WORKFLOW_PRICING.TIER_BASIC
-			? 'Basic'
-			: pricePerMonth === WORKFLOW_PRICING.TIER_STANDARD
-				? 'Standard'
-				: pricePerMonth === WORKFLOW_PRICING.TIER_PROFESSIONAL
-					? 'Professional'
-					: pricePerMonth === WORKFLOW_PRICING.TIER_PREMIUM
-						? 'Premium'
-						: 'Enterprise';
-
-	return `${tier} tier - $${pricePerMonth}/month after ${trialDays}-day trial`;
+export function getPricingDescription(): string {
+	return `1¢ per run — ${PRICING_DEFAULTS.FREE_EXECUTIONS} free runs included`;
 }

@@ -134,6 +134,10 @@
 		"./equipmentwatch": {
 			"types": "./dist/equipmentwatch/index.d.ts",
 			"import": "./dist/equipmentwatch/index.js"
+		},
+		"./composio": {
+			"types": "./dist/composio/index.d.ts",
+			"import": "./dist/composio/index.js"
 		}
 	},
 	"files": [
@@ -147,6 +151,9 @@
 	},
 	"dependencies": {
 		"@workwayco/sdk": "^1.1.0"
+	},
+	"optionalDependencies": {
+		"composio-core": "^0.5.39"
 	},
 	"devDependencies": {
 		"@types/node": "^20.10.0",

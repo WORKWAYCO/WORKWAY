@@ -45,6 +45,12 @@ credentials.json
 .wrangler/
 .dev.vars
 
+# IMPORTANT: wrangler.toml may contain infrastructure IDs that shouldn't be shared
+# If you've customized wrangler.toml with real IDs, do NOT commit it
+# Use wrangler.toml.example as the template for setup instructions
+# Uncomment the line below if your wrangler.toml contains sensitive infrastructure IDs:
+# packages/workway-construction-mcp/wrangler.toml
+
 # SvelteKit
 .svelte-kit/
 

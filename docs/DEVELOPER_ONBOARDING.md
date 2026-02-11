@@ -244,12 +244,11 @@ You set your upfront pricing:
 
 ### Platform Usage Fees
 
-After 20 free trial executions, WORKWAY charges users per execution:
+After 100 free runs, WORKWAY charges users per execution:
 
 | Workflow Type | Cost | Examples |
 |---------------|------|----------|
-| **Light** | 5¢/run | Simple integrations, data syncs, single API calls |
-| **Heavy** | 25¢/run | AI processing, multi-step automations, complex logic |
+| **All workflows** | 1¢/run | Flat rate for all workflow types |
 
 ### Revenue Split
 
@@ -259,7 +258,7 @@ After 20 free trial executions, WORKWAY charges users per execution:
 | Usage fees (after trial) | 0% | 100% |
 | Fork attribution (if your workflow is forked) | 12% of fork's upfront revenue | — |
 
-**The model is simple**: You set the upfront price and keep 100%. WORKWAY handles trials, billing, and infrastructure—charging 5¢ or 25¢ per run after the trial.
+**The model is simple**: You set the upfront price and keep 100%. WORKWAY handles trials, billing, and infrastructure—charging 1¢ per run after the 100 free runs.
 
 ### Stripe Connect Setup
 
@@ -337,7 +336,7 @@ export default defineWorkflow({
   pricing: {
     model: 'one_time',
     price: 2900, // $29 one-time (in cents)
-    complexityTier: 'heavy', // Platform charges 25¢/run after trial
+    // Platform charges 1¢/run after free runs
   },
 
   integrations: ['zoom', 'notion'],

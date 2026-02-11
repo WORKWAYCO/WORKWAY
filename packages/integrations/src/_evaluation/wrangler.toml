@@ -1,0 +1,8 @@
+name = "composio-eval"
+main = "composio-compat.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+# Set via `wrangler secret put COMPOSIO_API_KEY`
+# COMPOSIO_API_KEY = ""

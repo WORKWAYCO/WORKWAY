@@ -8,6 +8,71 @@ on:
   workflow_dispatch:
 
 jobs:
+  test-mcp-server:
+    name: MCP Server Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: packages/workway-construction-mcp
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+        working-directory: .
+
+      - name: Run unit tests
+        run: pnpm test:unit
+
+      - name: Run integration tests
+        run: pnpm test:integration
+
+      - name: Run e2e tests
+        run: pnpm test:e2e
+
+      - name: Run coverage
+        run: pnpm test:coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage/lcov.info
+          flags: mcp-server
+          name: mcp-server-coverage
+          fail_ci_if_error: false
+
+      - name: Test Summary
+        if: always()
+        run: |
+          echo "## MCP Server Tests" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ ${{ job.status }} == 'success' ]; then
+            echo "✅ **MCP Server tests passed**" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ **MCP Server tests failed**" >> $GITHUB_STEP_SUMMARY
+          fi
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Package: \`@workway/construction-mcp\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Test Type | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Unit | ${{ job.status == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integration | ${{ job.status == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| E2E | ${{ job.status == 'success' && '✅' || '❌' }} |" >> $GITHUB_STEP_SUMMARY
+
   test-workflows:
     name: Workflow Tests (259)
     runs-on: ubuntu-latest
@@ -125,23 +190,23 @@ jobs:
   test-summary:
     name: Test Summary
     runs-on: ubuntu-latest
-    needs: [test-workflows, test-integrations, test-sdk]
+    needs: [test-mcp-server, test-workflows, test-integrations, test-sdk]
     if: always()
     steps:
       - name: Overall Test Summary
         run: |
           echo "## 🧪 WORKWAY Test Suite Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "| Package | Tests | Status |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|-------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Workflows | 259 | ${{ needs.test-workflows.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Integrations | 68 | ${{ needs.test-integrations.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| SDK | 433 | ${{ needs.test-sdk.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Total: 760 tests**" >> $GITHUB_STEP_SUMMARY
+          echo "| Package | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| MCP Server | ${{ needs.test-mcp-server.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Workflows | ${{ needs.test-workflows.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Integrations | ${{ needs.test-integrations.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| SDK | ${{ needs.test-sdk.result == 'success' && '✅ Passed' || '❌ Failed' }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ needs.test-workflows.result }}" == "success" ] && \
+          if [ "${{ needs.test-mcp-server.result }}" == "success" ] && \
+             [ "${{ needs.test-workflows.result }}" == "success" ] && \
              [ "${{ needs.test-integrations.result }}" == "success" ] && \
              [ "${{ needs.test-sdk.result }}" == "success" ]; then
             echo "✅ **All tests passed!**" >> $GITHUB_STEP_SUMMARY

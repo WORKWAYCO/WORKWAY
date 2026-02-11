@@ -4,50 +4,44 @@
  * IMPORTANT: This file mirrors workway-platform/apps/api/src/lib/pricing-constants.ts
  * When updating pricing, both files should be updated together.
  *
+ * MODEL: Flat 1¢ per run. No tiers, no complexity levels.
+ *
  * All prices are in CENTS.
  */
 
 // ============================================================================
-// DEFAULT PRICING TIERS
+// DEFAULT PRICING
 // ============================================================================
 
 /**
- * Default per-execution rates (in cents)
+ * Default per-execution rate (in cents)
+ * Flat 1¢ per run.
  */
 export const DEFAULT_PRICING = {
-	// Public marketplace defaults
-	light: 5, // 5¢ - Simple syncs, notifications, single API calls
-	heavy: 25, // 25¢ - AI-powered, multi-step, complex processing
+	perRun: 1, // 1¢ per run — flat rate
 
 	// Trial configuration
-	freeTrialRuns: 20,
+	freeTrialRuns: 100, // 100 free runs on signup
 } as const;
-
-// ============================================================================
-// TYPE DEFINITIONS
-// ============================================================================
-
-export type ComplexityTier = 'light' | 'heavy';
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
 /**
- * Get price per execution for a complexity tier
+ * Get price per execution
  *
- * @param tier - 'light' or 'heavy'
- * @returns Price in cents
+ * @returns Price in cents (flat 1¢)
  */
-export function getPriceForTier(tier: ComplexityTier): number {
-	return DEFAULT_PRICING[tier];
+export function getPricePerRun(): number {
+	return DEFAULT_PRICING.perRun;
 }
 
 /**
  * Format cents to display string
  *
  * @param cents - Price in cents
- * @returns Formatted string (e.g., "5¢", "$1.00")
+ * @returns Formatted string (e.g., "1¢", "$1.00")
  */
 export function formatCents(cents: number): string {
 	if (cents < 100) {

@@ -1,12 +1,31 @@
-/* ==========================================================================
-   WORKWAY Design Tokens - CDN Distribution
-   "Weniger, aber besser" - Dieter Rams
-
-   Usage: <link rel="stylesheet" href="https://cdn.workway.co/tokens.css">
-
-   This file serves as the canonical source of truth for WORKWAY design tokens.
-   All Private/BYOO Workflows should use these tokens for consistency.
-   ========================================================================== */
+/**
+ * WORKWAY Design Tokens - CDN Distribution
+ * Served via: https://cdn.workway.co/tokens.css
+ *
+ * SOURCE OF TRUTH ALIGNMENT:
+ * These tokens are aligned with the CREATE SOMETHING Canon design system
+ * (packages/canon/src/lib/styles/tokens.css in create-something-monorepo).
+ *
+ * Shared token families:
+ *   - Colors: --color-bg-*, --color-fg-*, --color-border-*
+ *   - Glass: --glass-*, --liquid-glass-*
+ *   - Typography: --font-*, --text-*, --leading-*, --tracking-*
+ *   - Spacing: --space-* (golden ratio), --space-1 to --space-8 (component)
+ *   - Layout: --layout-1 to --layout-6, --section-padding-*
+ *   - Animation: --duration-*, --ease-*, --duration-bounce, --ease-bounce
+ *   - Shadows: --shadow-*, --shadow-glow-*
+ *   - Radius: --radius-*
+ *
+ * New shared modules available in Canon (for SvelteKit properties):
+ *   @import '@create-something/canon/styles/spacing.css';
+ *   @import '@create-something/canon/styles/typography.css';
+ *   @import '@create-something/canon/styles/buttons.css';
+ *   @import '@create-something/canon/styles/cards.css';
+ *   @import '@create-something/canon/styles/grid-patterns.css';
+ *   @import '@create-something/canon/styles/interactions.css';
+ *
+ * When updating tokens here, keep Canon tokens.css in sync and vice versa.
+ */
 
 :root {
   /* ==========================================================================
@@ -23,7 +42,7 @@
   --color-fg-primary: #ffffff;
   --color-fg-secondary: rgba(255, 255, 255, 0.8);
   --color-fg-tertiary: rgba(255, 255, 255, 0.6);
-  --color-fg-muted: rgba(255, 255, 255, 0.4);
+  --color-fg-muted: rgba(255, 255, 255, 0.46); /* WCAG AA compliant: 4.56:1 on pure black */
   --color-fg-subtle: rgba(255, 255, 255, 0.2);
 
   /* ==========================================================================
@@ -36,96 +55,305 @@
   /* ==========================================================================
      Functional Colors - Muted, purposeful
      ========================================================================== */
-  --color-success: #44aa44;
+  --color-success: #44aa44;               /* 7.08:1 */
   --color-success-muted: rgba(68, 170, 68, 0.2);
-  --color-error: #cc4444;
-  --color-error-muted: rgba(204, 68, 68, 0.2);
-  --color-warning: #aa8844;
+  --color-success-border: rgba(68, 170, 68, 0.3);
+  --color-error: #d44d4d;                 /* 4.97:1 */
+  --color-error-muted: rgba(212, 77, 77, 0.2);
+  --color-error-border: rgba(212, 77, 77, 0.3);
+  --color-warning: #aa8844;               /* 6.31:1 */
   --color-warning-muted: rgba(170, 136, 68, 0.2);
-  --color-info: #4477aa;
-  --color-info-muted: rgba(68, 119, 170, 0.2);
+  --color-warning-border: rgba(170, 136, 68, 0.3);
+  --color-info: #5082b9;                  /* 5.23:1 */
+  --color-info-muted: rgba(80, 130, 185, 0.2);
+  --color-info-border: rgba(80, 130, 185, 0.3);
 
   /* ==========================================================================
      Interactive States
      ========================================================================== */
   --color-hover: rgba(255, 255, 255, 0.05);
   --color-active: rgba(255, 255, 255, 0.1);
-  --color-focus: rgba(255, 255, 255, 0.2);
+  --color-focus: rgba(255, 255, 255, 0.5); /* WCAG AA compliant: 5.28:1 for focus indicators */
+
+  /* Overlay - for modals, dialogs, backdrops */
+  --color-overlay: rgba(0, 0, 0, 0.5);
+  --color-overlay-heavy: rgba(0, 0, 0, 0.7);
 
   /* ==========================================================================
      Shadow System - Elevation and hierarchy
      ========================================================================== */
+  --shadow-none: none;
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.5);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -2px rgba(0, 0, 0, 0.5);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.5);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
+
+  /* Glow shadows - light emission, not obstruction */
   --shadow-glow-sm: 0 0 10px rgba(255, 255, 255, 0.05);
   --shadow-glow-md: 0 0 20px rgba(255, 255, 255, 0.1);
+  --shadow-glow-lg: 0 0 40px rgba(255, 255, 255, 0.15);
+
+  /* Inner shadows - inset effects, pressed states */
+  --shadow-inner: inset 0 2px 4px 0 rgba(0, 0, 0, 0.5);
+  --shadow-inner-lg: inset 0 4px 8px 0 rgba(0, 0, 0, 0.5);
 
   /* ==========================================================================
      Radius System
      ========================================================================== */
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-sm: 6px;    /* 4 × 1.5 */
+  --radius-md: 8px;    /* 4 × 2 */
+  --radius-lg: 12px;   /* 4 × 3 */
+  --radius-xl: 16px;   /* 4 × 4 */
+  --radius-2xl: 24px;  /* 4 × 6 */
   --radius-full: 9999px;
 
   /* ==========================================================================
      Animation System - "Good design is unobtrusive"
      ========================================================================== */
+
+  /* Easing - cubic-bezier curves for natural motion */
   --ease-standard: cubic-bezier(0.4, 0.0, 0.2, 1);
+  --ease-decelerate: cubic-bezier(0.0, 0.0, 0.2, 1);
+  --ease-accelerate: cubic-bezier(0.4, 0.0, 1, 1);
+  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+
+  /* Duration - perceptual thresholds */
+  --duration-instant: 100ms;
   --duration-hover: 150ms;
   --duration-micro: 200ms;
+  --duration-fast: 200ms;     /* Alias for --duration-micro */
   --duration-standard: 300ms;
   --duration-complex: 500ms;
+  --duration-slow: 700ms;
+  --duration-bounce: 600ms;   /* For bounce animations */
+  --duration-loading: 2000ms;
+
+  /* Cascade timing - staggered animations */
+  --cascade-step: 50ms;
+  --cascade-group: 100ms;
+
+  /* Scale transforms - hover emphasis */
+  --scale-subtle: 0.98;
+  --scale-micro: 1.02;
+  --scale-small: 1.05;
+  --scale-medium: 1.1;
+
+  /* Opacity states */
+  --opacity-muted: 0.6;
+  --opacity-hover: 0.8;
+  --opacity-full: 1;
 
   /* ==========================================================================
      Typography System
      ========================================================================== */
-  --font-sans: 'Stack Sans Notch', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  --font-sans: 'Stack Sans Notch', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", "SF Mono", Consolas, monospace;
+  --font-serif: Georgia, "Times New Roman", serif;
 
   /* Font weights */
+  --font-light: 300;
   --font-regular: 400;
   --font-medium: 500;
   --font-semibold: 600;
   --font-bold: 700;
 
   /* Line heights */
-  --leading-tightest: 1.05;
-  --leading-tighter: 1.15;
   --leading-tight: 1.25;
   --leading-snug: 1.375;
   --leading-normal: 1.5;
-  --leading-body: 1.6;
-  --leading-relaxed: 1.625;
+  --leading-relaxed: 1.618; /* φ - Golden ratio */
+  --leading-loose: 1.75;
 
   /* Letter spacing */
   --tracking-tighter: -0.025em;
   --tracking-tight: -0.015em;
   --tracking-normal: 0;
+  --tracking-wide: 0.025em;
+  --tracking-wider: 0.05em;
+  --tracking-widest: 0.1em;
 
-  /* Fluid type scale */
-  --text-display-xl: clamp(3.5rem, 5vw + 2rem, 7rem);
-  --text-display: clamp(2.5rem, 4vw + 1.5rem, 5rem);
-  --text-h1: clamp(3.5rem, 9vw, 7rem);
-  --text-h2: clamp(2rem, 5vw, 3.5rem);
-  --text-h3: clamp(1.25rem, 1.5vw + 0.5rem, 1.75rem);
-  --text-h4: clamp(1.125rem, 1vw + 0.5rem, 1.5rem);
-  --text-body-lg: 1.125rem;
-  --text-body: clamp(1rem, 1.5vw, 1.25rem);
-  --text-body-sm: 0.875rem;
-  --text-caption: 0.75rem;
+  /* Type scale - Golden Ratio (φ) for display/headings, minor third (1.2) for body */
+  --text-display-xl: clamp(4.236rem, 6vw + 2rem, 6.854rem);  /* φ⁴ max */
+  --text-display: clamp(2.618rem, 4vw + 1.5rem, 4.236rem);   /* φ³ max */
+  --text-h1: clamp(1.618rem, 3vw + 1rem, 2.618rem);          /* φ² max */
+  --text-h2: clamp(1.2rem, 2vw + 0.5rem, 1.618rem);          /* φ¹ max */
+  --text-h3: clamp(1.02rem, 1vw + 0.5rem, 1.2rem);           /* 1.2¹ max */
+  --text-h4: clamp(0.931rem, 0.5vw + 0.5rem, 1.095rem);      /* √1.2 max */
+  --text-h5: 1rem;                                            /* base */
+  --text-h6: 0.913rem;                                        /* 1/√1.2 */
+  --text-body-lg: 1.095rem;                                   /* √1.2 */
+  --text-body: 1rem;                                          /* base */
+  --text-body-sm: 0.913rem;                                   /* 1/√1.2 */
+  --text-caption: 0.833rem;                                   /* 1/1.2 */
+  --text-overline: 0.618rem;                                  /* 1/φ */
 
   /* ==========================================================================
-     Golden Ratio Spacing Scale (phi = 1.618)
-     "Weniger, aber besser" - 4 values, rigorously applied
+     Spacing - Golden Ratio Scale (φ = 1.618)
+     
+     DERIVED from φⁿ where base = 1rem
+     | Step | Power | Value   | Derivation |
+     |------|-------|---------|------------|
+     | xs   | φ⁻¹   | 0.618   | 1 / φ      |
+     | sm   | φ⁰    | 1.000   | base       |
+     | md   | φ¹    | 1.618   | φ          |
+     | lg   | φ²    | 2.618   | φ²         |
+     | xl   | φ³    | 4.236   | φ³         |
+     | 2xl  | φ⁴    | 6.854   | φ⁴         |
+     | 3xl  | φ⁵    | 11.090  | φ⁵         |
      ========================================================================== */
-  --space-sm: 1rem;        /* 16px - base unit, tight relationships */
-  --space-md: 1.618rem;    /* ~26px - default breathing room */
-  --space-lg: 2.618rem;    /* ~42px - between related sections */
-  --space-xl: 4.236rem;    /* ~68px - major landmarks, heroes */
+  --space-xs: 0.618rem;   /* φ⁻¹ */
+  --space-sm: 1rem;       /* φ⁰ (base) */
+  --space-md: 1.618rem;   /* φ¹ */
+  --space-lg: 2.618rem;   /* φ² */
+  --space-xl: 4.236rem;   /* φ³ */
+  --space-2xl: 6.854rem;  /* φ⁴ */
+  --space-3xl: 11.09rem;  /* φ⁵ */
+
+  /* Component spacing scale - 1-8 for consistent component spacing */
+  --space-1: 0.25rem;     /* 4px */
+  --space-2: 0.5rem;      /* 8px */
+  --space-3: 0.75rem;     /* 12px */
+  --space-4: 1rem;        /* 16px */
+  --space-5: 1.5rem;      /* 24px */
+  --space-6: 2rem;        /* 32px */
+  --space-7: 3rem;        /* 48px */
+  --space-8: 4rem;        /* 64px */
+
+  /* ==========================================================================
+     Layout Scale - 1-6 for consistent layout spacing
+     ========================================================================== */
+  --layout-1: 1rem;        /* 16px */
+  --layout-2: 1.5rem;      /* 24px */
+  --layout-3: 2rem;        /* 32px */
+  --layout-4: 3rem;        /* 48px */
+  --layout-5: 4rem;       /* 64px */
+  --layout-6: 6rem;        /* 96px */
+
+  /* Section padding - for page sections */
+  --section-padding: 4rem;        /* 64px - standard section padding */
+  --section-padding-sm: 2rem;      /* 32px - smaller sections */
+  --section-padding-lg: 6rem;      /* 96px - hero/large sections */
+
+  /* ==========================================================================
+     Glass Design System - "The Automation Layer"
+     
+     Glass conveys WORKWAY's positioning: the transparent layer between
+     user and outcome. The tool recedes; the outcome remains.
+     
+     When to use:
+     - Navigation headers (glass-lg)
+     - Modal overlays (glass-elevated)
+     - Workflow/automation cards (glass-card)
+     - Floating UI elements (glass-elevated)
+     ========================================================================== */
+
+  /* Glass blur levels - backdrop-filter values */
+  --glass-blur-sm: 20px;
+  --glass-blur-md: 32px;
+  --glass-blur-lg: 48px;
+  --glass-blur-xl: 64px;
+  --glass-blur-2xl: 80px;
+
+  /* Glass saturation levels - adds color richness to blurred content */
+  --glass-saturate-sm: saturate(110%);
+  --glass-saturate-md: saturate(120%);
+  --glass-saturate-lg: saturate(130%);
+  --glass-saturate-xl: saturate(140%);
+
+  /* Glass background - dark/black tinted for true obsidian effect */
+  --glass-bg-subtle: rgba(0, 0, 0, 0.65);
+  --glass-bg-light: rgba(0, 0, 0, 0.72);
+  --glass-bg-medium: rgba(0, 0, 0, 0.78);
+  --glass-bg-strong: rgba(0, 0, 0, 0.85);
+
+  /* Glass border styles */
+  --glass-border-subtle: rgba(255, 255, 255, 0.06);
+  --glass-border-light: rgba(255, 255, 255, 0.10);
+  --glass-border-medium: rgba(255, 255, 255, 0.15);
+  --glass-border-strong: rgba(255, 255, 255, 0.22);
+
+  /* Glass shadows - deeper shadows for dramatic floating effect */
+  --glass-shadow-sm: 0 4px 24px rgba(0, 0, 0, 0.4);
+  --glass-shadow-md: 0 8px 40px rgba(0, 0, 0, 0.5);
+  --glass-shadow-lg: 0 16px 64px rgba(0, 0, 0, 0.6);
+
+  /* ==========================================================================
+     Liquid Glass Design System - Apple-style Refraction Effect
+     
+     Extends the Glass System with refraction, highlights, and depth layers.
+     ========================================================================== */
+
+  /* Refraction intensity - SVG displacement filter scale values */
+  --liquid-glass-refraction-subtle: 4;
+  --liquid-glass-refraction-medium: 8;
+  --liquid-glass-refraction-strong: 14;
+
+  /* Highlight gradients - simulating overhead light reflection */
+  --liquid-glass-highlight-primary: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    rgba(255, 255, 255, 0.04) 30%,
+    transparent 60%
+  );
+  --liquid-glass-highlight-subtle: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.08) 0%,
+    rgba(255, 255, 255, 0.02) 40%,
+    transparent 70%
+  );
+  --liquid-glass-highlight-strong: linear-gradient(
+    135deg,
+    rgba(255, 255, 255, 0.18) 0%,
+    rgba(255, 255, 255, 0.06) 25%,
+    transparent 55%
+  );
+
+  /* Top edge glow - simulates overhead light source */
+  --liquid-glass-edge-glow: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.3),
+    transparent
+  );
+
+  /* Inner shadow - creates depth and "thickness" to the glass */
+  --liquid-glass-inner-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.3);
+
+  /* Semantic tint colors - functional color overlays */
+  --liquid-glass-tint-purple: #a78bfa;
+  --liquid-glass-tint-blue: #60a5fa;
+  --liquid-glass-tint-emerald: #34d399;
+  --liquid-glass-tint-amber: #fbbf24;
+  --liquid-glass-tint-rose: #fb7185;
+  --liquid-glass-tint-cyan: #22d3ee;
+
+  /* Tint mix percentages - how much color to blend with glass background */
+  --liquid-glass-tint-mix-standard: 12%;
+  --liquid-glass-tint-mix-subtle: 8%;
+
+  /* ==========================================================================
+     Data Visualization Palette
+     ========================================================================== */
+  --color-data-1: #60a5fa; /* Blue */
+  --color-data-1-muted: rgba(96, 165, 250, 0.2);
+  --color-data-2: #22c55e; /* Green */
+  --color-data-2-muted: rgba(34, 197, 94, 0.2);
+  --color-data-3: #c084fc; /* Purple */
+  --color-data-3-muted: rgba(192, 132, 252, 0.2);
+  --color-data-3-border: rgba(192, 132, 252, 0.3);
+  --color-data-4: #fbbf24; /* Amber/Gold */
+  --color-data-4-muted: rgba(251, 191, 36, 0.2);
+  --color-data-5: #f472b6; /* Pink */
+  --color-data-5-muted: rgba(244, 114, 182, 0.2);
+  --color-data-6: #facc15; /* Yellow */
+  --color-data-6-muted: rgba(250, 204, 21, 0.2);
+
+  /* Rank colors - for leaderboards, medals, badges */
+  --color-rank-gold: #ca8a04;              /* Gold/1st place */
+  --color-rank-gold-muted: rgba(202, 138, 4, 0.2);
+  --color-rank-bronze: #c2410c;            /* Bronze/3rd place */
+  --color-rank-bronze-muted: rgba(194, 65, 12, 0.2);
 
   /* ==========================================================================
      Icon Size Scale - Consistent 16, 20, 24px
@@ -160,6 +388,61 @@
   --scrollbar-radius: 4px;        /* Scrollbar thumb radius */
   --outline-offset: 2px;          /* Focus outline offset (a11y standard) */
   --radius-none: 0;               /* Explicit zero radius for square corners */
+
+  /* ==========================================================================
+     Z-Index Layers
+     
+     Semantic stacking contexts with 10× gaps for flexibility.
+     | Layer    | Value | Use Case                        |
+     |----------|-------|--------------------------------|
+     | base     | 0     | Default stacking               |
+     | dropdown | 10    | Menus, selects, autocomplete   |
+     | sticky   | 20    | Sticky headers, sidebars       |
+     | fixed    | 50    | Fixed navbars, FABs            |
+     | modal    | 100   | Dialogs, drawers, sheets       |
+     | popover  | 200   | Popovers over modals           |
+     | tooltip  | 300   | Tooltips (always on top)       |
+     ========================================================================== */
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 50;
+  --z-modal: 100;
+  --z-popover: 200;
+  --z-tooltip: 300;
+
+  /* ==========================================================================
+     Layout Constants
+     ========================================================================== */
+  --header-height: 72px;
+
+  /* ==========================================================================
+     Breakpoints & Containers
+     ========================================================================== */
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+
+  --container-sm: 640px;
+  --container-md: 768px;
+  --container-lg: 1024px;
+  --container-xl: 1280px;
+  --container-2xl: 1400px;
+  --container-prose: 65ch;
+
+  /* Content widths - DERIVED from golden ratio (φ = 1.618) */
+  --width-tight: 16.07rem;   /* 26 / φ - narrow sidebars */
+  --width-narrow: 32.36rem;  /* 20 × φ - narrow content */
+  --width-prose: 42rem;      /* 26 × φ - optimal reading (66-75 chars) */
+  --width-content: 52.36rem; /* 20 × φ² - content sections */
+  --width-wide: 68rem;       /* 26 × φ² - full-width content */
+
+  /* ==========================================================================
+     View Transitions
+     ========================================================================== */
+  --view-transition-duration: var(--duration-standard);
 
   /* ==========================================================================
      Short Aliases - Backwards compatibility for existing workflows

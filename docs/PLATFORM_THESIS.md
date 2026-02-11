@@ -62,7 +62,7 @@ Both sides benefit from the same Heideggerian principle: the mechanism disappear
 | Party | Revenue Source | Model |
 |-------|----------------|-------|
 | **Developer** | One-time purchase from User | Developer sets price (free or paid), keeps 100% after processing |
-| **WORKWAY** | Per-execution fee from User | Light: 5¢/run, Heavy: 25¢/run |
+| **WORKWAY** | Per-execution fee from User | 1¢/run flat rate |
 | **User** | Pays both | Upfront purchase + usage fees |
 
 ### No Subscriptions
@@ -76,15 +76,15 @@ WORKWAY deliberately avoids subscription pricing:
 
 ### Trial Model
 
-Every workflow includes **20 free executions**. Users experience value before committing.
+Every account starts with **100 free runs**. Users experience value before committing.
 
 ### Real-World Examples
 
 | Business | Workflow | Upfront | Monthly Usage | Total |
 |----------|----------|---------|---------------|-------|
-| Dental office | Appointment reminders | $49 | ~$15 (300 × 5¢) | $64 first month |
-| Coffee shop | Transaction sync | $29 | ~$10 (200 × 5¢) | $39 first month |
-| Pickleball facility | Booking confirmations | $39 | ~$8 (150 × 5¢) | $47 first month |
+| Dental office | Appointment reminders | $49 | ~$3 (300 × 1¢) | $52 first month |
+| Coffee shop | Transaction sync | $29 | ~$2 (200 × 1¢) | $31 first month |
+| Pickleball facility | Booking confirmations | $39 | ~$1.50 (150 × 1¢) | $40.50 first month |
 
 ---
 
@@ -116,7 +116,7 @@ Every workflow includes **20 free executions**. Users experience value before co
    Browse marketplace by outcome ("meeting follow-up", "customer tracking")
 
 2. TRY
-   Enable workflow → 20 free executions
+   Enable workflow → 100 free runs
    Connect OAuth (one click per service)
 
 3. USE
@@ -125,7 +125,7 @@ Every workflow includes **20 free executions**. Users experience value before co
 
 4. PAY
    One-time purchase to developer (if priced)
-   Per-execution to WORKWAY (5¢ or 25¢)
+   Per-execution to WORKWAY (1¢/run)
 
 5. SCALE
    Usage grows naturally with business
@@ -151,7 +151,7 @@ Every workflow includes **20 free executions**. Users experience value before co
 |-------------|----------------------------------|
 | **Zapier** | WORKWAY sells outcomes, Zapier sells connections. "Zoom to Notion in 5 steps" vs "Meeting notes that write themselves" |
 | **Make** | Visual builders require users to think like programmers. WORKWAY: enable and forget |
-| **Manual work** | WORKWAY is cheaper than human time. 5¢ vs 15 minutes of follow-up |
+| **Manual work** | WORKWAY is cheaper than human time. 1¢ vs 15 minutes of follow-up |
 | **Custom development** | Users can't code. WORKWAY: no code required |
 | **Do nothing** | WORKWAY's 20-trial model removes risk of trying |
 
@@ -175,7 +175,7 @@ Every workflow includes **20 free executions**. Users experience value before co
 │   Write summary                                                │
 │   Post to channel                   │                          │
 │   Review for action items           ▼                          │
-│   Create tasks                 Done. 5¢.                       │
+│   Create tasks                 Done. 1¢.                       │
 │        │                                                       │
 │        ▼                                                       │
 │   45 minutes gone                                              │
@@ -220,7 +220,7 @@ Every workflow includes **20 free executions**. Users experience value before co
 
 3. PRICE
    Set one-time purchase price (or free)
-   Tag complexity: light (5¢) or heavy (25¢)
+   Pricing: 1¢/run flat rate
 
 4. DEPLOY
    workway deploy
@@ -329,7 +329,7 @@ That's it. OAuth, billing, deployment, metering—all invisible.
 ### Flywheel Mechanics
 
 1. **Developer builds workflow** → Listed in marketplace
-2. **User discovers workflow** → Tries 20 free executions
+2. **User discovers workflow** → Gets 100 free runs
 3. **User sees value** → Purchases and uses
 4. **Developer earns revenue** → Builds more workflows
 5. **More workflows** → More users discover platform
@@ -482,7 +482,7 @@ WORKWAY occupies the **upper-right quadrant**: developer-friendly SDK with user-
 ### Why This Model Works
 
 **For Users:**
-- Try before buying (20 free executions)
+- Try before buying (100 free runs)
 - Pay for value received (per execution)
 - No commitment trap (no subscriptions)
 - Costs scale with business (not with seats)
@@ -501,24 +501,23 @@ WORKWAY occupies the **upper-right quadrant**: developer-friendly SDK with user-
 
 ### Pricing Examples
 
-**Light Workflow (5¢/execution)**
+**Flat Rate (1¢/run)**
 ```
 Meeting Notes Automation
 - Developer price: $39 one-time
 - User executes: 200 meetings/month
-- Monthly cost to user: $39 + $10 = $49 first month, $10/month ongoing
+- Monthly cost to user: $39 + $2 = $41 first month, $2/month ongoing
 - Developer earns: $39 per install
-- WORKWAY earns: $10/month per active user
+- WORKWAY earns: $2/month per active user
 ```
 
-**Heavy Workflow (25¢/execution)**
 ```
 AI Meeting Intelligence with Multi-Step Processing
 - Developer price: $99 one-time
 - User executes: 50 meetings/month
-- Monthly cost to user: $99 + $12.50 = $111.50 first month, $12.50/month ongoing
+- Monthly cost to user: $99 + $0.50 = $99.50 first month, $0.50/month ongoing
 - Developer earns: $99 per install
-- WORKWAY earns: $12.50/month per active user
+- WORKWAY earns: $0.50/month per active user
 ```
 
 ### Why No Subscriptions

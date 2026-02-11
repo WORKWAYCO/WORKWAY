@@ -131,10 +131,8 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 		}
 
 		Logger.blank();
-		Logger.section('Workflow Complexity');
-		Logger.log('Complexity tier determines usage pricing after trial:');
-		Logger.listItem(`Light: ${formatCents(DEFAULT_PRICING.light)} per execution (simple workflows, 1-3 API calls, <5s)`);
-		Logger.listItem(`Heavy: ${formatCents(DEFAULT_PRICING.heavy)} per execution (AI processing, 4+ API calls, complex logic)`);
+		Logger.section('Workflow Pricing');
+		Logger.log(`Flat rate: ${formatCents(DEFAULT_PRICING.perRun)} per run after ${DEFAULT_PRICING.freeTrialRuns} free runs.`);
 		Logger.blank();
 
 		const complexityAnswer = await inquirer.prompt([
@@ -144,12 +142,8 @@ export async function workflowPublishCommand(options: PublishOptions): Promise<v
 				message: 'Complexity tier:',
 				choices: [
 					{
-						name: `Light (${formatCents(DEFAULT_PRICING.light)}/run after trial) - Simple integrations, data syncs`,
+						name: `Standard (${formatCents(DEFAULT_PRICING.perRun)}/run) - All workflow types`,
 						value: 'light',
-					},
-					{
-						name: `Heavy (${formatCents(DEFAULT_PRICING.heavy)}/run after trial) - AI-powered, multi-step automations`,
-						value: 'heavy',
 					},
 				],
 				default: 'light',
