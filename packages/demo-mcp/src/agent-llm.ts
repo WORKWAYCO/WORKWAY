@@ -6,7 +6,7 @@
  */
 
 const MODEL = '@cf/openai/gpt-oss-120b';
-const DATA_MAX_CHARS = 1500;
+const DATA_MAX_CHARS = 2000;
 
 const TOOL_SELECTION_INSTRUCTIONS = `You are a construction project assistant. You have access to these tools. Choose ONE tool that best answers the user's question. Reply with JSON only, no other text: {"tool": "<name>", "arguments": {...}}.
 
@@ -58,6 +58,13 @@ function extractText(response: unknown): string | null {
 export interface GenerateAgentMessageEnv {
 	AI: { run: (model: string, options: Record<string, unknown>) => Promise<unknown> };
 }
+
+/** SSE event envelope for streaming endpoint */
+export type StreamEvent =
+	| { type: 'start'; toolCall: Record<string, unknown>; response: Record<string, unknown>; summary?: string; responseStyle?: string }
+	| { type: 'content'; content: string }
+	| { type: 'done'; timeSaved: string }
+	| { type: 'error'; error: string };
 
 export type AgentOutput = { tool: string; arguments: Record<string, unknown> };
 
@@ -125,11 +132,11 @@ export async function generateAgentMessage(
 Tool used: ${toolName}
 Result data: ${dataBlob}
 
-Answer the user's question using the data above. Use any relevant fields (assignees, reviewers, project names, titles, status, counts). Be direct and concise; 1-4 sentences. No preamble like "Based on the data".`;
+Reply in natural language using the data above. Sound like a knowledgeable colleague, not a report: conversational, warm, and direct. Use specifics from the data (names, counts, project names, assignees, reviewers, status) so the answer feels grounded. Vary your style: sometimes 1–2 sentences, sometimes a short paragraph if there’s a lot to say. You may add a brief interpretation or one suggested next step when it fits. Avoid stock phrases like "Here they are" or "I found X items" when you can instead answer the actual question (e.g. who’s working on it, what needs attention). No preamble like "Based on the data" or "According to the tool result."`;
 
 	try {
 		const response = await env.AI.run(MODEL, {
-			instructions: 'You are a construction project assistant. Use the tool result data to answer the user. You have full freedom to cite assignees, reviewers, project names, and specifics from the data as needed.',
+			instructions: `You are a construction project assistant in the same vein as Claude or Codex: helpful, conversational, and outcome-focused. Answer the user's question using only the tool result data. Cite assignees, reviewers, project names, counts, and status when relevant. Vary tone and length naturally—brief when the answer is simple, a bit more when summarizing attention items or explaining who's on what. Never make up data; if something isn't in the result, don't mention it.`,
 			input,
 			reasoning: { effort: 'low', summary: 'concise' },
 		} as Record<string, unknown>);
@@ -138,4 +145,95 @@ Answer the user's question using the data above. Use any relevant fields (assign
 	} catch {
 		return null;
 	}
+}
+
+function toSSE(event: StreamEvent): string {
+	return `data: ${JSON.stringify(event)}\n\n`;
+}
+
+/**
+ * Stream the agent reply using Workers AI with stream: true.
+ * Returns a ReadableStream that yields SSE-formatted events: content chunks then done.
+ * Caller should send a "start" event before piping this (toolCall, response, etc.).
+ */
+export function streamAgentMessage(
+	env: GenerateAgentMessageEnv,
+	userMessage: string,
+	toolName: string,
+	toolResult: { success: boolean; data?: unknown; error?: string }
+): ReadableStream<Uint8Array> | null {
+	if (!env.AI?.run) return null;
+	if (!toolResult.success) return null;
+
+	const dataBlob = serializeData(toolResult.data);
+	const input = `User asked: "${userMessage}"
+
+Tool used: ${toolName}
+Result data: ${dataBlob}
+
+Reply in natural language using the data above. Sound like a knowledgeable colleague, not a report: conversational, warm, and direct. Use specifics from the data (names, counts, project names, assignees, reviewers, status) so the answer feels grounded. Vary your style: sometimes 1–2 sentences, sometimes a short paragraph if there's a lot to say. You may add a brief interpretation or one suggested next step when it fits. Avoid stock phrases like "Here they are" or "I found X items" when you can instead answer the actual question (e.g. who's working on it, what needs attention). No preamble like "Based on the data" or "According to the tool result."`;
+
+	const instructions = `You are a construction project assistant in the same vein as Claude or Codex: helpful, conversational, and outcome-focused. Answer the user's question using only the tool result data. Cite assignees, reviewers, project names, counts, and status when relevant. Vary tone and length naturally—brief when the answer is simple, a bit more when summarizing attention items or explaining who's on what. Never make up data; if something isn't in the result, don't mention it.`;
+
+	const encoder = new TextEncoder();
+	let buffer = '';
+
+	return new ReadableStream<Uint8Array>({
+		async start(controller) {
+			try {
+				const raw = await env.AI!.run(MODEL, {
+					instructions,
+					input,
+					reasoning: { effort: 'low', summary: 'concise' },
+					stream: true,
+				} as Record<string, unknown>);
+
+				const stream = raw as ReadableStream<Uint8Array> | AsyncIterable<{ response?: string }>;
+				if (!stream) {
+					controller.enqueue(encoder.encode(toSSE({ type: 'error', error: 'No stream' })));
+					controller.close();
+					return;
+				}
+
+				if (Symbol.asyncIterator in stream) {
+					for await (const chunk of stream as AsyncIterable<{ response?: string }>) {
+						const text = chunk?.response ?? '';
+						if (text) {
+							controller.enqueue(encoder.encode(toSSE({ type: 'content', content: text })));
+						}
+					}
+				} else {
+					const reader = (stream as ReadableStream<Uint8Array>).getReader();
+					const decoder = new TextDecoder();
+					while (true) {
+						const { done, value } = await reader.read();
+						if (done) break;
+						buffer += decoder.decode(value, { stream: true });
+						const lines = buffer.split('\n\n');
+						buffer = lines.pop() ?? '';
+						for (const line of lines) {
+							const trimmed = line.trim();
+							if (!trimmed.startsWith('data: ')) continue;
+							const payload = trimmed.slice(6);
+							if (payload === '[DONE]') continue;
+							try {
+								const data = JSON.parse(payload) as { response?: string };
+								if (data.response) {
+									controller.enqueue(encoder.encode(toSSE({ type: 'content', content: data.response })));
+								}
+							} catch {
+								// skip non-JSON lines
+							}
+						}
+					}
+				}
+			} catch (err) {
+				controller.enqueue(encoder.encode(toSSE({
+					type: 'error',
+					error: err instanceof Error ? err.message : 'Stream failed',
+				})));
+			}
+			controller.close();
+		},
+	});
 }

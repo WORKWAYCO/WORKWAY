@@ -12,7 +12,7 @@ import { createMCPServer } from '@workway/mcp-core';
 import { demoTools } from './tools';
 import { resolveToolCall, type AgentOutput } from './agent';
 import { buildSandboxResponse } from './sandbox-response';
-import { generateAgentMessage, selectToolWithLLM, type GenerateAgentMessageEnv } from './agent-llm';
+import { generateAgentMessage, selectToolWithLLM, streamAgentMessage, type GenerateAgentMessageEnv } from './agent-llm';
 
 export interface DemoMCPEnv {
 	KV: KVNamespace;
@@ -102,6 +102,107 @@ app.post('/demo/query', async (c) => {
 		return c.json(sandbox, 200);
 	} catch (err) {
 		console.error('[demo/query]', err);
+		return c.json(
+			{ error: 'server_error', message: err instanceof Error ? err.message : 'Internal error' },
+			500
+		);
+	}
+});
+
+const SSE_HEADERS = {
+	'Content-Type': 'text/event-stream',
+	'Cache-Control': 'no-cache',
+	'Connection': 'keep-alive',
+} as const;
+
+/**
+ * POST /demo/query/stream
+ * Same as /demo/query but streams the agent message as SSE: start → content chunks → done.
+ * Body: { message: string }
+ */
+app.post('/demo/query/stream', async (c) => {
+	try {
+		const body = (await c.req.json()) as { message?: string };
+		const message = typeof body?.message === 'string' ? body.message.trim() : '';
+		if (!message) {
+			return c.json(
+				{ error: 'missing_message', message: 'Request body must include { message: string }' },
+				400
+			);
+		}
+
+		const envWithAI = c.env as unknown as GenerateAgentMessageEnv;
+		let agentOutput: AgentOutput;
+		if ('AI' in c.env) {
+			const llmChoice = await selectToolWithLLM(envWithAI, message);
+			agentOutput = llmChoice
+				? { tool: llmChoice.tool as AgentOutput['tool'], arguments: llmChoice.arguments }
+				: resolveToolCall(message);
+		} else {
+			agentOutput = resolveToolCall(message);
+		}
+
+		const tool = demoTools[agentOutput.tool as keyof typeof demoTools];
+		if (!tool) {
+			return c.json(
+				{ error: 'unknown_tool', tool: agentOutput.tool },
+				400
+			);
+		}
+
+		const parsed = tool.inputSchema.safeParse(agentOutput.arguments);
+		const input = parsed.success ? parsed.data : agentOutput.arguments as Record<string, unknown>;
+		const toolResult = await tool.execute(input as never, c.env as never);
+		const sandbox = buildSandboxResponse(agentOutput, toolResult, message);
+
+		const encoder = new TextEncoder();
+		const toSSE = (event: object) => `data: ${JSON.stringify(event)}\n\n`;
+
+		const stream = new ReadableStream<Uint8Array>({
+			async start(controller) {
+				// 1. Send start event (toolCall, response, summary, responseStyle)
+				controller.enqueue(encoder.encode(toSSE({
+					type: 'start',
+					toolCall: { name: sandbox.toolCall.name, params: sandbox.toolCall.params },
+					response: sandbox.response,
+					summary: sandbox.summary,
+					responseStyle: sandbox.responseStyle ?? 'cards',
+				})));
+
+				// 2. Stream agent message when AI is available
+				if ('AI' in c.env && sandbox.agentMessage) {
+					const agentStream = streamAgentMessage(envWithAI, message, agentOutput.tool, toolResult);
+					if (agentStream) {
+						const reader = agentStream.getReader();
+						try {
+							while (true) {
+								const { done, value } = await reader.read();
+								if (done) break;
+								controller.enqueue(value);
+							}
+						} finally {
+							reader.releaseLock();
+						}
+					} else {
+						// Fallback: send template as single content event
+						controller.enqueue(encoder.encode(toSSE({ type: 'content', content: sandbox.agentMessage })));
+					}
+				} else {
+					controller.enqueue(encoder.encode(toSSE({ type: 'content', content: sandbox.agentMessage ?? sandbox.summary ?? '' })));
+				}
+
+				// 3. Send done event
+				controller.enqueue(encoder.encode(toSSE({
+					type: 'done',
+					timeSaved: sandbox.response.timeSaved,
+				})));
+				controller.close();
+			},
+		});
+
+		return new Response(stream, { headers: SSE_HEADERS });
+	} catch (err) {
+		console.error('[demo/query/stream]', err);
 		return c.json(
 			{ error: 'server_error', message: err instanceof Error ? err.message : 'Internal error' },
 			500
