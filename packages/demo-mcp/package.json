@@ -1,0 +1,22 @@
+{
+  "name": "@workway/demo-mcp",
+  "version": "0.1.0",
+  "description": "WORKWAY Demo MCP - Procore-shaped mock data and 8 tools for sandbox and Cursor/Claude",
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@workway/mcp-core": "workspace:*",
+    "hono": "^4.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240512.0",
+    "typescript": "^5.4.0",
+    "wrangler": "^3.114.17"
+  }
+}

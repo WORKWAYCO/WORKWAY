@@ -1,0 +1,20 @@
+name = "workway-demo-mcp"
+main = "src/index.ts"
+compatibility_date = "2024-12-01"
+compatibility_flags = ["nodejs_compat"]
+# Set CLOUDFLARE_ACCOUNT_ID if not using Half Dozen
+account_id = "5c3e9cf4d55ce171b844fad0931607f9"
+
+# For local dev use: pnpm dev (uses workers.dev or localhost)
+workers_dev = true
+
+# KV for anonymous metering (mcp-core)
+[[kv_namespaces]]
+binding = "KV"
+id = "c716ddb5fe5644b6a35381ae50fcd4ae"
+
+# D1 required by mcp-core type; not used for anonymous demo
+[[d1_databases]]
+binding = "DB"
+database_name = "workway-demo-mcp"
+database_id = "cbf8cd61-4179-463b-a921-bbc58c2a1af6"

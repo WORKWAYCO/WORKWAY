@@ -1,0 +1,7 @@
+{
+  "mcpServers": {
+    "workway-demo": {
+      "url": "https://workway-demo-mcp.workers.dev/sse"
+    }
+  }
+}
