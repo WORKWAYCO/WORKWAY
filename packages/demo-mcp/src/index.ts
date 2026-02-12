@@ -12,7 +12,7 @@ import { createMCPServer } from '@workway/mcp-core';
 import { demoTools } from './tools';
 import { resolveToolCall } from './agent';
 import { buildSandboxResponse } from './sandbox-response';
-import { generateAgentMessage, type GenerateAgentMessageEnv } from './agent-llm';
+import { generateAgentMessage, selectToolWithLLM, type GenerateAgentMessageEnv } from './agent-llm';
 
 export interface DemoMCPEnv {
 	KV: KVNamespace;
@@ -61,7 +61,14 @@ app.post('/demo/query', async (c) => {
 			);
 		}
 
-		const agentOutput = resolveToolCall(message);
+		const envWithAI = c.env as unknown as GenerateAgentMessageEnv;
+		let agentOutput = resolveToolCall(message);
+		if ('AI' in c.env) {
+			const llmChoice = await selectToolWithLLM(envWithAI, message);
+			if (llmChoice) {
+				agentOutput = { tool: llmChoice.tool as keyof typeof demoTools, arguments: llmChoice.arguments };
+			}
+		}
 		const tool = demoTools[agentOutput.tool as keyof typeof demoTools];
 		if (!tool) {
 			return c.json(
@@ -75,7 +82,6 @@ app.post('/demo/query', async (c) => {
 		const toolResult = await tool.execute(input as never, c.env as never);
 
 		const sandbox = buildSandboxResponse(agentOutput, toolResult, message);
-		const envWithAI = c.env as unknown as GenerateAgentMessageEnv;
 		if ('AI' in c.env && sandbox.agentMessage) {
 			const llmMessage = await generateAgentMessage(
 				envWithAI,
