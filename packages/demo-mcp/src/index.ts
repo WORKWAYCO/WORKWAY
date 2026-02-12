@@ -10,7 +10,7 @@
 import { Hono } from 'hono';
 import { createMCPServer } from '@workway/mcp-core';
 import { demoTools } from './tools';
-import { resolveToolCall } from './agent';
+import { resolveToolCall, type AgentOutput } from './agent';
 import { buildSandboxResponse } from './sandbox-response';
 import { generateAgentMessage, selectToolWithLLM, type GenerateAgentMessageEnv } from './agent-llm';
 
@@ -62,12 +62,15 @@ app.post('/demo/query', async (c) => {
 		}
 
 		const envWithAI = c.env as unknown as GenerateAgentMessageEnv;
-		let agentOutput = resolveToolCall(message);
+		// Always use LLM for tool selection when AI binding is present (reasoning required for Claude Desktop, Codex, etc.)
+		let agentOutput: AgentOutput;
 		if ('AI' in c.env) {
 			const llmChoice = await selectToolWithLLM(envWithAI, message);
-			if (llmChoice) {
-				agentOutput = { tool: llmChoice.tool as keyof typeof demoTools, arguments: llmChoice.arguments };
-			}
+			agentOutput = llmChoice
+				? { tool: llmChoice.tool as AgentOutput['tool'], arguments: llmChoice.arguments }
+				: resolveToolCall(message);
+		} else {
+			agentOutput = resolveToolCall(message);
 		}
 		const tool = demoTools[agentOutput.tool as keyof typeof demoTools];
 		if (!tool) {
@@ -82,6 +85,7 @@ app.post('/demo/query', async (c) => {
 		const toolResult = await tool.execute(input as never, c.env as never);
 
 		const sandbox = buildSandboxResponse(agentOutput, toolResult, message);
+		// Always use LLM for the reply when AI is present (reasoning over tool result)
 		if ('AI' in c.env && sandbox.agentMessage) {
 			const llmMessage = await generateAgentMessage(
 				envWithAI,
