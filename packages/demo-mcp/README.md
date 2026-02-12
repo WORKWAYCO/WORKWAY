@@ -6,8 +6,8 @@ Procore-shaped **mock** construction data and 8 MCP tools so you can try WORKWAY
 
 - **8 tools**: `list_projects`, `list_rfis`, `get_rfi`, `list_submittals`, `get_submittal`, `get_project_summary`, `list_daily_logs`, `create_daily_log`
 - **Mock data**: Projects (Main Street Tower, Harbor View Condos, Tech Campus Phase 2), RFIs, submittals, daily logs — all in-memory, no Procore OAuth
-- **Active agent**: Heuristic router maps natural language to one tool + arguments (no LLM required; optional LLM can be added later)
-- **Sandbox endpoint**: `POST /demo/query` with `{ message: string }` returns `{ toolCall, response, summary?, timeSaved }` for the web sandbox UI
+- **Active agent**: Heuristic router maps natural language to one tool + arguments. When the Worker has a Workers AI binding, **gpt-oss-120b** is used to generate the agent reply from the tool result (reasoning over the data); otherwise template messages are used.
+- **Sandbox endpoint**: `POST /demo/query` with `{ message: string }` returns `{ toolCall, response, agentMessage?, responseStyle?, timeSaved }` for the web sandbox UI
 
 ## Run locally
 
@@ -22,7 +22,7 @@ Then open the MCP server at `http://localhost:8787`. The sandbox on the WORKWAY 
 ## Deploy (Worker)
 
 1. Create a [KV namespace](https://developers.cloudflare.com/kv/) and [D1 database](https://developers.cloudflare.com/d1/) (required by `@workway/mcp-core` for metering).
-2. In `wrangler.toml`, set `KV` and `DB` bindings to your ids.
+2. In `wrangler.toml`, set `KV` and `DB` bindings to your ids. The `[ai]` binding is optional; when present, the sandbox uses **gpt-oss-120b** to generate agent messages from tool results (see [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/)).
 3. Deploy:
 
    ```bash

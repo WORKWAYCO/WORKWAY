@@ -18,3 +18,7 @@ id = "c716ddb5fe5644b6a35381ae50fcd4ae"
 binding = "DB"
 database_name = "workway-demo-mcp"
 database_id = "cbf8cd61-4179-463b-a921-bbc58c2a1af6"
+
+# Workers AI – optional: used to generate agent message with gpt-oss-120b
+[ai]
+binding = "AI"

@@ -12,6 +12,7 @@ import { createMCPServer } from '@workway/mcp-core';
 import { demoTools } from './tools';
 import { resolveToolCall } from './agent';
 import { buildSandboxResponse } from './sandbox-response';
+import { generateAgentMessage, type GenerateAgentMessageEnv } from './agent-llm';
 
 export interface DemoMCPEnv {
 	KV: KVNamespace;
@@ -74,6 +75,20 @@ app.post('/demo/query', async (c) => {
 		const toolResult = await tool.execute(input as never, c.env as never);
 
 		const sandbox = buildSandboxResponse(agentOutput, toolResult, message);
+		const envWithAI = c.env as unknown as GenerateAgentMessageEnv;
+		if ('AI' in c.env && sandbox.agentMessage) {
+			const llmMessage = await generateAgentMessage(
+				envWithAI,
+				message,
+				agentOutput.tool,
+				toolResult,
+				sandbox.agentMessage
+			);
+			if (llmMessage) {
+				sandbox.agentMessage = llmMessage;
+				sandbox.responseStyle = 'answer_with_details';
+			}
+		}
 		return c.json(sandbox, 200);
 	} catch (err) {
 		console.error('[demo/query]', err);
