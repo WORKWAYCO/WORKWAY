@@ -53,6 +53,11 @@ export function routeMessage(message: string): AgentOutput | null {
 	const lower = message.toLowerCase().trim();
 	const projectId = resolveProjectId(message);
 
+	// get_project_summary: "what needs my attention", "what needs attention", "what should I look at"
+	if (/\b(what\s+needs\s+(my\s+)?attention|what\s+needs\s+attention|what\s+should\s+I\s+look\s+at|what\s+should\s+i\s+focus\s+on)\b/.test(lower) && !/\b(rfi|submittal|daily|log)\b/.test(lower)) {
+		return { tool: 'get_project_summary', arguments: { project_id: projectId } };
+	}
+
 	// list_projects
 	if (/\b(projects|list projects|what projects|which projects)\b/.test(lower) && !/\b(rfi|submittal|daily|log)\b/.test(lower)) {
 		return { tool: 'list_projects', arguments: {} };
