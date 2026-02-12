@@ -73,7 +73,7 @@ app.post('/demo/query', async (c) => {
 		const input = parsed.success ? parsed.data : agentOutput.arguments as Record<string, unknown>;
 		const toolResult = await tool.execute(input as never, c.env as never);
 
-		const sandbox = buildSandboxResponse(agentOutput, toolResult);
+		const sandbox = buildSandboxResponse(agentOutput, toolResult, message);
 		return c.json(sandbox, 200);
 	} catch (err) {
 		console.error('[demo/query]', err);

@@ -2,6 +2,7 @@
  * Converts demo tool results into the shape MCPSandbox expects.
  * response.type: 'list' | 'summary' | 'action'
  * response.data: normalized for ResponseDisplay
+ * When user asks "what are X about?" we reason from the data and put details in agentMessage.
  */
 
 import type { AgentOutput } from './agent';
@@ -15,8 +16,10 @@ export interface SandboxResponse {
 	};
 	/** Short label for compatibility (e.g. "Found 2 RFI(s).") */
 	summary?: string;
-	/** Natural-language agent reply, like Claude/Cursor would respond before showing cards */
+	/** Natural-language agent reply; may be a full answer with details from the data */
 	agentMessage?: string;
+	/** When true, the agent message is the full answer; cards are reference only (UI can collapse or de-emphasize) */
+	responseStyle?: 'cards' | 'answer_with_details';
 }
 
 function inferTimeSaved(toolName: string, count?: number): string {
@@ -27,11 +30,24 @@ function inferTimeSaved(toolName: string, count?: number): string {
 	return '~10 min';
 }
 
+/** User is asking what/how/about — we should answer in prose from the data, not just "here are the cards". */
+function wantsProseAnswer(userMessage: string): boolean {
+	const lower = userMessage.toLowerCase();
+	return (
+		/\b(what are|what's|whats|what is)\s+(the\s+)?(submittals?|rfis?|logs?|projects?)\s+(about|for)\b/.test(lower) ||
+		/\b(what are|what is)\s+(they|these|those)\s+about\b/.test(lower) ||
+		/\b(tell me about|describe|summarize)\s+(the\s+)?(submittals?|rfis?|logs?)\b/.test(lower) ||
+		/\b(what do we have|what have we got)\s+(for|on)\b/.test(lower)
+	);
+}
+
 export function buildSandboxResponse(
 	agentOutput: AgentOutput,
-	toolResult: { success: boolean; data?: unknown; error?: string }
+	toolResult: { success: boolean; data?: unknown; error?: string },
+	userMessage?: string
 ): SandboxResponse {
 	const { tool: name, arguments: params } = agentOutput;
+	const prose = userMessage ? wantsProseAnswer(userMessage) : false;
 	const timeSaved = inferTimeSaved(name, Array.isArray((toolResult.data as any)?.rfis) ? (toolResult.data as any).rfis?.length : (toolResult.data as any)?.submittals?.length ?? (toolResult.data as any)?.count);
 
 	if (!toolResult.success) {
@@ -52,53 +68,80 @@ export function buildSandboxResponse(
 	switch (name) {
 		case 'list_projects': {
 			const projects = (data?.projects as Array<Record<string, unknown>>) ?? [];
-			const agentMessage =
-				projects.length === 0
-					? "I don't see any projects in the system yet. If you're setting up, you can add one from the project list."
-					: `I pulled the project list. You have ${projects.length} project${projects.length !== 1 ? 's' : ''} — here they are:`;
+			const mapped = projects.map((p) => ({
+				id: p.id,
+				title: p.name,
+				project: p.name,
+				status: p.status,
+				completion: p.completion,
+			}));
+			let agentMessage: string;
+			let responseStyle: 'cards' | 'answer_with_details' = 'cards';
+			if (projects.length === 0) {
+				agentMessage = "I don't see any projects in the system yet. If you're setting up, you can add one from the project list.";
+			} else if (prose) {
+				const names = mapped.map((p) => (p.project as string) ?? p.title).join(', ');
+				agentMessage = mapped.length === 1
+					? `There is 1 project: ${names}.`
+					: `There are ${mapped.length} projects: ${names}.`;
+				responseStyle = 'answer_with_details';
+			} else {
+				agentMessage = `I pulled the project list. You have ${projects.length} project${projects.length !== 1 ? 's' : ''} — here they are:`;
+			}
 			return {
 				toolCall: { name, params },
-				response: {
-					type: 'list',
-					data: projects.map((p) => ({
-						id: p.id,
-						title: p.name,
-						project: p.name,
-						status: p.status,
-						completion: p.completion,
-					})),
-					timeSaved,
-				},
+				response: { type: 'list', data: mapped, timeSaved },
 				summary: `Found ${projects.length} project(s).`,
 				agentMessage,
+				responseStyle,
 			};
 		}
 		case 'list_rfis': {
 			const rfis = (data?.rfis as Array<Record<string, unknown>>) ?? [];
 			const statusFilter = (params?.status as string) ?? 'all';
-			const agentMessage =
-				rfis.length === 0
-					? statusFilter === 'overdue'
+			const mapped = rfis.map((r) => ({
+				id: r.id,
+				subject: r.subject,
+				project: r.project ?? (r.project_id as string),
+				status: r.status,
+				daysOverdue: r.days_overdue,
+			}));
+			let agentMessage: string;
+			let responseStyle: 'cards' | 'answer_with_details' = 'cards';
+			if (rfis.length === 0) {
+				agentMessage =
+					statusFilter === 'overdue'
 						? "I checked for overdue RFIs and there aren't any right now — good news."
-						: "I didn't find any RFIs matching that. Try a different project or status."
-					: statusFilter === 'overdue'
+						: "I didn't find any RFIs matching that. Try a different project or status.";
+			} else if (prose) {
+				const projectName = (mapped[0]?.project as string) ?? 'this project';
+				if (mapped.length === 1) {
+					const r = mapped[0];
+					const subject = (r.subject as string) ?? String(r.id);
+					const overdue = r.daysOverdue != null ? `${r.daysOverdue} days overdue` : String(r.status ?? 'open');
+					agentMessage = `There is 1 RFI for ${projectName}: ${subject} (${overdue}).`;
+				} else {
+					const parts = mapped.map((r, i) => {
+						const subject = (r.subject as string) ?? String(r.id);
+						const overdue = r.daysOverdue != null ? `${r.daysOverdue} days overdue` : String(r.status ?? 'open');
+						const which = i === 0 ? 'One' : i === 1 ? 'the other' : 'another';
+						return `${which} is ${subject} (${overdue})`;
+					});
+					agentMessage = `There are ${mapped.length} RFIs for ${projectName}. ${parts.join('; ')}.`;
+				}
+				responseStyle = 'answer_with_details';
+			} else {
+				agentMessage =
+					statusFilter === 'overdue'
 						? `I found ${rfis.length} overdue RFI${rfis.length !== 1 ? 's' : ''} that need attention. Here they are:`
 						: `I looked up the RFIs and found ${rfis.length}. Here they are:`;
+			}
 			return {
 				toolCall: { name, params },
-				response: {
-					type: 'list',
-					data: rfis.map((r) => ({
-						id: r.id,
-						subject: r.subject,
-						project: r.project ?? (r.project_id as string),
-						status: r.status,
-						daysOverdue: r.days_overdue,
-					})),
-					timeSaved,
-				},
+				response: { type: 'list', data: mapped, timeSaved },
 				summary: `Found ${rfis.length} RFI(s).`,
 				agentMessage,
+				responseStyle,
 			};
 		}
 		case 'get_rfi': {
@@ -122,25 +165,43 @@ export function buildSandboxResponse(
 		}
 		case 'list_submittals': {
 			const submittals = (data?.submittals as Array<Record<string, unknown>>) ?? [];
-			const agentMessage =
-				submittals.length === 0
-					? "I didn't find any submittals matching that. Try a different project or status."
-					: `I found ${submittals.length} submittal${submittals.length !== 1 ? 's' : ''}. Here they are:`;
+			const mapped = submittals.map((s) => ({
+				id: s.id,
+				title: s.title,
+				project: s.project ?? s.project_id,
+				status: s.status,
+				daysPending: s.days_pending,
+			}));
+			let agentMessage: string;
+			let responseStyle: 'cards' | 'answer_with_details' = 'cards';
+			if (submittals.length === 0) {
+				agentMessage = "I didn't find any submittals matching that. Try a different project or status.";
+			} else if (prose) {
+				const projectName = (mapped[0]?.project as string) ?? 'this project';
+				if (mapped.length === 1) {
+					const s = mapped[0];
+					const title = (s.title as string) ?? String(s.id);
+					const pending = s.daysPending != null ? `${s.daysPending} days pending` : String(s.status ?? 'pending');
+					agentMessage = `There is 1 submittal for ${projectName}: ${title} (${pending}).`;
+				} else {
+					const parts = mapped.map((s, i) => {
+						const title = (s.title as string) ?? String(s.id);
+						const pending = s.daysPending != null ? `${s.daysPending} days pending` : String(s.status ?? 'pending');
+						const which = i === 0 ? 'One' : i === 1 ? 'the other' : 'another';
+						return `${which} is ${title} (${pending})`;
+					});
+					agentMessage = `There are ${mapped.length} submittals for ${projectName}. ${parts.join('; ')}.`;
+				}
+				responseStyle = 'answer_with_details';
+			} else {
+				agentMessage = `I found ${submittals.length} submittal${submittals.length !== 1 ? 's' : ''}. Here they are:`;
+			}
 			return {
 				toolCall: { name, params },
-				response: {
-					type: 'list',
-					data: submittals.map((s) => ({
-						id: s.id,
-						title: s.title,
-						project: s.project ?? s.project_id,
-						status: s.status,
-						daysPending: s.days_pending,
-					})),
-					timeSaved,
-				},
+				response: { type: 'list', data: mapped, timeSaved },
 				summary: `Found ${submittals.length} submittal(s).`,
 				agentMessage,
+				responseStyle,
 			};
 		}
 		case 'get_submittal': {
@@ -186,25 +247,35 @@ export function buildSandboxResponse(
 		}
 		case 'list_daily_logs': {
 			const logs = (data?.daily_logs as Array<Record<string, unknown>>) ?? [];
-			const agentMessage =
-				logs.length === 0
-					? "I didn't find any daily logs for that project yet. You can create one if you'd like."
-					: `I found ${logs.length} daily log${logs.length !== 1 ? 's' : ''}. Here they are:`;
+			const mapped = logs.map((l) => ({
+				id: l.id,
+				title: `${l.log_date} - ${l.weather ?? 'N/A'}`,
+				project: l.project_id,
+				status: l.status,
+				notes: l.notes,
+			}));
+			let agentMessage: string;
+			let responseStyle: 'cards' | 'answer_with_details' = 'cards';
+			if (logs.length === 0) {
+				agentMessage = "I didn't find any daily logs for that project yet. You can create one if you'd like.";
+			} else if (prose) {
+				const parts = mapped.map((l, i) => {
+					const title = (l.title as string) ?? String(l.id);
+					return i === 0 ? `One is ${title}` : `another is ${title}`;
+				});
+				agentMessage = mapped.length === 1
+					? `There is 1 daily log: ${(mapped[0].title as string) ?? mapped[0].id}.`
+					: `There are ${mapped.length} daily logs. ${parts.join('; ')}.`;
+				responseStyle = 'answer_with_details';
+			} else {
+				agentMessage = `I found ${logs.length} daily log${logs.length !== 1 ? 's' : ''}. Here they are:`;
+			}
 			return {
 				toolCall: { name, params },
-				response: {
-					type: 'list',
-					data: logs.map((l) => ({
-						id: l.id,
-						title: `${l.log_date} - ${l.weather ?? 'N/A'}`,
-						project: l.project_id,
-						status: l.status,
-						notes: l.notes,
-					})),
-					timeSaved,
-				},
+				response: { type: 'list', data: mapped, timeSaved },
 				summary: `Found ${logs.length} daily log(s).`,
 				agentMessage,
+				responseStyle,
 			};
 		}
 		case 'create_daily_log': {
