@@ -6,6 +6,8 @@
 
 Evaluating [Composio](https://composio.dev) as invisible plumbing for commodity CRUD integrations (Slack notifications, HubSpot leads, Jira tickets). Deep MCPs (QuickBooks, Notion substrate, scheduling) stay custom-built.
 
+**Product context**: See [specs/procore-cross-app-workflow-research.md](../../../../specs/procore-cross-app-workflow-research.md) for how Composio’s toolkit catalog (Drive, Gmail/Outlook, Slack, Notion, Jira, Precoro) maps to high-value Procore cross-app workflows and where WORKWAY’s Procore MCP + Skills + Judgment Layer differentiate.
+
 The gating question: Does `composio-core` run in Cloudflare Workers?
 
 ## Quick Start
