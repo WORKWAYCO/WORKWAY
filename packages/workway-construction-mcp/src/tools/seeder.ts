@@ -157,6 +157,15 @@ const MANPOWER_ENTRIES = [
   { company: 'Reliable Plumbing', workers: 3, description: 'Underground plumbing' },
 ];
 
+function resolveConnectionId(input: { connection_id?: string; user_id?: string }): string {
+  return input.connection_id || input.user_id || 'default';
+}
+
+function normalizeRfiPriority(priority: 'low' | 'normal' | 'high' | 'critical'): 'low' | 'normal' | 'high' {
+  // Procore API supports low|normal|high. Map critical to high for compatibility.
+  return priority === 'critical' ? 'high' : priority;
+}
+
 // ============================================================================
 // Seeder Tools
 // ============================================================================
@@ -179,6 +188,8 @@ Use this to test the Intelligence Layer Skills like draft_rfi and daily_log_summ
     inputSchema: z.object({
       project_id: z.number().describe('Procore project ID to seed data into'),
       count: z.number().optional().default(5).describe('Number of RFIs to create (max 8)'),
+      connection_id: z.string().optional().default('default')
+        .describe('Your WORKWAY connection ID from workway_connect_procore'),
       user_id: z.string().optional().default('default'),
     }),
     outputSchema: z.object({
@@ -192,6 +203,7 @@ Use this to test the Intelligence Layer Skills like draft_rfi and daily_log_summ
     execute: async (input: z.infer<typeof seederTools.seed_test_rfis.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         const count = Math.min(input.count || 5, SAMPLE_RFIS.length);
+        const connectionId = resolveConnectionId(input);
         const created: any[] = [];
         
         for (let i = 0; i < count; i++) {
@@ -205,9 +217,9 @@ Use this to test the Intelligence Layer Skills like draft_rfi and daily_log_summ
             project_id: input.project_id,
             subject: template.subject,
             question: template.question,
-            priority: template.priority,
+            priority: normalizeRfiPriority(template.priority),
             due_date: dueDate.toISOString().split('T')[0],
-            user_id: input.user_id,
+            connection_id: connectionId,
           }, env);
           
           if (result.success && result.data) {
@@ -238,8 +250,7 @@ Use this to test the Intelligence Layer Skills like draft_rfi and daily_log_summ
 
   /**
    * Seed Daily Logs
-   * Note: Procore's daily log API is more complex - this creates the structure
-   * but may need adjustment based on actual API capabilities
+   * Attempts to create real daily logs in Procore.
    */
   seed_test_daily_logs: {
     name: 'workway_seed_test_daily_logs',
@@ -255,6 +266,8 @@ Note: Uses Procore's daily log API which requires specific permissions.`,
     inputSchema: z.object({
       project_id: z.number().describe('Procore project ID'),
       days: z.number().optional().default(7).describe('Number of days to create logs for'),
+      connection_id: z.string().optional().default('default')
+        .describe('Your WORKWAY connection ID from workway_connect_procore'),
       user_id: z.string().optional().default('default'),
     }),
     outputSchema: z.object({
@@ -268,6 +281,7 @@ Note: Uses Procore's daily log API which requires specific permissions.`,
     execute: async (input: z.infer<typeof seederTools.seed_test_daily_logs.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
         const days = Math.min(input.days || 7, 14);
+        const connectionId = resolveConnectionId(input);
         const created: any[] = [];
         
         // Note: Procore daily log API structure
@@ -281,29 +295,31 @@ Note: Uses Procore's daily log API which requires specific permissions.`,
           const note = DAILY_LOG_NOTES[i % DAILY_LOG_NOTES.length];
           const manpower = MANPOWER_ENTRIES.slice(0, 3 + Math.floor(Math.random() * 3));
           
-          // Attempt to create via Procore API
-          // Note: Daily log creation API varies by Procore version
-          try {
-            const result = await procoreTools.test_procore_api.execute({
-              path: `/projects/${input.project_id}/daily_logs`,
-              user_id: input.user_id,
-            }, env);
-            
-            // For now, just track what we would create
+          const result = await procoreTools.create_procore_daily_log.execute({
+            project_id: input.project_id,
+            log_date: dateStr,
+            notes: note,
+            weather_conditions: weather.conditions,
+            temperature_high: weather.temp_high,
+            temperature_low: weather.temp_low,
+            connection_id: connectionId,
+          }, env);
+
+          if (result.success && result.data) {
             created.push({
               date: dateStr,
               weather: weather.conditions,
               manpower_count: manpower.reduce((sum, m) => sum + m.workers, 0),
               note_preview: note.slice(0, 50) + '...',
+              id: (result.data as any).id,
             });
-          } catch (e) {
-            // Daily log API may not support POST - track anyway for demo
+          } else {
             created.push({
               date: dateStr,
               weather: weather.conditions,
               manpower_count: manpower.reduce((sum, m) => sum + m.workers, 0),
               note_preview: note.slice(0, 50) + '...',
-              api_note: 'Simulated - daily log POST may require different endpoint',
+              api_error: result.error || 'Unknown error',
             });
           }
         }
@@ -313,7 +329,7 @@ Note: Uses Procore's daily log API which requires specific permissions.`,
           data: {
             created,
             total: created.length,
-            message: `Prepared ${created.length} daily log entries. Note: Procore daily log creation may require manual entry or different API version.`,
+            message: `Created ${created.length} daily log entries in Procore (entries with api_error were not created).`,
             manualEntryData: {
               weather: WEATHER_CONDITIONS.slice(0, days),
               notes: DAILY_LOG_NOTES.slice(0, days),
@@ -345,12 +361,19 @@ Creates:
 Perfect for setting up a demo environment to test the Intelligence Layer Skills.`,
     inputSchema: z.object({
       project_id: z.number().describe('Procore project ID'),
+      connection_id: z.string().optional().default('default')
+        .describe('Your WORKWAY connection ID from workway_connect_procore'),
       user_id: z.string().optional().default('default'),
     }),
     outputSchema: z.object({
-      rfis_created: z.number(),
-      daily_logs_created: z.number(),
-      summary: z.string(),
+      rfis: z.any().optional(),
+      daily_logs: z.any().optional(),
+      summary: z.object({
+        rfis_created: z.number(),
+        daily_logs_created: z.number(),
+        message: z.string(),
+      }),
+      nextSteps: z.array(z.string()).optional(),
     }),
     execute: async (input: z.infer<typeof seederTools.seed_test_data.inputSchema>, env: Env): Promise<ToolResult> => {
       try {
@@ -358,14 +381,14 @@ Perfect for setting up a demo environment to test the Intelligence Layer Skills.
         const rfiResult = await seederTools.seed_test_rfis.execute({
           project_id: input.project_id,
           count: 5,
-          user_id: input.user_id,
+          connection_id: resolveConnectionId(input),
         }, env);
         
         // Seed Daily Logs
         const logResult = await seederTools.seed_test_daily_logs.execute({
           project_id: input.project_id,
           days: 7,
-          user_id: input.user_id,
+          connection_id: resolveConnectionId(input),
         }, env);
         
         const rfisCreated = rfiResult.success ? (rfiResult.data as any)?.total || 0 : 0;
@@ -378,8 +401,8 @@ Perfect for setting up a demo environment to test the Intelligence Layer Skills.
             daily_logs: logResult.data,
             summary: {
               rfis_created: rfisCreated,
-              daily_logs_prepared: logsCreated,
-              message: `Test data seeded! Created ${rfisCreated} RFIs. Daily logs prepared (${logsCreated} days). You can now test the Intelligence Layer Skills.`,
+              daily_logs_created: logsCreated,
+              message: `Test data seeded! Created ${rfisCreated} RFIs and ${logsCreated} daily logs. You can now test the Intelligence Layer Skills.`,
             },
             nextSteps: [
               `Test draft_rfi: workway_skill_draft_rfi({ project_id: ${input.project_id}, question_intent: "..." })`,

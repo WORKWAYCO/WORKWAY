@@ -120,6 +120,7 @@ export const toolCategories = {
     'workway_get_procore_documents',
     'workway_get_procore_schedule',
     'workway_create_procore_rfi',
+    'workway_create_procore_daily_log',
     'workway_create_procore_webhook',
     'workway_list_procore_webhooks',
     'workway_delete_procore_webhook',

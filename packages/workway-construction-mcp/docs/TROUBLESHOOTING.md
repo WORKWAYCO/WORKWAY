@@ -71,7 +71,7 @@ Common issues and solutions for the WORKWAY Construction MCP server.
 
 2. **Callback URL mismatch:**
    - Ensure Procore OAuth app callback URL matches exactly:
-     `https://workway-construction-mcp.workers.dev/oauth/callback`
+     `https://construction.mcp.workway.co/oauth/callback`
    - Check for trailing slashes or protocol mismatches
 
 3. **Retry OAuth flow:**

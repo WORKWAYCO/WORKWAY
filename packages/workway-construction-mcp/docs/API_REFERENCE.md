@@ -460,19 +460,24 @@ Get daily logs from a Procore project.
 **Response:**
 ```json
 {
-  "daily_logs": [
-    {
-      "id": 11111,
-      "log_date": "2026-02-01",
-      "status": "submitted",
-      "weather_conditions": "Clear",
-      "temperature_high": 72,
-      "temperature_low": 45,
-      "notes": "Foundation pour completed",
-      "manpower_count": 12
-    }
-  ],
-  "total": 1
+  "date_range": {
+    "start_date": "2026-02-01",
+    "end_date": "2026-02-28"
+  },
+  "weather_logs": [],
+  "manpower_logs": [],
+  "notes_logs": [],
+  "equipment_logs": [],
+  "safety_violation_logs": [],
+  "accident_logs": [],
+  "work_logs": [],
+  "delay_logs": [],
+  "pagination": {
+    "limit": 30,
+    "offset": 0,
+    "total_days_in_range": 28,
+    "hasMore": false
+  }
 }
 ```
 

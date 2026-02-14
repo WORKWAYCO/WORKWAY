@@ -52,7 +52,7 @@ WORKWAY Construction MCP uses OAuth 2.0 to securely connect to your Procore acco
    - **Application Type:** Select `Web Application`
 
 3. **Configure redirect URI:**
-   - **Redirect URI:** `https://workway-construction-mcp.workers.dev/oauth/callback`
+   - **Redirect URI:** `https://construction.mcp.workway.co/oauth/callback`
    - ⚠️ **Important:** This must match exactly (no trailing slash, correct protocol)
 
 4. **Select scopes:**
@@ -172,7 +172,7 @@ WORKWAY Construction MCP uses OAuth 2.0 to securely connect to your Procore acco
 
 **Solution:**
 1. Check Procore app settings
-2. Ensure redirect URI is exactly: `https://workway-construction-mcp.workers.dev/oauth/callback`
+2. Ensure redirect URI is exactly: `https://construction.mcp.workway.co/oauth/callback`
 3. No trailing slash, correct protocol (https)
 4. Update and save in Procore Developer Portal
 
@@ -270,7 +270,7 @@ If running multiple environments (dev, staging, production):
 
 3. **Update callback URLs:**
    - Dev: `https://workway-construction-mcp-dev.workers.dev/oauth/callback`
-   - Prod: `https://workway-construction-mcp.workers.dev/oauth/callback`
+   - Prod: `https://construction.mcp.workway.co/oauth/callback`
 
 ---
 

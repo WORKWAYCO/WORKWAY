@@ -831,8 +831,8 @@ export const procoreTools: MCPToolSet = {
         
         const hasMore = pagination.offset + pagination.limit < totalDaysInRange;
         
-        // Procore daily logs uses filters[start_date] and filters[end_date]
-        const url = `/projects/${input.project_id}/daily_logs?filters[start_date]=${startDate}&filters[end_date]=${endDate}`;
+        // Use log_date range filters for daily logs
+        const url = `/projects/${input.project_id}/daily_logs?filters[log_date][gte]=${startDate}&filters[log_date][lte]=${endDate}`;
 
         const response = await procoreRequest<any>(env, url, {}, input.connection_id || 'default');
 
@@ -1320,6 +1320,71 @@ export const procoreTools: MCPToolSet = {
           durationMs: Date.now() - startTime,
           errorMessage: error instanceof WorkwayError ? error.message : 'Unknown error',
         });
+        return handleError(error);
+      }
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // workway_create_procore_daily_log
+  // --------------------------------------------------------------------------
+  create_procore_daily_log: {
+    name: 'workway_create_procore_daily_log',
+    description: 'Create a daily log in a Procore project.',
+    inputSchema: z.object({
+      project_id: z.number().describe('Procore project ID'),
+      log_date: z.string().optional().describe('Log date (YYYY-MM-DD). Defaults to yesterday.'),
+      notes: z.string().optional().describe('Daily log notes'),
+      weather_conditions: z.string().optional().describe('Weather condition summary (e.g., Clear, Overcast)'),
+      temperature_high: z.number().optional().describe('High temperature in Fahrenheit'),
+      temperature_low: z.number().optional().describe('Low temperature in Fahrenheit'),
+      connection_id: z.string().optional().describe('Your WORKWAY connection ID'),
+    }),
+    outputSchema: z.object({
+      id: z.number(),
+      log_date: z.string().optional(),
+      status: z.string().optional(),
+      created_at: z.string().optional(),
+    }),
+    execute: async (input: z.infer<typeof procoreTools.create_procore_daily_log.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
+      try {
+        const userId = input.connection_id || 'default';
+
+        const logDate = input.log_date || new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        const dailyLog: Record<string, unknown> = {
+          log_date: logDate,
+        };
+
+        if (input.notes) {
+          dailyLog.notes = input.notes;
+        }
+
+        if (input.weather_conditions || input.temperature_high != null || input.temperature_low != null) {
+          dailyLog.weather_conditions = {
+            conditions: input.weather_conditions,
+            temperature_high: input.temperature_high,
+            temperature_low: input.temperature_low,
+          };
+        }
+
+        const created = await procoreRequest<any>(
+          env,
+          `/projects/${input.project_id}/daily_logs`,
+          {
+            method: 'POST',
+            body: JSON.stringify({ daily_log: dailyLog }),
+          },
+          userId
+        );
+
+        return success({
+          id: created.id,
+          log_date: created.log_date || logDate,
+          status: created.status,
+          created_at: created.created_at,
+          message: `Daily log created for ${created.log_date || logDate}`,
+        });
+      } catch (error) {
         return handleError(error);
       }
     },

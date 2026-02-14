@@ -208,8 +208,8 @@ const templates: Record<string, WorkflowTemplate> = {
           endpoint: '/projects/{{project_id}}/daily_logs',
           method: 'GET',
           params: {
-            'filters[start_date]': '{{today}}',
-            'filters[end_date]': '{{today}}',
+            'filters[log_date][gte]': '{{today}}',
+            'filters[log_date][lte]': '{{today}}',
           },
         },
       },

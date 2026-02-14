@@ -614,6 +614,41 @@ describe('Construction Workflows', () => {
 
   describe('Daily Log Workflows', () => {
     describe('workway_get_procore_daily_logs', () => {
+      it('should create a daily log entry', async () => {
+        global.fetch = vi.fn().mockResolvedValue(
+          createMockFetchResponse({
+            id: 7001,
+            log_date: '2024-01-15',
+            status: 'open',
+            created_at: '2024-01-15T18:00:00Z',
+          })
+        );
+
+        const result = await procoreTools.create_procore_daily_log.execute(
+          {
+            project_id: 12345,
+            log_date: '2024-01-15',
+            notes: 'Field work progressed as planned.',
+            weather_conditions: 'Clear',
+            temperature_high: 72,
+            temperature_low: 48,
+            connection_id: 'test-user',
+          },
+          env
+        );
+
+        expect(result.success).toBe(true);
+        expect(result.data?.id).toBe(7001);
+
+        const [url, options] = (global.fetch as any).mock.calls[0];
+        expect(url).toContain('/projects/12345/daily_logs');
+        expect(options.method).toBe('POST');
+
+        const body = JSON.parse(options.body);
+        expect(body.daily_log.log_date).toBe('2024-01-15');
+        expect(body.daily_log.notes).toBe('Field work progressed as planned.');
+      });
+
       it('should list daily logs for a project', async () => {
         const mockResponse = {
           weather_logs: mockDailyLogs.map((l) => ({
@@ -649,7 +684,7 @@ describe('Construction Workflows', () => {
         expect(result.data?.notesLogs).toBeDefined();
       });
 
-      it('should filter by date range (start_date, end_date)', async () => {
+      it('should filter by date range (log_date gte/lte)', async () => {
         global.fetch = vi.fn().mockResolvedValue(
           createMockFetchResponse({
             weather_logs: [],
@@ -671,11 +706,11 @@ describe('Construction Workflows', () => {
 
         expect(result.success).toBe(true);
         expect(global.fetch).toHaveBeenCalledWith(
-          expect.stringContaining('filters[start_date]='),
+          expect.stringContaining('filters[log_date][gte]='),
           expect.any(Object)
         );
         expect(global.fetch).toHaveBeenCalledWith(
-          expect.stringContaining('filters[end_date]='),
+          expect.stringContaining('filters[log_date][lte]='),
           expect.any(Object)
         );
       });

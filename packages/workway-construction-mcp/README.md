@@ -127,6 +127,7 @@ All tools follow the pattern: `workway_{action}_{provider}_{resource}`
 | `workway_get_procore_documents` | Fetch documents |
 | `workway_get_procore_schedule` | Fetch schedule tasks |
 | `workway_create_procore_rfi` | Create new RFI |
+| `workway_create_procore_daily_log` | Create daily log |
 | `workway_create_procore_webhook` | Register webhook |
 | `workway_list_procore_webhooks` | List webhooks |
 | `workway_delete_procore_webhook` | Delete webhook |
@@ -200,7 +201,7 @@ wrangler secret put CLOUDFLARE_ACCOUNT_ID  # Find at dash.cloudflare.com
 ### OAuth Setup
 
 1. Create a Procore OAuth app at [developers.procore.com](https://developers.procore.com)
-2. Set callback URL to: `https://workway-construction-mcp.workers.dev/oauth/callback`
+2. Set callback URL to: `https://construction.mcp.workway.co/oauth/callback`
 3. Add client credentials as secrets
 
 ## AI Gateway Integration
