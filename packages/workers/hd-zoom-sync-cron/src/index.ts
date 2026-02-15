@@ -57,8 +57,11 @@ async function triggerSync(env: Env): Promise<{
 	let message = bodyText;
 
 	try {
-		const json = JSON.parse(bodyText) as { success?: boolean; message?: string };
+		const json = JSON.parse(bodyText) as { success?: boolean; message?: string; error?: string };
+		// meetings.workway.co typically returns { success, message?, error? }.
+		// Prefer message, then error, then the raw body.
 		if (typeof json?.message === 'string') message = json.message;
+		else if (typeof json?.error === 'string') message = json.error;
 		if (json?.success === false) {
 			return { ok: false, status: res.status, message, bodyText };
 		}
