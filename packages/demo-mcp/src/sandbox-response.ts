@@ -30,6 +30,28 @@ function inferTimeSaved(toolName: string, count?: number): string {
 	return '~10 min';
 }
 
+type TeamMember = { name: string; role: string };
+
+function formatTeam(team: unknown): string {
+	if (!Array.isArray(team) || team.length === 0) return 'No staffing assigned yet.';
+	const names = team
+		.map((member) => {
+			if (!member || typeof member !== 'object') return null;
+			const m = member as Partial<TeamMember>;
+			if (typeof m.name !== 'string' || typeof m.role !== 'string') return null;
+			return `${m.name} (${m.role})`;
+		})
+		.filter((entry): entry is string => Boolean(entry));
+	return names.length > 0 ? names.join(', ') : 'No staffing assigned yet.';
+}
+
+function isTeamQuestion(message: string | undefined): boolean {
+	if (!message) return false;
+	const lower = message.toLowerCase();
+	return /\b(who\s*('s| is| are)?\s*(is|are)?\s*(working|assigned|on|handling)|who\s+is\s+working\s+on)\b/.test(lower)
+		&& /\b(project|projects|team|teams)\b/.test(lower);
+}
+
 /** User is asking what/how/about — we should answer in prose from the data, not just "here are the cards". */
 function wantsProseAnswer(userMessage: string): boolean {
 	const lower = userMessage.toLowerCase();
@@ -37,7 +59,8 @@ function wantsProseAnswer(userMessage: string): boolean {
 		/\b(what are|what's|whats|what is)\s+(the\s+)?(submittals?|rfis?|logs?|projects?)\s+(about|for)\b/.test(lower) ||
 		/\b(what are|what is)\s+(they|these|those)\s+about\b/.test(lower) ||
 		/\b(tell me about|describe|summarize)\s+(the\s+)?(submittals?|rfis?|logs?)\b/.test(lower) ||
-		/\b(what do we have|what have we got)\s+(for|on)\b/.test(lower)
+		/\b(what do we have|what have we got)\s+(for|on)\b/.test(lower) ||
+		isTeamQuestion(userMessage)
 	);
 }
 
@@ -74,11 +97,18 @@ export function buildSandboxResponse(
 				project: p.name,
 				status: p.status,
 				completion: p.completion,
+				team: p.team,
 			}));
 			let agentMessage: string;
 			let responseStyle: 'cards' | 'answer_with_details' = 'cards';
 			if (projects.length === 0) {
 				agentMessage = "I don't see any projects in the system yet. If you're setting up, you can add one from the project list.";
+			} else if (isTeamQuestion(userMessage)) {
+				const projectLines = mapped
+					.map((p) => `${p.project}: ${formatTeam(p.team)}`)
+					.join('\n');
+				agentMessage = `Here\'s who is currently listed as working on the projects:\n${projectLines}`;
+				responseStyle = 'answer_with_details';
 			} else if (prose) {
 				const names = mapped.map((p) => (p.project as string) ?? p.title).join(', ');
 				agentMessage = mapped.length === 1

@@ -10,6 +10,8 @@ export interface DemoProject {
 	completion: number;
 	projectNumber?: string;
 	active: boolean;
+	/** Small staffing stub to support "who's working on the projects?" demo queries. */
+	team?: Array<{ name: string; role: string }>;
 }
 
 export interface DemoRFI {
@@ -20,6 +22,8 @@ export interface DemoRFI {
 	project_id: string;
 	project?: string;
 	due_date?: string;
+	/** Relative due date (days from "today" in UTC). When set, due_date is derived at runtime. */
+	due_offset_days?: number;
 	created_at: string;
 	days_overdue?: number;
 	assignee?: string;
@@ -35,6 +39,8 @@ export interface DemoSubmittal {
 	project_id: string;
 	project?: string;
 	due_date?: string;
+	/** Relative due date (days from "today" in UTC). When set, due_date is derived at runtime. */
+	due_offset_days?: number;
 	reviewer?: string;
 	days_pending?: number;
 	created_at?: string;
@@ -56,9 +62,45 @@ export interface DemoDailyLog {
 // ============================================================================
 
 export const PROJECTS: DemoProject[] = [
-	{ id: 'P-001', name: 'Main Street Tower', status: 'active', completion: 67, projectNumber: 'PRJ-001', active: true },
-	{ id: 'P-002', name: 'Harbor View Condos', status: 'active', completion: 34, projectNumber: 'PRJ-002', active: true },
-	{ id: 'P-003', name: 'Tech Campus Phase 2', status: 'active', completion: 89, projectNumber: 'PRJ-003', active: true },
+	{
+		id: 'P-001',
+		name: 'Main Street Tower',
+		status: 'active',
+		completion: 67,
+		projectNumber: 'PRJ-001',
+		active: true,
+		team: [
+			{ name: 'Sarah Chen', role: 'Project Engineer' },
+			{ name: 'Mike Rodriguez', role: 'MEP Coordinator' },
+			{ name: 'Alex Nguyen', role: 'Superintendent' },
+		],
+	},
+	{
+		id: 'P-002',
+		name: 'Harbor View Condos',
+		status: 'active',
+		completion: 34,
+		projectNumber: 'PRJ-002',
+		active: true,
+		team: [
+			{ name: 'Priya Desai', role: 'Project Manager' },
+			{ name: 'Ben Walker', role: 'Superintendent' },
+			{ name: 'Erin Holt', role: 'Architect Liaison' },
+		],
+	},
+	{
+		id: 'P-003',
+		name: 'Tech Campus Phase 2',
+		status: 'active',
+		completion: 89,
+		projectNumber: 'PRJ-003',
+		active: true,
+		team: [
+			{ name: 'Noah Park', role: 'Project Manager' },
+			{ name: 'Alicia Gomez', role: 'Superintendent' },
+			{ name: 'Drew Collins', role: 'QA/QC Lead' },
+		],
+	},
 ];
 
 // ============================================================================
@@ -73,9 +115,8 @@ export const RFIS: DemoRFI[] = [
 		project_id: 'P-001',
 		project: 'Main Street Tower',
 		status: 'overdue',
-		days_overdue: 3,
 		assignee: 'Sarah Chen',
-		due_date: '2025-02-09',
+		due_offset_days: -3,
 		created_at: '2025-01-15T10:00:00Z',
 		question_body: 'Clarification needed on conduit penetration detail through 2-hour fire-rated assembly at Level 5.',
 	},
@@ -86,9 +127,8 @@ export const RFIS: DemoRFI[] = [
 		project_id: 'P-001',
 		project: 'Main Street Tower',
 		status: 'overdue',
-		days_overdue: 1,
 		assignee: 'Mike Rodriguez',
-		due_date: '2025-02-11',
+		due_offset_days: -1,
 		created_at: '2025-01-20T14:00:00Z',
 		question_body: 'Conflict between structural beam and duct run; requesting clearance verification.',
 	},
@@ -99,9 +139,8 @@ export const RFIS: DemoRFI[] = [
 		project_id: 'P-002',
 		project: 'Harbor View Condos',
 		status: 'open',
-		days_overdue: 0,
 		assignee: 'Sarah Chen',
-		due_date: '2025-02-20',
+		due_offset_days: 7,
 		created_at: '2025-02-01T09:00:00Z',
 		question_body: 'Request typical detail for parapet anchor attachment per spec 08 44 00.',
 	},
@@ -112,7 +151,6 @@ export const RFIS: DemoRFI[] = [
 		project_id: 'P-001',
 		project: 'Main Street Tower',
 		status: 'closed',
-		days_overdue: 0,
 		assignee: 'Mike Rodriguez',
 		created_at: '2025-01-10T08:00:00Z',
 		answer_body: 'Mix design approved as submitted. Proceed with placement.',
@@ -133,7 +171,7 @@ export const SUBMITTALS: DemoSubmittal[] = [
 		status: 'pending_review',
 		reviewer: 'Martinez Structural',
 		days_pending: 5,
-		due_date: '2025-02-20',
+		due_offset_days: 4,
 		created_at: '2025-02-01T10:00:00Z',
 	},
 	{
@@ -156,7 +194,7 @@ export const SUBMITTALS: DemoSubmittal[] = [
 		status: 'pending_review',
 		reviewer: 'Engineer',
 		days_pending: 3,
-		due_date: '2025-02-18',
+		due_offset_days: 2,
 		created_at: '2025-02-05T11:00:00Z',
 	},
 ];
@@ -165,11 +203,18 @@ export const SUBMITTALS: DemoSubmittal[] = [
 // Daily logs (in-memory mutable for create_daily_log)
 // ============================================================================
 
+function isoDateFromOffsetDays(offsetDays: number): string {
+	const now = new Date();
+	const base = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+	base.setUTCDate(base.getUTCDate() + offsetDays);
+	return base.toISOString().split('T')[0];
+}
+
 const _DAILY_LOGS: DemoDailyLog[] = [
 	{
 		id: 'DL-2001',
 		project_id: 'P-001',
-		log_date: '2025-02-10',
+		log_date: isoDateFromOffsetDays(-6),
 		status: 'submitted',
 		weather: 'Clear, 45°F',
 		notes: 'Level 5 deck pour completed. No incidents.',
@@ -179,7 +224,7 @@ const _DAILY_LOGS: DemoDailyLog[] = [
 	{
 		id: 'DL-2002',
 		project_id: 'P-001',
-		log_date: '2025-02-11',
+		log_date: isoDateFromOffsetDays(-5),
 		status: 'submitted',
 		weather: 'Cloudy, 42°F',
 		notes: 'Rain delay 2 hours AM. Rebar installation resumed.',
@@ -189,7 +234,7 @@ const _DAILY_LOGS: DemoDailyLog[] = [
 	{
 		id: 'DL-2003',
 		project_id: 'P-002',
-		log_date: '2025-02-11',
+		log_date: isoDateFromOffsetDays(-5),
 		status: 'submitted',
 		weather: 'Partly cloudy, 48°F',
 		notes: 'Curtain wall installation continued. Inspector on site.',

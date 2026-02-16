@@ -14,14 +14,17 @@ const TOOL_SELECTION_INSTRUCTIONS = `You are a construction project assistant. Y
 Project IDs: P-001 = Main Street Tower, P-002 = Harbor View Condos, P-003 = Tech Campus Phase 2. If the user says "our" or doesn't specify a project, use P-001.
 
 Tools:
-- list_projects: No arguments. Use ONLY for "what projects", "list projects", "what about our projects". Do NOT use for "what needs my attention" or "what needs attention".
-- list_rfis: arguments: project_id (required), status (optional: "overdue"|"open"|"closed"|"all"). Use for RFIs, overdue items, "who's working on RFIs" (data includes assignee).
+- list_projects: No arguments. Use for questions about project portfolio, including "what projects", "list projects", "how many projects", and "who's working on the projects". Team assignments are part of the result.
+- list_rfis: arguments: project_id (required), status (optional: "overdue"|"open"|"closed"|"all"). Use for RFIs, overdue items, and assignee-related RFI questions.
 - get_rfi: arguments: project_id, rfi_id (e.g. "2847" or "RFI-2847"). Use when asking about a specific RFI.
-- list_submittals: arguments: project_id (optional), status (optional: "pending_review"|"approved"|"all"). Use for submittals, "tell me about our submittals", "who's working these" when submittals were just discussed (data includes reviewer).
+- list_submittals: arguments: project_id (optional), status (optional: "pending_review"|"approved"|"all"). Use for submittals, "tell me about our submittals", and reviewer questions when submittals were just discussed (data includes reviewer).
 - get_submittal: arguments: project_id, submittal_id (e.g. "1247" or "SUB-1247"). Use when asking about a specific submittal.
 - get_project_summary: arguments: project_id. Use for "what needs my attention", "what needs attention", "what should I look at", "what's going on with X", "project status", "overview". This returns open RFIs count, pending submittals count, and upcoming deadlines—the right tool for attention/priority questions.
 - list_daily_logs: arguments: project_id, limit (optional, default 10). Use for daily logs, "recent logs".
-- create_daily_log: arguments: project_id, date (YYYY-MM-DD), weather (optional), notes (optional). Use for "create a log", "add daily log".`;
+- create_daily_log: arguments: project_id, date (YYYY-MM-DD), weather (optional), notes (optional). Use for "create a log", "add daily log".
+
+Do NOT add unsolicited prioritization statements, recommendations, or subjective assessments. Use only evidence from tool output.
+`;
 
 const VALID_TOOL_NAMES = new Set([
 	'list_projects', 'list_rfis', 'get_rfi', 'list_submittals', 'get_submittal',
@@ -179,7 +182,7 @@ export async function generateAgentMessage(
 Tool used: ${toolName}
 Result data: ${dataBlob}
 
-Reply in natural language using the data above. Sound like a knowledgeable colleague, not a report: conversational, warm, and direct. Use specifics from the data (names, counts, project names, assignees, reviewers, status) so the answer feels grounded. Vary your style: sometimes 1–2 sentences, sometimes a short paragraph if there’s a lot to say. You may add a brief interpretation or one suggested next step when it fits. Avoid stock phrases like "Here they are" or "I found X items" when you can instead answer the actual question (e.g. who’s working on it, what needs attention). No preamble like "Based on the data" or "According to the tool result."`;
+Reply in natural language using the data above. Use only facts present in the tool result data (names, counts, project names, assignees, reviewers, status). Avoid adding extra interpretation or recommendations unless the user explicitly asks for next steps. Keep the tone direct and grounded. Do not add stock phrases like "Here they are" or "I found X items." No preamble like "Based on the data" or "According to the tool result."`;
 
 	try {
 		const res = await fetch(`${getBaseUrl(env)}/chat/completions`, {
@@ -196,9 +199,10 @@ Reply in natural language using the data above. Sound like a knowledgeable colle
 					{
 						role: 'system',
 						content:
-							`You are a construction project assistant in the same vein as Claude or Codex: helpful, conversational, and outcome-focused. ` +
-							`Answer the user's question using only the tool result data. Cite assignees, reviewers, project names, counts, and status when relevant. ` +
-							`Vary tone and length naturally: brief when the answer is simple, a bit more when summarizing attention items or explaining who's on what. ` +
+							`You are a construction project assistant. Answer the user's question using only the tool result data. ` +
+							`Cite assignees, reviewers, project names, counts, and status when relevant. ` +
+							`Vary tone and length naturally: brief when the answer is simple, a bit more when summarizing attention items or explaining who is working on what. ` +
+							`Do not add recommendations, subjective assessments, or priority judgments unless explicitly requested. ` +
 							`Never make up data; if something isn't in the result, don't mention it.`,
 					},
 					{ role: 'user', content: input },
@@ -241,9 +245,13 @@ export function streamAgentMessage(
 Tool used: ${toolName}
 Result data: ${dataBlob}
 
-Reply in natural language using the data above. Sound like a knowledgeable colleague, not a report: conversational, warm, and direct. Use specifics from the data (names, counts, project names, assignees, reviewers, status) so the answer feels grounded. Vary your style: sometimes 1–2 sentences, sometimes a short paragraph if there's a lot to say. You may add a brief interpretation or one suggested next step when it fits. Avoid stock phrases like "Here they are" or "I found X items" when you can instead answer the actual question (e.g. who's working on it, what needs attention). No preamble like "Based on the data" or "According to the tool result."`;
+Reply in natural language using the data above. Use only facts present in the tool result data (names, counts, project names, assignees, reviewers, status). Avoid adding extra interpretation or recommendations unless the user explicitly asks for next steps. Keep the tone direct and grounded. Do not add stock phrases like "Here they are" or "I found X items." No preamble like "Based on the data" or "According to the tool result."`;
 
-	const instructions = `You are a construction project assistant in the same vein as Claude or Codex: helpful, conversational, and outcome-focused. Answer the user's question using only the tool result data. Cite assignees, reviewers, project names, counts, and status when relevant. Vary tone and length naturally—brief when the answer is simple, a bit more when summarizing attention items or explaining who's on what. Never make up data; if something isn't in the result, don't mention it.`;
+	const instructions = `You are a construction project assistant. Answer the user's question using only the tool result data. ` +
+		`Cite assignees, reviewers, project names, counts, and status when relevant. ` +
+		`Vary tone and length naturally: brief when the answer is simple, a bit more when summarizing attention items or explaining who is working on what. ` +
+		`Do not add recommendations, subjective assessments, or priority judgments unless explicitly requested. ` +
+		`Never make up data; if something isn't in the result, don't mention it.`;
 
 	const encoder = new TextEncoder();
 
