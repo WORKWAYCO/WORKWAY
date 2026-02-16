@@ -53,7 +53,7 @@ Add the Demo MCP server so your AI can call the same tools (mock data only).
 {
   "mcpServers": {
     "workway-demo": {
-      "url": "https://your-demo-mcp.workers.dev/sse"
+      "url": "https://your-demo-mcp.workers.dev/mcp"
     }
   }
 }
@@ -65,7 +65,7 @@ If you run the server locally:
 {
   "mcpServers": {
     "workway-demo": {
-      "url": "http://localhost:8787/sse"
+      "url": "http://localhost:8787/mcp"
     }
   }
 }
@@ -77,7 +77,7 @@ If you run the server locally:
 {
   "mcp_servers": {
     "workway-demo": {
-      "url": "https://your-demo-mcp.workers.dev/sse"
+      "url": "https://your-demo-mcp.workers.dev/mcp"
     }
   }
 }
