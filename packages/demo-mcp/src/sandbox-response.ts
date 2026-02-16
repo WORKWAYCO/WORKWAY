@@ -45,11 +45,47 @@ function formatTeam(team: unknown): string {
 	return names.length > 0 ? names.join(', ') : 'No staffing assigned yet.';
 }
 
+function mentionsProjectByName(lower: string): boolean {
+	return /\b(main\s+street|main\s+st|harbor\s+view|harbor\s+condos|tech\s+campus)\b/.test(lower);
+}
+
+type ProjectTeamItem = {
+	id: unknown;
+	title: unknown;
+	project: unknown;
+	status: unknown;
+	completion: unknown;
+	team: unknown;
+};
+
+function selectTeamProjects(projects: ProjectTeamItem[], message: string | undefined): ProjectTeamItem[] {
+	if (!message) return projects;
+	const lower = message.toLowerCase();
+	if (!mentionsProjectByName(lower) && !/\b(project|projects|team|teams)\b/.test(lower)) {
+		return projects;
+	}
+
+	const hasMain = /\b(main\s+street|main\s+st)\b/.test(lower) || (/\bmain\b/.test(lower) && /\btower\b/.test(lower));
+	const hasHarbor = /\bharbor\s+view\b/.test(lower) || /\bharbor\s+condos\b/.test(lower) || /\bharbor\b/.test(lower);
+	const hasTech = /\btech\s+campus\b/.test(lower) || (/\btech\b/.test(lower) && /\bcampus\b/.test(lower));
+
+	const filtered = projects.filter((p) => {
+		const name = String((p.project as string) ?? p.title ?? '').toLowerCase();
+		if (hasMain && name.includes('main street')) return true;
+		if (hasHarbor && name.includes('harbor view')) return true;
+		if (hasTech && name.includes('tech campus')) return true;
+		return false;
+	});
+
+	return filtered.length > 0 ? filtered : projects;
+}
+
 function isTeamQuestion(message: string | undefined): boolean {
 	if (!message) return false;
 	const lower = message.toLowerCase();
-	return /\b(who\s*('s| is| are)?\s*(is|are)?\s*(working|assigned|on|handling)|who\s+is\s+working\s+on)\b/.test(lower)
-		&& /\b(project|projects|team|teams)\b/.test(lower);
+	return /\b(who\s*('s| is| are)?\s*(is|are)?\s*(working|assigned|on|handling)|who\s+is\s+working\s+on|who\s+is\s+on)\b/.test(lower)
+		&& !/\b(rfi|submittal|daily|log|logs)\b/.test(lower)
+		&& (mentionsProjectByName(lower) || /\b(project|projects|team|teams)\b/.test(lower));
 }
 
 /** User is asking what/how/about — we should answer in prose from the data, not just "here are the cards". */
@@ -98,16 +134,18 @@ export function buildSandboxResponse(
 				status: p.status,
 				completion: p.completion,
 				team: p.team,
-			}));
+			})) as ProjectTeamItem[];
+			const listedProjects = selectTeamProjects(mapped, userMessage);
 			let agentMessage: string;
 			let responseStyle: 'cards' | 'answer_with_details' = 'cards';
 			if (projects.length === 0) {
 				agentMessage = "I don't see any projects in the system yet. If you're setting up, you can add one from the project list.";
 			} else if (isTeamQuestion(userMessage)) {
-				const projectLines = mapped
+				const projectLines = listedProjects
 					.map((p) => `${p.project}: ${formatTeam(p.team)}`)
 					.join('\n');
-				agentMessage = `Here\'s who is currently listed as working on the projects:\n${projectLines}`;
+				const scopeLabel = listedProjects.length === mapped.length ? 'the projects' : (listedProjects.length === 1 ? 'that project' : 'those projects');
+				agentMessage = `Here's who is currently listed as working on ${scopeLabel}:\n${projectLines}`;
 				responseStyle = 'answer_with_details';
 			} else if (prose) {
 				const names = mapped.map((p) => (p.project as string) ?? p.title).join(', ');

@@ -52,7 +52,9 @@ export type AgentOutput = z.infer<typeof agentOutputSchema>;
 export function routeMessage(message: string): AgentOutput | null {
 	const lower = message.toLowerCase().trim();
 	const projectId = resolveProjectId(message);
-	const isTeamQuestion = /(who('?s| is| are)?\s+(working|assigned|on|handling)|who works on|who'?s on|team on)/.test(lower);
+	const isTeamQuestion =
+		/(who('?s| is| are)?\s+(working|assigned|on|handling)|who works on|who'?s on|team on)/.test(lower) &&
+		!/\b(rfi|submittal|daily|log|logs)\b/.test(lower);
 
 	// get_project_summary: "what needs my attention", "what needs attention", "what should I look at"
 	if (/\b(what\s+needs\s+(my\s+)?attention|what\s+needs\s+attention|what\s+should\s+I\s+look\s+at|what\s+should\s+i\s+focus\s+on)\b/.test(lower) && !/\b(rfi|submittal|daily|log)\b/.test(lower)) {
