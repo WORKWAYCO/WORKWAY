@@ -17,6 +17,12 @@ import { generateAgentMessage, selectToolWithLLM, streamAgentMessage, type Gener
 export interface DemoMCPEnv {
 	KV: KVNamespace;
 	DB: D1Database;
+	/** When set, the demo uses OpenAI for tool selection + reply generation. */
+	OPENAI_API_KEY?: string;
+	/** OpenAI model id for the demo (defaults in code). */
+	OPENAI_MODEL?: string;
+	/** Optional OpenAI base URL override (defaults to https://api.openai.com/v1). */
+	OPENAI_BASE_URL?: string;
 }
 
 const mcpServer = createMCPServer<DemoMCPEnv>({
@@ -46,6 +52,10 @@ const mcpServer = createMCPServer<DemoMCPEnv>({
 
 const app = new Hono<{ Bindings: DemoMCPEnv }>();
 
+function hasOpenAI(env: GenerateAgentMessageEnv): boolean {
+	return typeof env.OPENAI_API_KEY === 'string' && env.OPENAI_API_KEY.trim().length > 0;
+}
+
 // Mount MCP server at root (/, /sse, /mcp, etc.)
 app.route('/', mcpServer);
 
@@ -62,9 +72,9 @@ app.post('/demo/query', async (c) => {
 		}
 
 		const envWithAI = c.env as unknown as GenerateAgentMessageEnv;
-		// Always use LLM for tool selection when AI binding is present (reasoning required for Claude Desktop, Codex, etc.)
+		// Use OpenAI for tool selection when configured (reasoning required for Claude Desktop, Codex, etc.)
 		let agentOutput: AgentOutput;
-		if ('AI' in c.env) {
+		if (hasOpenAI(envWithAI)) {
 			const llmChoice = await selectToolWithLLM(envWithAI, message);
 			agentOutput = llmChoice
 				? { tool: llmChoice.tool as AgentOutput['tool'], arguments: llmChoice.arguments }
@@ -85,8 +95,8 @@ app.post('/demo/query', async (c) => {
 		const toolResult = await tool.execute(input as never, c.env as never);
 
 		const sandbox = buildSandboxResponse(agentOutput, toolResult, message);
-		// Always use LLM for the reply when AI is present (reasoning over tool result)
-		if ('AI' in c.env && sandbox.agentMessage) {
+		// Use OpenAI for the reply when configured (reasoning over tool result)
+		if (hasOpenAI(envWithAI) && sandbox.agentMessage) {
 			const llmMessage = await generateAgentMessage(
 				envWithAI,
 				message,
@@ -133,7 +143,7 @@ app.post('/demo/query/stream', async (c) => {
 
 		const envWithAI = c.env as unknown as GenerateAgentMessageEnv;
 		let agentOutput: AgentOutput;
-		if ('AI' in c.env) {
+		if (hasOpenAI(envWithAI)) {
 			const llmChoice = await selectToolWithLLM(envWithAI, message);
 			agentOutput = llmChoice
 				? { tool: llmChoice.tool as AgentOutput['tool'], arguments: llmChoice.arguments }
@@ -170,7 +180,7 @@ app.post('/demo/query/stream', async (c) => {
 				})));
 
 				// 2. Stream agent message when AI is available
-				if ('AI' in c.env && sandbox.agentMessage) {
+				if (hasOpenAI(envWithAI) && sandbox.agentMessage) {
 					const agentStream = streamAgentMessage(envWithAI, message, agentOutput.tool, toolResult);
 					if (agentStream) {
 						const reader = agentStream.getReader();

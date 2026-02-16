@@ -19,6 +19,6 @@ binding = "DB"
 database_name = "workway-demo-mcp"
 database_id = "cbf8cd61-4179-463b-a921-bbc58c2a1af6"
 
-# Workers AI – optional: used to generate agent message with gpt-oss-120b
-[ai]
-binding = "AI"
+# OpenAI (optional): when OPENAI_API_KEY is set, the demo uses OpenAI for tool selection + reply generation.
+[vars]
+OPENAI_MODEL = "gpt-4o"

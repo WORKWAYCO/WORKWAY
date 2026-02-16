@@ -6,7 +6,7 @@ Procore-shaped **mock** construction data and 8 MCP tools so you can try WORKWAY
 
 - **8 tools**: `list_projects`, `list_rfis`, `get_rfi`, `list_submittals`, `get_submittal`, `get_project_summary`, `list_daily_logs`, `create_daily_log`
 - **Mock data**: Projects (Main Street Tower, Harbor View Condos, Tech Campus Phase 2), RFIs, submittals, daily logs — all in-memory, no Procore OAuth
-- **Active agent**: Heuristic router maps natural language to one tool + arguments. When the Worker has a Workers AI binding, **gpt-oss-120b** is used to generate the agent reply from the tool result (reasoning over the data); otherwise template messages are used.
+- **Active agent**: Heuristic router maps natural language to one tool + arguments. When `OPENAI_API_KEY` is set, an OpenAI model (default `gpt-4o`, configurable via `OPENAI_MODEL`) is used for tool selection + generating the agent reply from the tool result; otherwise template messages are used.
 - **Sandbox endpoint**: `POST /demo/query` with `{ message: string }` returns `{ toolCall, response, agentMessage?, responseStyle?, timeSaved }` for the web sandbox UI
 
 ## Run locally
@@ -17,19 +17,31 @@ pnpm install
 pnpm dev
 ```
 
+To enable the OpenAI-backed replies locally, set env vars in `Cloudflare/packages/demo-mcp/.dev.vars`:
+
+```bash
+OPENAI_API_KEY=...
+OPENAI_MODEL=gpt-4o
+```
+
 Then open the MCP server at `http://localhost:8787`. The sandbox on the WORKWAY site will work when the platform API has `DEMO_MCP_URL=http://localhost:8787` (or your tunnel URL).
 
 ## Deploy (Worker)
 
 1. Create a [KV namespace](https://developers.cloudflare.com/kv/) and [D1 database](https://developers.cloudflare.com/d1/) (required by `@workway/mcp-core` for metering).
-2. In `wrangler.toml`, set `KV` and `DB` bindings to your ids. The `[ai]` binding is optional; when present, the sandbox uses **gpt-oss-120b** to generate agent messages from tool results (see [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/)).
-3. Deploy:
+2. In `wrangler.toml`, set `KV` and `DB` bindings to your ids.
+3. Set the OpenAI API key:
+
+   ```bash
+   wrangler secret put OPENAI_API_KEY
+   ```
+4. Deploy:
 
    ```bash
    pnpm deploy
    ```
 
-4. Set the platform API env: `DEMO_MCP_URL=https://your-demo-mcp.workers.dev` (or your custom domain).
+5. Set the platform API env: `DEMO_MCP_URL=https://your-demo-mcp.workers.dev` (or your custom domain).
 
 ## Use in Cursor / Claude
 
