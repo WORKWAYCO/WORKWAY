@@ -217,6 +217,11 @@ export default defineWorkflow({
 			actionItemCount: number;
 		}> = [];
 
+		const failedNotionWrites: Array<{
+			item: { id: string; title: string; type: 'meeting' | 'clip' };
+			sourceUrl?: string;
+		}> = [];
+
 		// Determine if data was pre-fetched (manual trigger) or needs fetching (cron)
 		const isManualTrigger = trigger.type === 'manual';
 		const preFetchedData = isManualTrigger ? (trigger as any).data : null;
@@ -320,9 +325,17 @@ export default defineWorkflow({
 					integrations,
 				});
 
+				if (!notionPage?.url) {
+					failedNotionWrites.push({
+						item: { id: meeting.id, title: meeting.topic, type: 'meeting' },
+						sourceUrl: meeting.share_url,
+					});
+					continue;
+				}
+
 				meetingResults.push({
 					item: { id: meeting.id, title: meeting.topic, date: meeting.start_time, type: 'meeting' },
-					notionPageUrl: notionPage?.url,
+					notionPageUrl: notionPage.url,
 					actionItemCount: analysis?.actionItems?.length || 0,
 				});
 			}
@@ -378,9 +391,17 @@ export default defineWorkflow({
 					integrations,
 				});
 
+				if (!notionPage?.url) {
+					failedNotionWrites.push({
+						item: { id: clip.id, title: clip.title, type: 'clip' },
+						sourceUrl: clip.share_url,
+					});
+					continue;
+				}
+
 				clipResults.push({
 					item: { id: clip.id, title: clip.title, date: clip.created_at, type: 'clip' },
-					notionPageUrl: notionPage?.url,
+					notionPageUrl: notionPage.url,
 					actionItemCount: analysis?.actionItems?.length || 0,
 				});
 			}
@@ -389,6 +410,38 @@ export default defineWorkflow({
 		// Combine results
 		const allResults = [...meetingResults, ...clipResults];
 		const totalActionItems = allResults.reduce((sum, r) => sum + r.actionItemCount, 0);
+
+		if (failedNotionWrites.length > 0) {
+			const failedSample = failedNotionWrites
+				.slice(0, 3)
+				.map((item) => item.sourceUrl || item.item.id)
+				.join(', ');
+			const failureSummary = `Failed to write ${failedNotionWrites.length} items to Notion`;
+
+			await trackExecution(userId, apiSecret, {
+				status: 'failed',
+				meetingsSynced: meetingResults.length,
+				clipsSynced: clipResults.length,
+				actionItemsFound: totalActionItems,
+				resultSummary: failureSummary,
+				startedAt,
+				completedAt: new Date().toISOString(),
+				executionTimeMs: Date.now() - startTime,
+				errorMessage: `Notion write failures: ${failedSample}`,
+			});
+
+			return {
+				success: false,
+				error: failureSummary,
+				synced: allResults.length,
+				meetings: meetingResults.length,
+				clips: clipResults.length,
+				actionItems: totalActionItems,
+				failedNotionWrites,
+				results: allResults,
+				analyticsUrl: 'https://workway.co/workflows/private/meeting-intelligence-private/analytics',
+			};
+		}
 
 		// Track successful execution
 		await trackExecution(userId, apiSecret, {
@@ -806,7 +859,29 @@ async function createNotionMeetingPage(params: CreateNotionPageParams) {
 			properties,
 			children,
 		});
-		return result.success ? { url: result.data?.url } : null;
+
+		if (!result.success) {
+			console.error('Failed to create Notion page:', {
+				topic,
+				sourceId,
+				sourceType,
+				sourceUrl,
+				error: result.error || 'unknown error',
+			});
+			return null;
+		}
+
+		if (!result.data?.url) {
+			console.error('Failed to create Notion page: missing URL in response', {
+				topic,
+				sourceId,
+				sourceType,
+				sourceUrl,
+			});
+			return null;
+		}
+
+		return { url: result.data.url };
 	} catch (error) {
 		console.error('Failed to create Notion page:', error);
 		return null;
