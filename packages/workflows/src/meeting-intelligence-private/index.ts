@@ -14,7 +14,7 @@
  *
  * - Zoom Meetings: AI Companion transcripts with speaker attribution
  * - Zoom Clips: Full transcript extraction via virtual scroll
- * - Deduplication: Two-tier (Source URL primary, Source ID fallback)
+ * - Deduplication: Three-tier (Source URL -> Source ID -> Type+Item+Date)
  * - AI Analysis: Summary, decisions, action items, follow-ups
  *
  * ## vs. meeting-intelligence (Public)
@@ -50,8 +50,10 @@ const ZOOM_CONNECTION_URL = 'https://meetings.workway.co';
  */
 const HALFDOZEN_INTERNAL_LLM_DATABASE = '27a019187ac580b797fec563c98afbbc';
 
-// Cache for database schema (avoid repeated API calls)
+// Cache database schema to avoid repeated API calls during a sync run.
+let cachedSchemaDatabaseId: string | null = null;
 let cachedTitleProperty: string | null = null;
+let cachedPropertyNames: Set<string> | null = null;
 
 // Track workflow execution for dashboard visibility
 // This POSTs to the same zoom-cookie-sync worker that stores the user's session
@@ -283,63 +285,79 @@ export default defineWorkflow({
 			: await fetchMeetings(userId, inputs.lookbackDays || 1);
 
 		if (meetings.success && meetings.data.length > 0) {
-			for (const meeting of meetings.data) {
-				// Skip if already documented (deduplication)
-				const alreadyDocumented = await checkExistingPage(
-					integrations.notion,
-					HALFDOZEN_INTERNAL_LLM_DATABASE,
-					meeting.id,
-					meeting.share_url
-				);
+				for (const meeting of meetings.data) {
+					let alreadyDocumented = false;
+					try {
+						alreadyDocumented = await checkExistingPage({
+							notion: integrations.notion,
+							databaseId: HALFDOZEN_INTERNAL_LLM_DATABASE,
+							sourceType: 'meeting',
+							sourceId: meeting.id,
+							sourceUrl: meeting.share_url,
+							topic: meeting.topic,
+							startTime: meeting.start_time,
+						});
+					} catch (error) {
+						console.error('[Workflow] Meeting deduplication check failed; skipping write.', {
+							meetingId: meeting.id,
+							topic: meeting.topic,
+							error: error instanceof Error ? error.message : String(error),
+						});
+						failedNotionWrites.push({
+							item: { id: meeting.id, title: meeting.topic, type: 'meeting' },
+							sourceUrl: meeting.share_url,
+						});
+						continue;
+					}
 
-				if (alreadyDocumented) {
-					continue;
-				}
+					if (alreadyDocumented) {
+						continue;
+					}
 
-				// Get transcript
-				const transcript = await fetchTranscript(userId, meeting.id, meeting.share_url);
+					// Get transcript
+					const transcript = await fetchTranscript(userId, meeting.id, meeting.share_url);
 
-				// AI Analysis (if enabled)
-				let analysis: any = null;
-				if (inputs.enableAI && transcript && transcript.length > 100) {
-					analysis = await analyzeMeeting(
+					// AI Analysis (if enabled)
+					let analysis: any = null;
+					if (inputs.enableAI && transcript && transcript.length > 100) {
+						analysis = await analyzeMeeting(
+							transcript,
+							meeting.topic,
+							inputs.analysisDepth || 'standard',
+							integrations,
+							env
+						);
+					}
+
+					// Create Notion page
+					const notionPage = await createNotionMeetingPage({
+						databaseId: HALFDOZEN_INTERNAL_LLM_DATABASE,
+						topic: meeting.topic,
+						startTime: meeting.start_time,
 						transcript,
-						meeting.topic,
-						inputs.analysisDepth || 'standard',
-						integrations,
-						env
-					);
-				}
-
-				// Create Notion page
-				const notionPage = await createNotionMeetingPage({
-					databaseId: HALFDOZEN_INTERNAL_LLM_DATABASE,
-					topic: meeting.topic,
-					startTime: meeting.start_time,
-					transcript,
-					speakers: meeting.speakers || [],
-					analysis,
-					sourceId: meeting.id,
-					sourceType: 'meeting',
-					sourceUrl: meeting.share_url,
-					integrations,
-				});
-
-				if (!notionPage?.url) {
-					failedNotionWrites.push({
-						item: { id: meeting.id, title: meeting.topic, type: 'meeting' },
+						speakers: meeting.speakers || [],
+						analysis,
+						sourceId: meeting.id,
+						sourceType: 'meeting',
 						sourceUrl: meeting.share_url,
+						integrations,
 					});
-					continue;
-				}
 
-				meetingResults.push({
-					item: { id: meeting.id, title: meeting.topic, date: meeting.start_time, type: 'meeting' },
-					notionPageUrl: notionPage.url,
-					actionItemCount: analysis?.actionItems?.length || 0,
-				});
+					if (!notionPage?.url) {
+						failedNotionWrites.push({
+							item: { id: meeting.id, title: meeting.topic, type: 'meeting' },
+							sourceUrl: meeting.share_url,
+						});
+						continue;
+					}
+
+					meetingResults.push({
+						item: { id: meeting.id, title: meeting.topic, date: meeting.start_time, type: 'meeting' },
+						notionPageUrl: notionPage.url,
+						actionItemCount: analysis?.actionItems?.length || 0,
+					});
+				}
 			}
-		}
 
 		// ========================================================================
 		// PROCESS CLIPS
@@ -350,62 +368,79 @@ export default defineWorkflow({
 			: await fetchClips(userId, inputs.lookbackDays || 7);
 
 		if (clips.success && clips.data.length > 0) {
-			for (const clip of clips.data) {
-				// Skip if already documented (deduplication by share_url)
-				const alreadyDocumented = await checkExistingPageByUrl(
-					integrations.notion,
-					HALFDOZEN_INTERNAL_LLM_DATABASE,
-					clip.share_url
-				);
+				for (const clip of clips.data) {
+					let alreadyDocumented = false;
+					try {
+						alreadyDocumented = await checkExistingPage({
+							notion: integrations.notion,
+							databaseId: HALFDOZEN_INTERNAL_LLM_DATABASE,
+							sourceType: 'clip',
+							sourceId: clip.id,
+							sourceUrl: clip.share_url,
+							topic: clip.title,
+							startTime: clip.created_at,
+						});
+					} catch (error) {
+						console.error('[Workflow] Clip deduplication check failed; skipping write.', {
+							clipId: clip.id,
+							title: clip.title,
+							error: error instanceof Error ? error.message : String(error),
+						});
+						failedNotionWrites.push({
+							item: { id: clip.id, title: clip.title, type: 'clip' },
+							sourceUrl: clip.share_url,
+						});
+						continue;
+					}
 
-				if (alreadyDocumented) {
-					continue;
-				}
+					if (alreadyDocumented) {
+						continue;
+					}
 
-				// Get clip transcript
-				const transcript = await fetchClipTranscript(userId, clip.id, clip.share_url);
+					// Get clip transcript
+					const transcript = await fetchClipTranscript(userId, clip.id, clip.share_url);
 
-				// AI Analysis (if enabled)
-				let analysis: any = null;
-				if (inputs.enableAI && transcript && transcript.length > 100) {
-					analysis = await analyzeMeeting(
+					// AI Analysis (if enabled)
+					let analysis: any = null;
+					if (inputs.enableAI && transcript && transcript.length > 100) {
+						analysis = await analyzeMeeting(
+							transcript,
+							clip.title,
+							inputs.analysisDepth || 'standard',
+							integrations,
+							env
+						);
+					}
+
+					// Create Notion page for clip
+					const notionPage = await createNotionMeetingPage({
+						databaseId: HALFDOZEN_INTERNAL_LLM_DATABASE,
+						topic: clip.title,
+						startTime: clip.created_at,
 						transcript,
-						clip.title,
-						inputs.analysisDepth || 'standard',
-						integrations,
-						env
-					);
-				}
-
-				// Create Notion page for clip
-				const notionPage = await createNotionMeetingPage({
-					databaseId: HALFDOZEN_INTERNAL_LLM_DATABASE,
-					topic: clip.title,
-					startTime: clip.created_at,
-					transcript,
-					speakers: [],
-					analysis,
-					sourceId: clip.id,
-					sourceType: 'clip',
-					sourceUrl: clip.share_url,
-					integrations,
-				});
-
-				if (!notionPage?.url) {
-					failedNotionWrites.push({
-						item: { id: clip.id, title: clip.title, type: 'clip' },
+						speakers: [],
+						analysis,
+						sourceId: clip.id,
+						sourceType: 'clip',
 						sourceUrl: clip.share_url,
+						integrations,
 					});
-					continue;
-				}
 
-				clipResults.push({
-					item: { id: clip.id, title: clip.title, date: clip.created_at, type: 'clip' },
-					notionPageUrl: notionPage.url,
-					actionItemCount: analysis?.actionItems?.length || 0,
-				});
+					if (!notionPage?.url) {
+						failedNotionWrites.push({
+							item: { id: clip.id, title: clip.title, type: 'clip' },
+							sourceUrl: clip.share_url,
+						});
+						continue;
+					}
+
+					clipResults.push({
+						item: { id: clip.id, title: clip.title, date: clip.created_at, type: 'clip' },
+						notionPageUrl: notionPage.url,
+						actionItemCount: analysis?.actionItems?.length || 0,
+					});
+				}
 			}
-		}
 
 		// Combine results
 		const allResults = [...meetingResults, ...clipResults];
@@ -603,55 +638,167 @@ async function fetchClipTranscript(
 	}
 }
 
+function extractQueryResults(data: any): any[] {
+	if (Array.isArray(data)) {
+		return data;
+	}
+	if (Array.isArray(data?.results)) {
+		return data.results;
+	}
+	return [];
+}
+
+async function getDatabaseSchemaInfo(
+	notion: any,
+	databaseId: string
+): Promise<{ titleProperty: string; propertyNames: Set<string> }> {
+	if (
+		cachedSchemaDatabaseId === databaseId &&
+		cachedTitleProperty &&
+		cachedPropertyNames
+	) {
+		return {
+			titleProperty: cachedTitleProperty,
+			propertyNames: cachedPropertyNames,
+		};
+	}
+
+	const propertyNames = new Set<string>();
+	let titleProperty = 'Item';
+
+	try {
+		const dbResult = await notion.getDatabase(databaseId);
+		if (dbResult.success && dbResult.data?.properties) {
+			for (const [propName, propConfig] of Object.entries(dbResult.data.properties)) {
+				propertyNames.add(propName);
+				if ((propConfig as any).type === 'title') {
+					titleProperty = propName;
+				}
+			}
+		} else {
+			const reason =
+				typeof dbResult?.error === 'string'
+					? dbResult.error
+					: dbResult?.error?.message || 'unknown';
+			console.error(`[Workflow] Failed to fetch database schema: ${reason}`);
+		}
+	} catch (error) {
+		console.error('[Workflow] Failed to fetch database schema:', error);
+	}
+
+	cachedSchemaDatabaseId = databaseId;
+	cachedTitleProperty = titleProperty;
+	cachedPropertyNames = propertyNames;
+	console.log(`[Workflow] Using title property: "${titleProperty}"`);
+
+	return { titleProperty, propertyNames };
+}
+
+async function queryForExistingPage(
+	notion: any,
+	databaseId: string,
+	filter: Record<string, any>
+): Promise<boolean> {
+	const result = await notion.databases.query({
+		database_id: databaseId,
+		filter,
+		page_size: 1,
+	});
+
+	if (!result?.success) {
+		const reason =
+			typeof result?.error === 'string'
+				? result.error
+				: result?.error?.message || 'unknown';
+		throw new Error(`Notion query failed: ${reason}`);
+	}
+
+	return extractQueryResults(result.data).length > 0;
+}
+
 async function checkExistingPageByUrl(
 	notion: any,
 	databaseId: string,
-	sourceUrl: string
-): Promise<boolean> {
-	try {
-		const result = await notion.databases.query({
-			database_id: databaseId,
-			filter: {
-				property: 'Source URL',
-				url: { equals: sourceUrl },
-			},
-			page_size: 1,
-		});
-		return result.success && result.data?.length > 0;
-	} catch {
-		return false;
-	}
-}
-
-async function checkExistingPage(
-	notion: any,
-	databaseId: string,
-	sourceId: string,
 	sourceUrl?: string
 ): Promise<boolean> {
-	// Try URL-based deduplication first (most reliable)
-	if (sourceUrl) {
-		return checkExistingPageByUrl(notion, databaseId, sourceUrl);
+	if (!sourceUrl) {
+		return false;
 	}
-	// Fallback: check by Source ID if URL not available
-	// The worker generates deterministic IDs from topic+date
-	if (sourceId) {
-		try {
-			const result = await notion.databases.query({
-				database_id: databaseId,
-				filter: {
-					property: 'Source ID',
-					rich_text: { equals: sourceId },
-				},
-				page_size: 1,
-			});
-			return result.success && result.data?.length > 0;
-		} catch {
-			// Property might not exist - that's ok, continue without deduplication
-			return false;
+
+	return queryForExistingPage(notion, databaseId, {
+		property: 'Source URL',
+		url: { equals: sourceUrl },
+	});
+}
+
+async function checkExistingPageBySourceId(
+	notion: any,
+	databaseId: string,
+	sourceId: string
+): Promise<boolean> {
+	return queryForExistingPage(notion, databaseId, {
+		property: 'Source ID',
+		rich_text: { equals: sourceId },
+	});
+}
+
+async function checkExistingPageByTypeNameDate(
+	notion: any,
+	databaseId: string,
+	titleProperty: string,
+	sourceType: 'meeting' | 'clip',
+	topic: string,
+	startTime: string
+): Promise<boolean> {
+	const dateOnly = startTime.split('T')[0];
+	const typeName = sourceType === 'meeting' ? 'Meeting' : 'Clip';
+
+	return queryForExistingPage(notion, databaseId, {
+		and: [
+			{ property: 'Type', select: { equals: typeName } },
+			{ property: titleProperty, title: { equals: topic } },
+			{ property: 'Date', date: { on_or_after: dateOnly } },
+			{ property: 'Date', date: { on_or_before: dateOnly } },
+		],
+	});
+}
+
+interface ExistingPageCheckParams {
+	notion: any;
+	databaseId: string;
+	sourceType: 'meeting' | 'clip';
+	sourceId?: string;
+	sourceUrl?: string;
+	topic: string;
+	startTime: string;
+}
+
+async function checkExistingPage(params: ExistingPageCheckParams): Promise<boolean> {
+	const { notion, databaseId, sourceType, sourceId, sourceUrl, topic, startTime } = params;
+
+	// 1) Primary dedupe: Source URL (most stable key)
+	if (sourceUrl && (await checkExistingPageByUrl(notion, databaseId, sourceUrl))) {
+		return true;
+	}
+
+	const schema = await getDatabaseSchemaInfo(notion, databaseId);
+
+	// 2) Secondary dedupe: Source ID (only when property exists in target DB)
+	if (sourceId && schema.propertyNames.has('Source ID')) {
+		if (await checkExistingPageBySourceId(notion, databaseId, sourceId)) {
+			return true;
 		}
 	}
-	return false;
+
+	// 3) Fallback dedupe: Type + Item (title) + Date
+	return checkExistingPageByTypeNameDate(
+		notion,
+		databaseId,
+		schema.titleProperty,
+		sourceType,
+		topic,
+		startTime
+	);
 }
 
 // analyzeMeeting is now imported from ../meeting-intelligence/utils.js
@@ -683,33 +830,8 @@ async function createNotionMeetingPage(params: CreateNotionPageParams) {
 		integrations,
 	} = params;
 
-	// Dynamically detect title property from database schema (like original workflow)
-	let titleProperty = cachedTitleProperty;
-
-	if (!titleProperty) {
-		try {
-			const dbResult = await integrations.notion.getDatabase(databaseId);
-			if (dbResult.success && dbResult.data?.properties) {
-				// Find the property with type 'title' (every database has exactly one)
-				for (const [propName, propConfig] of Object.entries(dbResult.data.properties)) {
-					if ((propConfig as any).type === 'title') {
-						titleProperty = propName;
-						cachedTitleProperty = propName;
-						console.log(`[Workflow] Detected title property: "${titleProperty}"`);
-						break;
-					}
-				}
-			}
-		} catch (error) {
-			console.error('[Workflow] Failed to fetch database schema:', error);
-		}
-
-		// Fallback if detection fails
-		if (!titleProperty) {
-			titleProperty = 'Item'; // Known title property for Internal LLM database
-			console.log(`[Workflow] Using fallback title property: "${titleProperty}"`);
-		}
-	}
+	const schema = await getDatabaseSchemaInfo(integrations.notion, databaseId);
+	const titleProperty = schema.titleProperty;
 
 	// Build properties dynamically based on detected schema
 	const properties: Record<string, any> = {
@@ -734,8 +856,8 @@ async function createNotionMeetingPage(params: CreateNotionPageParams) {
 		properties['Source URL'] = { url: sourceUrl };
 	}
 
-	// Always add Source ID for deduplication (even without URL)
-	if (sourceId) {
+	// Only write Source ID when the property exists in the target schema.
+	if (sourceId && schema.propertyNames.has('Source ID')) {
 		properties['Source ID'] = {
 			rich_text: [{ text: { content: sourceId } }],
 		};
