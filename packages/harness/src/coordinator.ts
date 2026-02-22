@@ -102,6 +102,7 @@ export class Coordinator {
   private beadsSnapshot: Awaited<ReturnType<typeof takeSnapshot>>;
   private lastCheckpoint: Checkpoint | null;
   private redirectNotes: string[];
+  private sawRedirectSinceLastSession: boolean;
 
   constructor(
     harnessState: HarnessState,
@@ -136,6 +137,7 @@ export class Coordinator {
     this.beadsSnapshot = null as any; // Will be set in initialize()
     this.lastCheckpoint = null;
     this.redirectNotes = [];
+    this.sawRedirectSinceLastSession = false;
   }
 
   /**
@@ -191,6 +193,7 @@ export class Coordinator {
           console.log(`  ${redirect.description}`);
         }
         this.redirectNotes.push(...redirectCheck.redirects.map(r => r.description));
+        this.sawRedirectSinceLastSession = true;
       }
 
       // Check for pause request
@@ -205,6 +208,7 @@ export class Coordinator {
       if (requiresImmediateAction(redirectCheck.redirects)) {
         if (this.checkpointTracker.sessionsResults.length > 0) {
           await this.createCheckpoint(formatRedirectNotes(redirectCheck.redirects));
+          this.sawRedirectSinceLastSession = false;
         }
       }
 
@@ -399,12 +403,13 @@ export class Coordinator {
       this.checkpointTracker,
       this.harnessState.checkpointPolicy,
       sessionResult,
-      false
+      this.sawRedirectSinceLastSession
     );
 
     if (checkpointCheck.create) {
       await this.createCheckpoint(checkpointCheck.reason);
     }
+    this.sawRedirectSinceLastSession = false;
 
     // Check confidence threshold
     if (shouldPauseForConfidence(

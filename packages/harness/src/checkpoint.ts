@@ -14,9 +14,14 @@ import type {
   SessionResult,
   SessionOutcome,
   HarnessState,
-  Redirect,
 } from './types.js';
 import { getHeadCommit } from './session.js';
+import {
+  checkForRedirects,
+  formatRedirectNotes,
+  takeSnapshot,
+} from './redirect.js';
+import type { BeadsSnapshot } from './redirect.js';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Checkpoint Tracker
@@ -283,6 +288,41 @@ function formatCheckpointDescription(checkpoint: Omit<Checkpoint, 'id' | 'timest
   return lines.join('\n');
 }
 
+interface SerializedBeadsSnapshot {
+  timestamp: string;
+  issues: Array<{
+    id: string;
+    priority: number;
+    status: string;
+  }>;
+  urgentIds: string[];
+}
+
+function serializeSnapshot(snapshot: BeadsSnapshot): SerializedBeadsSnapshot {
+  return {
+    timestamp: snapshot.timestamp,
+    issues: Array.from(snapshot.issues.entries()).map(([id, state]) => ({
+      id,
+      priority: state.priority,
+      status: state.status,
+    })),
+    urgentIds: Array.from(snapshot.urgentIds),
+  };
+}
+
+function deserializeSnapshot(serialized: SerializedBeadsSnapshot): BeadsSnapshot {
+  return {
+    timestamp: serialized.timestamp,
+    issues: new Map(
+      serialized.issues.map((issue) => [
+        issue.id,
+        { priority: issue.priority, status: issue.status },
+      ])
+    ),
+    urgentIds: new Set(serialized.urgentIds),
+  };
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Hook-Based Checkpoint Triggering (Claude Code 2.1.0+)
 // ─────────────────────────────────────────────────────────────────────────────
@@ -298,7 +338,7 @@ export async function checkAndCreateCheckpointFromHook(
 ): Promise<{ created: boolean; reason: string }> {
   try {
     // Read harness state from .harness/state.json
-    const { readFile } = await import('node:fs/promises');
+    const { readFile, writeFile } = await import('node:fs/promises');
     const { join } = await import('node:path');
 
     const statePath = join(cwd, '.harness/state.json');
@@ -310,9 +350,27 @@ export async function checkAndCreateCheckpointFromHook(
     const trackerContent = await readFile(trackerPath, 'utf-8');
     const tracker: CheckpointTracker = JSON.parse(trackerContent);
 
+    if (tracker.sessionsResults.length === 0) {
+      return { created: false, reason: 'No completed sessions to evaluate' };
+    }
+
+    // Detect redirects by diffing the current Beads snapshot against the last hook snapshot.
+    const redirectSnapshotPath = join(cwd, '.harness/redirect-snapshot.json');
+    let previousSnapshot: BeadsSnapshot;
+
+    try {
+      const redirectSnapshotContent = await readFile(redirectSnapshotPath, 'utf-8');
+      previousSnapshot = deserializeSnapshot(JSON.parse(redirectSnapshotContent) as SerializedBeadsSnapshot);
+    } catch {
+      previousSnapshot = await takeSnapshot(cwd);
+    }
+
+    const redirectCheck = await checkForRedirects(previousSnapshot, state.id, cwd);
+    const hasRedirects = redirectCheck.redirects.length > 0;
+    const redirectNotes = formatRedirectNotes(redirectCheck.redirects);
+
     // Check if we need a checkpoint
     const lastResult = tracker.sessionsResults[tracker.sessionsResults.length - 1];
-    const hasRedirects = false; // TODO: Detect redirects from bd list changes
 
     const decision = shouldCreateCheckpoint(
       tracker,
@@ -322,6 +380,10 @@ export async function checkAndCreateCheckpointFromHook(
     );
 
     if (!decision.create) {
+      await writeFile(
+        redirectSnapshotPath,
+        JSON.stringify(serializeSnapshot(redirectCheck.newSnapshot), null, 2)
+      );
       return { created: false, reason: 'Checkpoint criteria not met' };
     }
 
@@ -329,7 +391,7 @@ export async function checkAndCreateCheckpointFromHook(
     const checkpoint = await generateCheckpoint(
       tracker,
       state,
-      '', // No redirect notes from hook
+      redirectNotes,
       cwd
     );
 
@@ -339,10 +401,13 @@ export async function checkAndCreateCheckpointFromHook(
     // Update state
     state.lastCheckpoint = checkpoint.id;
 
-    // Write updated state and tracker
-    const { writeFile } = await import('node:fs/promises');
+    // Write updated state, tracker, and redirect snapshot baseline.
     await writeFile(statePath, JSON.stringify(state, null, 2));
     await writeFile(trackerPath, JSON.stringify(tracker, null, 2));
+    await writeFile(
+      redirectSnapshotPath,
+      JSON.stringify(serializeSnapshot(redirectCheck.newSnapshot), null, 2)
+    );
 
     return { created: true, reason: decision.reason };
   } catch (error) {

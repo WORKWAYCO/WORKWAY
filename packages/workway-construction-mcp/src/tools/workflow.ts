@@ -22,6 +22,11 @@ import {
 } from '../lib/pagination';
 import { handleError } from '../middleware/error-handler';
 
+function ensureOutputShape<T>(schema: z.ZodTypeAny, data: T): T {
+  schema.parse(data);
+  return data;
+}
+
 // ============================================================================
 // Tool Definitions
 // ============================================================================
@@ -85,12 +90,17 @@ export const workflowTools: MCPToolSet = {
         } else if (input.trigger_type) {
           nextStep = 'Call workway_add_workflow_action to add workflow steps';
         }
-        
-        return success({
+
+        const output = {
+          workflow_id: id,
+          webhook_url: webhookUrl,
+          next_step: nextStep,
           ...workflow,
           webhookUrl,
           nextStep,
-        });
+        };
+
+        return success(ensureOutputShape(workflowTools.create_workflow.outputSchema, output));
       } catch (error) {
         return handleError(error);
       }
@@ -115,7 +125,6 @@ export const workflowTools: MCPToolSet = {
         .describe('Timezone for cron schedule'),
     }),
     outputSchema: z.object({
-      success: z.boolean(),
       trigger_config: z.object({
         source: z.string().optional(),
         event_types: z.array(z.string()).optional(),
@@ -151,12 +160,21 @@ export const workflowTools: MCPToolSet = {
           new Date().toISOString(),
           input.workflow_id
         ).run();
-        
-        return success({
+
+        const output = {
+          trigger_config: {
+            source: input.source,
+            event_types: input.event_types,
+            cron_schedule: input.cron_schedule,
+            webhook_url: input.source ? `${WEBHOOK_BASE_URL}/${input.workflow_id}` : undefined,
+          },
+          next_step: 'Call workway_add_workflow_action to add workflow steps',
           triggerConfig,
           webhookUrl: input.source ? `${WEBHOOK_BASE_URL}/${input.workflow_id}` : undefined,
           nextStep: 'Call workway_add_workflow_action to add workflow steps',
-        });
+        };
+
+        return success(ensureOutputShape(workflowTools.configure_workflow_trigger.outputSchema, output));
       } catch (error) {
         return handleError(error);
       }
@@ -177,7 +195,6 @@ export const workflowTools: MCPToolSet = {
         .describe('Optional condition expression (e.g., "{{trigger.rfi.status}} == \'open\'")'),
     }),
     outputSchema: z.object({
-      success: z.boolean(),
       action_id: z.string(),
       sequence: z.number(),
       next_step: z.string(),
@@ -203,12 +220,16 @@ export const workflowTools: MCPToolSet = {
           sequence,
           input.condition || null
         ).run();
-        
-        return success({
-          actionId,
+
+        const output = {
+          action_id: actionId,
           sequence,
+          next_step: 'Add more actions with workway_add_workflow_action, or call workway_deploy_workflow to activate the workflow',
+          actionId,
           nextStep: 'Add more actions with workway_add_workflow_action, or call workway_deploy_workflow to activate the workflow',
-        });
+        };
+
+        return success(ensureOutputShape(workflowTools.add_workflow_action.outputSchema, output));
       } catch (error) {
         return handleError(error);
       }
@@ -227,7 +248,6 @@ export const workflowTools: MCPToolSet = {
         .describe('If true, validates without deploying'),
     }),
     outputSchema: z.object({
-      success: z.boolean(),
       deployment_id: z.string().optional(),
       webhook_url: z.string().optional(),
       validation_errors: z.array(z.string()),
@@ -295,10 +315,15 @@ export const workflowTools: MCPToolSet = {
         }
         
         if (input.dry_run) {
-          return success({
+          const output = {
+            deployment_id: undefined,
+            webhook_url: undefined,
+            validation_errors: [] as string[],
             validationErrors: [],
             status: 'validated',
-          });
+          };
+
+          return success(ensureOutputShape(workflowTools.deploy_workflow.outputSchema, output));
         }
         
         // Deploy
@@ -307,15 +332,21 @@ export const workflowTools: MCPToolSet = {
         await env.DB.prepare(`
           UPDATE workflows SET status = ?, updated_at = ? WHERE id = ?
         `).bind('active', new Date().toISOString(), input.workflow_id).run();
-        
-        return success({
+
+        const webhookUrl = result.trigger_type === 'webhook'
+          ? `${WEBHOOK_BASE_URL}/${input.workflow_id}`
+          : undefined;
+        const output = {
+          deployment_id: deploymentId,
+          webhook_url: webhookUrl,
           deploymentId,
-          webhookUrl: result.trigger_type === 'webhook' 
-            ? `${WEBHOOK_BASE_URL}/${input.workflow_id}`
-            : undefined,
+          webhookUrl,
+          validation_errors: [] as string[],
           validationErrors: [],
           status: 'deployed',
-        });
+        };
+
+        return success(ensureOutputShape(workflowTools.deploy_workflow.outputSchema, output));
       } catch (error) {
         return handleError(error);
       }
@@ -327,14 +358,13 @@ export const workflowTools: MCPToolSet = {
   // --------------------------------------------------------------------------
   test_workflow: {
     name: 'workway_test_workflow',
-    description: 'Send a test event through the workflow and verify end-to-end execution. Returns execution results and any errors.',
+    description: 'Send a test event through the workflow and run simulated action execution. Returns execution metadata, simulated outputs, and any errors.',
     inputSchema: z.object({
       workflow_id: z.string().describe('The workflow to test'),
       test_payload: z.record(z.unknown()).optional()
         .describe('Mock event payload to simulate trigger'),
     }),
     outputSchema: z.object({
-      success: z.boolean(),
       execution_id: z.string(),
       steps_completed: z.number(),
       steps_total: z.number(),
@@ -421,15 +451,24 @@ export const workflowTools: MCPToolSet = {
             }
           );
         }
-        
-        return success({
+        const durationMs = Date.now() - startTime;
+        const outputData = {
+          execution_id: executionId,
+          steps_completed: completedSteps,
+          steps_total: totalSteps,
+          output,
+          errors: executionErrors,
+          duration_ms: durationMs,
           executionId,
           stepsCompleted: completedSteps,
           stepsTotal: totalSteps,
-          output,
-          errors: executionErrors,
-          durationMs: Date.now() - startTime,
-        }, { executionTime: Date.now() - startTime });
+          durationMs,
+        };
+
+        return success(
+          ensureOutputShape(workflowTools.test_workflow.outputSchema, outputData),
+          { executionTime: durationMs }
+        );
       } catch (error) {
         return handleError(error);
       }
@@ -461,7 +500,7 @@ export const workflowTools: MCPToolSet = {
         id: z.string(),
         name: z.string(),
         status: z.string(),
-        trigger_type: z.string(),
+        trigger_type: z.string().nullable().optional(),
         project_id: z.string().optional(),
         created_at: z.string(),
       })),
@@ -503,18 +542,26 @@ export const workflowTools: MCPToolSet = {
         const allParams = [...whereParams, ...paginationParams];
         const stmt = env.DB.prepare(query);
         const result = await stmt.bind(...allParams).all<any>();
-        
-        return success({
-          workflows: result.results?.map((w: any) => ({
+
+        const paginationResult = buildPaginationResult(pagination.limit, pagination.offset, total);
+        const workflows = result.results?.map((w: any) => ({
             id: w.id,
             name: w.name,
             status: w.status,
+            trigger_type: w.trigger_type ?? null,
+            project_id: w.project_id ?? undefined,
+            created_at: w.created_at,
             triggerType: w.trigger_type,
-            projectId: w.project_id,
+            projectId: w.project_id ?? undefined,
             createdAt: w.created_at,
-          })) || [],
-          pagination: buildPaginationResult(pagination.limit, pagination.offset, total),
-        });
+          })) || [];
+        const output = {
+          workflows,
+          pagination: paginationResult,
+          total,
+        };
+
+        return success(ensureOutputShape(workflowTools.list_workflows.outputSchema, output));
       } catch (error) {
         return handleError(error);
       }
@@ -533,7 +580,6 @@ export const workflowTools: MCPToolSet = {
         .describe('Whether to pause or rollback to previous version'),
     }),
     outputSchema: z.object({
-      success: z.boolean(),
       new_status: z.string(),
       message: z.string(),
     }),
@@ -544,13 +590,16 @@ export const workflowTools: MCPToolSet = {
         await env.DB.prepare(`
           UPDATE workflows SET status = ?, updated_at = ? WHERE id = ?
         `).bind(newStatus, new Date().toISOString(), input.workflow_id).run();
-        
-        return success({
+
+        const output = {
+          new_status: newStatus,
           newStatus,
           message: input.action === 'pause' 
             ? 'Workflow paused. No new executions will run until reactivated.'
             : 'Workflow rolled back to draft. Review configuration before redeploying.',
-        });
+        };
+
+        return success(ensureOutputShape(workflowTools.rollback_workflow.outputSchema, output));
       } catch (error) {
         return handleError(error);
       }
