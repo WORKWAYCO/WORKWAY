@@ -10,6 +10,7 @@ import type {
   MCPServerConfig, 
   MCPTool, 
   MCPResource,
+  MCPPrompt,
   JsonRpcRequest,
   JsonRpcResponse,
   JsonRpcError,
@@ -34,6 +35,7 @@ export interface ProtocolHandlerConfig<TEnv extends BaseMCPEnv> {
     list: () => MCPResource[];
     fetch: (uri: string, env: TEnv) => Promise<unknown | null>;
   };
+  prompts?: MCPPrompt[];
   tierLimits?: Record<string, number>;
 }
 
@@ -198,8 +200,37 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
     }
       
     case 'prompts/list':
-      result = { prompts: [] };
+      result = {
+        prompts: (config.prompts || []).map((prompt) => ({
+          name: prompt.name,
+          description: prompt.description,
+          arguments: prompt.arguments,
+        })),
+      };
       break;
+
+    case 'prompts/get': {
+      const params = message.params as { name: string; arguments?: Record<string, unknown> };
+      const prompt = (config.prompts || []).find((entry) => entry.name === params?.name);
+      if (!prompt) {
+        return {
+          jsonrpc: '2.0',
+          id: message.id,
+          error: {
+            code: -32602,
+            message: `Unknown prompt: ${params?.name}`,
+          },
+        };
+      }
+
+      const args = params?.arguments || {};
+      const messages = prompt.render ? prompt.render(args) : (prompt.messages || []);
+      result = {
+        description: prompt.description,
+        messages,
+      };
+      break;
+    }
       
     default:
       return {

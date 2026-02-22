@@ -114,6 +114,16 @@ export interface MCPPrompt {
     description?: string;
     required?: boolean;
   }>;
+  messages?: MCPPromptMessage[];
+  render?: (args: Record<string, unknown>) => MCPPromptMessage[];
+}
+
+export interface MCPPromptMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: {
+    type: 'text';
+    text: string;
+  };
 }
 
 // ============================================================================

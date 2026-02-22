@@ -117,7 +117,7 @@ describe('ComposioAdapter.listActions', () => {
 		await adapter.listActions({ useCase: 'send a message' });
 
 		const fetchUrl = mockFetch.mock.calls[0][0] as string;
-		expect(fetchUrl).toContain('useCase=send+a+message');
+		expect(fetchUrl).toContain('query=send+a+message');
 	});
 
 	it('should handle API errors gracefully', async () => {
@@ -305,7 +305,7 @@ describe('ComposioAdapter.checkConnection', () => {
 		const result = await adapter.checkConnection();
 
 		expect(result.success).toBe(false);
-		expect(result.error?.message).toContain('Entity ID required');
+		expect(result.error?.message).toContain('User ID required');
 	});
 
 	it('should find active connection', async () => {
@@ -350,15 +350,17 @@ describe('ComposioAdapter.checkConnection', () => {
 
 describe('ComposioAdapter.initiateConnection', () => {
 	it('should return redirect URL', async () => {
-		const mockResponse = {
-			redirectUrl: 'https://slack.com/oauth/v2/authorize?...',
-			connectedAccountId: 'ca_new_123',
+		const mockConfigs = [{ id: 'auth_cfg_123' }];
+		const mockLinkResponse = {
+			redirect_url: 'https://slack.com/oauth/v2/authorize?...',
+			connected_account_id: 'ca_new_123',
 		};
 
-		mockFetch.mockResolvedValueOnce(mockJsonResponse(mockResponse));
+		mockFetch.mockResolvedValueOnce(mockJsonResponse(mockConfigs));
+		mockFetch.mockResolvedValueOnce(mockJsonResponse(mockLinkResponse));
 
 		const result = await adapter.initiateConnection({
-			entityId: 'user_123',
+			userId: 'user_123',
 			redirectUrl: 'https://workway.co/oauth/callback',
 		});
 

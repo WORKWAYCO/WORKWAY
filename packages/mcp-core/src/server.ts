@@ -112,6 +112,7 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
     },
     tools: config.tools,
     resources: config.resources,
+    prompts: config.prompts,
     tierLimits,
   }));
   
@@ -130,6 +131,7 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
     },
     tools: config.tools,
     resources: config.resources,
+    prompts: config.prompts,
     tierLimits,
   }));
   
@@ -270,8 +272,34 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
         }
           
         case 'prompts/list':
-          result = { prompts: [] };
+          result = {
+            prompts: (config.prompts || []).map((prompt) => ({
+              name: prompt.name,
+              description: prompt.description,
+              arguments: prompt.arguments,
+            })),
+          };
           break;
+
+        case 'prompts/get': {
+          const promptParams = message.params as { name: string; arguments?: Record<string, unknown> };
+          const prompt = (config.prompts || []).find((entry) => entry.name === promptParams?.name);
+          if (!prompt) {
+            return c.json({
+              jsonrpc: '2.0',
+              id: message.id,
+              error: { code: -32602, message: `Unknown prompt: ${promptParams?.name}` },
+            });
+          }
+
+          const args = promptParams?.arguments || {};
+          const messages = prompt.render ? prompt.render(args) : (prompt.messages || []);
+          result = {
+            description: prompt.description,
+            messages,
+          };
+          break;
+        }
           
         case 'notifications/initialized':
           // Client notification - just acknowledge
@@ -326,6 +354,40 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
     }));
     
     return c.json({ tools });
+  });
+
+  app.get('/mcp/prompts', (c) => {
+    return c.json({
+      prompts: (config.prompts || []).map((prompt) => ({
+        name: prompt.name,
+        description: prompt.description,
+        arguments: prompt.arguments,
+      })),
+    });
+  });
+
+  app.get('/mcp/prompts/:name', (c) => {
+    const promptName = c.req.param('name');
+    const prompt = (config.prompts || []).find((entry) => entry.name === promptName);
+    if (!prompt) {
+      return c.json({ error: `Prompt not found: ${promptName}` }, 404);
+    }
+
+    const rawArgs = c.req.query('args');
+    let args: Record<string, unknown> = {};
+    if (rawArgs) {
+      try {
+        args = JSON.parse(rawArgs) as Record<string, unknown>;
+      } catch {
+        return c.json({ error: 'Invalid args JSON' }, 400);
+      }
+    }
+
+    const messages = prompt.render ? prompt.render(args) : (prompt.messages || []);
+    return c.json({
+      description: prompt.description,
+      messages,
+    });
   });
   
   app.post('/mcp/tools/:name', async (c) => {

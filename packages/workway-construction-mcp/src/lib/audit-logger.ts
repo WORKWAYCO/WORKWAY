@@ -20,7 +20,10 @@ export type AuditEventType =
   | 'rate_limit_exceeded'
   | 'authentication_failure'
   | 'authorization_failure'
-  | 'ai_usage';
+  | 'ai_usage'
+  | 'judgment_decision'
+  | 'judgment_approval'
+  | 'provider_connection';
 
 export type ResourceType = 
   | 'rfi'
@@ -34,7 +37,11 @@ export type ResourceType =
   | 'webhook'
   | 'workflow'
   | 'user'
-  | 'token';
+  | 'token'
+  | 'toolkit'
+  | 'policy'
+  | 'decision'
+  | 'approval';
 
 export interface AuditEvent {
   eventType: AuditEventType;
@@ -332,6 +339,68 @@ export async function logDataAccess(
     details: {
       action: options.action,
       count: options.count,
+    },
+  });
+}
+
+/**
+ * Log judgment decision lifecycle events.
+ */
+export async function logJudgmentDecision(
+  env: Env,
+  options: {
+    userId: string;
+    tenantId: string;
+    decisionId: string;
+    status: string;
+    toolSlug: string;
+    toolkitSlug?: string;
+    reason?: string;
+  }
+): Promise<string> {
+  return logAuditEvent(env, {
+    eventType: 'judgment_decision',
+    userId: options.userId,
+    resourceType: 'decision',
+    resourceId: options.decisionId,
+    projectId: options.tenantId,
+    details: {
+      tenantId: options.tenantId,
+      status: options.status,
+      toolSlug: options.toolSlug,
+      toolkitSlug: options.toolkitSlug,
+      reason: options.reason,
+    },
+  });
+}
+
+/**
+ * Log provider connection state transitions (active/pending/expired/revoked).
+ */
+export async function logProviderConnection(
+  env: Env,
+  options: {
+    userId: string;
+    tenantId: string;
+    provider: string;
+    toolkitSlug?: string;
+    status: string;
+    connectionId?: string;
+    details?: Record<string, unknown>;
+  }
+): Promise<string> {
+  return logAuditEvent(env, {
+    eventType: 'provider_connection',
+    userId: options.userId,
+    connectionId: options.connectionId,
+    resourceType: 'toolkit',
+    projectId: options.tenantId,
+    details: {
+      tenantId: options.tenantId,
+      provider: options.provider,
+      toolkitSlug: options.toolkitSlug,
+      status: options.status,
+      ...(options.details || {}),
     },
   });
 }

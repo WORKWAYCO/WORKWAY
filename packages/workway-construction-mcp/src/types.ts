@@ -44,6 +44,12 @@ export interface Env extends BaseMCPEnv {
   CLOUDFLARE_ACCOUNT_ID?: string;
   /** AI Gateway name (default: workway-mcp) */
   AI_GATEWAY_ID?: string;
+  /** Composio API key for hub toolkit routing */
+  COMPOSIO_API_KEY?: string;
+  /** Optional Composio base URL override */
+  COMPOSIO_BASE_URL?: string;
+  /** R2 bucket for immutable decision/evidence artifacts */
+  JUDGMENT_EVIDENCE?: R2Bucket;
 }
 
 // ============================================================================
@@ -303,3 +309,165 @@ export interface RFIOutcome {
   wasAccepted: boolean;
   createdAt: string;
 }
+
+// ============================================================================
+// Hub + Judgment Axis Types
+// ============================================================================
+
+export type JudgmentDecisionStatus =
+  | 'approved'
+  | 'pending_approval'
+  | 'denied'
+  | 'executed'
+  | 'failed'
+  | 'expired';
+
+export type JudgmentAction = 'allow' | 'require_approval' | 'deny';
+
+export type ApprovalStatus = 'approved' | 'rejected' | 'commented';
+
+export type ApprovalTier =
+  | 'none'
+  | 'superintendent'
+  | 'project_manager'
+  | 'director'
+  | 'compliance';
+
+export interface JudgmentPolicy {
+  id: string;
+  tenantId: string;
+  name: string;
+  policyType: string;
+  status: 'active' | 'inactive';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PolicyVersion {
+  id: string;
+  policyId: string;
+  tenantId: string;
+  version: number;
+  policyJson: string;
+  trustProfileJson?: string | null;
+  status: 'draft' | 'active' | 'deprecated';
+  effectiveAt: string;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface PolicyRuleMatch {
+  toolkit_slugs?: string[];
+  tool_slugs?: string[];
+  tool_slug_prefixes?: string[];
+  operation_types?: Array<'read' | 'write' | 'admin'>;
+  min_risk?: number;
+  max_risk?: number;
+}
+
+export interface PolicyRule {
+  id: string;
+  action: JudgmentAction;
+  reason?: string;
+  required_approval_tier?: ApprovalTier;
+  match: PolicyRuleMatch;
+}
+
+export interface PolicyDefinition {
+  default_action?: JudgmentAction;
+  default_required_approval_tier?: ApprovalTier;
+  rules?: PolicyRule[];
+}
+
+export interface DecisionRecord {
+  id: string;
+  tenantId: string;
+  policyId?: string | null;
+  policyVersionId?: string | null;
+  userId: string;
+  projectId?: string | null;
+  toolkitSlug?: string | null;
+  toolSlug: string;
+  provider: string;
+  argumentsJson?: string | null;
+  riskScore: number;
+  requiredApprovalTier?: ApprovalTier | null;
+  status: JudgmentDecisionStatus;
+  reason?: string | null;
+  decidedBy?: string | null;
+  decidedAt?: string | null;
+  evidenceR2Key?: string | null;
+  executionResultJson?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ApprovalRecord {
+  id: string;
+  decisionId: string;
+  tenantId: string;
+  approverUserId: string;
+  approvalTier: ApprovalTier;
+  status: ApprovalStatus;
+  note?: string | null;
+  createdAt: string;
+}
+
+export interface ToolAccessPack {
+  id: string;
+  tenantId: string;
+  name: string;
+  slug: string;
+  description?: string | null;
+  status: 'active' | 'inactive';
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ToolAccessRule {
+  id: string;
+  packId: string;
+  tenantId: string;
+  toolkitSlug: string;
+  toolSlug?: string | null;
+  ruleType: 'allow' | 'deny';
+  createdAt: string;
+}
+
+export interface ProviderExecutionRequest {
+  tenantId: string;
+  userId: string;
+  projectId?: string;
+  toolkitSlug?: string;
+  toolSlug: string;
+  args: Record<string, unknown>;
+  connectedAccountId?: string;
+}
+
+export interface ProviderExecutionResult {
+  provider: 'first_party' | 'composio';
+  toolkitSlug?: string;
+  toolSlug: string;
+  result: unknown;
+}
+
+export type HubExecutionResponse =
+  | {
+      status: 'executed';
+      decision_id: string;
+      provider: 'first_party' | 'composio';
+      result: unknown;
+    }
+  | {
+      status: 'requires_approval';
+      decision_id: string;
+      required_approval_tier?: ApprovalTier | null;
+      reason: string;
+    }
+  | {
+      status: 'denied';
+      decision_id: string;
+      reason: string;
+    };

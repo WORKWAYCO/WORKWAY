@@ -149,6 +149,43 @@ All tools follow the pattern: `workway_{action}_{provider}_{resource}`
 | `workway_get_workflow_guidance` | Get guidance when stuck |
 | `workway_observe_workflow_execution` | Detailed execution trace |
 
+### MCP Hub (Curated Toolkits)
+
+| Tool | Description |
+|------|-------------|
+| `workway_hub_list_toolkits` | List tenant allowlisted toolkit packs |
+| `workway_hub_connect_toolkit` | Start toolkit OAuth connection flow |
+| `workway_hub_list_tools` | List allowlisted tools for a toolkit |
+| `workway_hub_execute_tool` | Policy-gated execution for first-party and Composio tools |
+
+### Judgment Axis (MCP-only Governance)
+
+| Tool | Description |
+|------|-------------|
+| `workway_judgment_evaluate_action` | Evaluate policy and create a decision record |
+| `workway_judgment_approve_action` | Approve pending decision |
+| `workway_judgment_reject_action` | Reject pending decision |
+| `workway_judgment_list_pending` | List pending approvals |
+| `workway_judgment_get_decision` | Get full decision details |
+
+### Tenant Runtime Controls
+
+Tenant-scoped runtime controls are supported for hub rollouts and failure isolation:
+
+- Feature flags (defaults):
+  - `hub_enabled=true`
+  - `hub_execution_enabled=true`
+  - `hub_circuit_breaker_enabled=true`
+- Circuit breaker policy defaults:
+  - `failure_threshold=3`
+  - `cooldown_seconds=120`
+
+Storage:
+- Policy/config in D1 tables:
+  - `tenant_feature_flags`
+  - `tenant_circuit_policies`
+- Runtime circuit state in KV (`tenant:{tenant_id}:circuit:{toolkit}:{tool}`)
+
 ### Intelligence Layer Skills (AI-Powered)
 
 | Skill | Description | Atlas Task |
@@ -196,6 +233,11 @@ wrangler secret put PROCORE_SANDBOX_CLIENT_SECRET
 # Optional: For AI Gateway (LLM observability)
 wrangler secret put CLOUDFLARE_ACCOUNT_ID  # Find at dash.cloudflare.com
 # AI_GATEWAY_ID is set in wrangler.toml (default: workway-mcp)
+
+# Optional: Composio toolkit hub
+wrangler secret put COMPOSIO_API_KEY
+# Optional override (default: https://backend.composio.dev/api/v3)
+wrangler secret put COMPOSIO_BASE_URL
 ```
 
 ### OAuth Setup

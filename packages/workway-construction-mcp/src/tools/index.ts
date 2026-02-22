@@ -23,6 +23,8 @@ export { templateTools } from './templates';
 export { debuggingTools } from './debugging';
 export { skillTools } from './skills';
 export { seederTools } from './seeder';
+export { hubTools } from './hub';
+export { judgmentTools } from './judgment';
 
 import { workflowTools } from './workflow';
 import { procoreTools } from './procore';
@@ -34,6 +36,8 @@ import { templateTools } from './templates';
 import { debuggingTools } from './debugging';
 import { skillTools } from './skills';
 import { seederTools } from './seeder';
+import { hubTools } from './hub';
+import { judgmentTools } from './judgment';
 
 /**
  * All tools combined for MCP registration
@@ -59,6 +63,9 @@ export const allTools = {
   ...debuggingTools,
   // Intelligence Layer Skills
   ...skillTools,
+  // MCP Hub + judgment axis
+  ...hubTools,
+  ...judgmentTools,
   // seederTools excluded - use seederTools directly for dev/test
 };
 
@@ -162,6 +169,19 @@ export const toolCategories = {
     'workway_get_dronedeploy_map',
     'workway_get_dronedeploy_issues',
     'workway_get_dronedeploy_volume',
+  ],
+  hub: [
+    'workway_hub_list_toolkits',
+    'workway_hub_connect_toolkit',
+    'workway_hub_list_tools',
+    'workway_hub_execute_tool',
+  ],
+  judgment: [
+    'workway_judgment_evaluate_action',
+    'workway_judgment_approve_action',
+    'workway_judgment_reject_action',
+    'workway_judgment_list_pending',
+    'workway_judgment_get_decision',
   ],
   // === INTELLIGENCE LAYER (Skills) ===
   skills: [

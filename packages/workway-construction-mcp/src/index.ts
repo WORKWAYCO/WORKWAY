@@ -16,6 +16,7 @@ import { Hono } from 'hono';
 import { createMCPServer, type MCPEnv } from '@workway/mcp-core';
 import { allTools, toolCategories } from './tools';
 import { listResources, fetchResource } from './resources';
+import { judgmentPrompts } from './prompts';
 import { encrypt, decrypt } from './lib/crypto';
 import { 
   ALLOWED_ORIGINS, 
@@ -64,6 +65,7 @@ const mcpServer = createMCPServer<Env>({
     list: listResources,
     fetch: fetchResource,
   },
+  prompts: judgmentPrompts,
 });
 
 // ============================================================================

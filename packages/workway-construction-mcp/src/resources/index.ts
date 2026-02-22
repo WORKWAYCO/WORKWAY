@@ -12,6 +12,14 @@
  */
 
 import type { Env } from '../types';
+import { getDecision, listPendingDecisions, resolveTenantId } from '../lib/db';
+import { ComposioSessionProvider } from '../lib/provider-router';
+
+function parseResourceQuery(uri: string): URLSearchParams {
+  const queryIndex = uri.indexOf('?');
+  if (queryIndex === -1) return new URLSearchParams();
+  return new URLSearchParams(uri.slice(queryIndex + 1));
+}
 
 // ============================================================================
 // Resource Definitions
@@ -261,6 +269,296 @@ export const resources = {
   },
 
   // --------------------------------------------------------------------------
+  // Hub Toolkits
+  // --------------------------------------------------------------------------
+  'hub://toolkits': {
+    name: 'Hub Toolkits',
+    description: 'Curated allowlisted toolkit inventory for a tenant',
+    mimeType: 'application/json',
+    fetch: async (uri: string, env: Env) => {
+      const query = parseResourceQuery(uri);
+      const userId = query.get('user_id') || 'default';
+      const tenantHint = query.get('tenant_id') || undefined;
+
+      const tenantId = await resolveTenantId(env, userId, tenantHint);
+      if (!tenantId) {
+        return {
+          error: 'tenant_not_found',
+          message: 'Provide tenant_id and user_id query parameters to scope hub resources.',
+        };
+      }
+
+      let allowlistedToolkits: string[] = [];
+      try {
+        const allowlisted = await env.DB.prepare(`
+          SELECT DISTINCT r.toolkit_slug AS toolkit_slug
+          FROM tool_access_rules r
+          INNER JOIN tool_access_packs p ON p.id = r.pack_id
+          WHERE r.tenant_id = ? AND p.status = 'active' AND r.rule_type = 'allow'
+          ORDER BY r.toolkit_slug ASC
+        `).bind(tenantId).all<{ toolkit_slug: string }>();
+        allowlistedToolkits = (allowlisted.results || []).map((row) => row.toolkit_slug);
+      } catch {
+        allowlistedToolkits = ['slack', 'gmail', 'google_drive', 'notion', 'jira'];
+      }
+
+      let remoteToolkits: Array<{ slug: string; name: string; description?: string }> = [];
+      if (env.COMPOSIO_API_KEY) {
+        try {
+          const composio = new ComposioSessionProvider(env);
+          const toolkits = await composio.listToolkits();
+          remoteToolkits = toolkits
+            .filter((toolkit) => allowlistedToolkits.includes(toolkit.slug))
+            .map((toolkit) => ({
+              slug: toolkit.slug,
+              name: toolkit.name,
+              description: toolkit.description,
+            }));
+        } catch {
+          // Keep response useful even if remote fetch fails.
+        }
+      }
+
+      const toolkits = remoteToolkits.length
+        ? remoteToolkits
+        : allowlistedToolkits.map((slug) => ({
+            slug,
+            name: slug,
+          }));
+
+      return {
+        tenant_id: tenantId,
+        user_id: userId,
+        toolkits,
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // Hub Toolkit Tools
+  // --------------------------------------------------------------------------
+  'hub://toolkits/{slug}/tools': {
+    name: 'Hub Toolkit Tools',
+    description: 'Allowlisted tool catalog for a specific toolkit',
+    mimeType: 'application/json',
+    fetch: async (uri: string, env: Env) => {
+      const match = uri.match(/hub:\/\/toolkits\/([^/?]+)\/tools/);
+      if (!match) return null;
+
+      const toolkitSlug = decodeURIComponent(match[1]);
+      const query = parseResourceQuery(uri);
+      const userId = query.get('user_id') || 'default';
+      const tenantHint = query.get('tenant_id') || undefined;
+      const tenantId = await resolveTenantId(env, userId, tenantHint);
+
+      if (!tenantId) {
+        return {
+          error: 'tenant_not_found',
+          message: 'Provide tenant_id and user_id query parameters to scope toolkit resources.',
+        };
+      }
+
+      if (!env.COMPOSIO_API_KEY) {
+        return {
+          tenant_id: tenantId,
+          toolkit_slug: toolkitSlug,
+          tools: [],
+          message: 'COMPOSIO_API_KEY not configured.',
+        };
+      }
+
+      const composio = new ComposioSessionProvider(env);
+      const toolkitTools = await composio.listTools(toolkitSlug);
+
+      const checks = await Promise.all(
+        toolkitTools.map(async (tool) => {
+          let allowed = false;
+          try {
+            const result = await env.DB.prepare(`
+              SELECT r.rule_type AS rule_type
+              FROM tool_access_rules r
+              INNER JOIN tool_access_packs p ON p.id = r.pack_id
+              WHERE r.tenant_id = ? AND p.status = 'active'
+                AND r.toolkit_slug = ?
+                AND (r.tool_slug IS NULL OR r.tool_slug = ?)
+            `).bind(tenantId, toolkitSlug, tool.slug).all<{ rule_type: 'allow' | 'deny' }>();
+            const rules = result.results || [];
+            allowed = rules.length > 0 && !rules.some((rule) => rule.rule_type === 'deny') && rules.some((rule) => rule.rule_type === 'allow');
+          } catch {
+            allowed = false;
+          }
+
+          return {
+            ...tool,
+            allowed,
+          };
+        })
+      );
+
+      return {
+        tenant_id: tenantId,
+        toolkit_slug: toolkitSlug,
+        tools: checks.filter((tool) => tool.allowed).map((tool) => ({
+          slug: tool.slug,
+          name: tool.name,
+          description: tool.description,
+        })),
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // Judgment Policies
+  // --------------------------------------------------------------------------
+  'judgment://policies': {
+    name: 'Judgment Policies',
+    description: 'Active policy definitions and versions for the tenant',
+    mimeType: 'application/json',
+    fetch: async (uri: string, env: Env) => {
+      const query = parseResourceQuery(uri);
+      const userId = query.get('user_id') || 'default';
+      const tenantHint = query.get('tenant_id') || undefined;
+      const tenantId = await resolveTenantId(env, userId, tenantHint);
+
+      if (!tenantId) {
+        return {
+          error: 'tenant_not_found',
+          message: 'Provide tenant_id and user_id query parameters.',
+        };
+      }
+
+      try {
+        const policies = await env.DB.prepare(`
+          SELECT p.id, p.name, p.policy_type, p.status,
+                 v.id AS version_id, v.version, v.effective_at, v.policy_json
+          FROM judgment_policies p
+          LEFT JOIN judgment_policy_versions v ON v.policy_id = p.id
+          WHERE p.tenant_id = ?
+          ORDER BY p.updated_at DESC, v.version DESC
+        `).bind(tenantId).all<any>();
+
+        return {
+          tenant_id: tenantId,
+          policies: (policies.results || []).map((row: any) => ({
+            id: row.id,
+            name: row.name,
+            policy_type: row.policy_type,
+            status: row.status,
+            version_id: row.version_id,
+            version: row.version,
+            effective_at: row.effective_at,
+            policy_json: row.policy_json ? JSON.parse(row.policy_json) : null,
+          })),
+        };
+      } catch {
+        return {
+          tenant_id: tenantId,
+          policies: [],
+        };
+      }
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // Judgment Decision Detail
+  // --------------------------------------------------------------------------
+  'judgment://decisions/{decision_id}': {
+    name: 'Judgment Decision',
+    description: 'Detailed decision record and execution metadata',
+    mimeType: 'application/json',
+    fetch: async (uri: string, env: Env) => {
+      const match = uri.match(/judgment:\/\/decisions\/([^/?]+)/);
+      if (!match) return null;
+      const decisionId = decodeURIComponent(match[1]);
+
+      const query = parseResourceQuery(uri);
+      const userId = query.get('user_id') || 'default';
+      const tenantHint = query.get('tenant_id') || undefined;
+      const tenantId = await resolveTenantId(env, userId, tenantHint);
+
+      if (!tenantId) {
+        return {
+          error: 'tenant_not_found',
+          message: 'Provide tenant_id and user_id query parameters.',
+        };
+      }
+
+      const decision = await getDecision(env, tenantId, decisionId);
+      if (!decision) {
+        return {
+          error: 'not_found',
+          message: `Decision not found: ${decisionId}`,
+        };
+      }
+
+      let approvals: Array<Record<string, unknown>> = [];
+      try {
+        const approvalRows = await env.DB.prepare(`
+          SELECT id, approver_user_id, approval_tier, status, note, created_at
+          FROM judgment_approvals
+          WHERE decision_id = ?
+          ORDER BY created_at DESC
+        `).bind(decisionId).all<any>();
+        approvals = (approvalRows.results || []).map((row: any) => ({
+          id: row.id,
+          approver_user_id: row.approver_user_id,
+          approval_tier: row.approval_tier,
+          status: row.status,
+          note: row.note,
+          created_at: row.created_at,
+        }));
+      } catch {
+        approvals = [];
+      }
+
+      return {
+        decision,
+        approvals,
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
+  // Pending Approvals
+  // --------------------------------------------------------------------------
+  'judgment://approvals/pending': {
+    name: 'Pending Approvals',
+    description: 'Queue of pending decisions requiring human approval',
+    mimeType: 'application/json',
+    fetch: async (uri: string, env: Env) => {
+      const query = parseResourceQuery(uri);
+      const userId = query.get('user_id') || 'default';
+      const tenantHint = query.get('tenant_id') || undefined;
+      const limit = Math.min(Number(query.get('limit') || 50), 200);
+      const tenantId = await resolveTenantId(env, userId, tenantHint);
+
+      if (!tenantId) {
+        return {
+          error: 'tenant_not_found',
+          message: 'Provide tenant_id and user_id query parameters.',
+        };
+      }
+
+      const pending = await listPendingDecisions(env, tenantId, limit);
+      return {
+        tenant_id: tenantId,
+        count: pending.length,
+        approvals: pending.map((decision) => ({
+          decision_id: decision.id,
+          user_id: decision.userId,
+          toolkit_slug: decision.toolkitSlug,
+          tool_slug: decision.toolSlug,
+          provider: decision.provider,
+          required_approval_tier: decision.requiredApprovalTier,
+          risk_score: decision.riskScore,
+          reason: decision.reason,
+          created_at: decision.createdAt,
+        })),
+      };
+    },
+  },
+
+  // --------------------------------------------------------------------------
   // Integration Capabilities
   // --------------------------------------------------------------------------
   'integration://{provider}/capabilities': {
@@ -349,13 +647,14 @@ export function listResources() {
  * Fetch a resource by URI
  */
 export async function fetchResource(uri: string, env: Env) {
+  const uriWithoutQuery = uri.split('?')[0];
   // Find matching resource pattern
   for (const [pattern, resource] of Object.entries(resources)) {
     // Convert pattern to regex
     const regexPattern = pattern.replace(/\{[^}]+\}/g, '[^/]+');
     const regex = new RegExp(`^${regexPattern}$`);
     
-    if (regex.test(uri)) {
+    if (regex.test(uriWithoutQuery)) {
       return await resource.fetch(uri, env);
     }
   }

@@ -44,6 +44,12 @@ database_id = "YOUR_D1_DATABASE_ID"
 binding = "KV"
 id = "YOUR_KV_NAMESPACE_ID"
 
+# R2 bucket for immutable judgment evidence artifacts
+# Create with: wrangler r2 bucket create workway-judgment-evidence
+[[r2_buckets]]
+binding = "JUDGMENT_EVIDENCE"
+bucket_name = "workway-judgment-evidence"
+
 # Durable Objects for workflow state
 [[durable_objects.bindings]]
 name = "WORKFLOW_STATE"
@@ -82,6 +88,8 @@ ENVIRONMENT = "development"
 # - PROCORE_SANDBOX_CLIENT_ID: Procore sandbox app client ID (for testing)
 # - PROCORE_SANDBOX_CLIENT_SECRET: Procore sandbox app client secret
 # - RESEND_API_KEY: For email notifications
+# - COMPOSIO_API_KEY: Composio API key for toolkit hub access
+# - COMPOSIO_BASE_URL: Override Composio API base URL (defaults to https://backend.composio.dev/api/v3)
 
 # ============================================================================
 # Development Tips

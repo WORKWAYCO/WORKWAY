@@ -1,10 +1,16 @@
 # Composio Technical Evaluation
 
-**Status**: Phase 1 — Workers Compatibility Gate
+**Status**: Phase 1 complete; adapter now targets Composio v3 API semantics.
 
 ## Context
 
 Evaluating [Composio](https://composio.dev) as invisible plumbing for commodity CRUD integrations (Slack notifications, HubSpot leads, Jira tickets). Deep MCPs (QuickBooks, Notion substrate, scheduling) stay custom-built.
+
+Current adapter stance:
+- API base defaults to `https://backend.composio.dev/api/v3`
+- Uses `x-api-key` authentication header
+- Uses explicit `user_id` and `connected_account_id` fields for execution
+- Uses toolkit/tool endpoint family (`/toolkits`, `/tools`, `/connected_accounts`, `/auth_configs`)
 
 **Product context**: See [specs/procore-cross-app-workflow-research.md](../../../../specs/procore-cross-app-workflow-research.md) for how Composio’s toolkit catalog (Drive, Gmail/Outlook, Slack, Notion, Jira, Precoro) maps to high-value Procore cross-app workflows and where WORKWAY’s Procore MCP + Skills + Judgment Layer differentiate.
 
@@ -40,7 +46,7 @@ curl http://localhost:8787/all       # All tests
 | SDK import (`CloudflareToolSet`) | Pending | Composio has official Workers support |
 | SDK tool fetching | Pending | |
 | SDK use-case filtering | Pending | |
-| HTTP API fallback | Pending | Guaranteed to work (pure `fetch()`) |
+| HTTP API fallback | Done | v3 fetch-based adapter is production path |
 | Latency: SDK vs HTTP API | Pending | Threshold: < 2x overhead |
 | Bundle size | Pending | Limit: 10MB compressed |
 

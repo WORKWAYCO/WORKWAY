@@ -68,7 +68,9 @@ export interface ComposioAdapterConfig {
 	timeout?: number;
 	/** Optional: Connected account ID for authenticated actions */
 	connectedAccountId?: string;
-	/** Optional: Entity ID for user-scoped operations */
+	/** Optional: User ID for user-scoped operations (v3) */
+	userId?: string;
+	/** Optional: Legacy Entity ID alias (v2 compatibility) */
 	entityId?: string;
 }
 
@@ -108,6 +110,8 @@ export interface ComposioExecutionResult {
 	execution_output?: unknown;
 	response_data?: unknown;
 	successfull?: boolean;
+	success?: boolean;
+	successful?: boolean;
 	error?: string;
 }
 
@@ -127,7 +131,7 @@ export interface ComposioApp {
 // CONSTANTS
 // ============================================================================
 
-const COMPOSIO_API_BASE = 'https://backend.composio.dev/api/v2';
+const COMPOSIO_API_BASE = 'https://backend.composio.dev/api/v3';
 
 // ============================================================================
 // ADAPTER CLASS
@@ -146,7 +150,7 @@ export class ComposioAdapter extends BaseAPIClient {
 	private readonly composioApiKey: string;
 	private readonly composioAppName: string;
 	private readonly connectedAccountId?: string;
-	private readonly entityId?: string;
+	private readonly userId?: string;
 	private readonly handleError: ReturnType<typeof createErrorHandler>;
 
 	constructor(config: ComposioAdapterConfig) {
@@ -176,7 +180,7 @@ export class ComposioAdapter extends BaseAPIClient {
 		this.composioApiKey = config.composioApiKey;
 		this.composioAppName = config.appName;
 		this.connectedAccountId = config.connectedAccountId;
-		this.entityId = config.entityId;
+		this.userId = config.userId || config.entityId;
 		this.handleError = createErrorHandler(`composio:${config.appName}`);
 	}
 
@@ -197,14 +201,15 @@ export class ComposioAdapter extends BaseAPIClient {
 	} = {}): Promise<ActionResult<ComposioAction[]>> {
 		try {
 			const params = new URLSearchParams();
-			params.append('appNames', this.composioAppName);
+			params.append('toolkit_slug', this.composioAppName);
 			if (options.limit) params.append('limit', options.limit.toString());
-			if (options.useCase) params.append('useCase', options.useCase);
+			if (options.useCase) params.append('query', options.useCase);
 			if (options.tags?.length) params.append('tags', options.tags.join(','));
 
-			const actions = await this.getJson<ComposioAction[]>(
-				`/actions?${params.toString()}`
+			const response = await this.getJson<{ items?: ComposioAction[] } | ComposioAction[]>(
+				`/tools?${params.toString()}`
 			);
+			const actions = Array.isArray(response) ? response : (response.items || []);
 
 			return createActionResult({
 				data: actions,
@@ -224,7 +229,7 @@ export class ComposioAdapter extends BaseAPIClient {
 	async getAction(actionName: string): Promise<ActionResult<ComposioAction>> {
 		try {
 			const action = await this.getJson<ComposioAction>(
-				`/actions/${actionName}`
+				`/tools/${actionName}`
 			);
 
 			return createActionResult({
@@ -267,24 +272,25 @@ export class ComposioAdapter extends BaseAPIClient {
 			}
 
 			const body: Record<string, unknown> = {
-				input: params,
+				arguments: params,
 			};
 
-			// Include connected account or entity if configured
+			// Include connected account or user if configured
 			if (this.connectedAccountId) {
-				body.connectedAccountId = this.connectedAccountId;
+				body.connected_account_id = this.connectedAccountId;
 			}
-			if (this.entityId) {
-				body.entityId = this.entityId;
+			if (this.userId) {
+				body.user_id = this.userId;
 			}
 
 			const result = await this.postJson<ComposioExecutionResult>(
-				`/actions/${actionName}/execute`,
+				`/tools/execute/${actionName}`,
 				body
 			);
 
 			// Check Composio's own success indicator
-			if (result.successfull === false || result.error) {
+			const explicitFailure = result.successfull === false || result.success === false || result.successful === false;
+			if (explicitFailure || result.error) {
 				return ActionResult.error(
 					result.error || 'Action execution failed',
 					ErrorCode.API_ERROR,
@@ -317,7 +323,7 @@ export class ComposioAdapter extends BaseAPIClient {
 	async getAppInfo(): Promise<ActionResult<ComposioApp>> {
 		try {
 			const app = await this.getJson<ComposioApp>(
-				`/apps/${this.composioAppName}`
+				`/toolkits/${this.composioAppName}`
 			);
 
 			return createActionResult({
@@ -337,23 +343,25 @@ export class ComposioAdapter extends BaseAPIClient {
 	 */
 	async checkConnection(): Promise<ActionResult<{ connected: boolean; accountId?: string }>> {
 		try {
-			if (!this.entityId) {
+			if (!this.userId) {
 				return ActionResult.error(
-					'Entity ID required to check connection',
+					'User ID required to check connection',
 					ErrorCode.VALIDATION_ERROR,
 					{ integration: `composio:${this.composioAppName}`, action: 'check-connection' }
 				);
 			}
 
 			const params = new URLSearchParams();
-			params.append('user_uuid', this.entityId);
+			params.append('user_id', this.userId);
+			params.append('toolkit_slug', this.composioAppName);
 
-			const accounts = await this.getJson<Array<{ id: string; appName: string; status: string }>>(
-				`/connectedAccounts?${params.toString()}`
+			const response = await this.getJson<{ items?: Array<{ id: string; toolkit_slug?: string; status: string }> } | Array<{ id: string; toolkit_slug?: string; status: string }>>(
+				`/connected_accounts?${params.toString()}`
 			);
+			const accounts = Array.isArray(response) ? response : (response.items || []);
 
 			const match = accounts.find(
-				(a) => a.appName === this.composioAppName && a.status === 'active'
+				(a) => (a.toolkit_slug || this.composioAppName) === this.composioAppName && a.status === 'active'
 			);
 
 			return createActionResult({
@@ -383,23 +391,51 @@ export class ComposioAdapter extends BaseAPIClient {
 	 * connected account ID for future action execution.
 	 */
 	async initiateConnection(options: {
-		entityId: string;
+		entityId?: string;
+		userId?: string;
+		authConfigId?: string;
 		redirectUrl?: string;
 	}): Promise<ActionResult<{ redirectUrl: string; connectionId: string }>> {
 		try {
-			const result = await this.postJson<{ redirectUrl: string; connectedAccountId: string }>(
-				'/connectedAccounts',
+			const userId = options.userId || options.entityId || this.userId;
+			if (!userId) {
+				return ActionResult.error(
+					'User ID is required to initiate connection',
+					ErrorCode.VALIDATION_ERROR,
+					{ integration: `composio:${this.composioAppName}`, action: 'initiate-connection' }
+				);
+			}
+
+			let authConfigId = options.authConfigId;
+			if (!authConfigId) {
+				const configs = await this.getJson<{ items?: Array<{ id: string }> } | Array<{ id: string }>>(
+					`/auth_configs?toolkit_slug=${encodeURIComponent(this.composioAppName)}`
+				);
+				const configItems = Array.isArray(configs) ? configs : (configs.items || []);
+				authConfigId = configItems[0]?.id;
+			}
+
+			if (!authConfigId) {
+				return ActionResult.error(
+					`No auth config found for toolkit: ${this.composioAppName}`,
+					ErrorCode.API_ERROR,
+					{ integration: `composio:${this.composioAppName}`, action: 'initiate-connection' }
+				);
+			}
+
+			const result = await this.postJson<{ redirect_url?: string; connected_account_id?: string; redirectUrl?: string; connectedAccountId?: string }>(
+				'/connected_accounts/link',
 				{
-					integrationId: this.composioAppName,
-					userUuid: options.entityId,
-					redirectUri: options.redirectUrl,
+					auth_config_id: authConfigId,
+					user_id: userId,
+					callback_url: options.redirectUrl,
 				}
 			);
 
 			return createActionResult({
 				data: {
-					redirectUrl: result.redirectUrl,
-					connectionId: result.connectedAccountId,
+					redirectUrl: result.redirect_url || result.redirectUrl || '',
+					connectionId: result.connected_account_id || result.connectedAccountId || '',
 				},
 				integration: `composio:${this.composioAppName}`,
 				action: 'initiate-connection',
@@ -426,6 +462,7 @@ export class ComposioAdapter extends BaseAPIClient {
 		additionalHeaders: Record<string, string> = {}
 	): Promise<T> {
 		return super.getJson<T>(path, {
+			'x-api-key': this.composioApiKey,
 			'X-API-Key': this.composioApiKey,
 			...additionalHeaders,
 		});
@@ -440,6 +477,7 @@ export class ComposioAdapter extends BaseAPIClient {
 		additionalHeaders: Record<string, string> = {}
 	): Promise<T> {
 		return super.postJson<T>(path, body, {
+			'x-api-key': this.composioApiKey,
 			'X-API-Key': this.composioApiKey,
 			...additionalHeaders,
 		});
