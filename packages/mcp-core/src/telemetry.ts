@@ -151,7 +151,9 @@ function initBraintrustTelemetry(options: BraintrustTelemetryOptions = {}, serve
   braintrustLogger = initLogger({
     apiKey: options.apiKey,
     projectName,
-    asyncFlush: true,
+    // In Cloudflare Workers, deterministic flush avoids queued traces being dropped
+    // when the request lifecycle ends quickly.
+    asyncFlush: false,
     setCurrent: true,
   });
   braintrustLoggerSignature = signature;
@@ -193,6 +195,7 @@ async function emitBraintrustInvocation(args: {
       type: 'tool',
     },
   );
+  await braintrustLogger.flush();
 }
 
 export async function recordInvocation(
