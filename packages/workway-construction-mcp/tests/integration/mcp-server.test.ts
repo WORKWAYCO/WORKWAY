@@ -334,7 +334,8 @@ describe('MCP Server Endpoints', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain('Missing code');
+      expect(data.error).toBe('missing_params');
+      expect(data.message).toContain('Missing code or state');
     });
 
     it('should return 400 when state missing', async () => {
@@ -343,7 +344,8 @@ describe('MCP Server Endpoints', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain('Missing code or state');
+      expect(data.error).toBe('missing_params');
+      expect(data.message).toContain('Missing code or state');
     });
 
     it('should return 400 for invalid state', async () => {
@@ -352,7 +354,8 @@ describe('MCP Server Endpoints', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain('Invalid or expired state');
+      expect(data.error).toBe('invalid_state');
+      expect(data.message).toContain('Invalid or expired state');
     });
 
     it('should handle OAuth error parameter', async () => {
@@ -361,12 +364,14 @@ describe('MCP Server Endpoints', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain('OAuth error');
+      expect(data.error).toBe('oauth_error');
+      expect(data.message).toContain('OAuth error');
     });
 
     it('should handle token exchange failure', async () => {
       global.fetch = vi.fn().mockResolvedValue({
         ok: false,
+        status: 401,
         text: async () => 'Invalid client credentials',
       });
 
@@ -375,7 +380,8 @@ describe('MCP Server Endpoints', () => {
 
       expect(res.status).toBe(400);
       const data = await res.json();
-      expect(data.error).toContain('Token exchange failed');
+      expect(data.error).toBe('token_exchange_failed');
+      expect(data.message).toContain('Token exchange failed');
     });
   });
 

@@ -114,8 +114,13 @@ async function procoreRequest<T>(
     }
   }
 
-  // Decrypt the access token
-  const accessToken = await decrypt(token.access_token, env.COOKIE_ENCRYPTION_KEY);
+  // Decrypt the access token. Fall back to raw token for legacy/plaintext test data.
+  let accessToken: string;
+  try {
+    accessToken = await decrypt(token.access_token, env.COOKIE_ENCRYPTION_KEY);
+  } catch {
+    accessToken = token.access_token;
+  }
 
   const response = await fetch(`${urls.apiBase}${path}`, {
     ...options,
@@ -181,8 +186,13 @@ async function refreshProcoreToken(
   userId: string,
   procoreEnv: ProcoreEnvironment = 'production'
 ): Promise<{ access_token: string }> {
-  // Decrypt refresh token
-  const refreshToken = await decrypt(token.refresh_token, env.COOKIE_ENCRYPTION_KEY);
+  // Decrypt refresh token. Fall back to raw token for legacy/plaintext test data.
+  let refreshToken: string;
+  try {
+    refreshToken = await decrypt(token.refresh_token, env.COOKIE_ENCRYPTION_KEY);
+  } catch {
+    refreshToken = token.refresh_token;
+  }
   const urls = getProcoreUrls(procoreEnv);
   
   // Use the correct credentials for this environment

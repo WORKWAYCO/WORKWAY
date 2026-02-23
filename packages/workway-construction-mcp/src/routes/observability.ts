@@ -106,7 +106,7 @@ app.get('/metrics/tools', async (c) => {
 
   // Query Analytics Engine for tool metrics
   const metrics = await queryAnalyticsEngine(c.env, {
-    query: AGENT_SLI_QUERIES.toolSuccessRate,
+    query: AGENT_SLI_QUERIES.toolUsageByCategory,
     params: {
       startTime,
       endTime,
@@ -116,11 +116,11 @@ app.get('/metrics/tools', async (c) => {
 
   // Transform results
   const byTool = (metrics.data || []).map((row: any) => ({
-    name: row.toolName || 'unknown',
+    name: row.toolCategory || 'unknown',
     calls: Number(row.total) || 0,
     successRate: Number(row.successRate) || 0,
-    errorCount: Number(row.errorCount) || 0,
-    rateLimitedCount: Number(row.rateLimitedCount) || 0,
+    errorCount: Number(row.errors) || 0,
+    rateLimitedCount: 0,
   }));
 
   const totalCalls = byTool.reduce((sum: number, t: any) => sum + t.calls, 0);
@@ -165,12 +165,12 @@ app.get('/metrics/latency', async (c) => {
   // Transform results
   const byTool = (metrics.data || []).map((row: any) => ({
     name: row.toolName || 'unknown',
-    p50: Number(row.p50) || 0,
-    p95: Number(row.p95) || 0,
-    p99: Number(row.p99) || 0,
-    avgLatency: Number(row.avgLatency) || 0,
+    p50: Number(row.p50Ms) || 0,
+    p95: Number(row.p95Ms) || 0,
+    p99: Number(row.p99Ms) || 0,
+    avgLatency: Number(row.avgMs) || 0,
     maxLatency: Number(row.maxLatency) || 0,
-    sampleCount: Number(row.sampleCount) || 0,
+    sampleCount: Number(row.callCount) || 0,
   }));
 
   // Calculate aggregate percentiles
@@ -292,7 +292,7 @@ app.get('/metrics/errors', async (c) => {
   const { startTime, endTime } = getTimeBoundaries(timeRange);
 
   const metrics = await queryAnalyticsEngine(c.env, {
-    query: AGENT_SLI_QUERIES.errorBreakdown,
+    query: AGENT_SLI_QUERIES.errorBreakdownByTool,
     params: {
       startTime,
       endTime,
@@ -309,7 +309,7 @@ app.get('/metrics/errors', async (c) => {
     const toolName = row.toolName || 'unknown';
     const errorCode = row.errorCode || 'UNKNOWN';
     const outcome = row.outcome || 'error';
-    const count = Number(row.errorCount) || 0;
+    const count = Number(row.count) || 0;
 
     totalErrors += count;
 
@@ -539,8 +539,8 @@ async function queryAnalyticsEngine(
   options: {
     query: string;
     params: {
-      startTime: number;
-      endTime: number;
+      startTime: string;
+      endTime: string;
       tenantId?: string;
       toolName?: string;
     };

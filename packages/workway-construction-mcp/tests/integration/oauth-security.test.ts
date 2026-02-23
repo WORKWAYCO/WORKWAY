@@ -633,19 +633,18 @@ describe('Token Expiration', () => {
 
     const expiredTime = new Date(Date.now() - 3600000).toISOString(); // 1 hour ago
 
-    // ProcoreClient uses .first() directly on prepare(), not on bind()
+    // ProcoreClient token lookup is bound by user_id.
     env.DB.prepare = vi.fn(() => ({
-      first: async () => ({
-        id: 'token-123',
-        provider: 'procore',
-        user_id: 'user-123',
-        access_token: 'expired-token',
-        refresh_token: null, // No refresh token
-        expires_at: expiredTime,
-        created_at: new Date().toISOString(),
-      }),
       bind: () => ({
-        first: async () => null,
+        first: async () => ({
+          id: 'token-123',
+          provider: 'procore',
+          user_id: 'user-123',
+          access_token: 'expired-token',
+          refresh_token: null, // No refresh token
+          expires_at: expiredTime,
+          created_at: new Date().toISOString(),
+        }),
         run: async () => ({ success: true }),
       }),
     })) as any;
@@ -714,19 +713,18 @@ describe('Token Expiration', () => {
 
     const expiredTime = new Date(Date.now() - 3600000).toISOString();
 
-    // ProcoreClient uses .first() directly on prepare()
+    // ProcoreClient token lookup is bound by user_id.
     env.DB.prepare = vi.fn(() => ({
-      first: async () => ({
-        id: 'token-123',
-        provider: 'procore',
-        user_id: 'user-123',
-        access_token: 'expired-token',
-        refresh_token: 'invalid-refresh-token',
-        expires_at: expiredTime,
-        created_at: new Date().toISOString(),
-      }),
       bind: () => ({
-        first: async () => null,
+        first: async () => ({
+          id: 'token-123',
+          provider: 'procore',
+          user_id: 'user-123',
+          access_token: 'expired-token',
+          refresh_token: 'invalid-refresh-token',
+          expires_at: expiredTime,
+          created_at: new Date().toISOString(),
+        }),
         run: async () => ({ success: true }),
       }),
     })) as any;
@@ -1165,18 +1163,17 @@ describe('Connection Isolation', () => {
 
     const futureDate = new Date(Date.now() + 3600000).toISOString();
 
-    // ProcoreClient uses .first() directly on prepare() for SELECT
+    // ProcoreClient token lookup is bound by user_id.
     env.DB.prepare = vi.fn((sql: string) => ({
-      first: async () => ({
-        id: 'token-123',
-        provider: 'procore',
-        user_id: 'user-1',
-        access_token: 'user1-token',
-        expires_at: futureDate,
-        created_at: new Date().toISOString(),
-      }),
       bind: () => ({
-        first: async () => null,
+        first: async () => ({
+          id: 'token-123',
+          provider: 'procore',
+          user_id: 'user-1',
+          access_token: 'user1-token',
+          expires_at: futureDate,
+          created_at: new Date().toISOString(),
+        }),
         run: async () => ({ success: true }),
       }),
     })) as any;
@@ -1186,8 +1183,6 @@ describe('Connection Isolation', () => {
 
     // Verify token was retrieved successfully
     expect(token.accessToken).toBe('user1-token');
-    // Note: Current implementation uses a simple query without user filtering
-    // This test documents that tokens are retrieved and will be isolated by user_id
   });
 
   it('should not allow cross-user token access', async () => {

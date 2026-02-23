@@ -53,12 +53,18 @@ describe('E2E: Workflow Lifecycle', () => {
           bind: (...params: any[]) => {
             const workflow = dbState.workflows.find((w: any) => w.id === params[params.length - 1]);
             if (workflow) {
-              Object.assign(workflow, {
-                trigger_config: params[0],
-                trigger_type: params[1] || workflow.trigger_type,
-                status: params[0]?.includes('active') ? 'active' : workflow.status,
-                updated_at: params[1] || new Date().toISOString(),
-              });
+              if (sql.includes('SET trigger_config')) {
+                Object.assign(workflow, {
+                  trigger_config: params[0],
+                  trigger_type: params[1] || workflow.trigger_type,
+                  updated_at: params[2] || new Date().toISOString(),
+                });
+              } else if (sql.includes('SET status')) {
+                Object.assign(workflow, {
+                  status: params[0] || workflow.status,
+                  updated_at: params[1] || new Date().toISOString(),
+                });
+              }
             }
             return {
               run: async () => ({ success: true }),
@@ -67,11 +73,43 @@ describe('E2E: Workflow Lifecycle', () => {
         };
       }
 
+      if (sql.includes('COUNT(*) as total')) {
+        return {
+          bind: (...params: any[]) => ({
+            first: undefined,
+            all: async () => ({ results: [{ total: dbState.workflows.length }] }),
+          }),
+        };
+      }
+
       if (sql.includes('SELECT * FROM workflows')) {
         return {
           bind: (...params: any[]) => ({
-            first: async () => dbState.workflows.find((w: any) => w.id === params[0]) || null,
+            all: async () => ({
+              results: dbState.workflows,
+            }),
           }),
+        };
+      }
+
+      if (sql.includes('FROM workflows')) {
+        return {
+          bind: (...params: any[]) => {
+            const workflow = dbState.workflows.find((w: any) => w.id === params[0]) || null;
+            const actions = dbState.workflow_actions
+              .filter((a: any) => a.workflow_id === params[0])
+              .sort((a: any, b: any) => a.sequence - b.sequence)
+              .map((a: any) => ({
+                id: a.id,
+                action_type: a.action_type,
+                sequence: a.sequence,
+                condition: a.condition ?? null,
+                action_config: a.action_config ?? '{}',
+              }));
+            return {
+              first: async () => workflow ? { ...workflow, actions_json: JSON.stringify(actions) } : null,
+            };
+          },
         };
       }
 
@@ -298,7 +336,7 @@ describe('E2E: Workflow Lifecycle', () => {
     );
 
     expect(deployResult.success).toBe(false);
-    expect(deployResult.data?.validationErrors).toContain('Workflow must have at least one action');
+    expect(deployResult.error.message).toContain('Workflow must have at least one action');
   });
 
   it('should list workflows with filters', async () => {

@@ -13,7 +13,27 @@ export * from './pagination';
 export * from './ai-gateway';
 
 // Agent Observability
-export * from './agent-metrics';
+export {
+  AgentBlobIndex,
+  AgentDoubleIndex,
+  createAgentMetrics,
+  getToolCategory,
+  extractTenantId,
+  isRateLimitError,
+  extractErrorCode,
+  trackToolExecution,
+  trackAIExecution,
+  trackAIExecutionError,
+  createMetricsBatch,
+} from './agent-metrics';
+export type {
+  ToolCategory,
+  ExecutionOutcome,
+  AgentDataPoint,
+  AgentMetrics,
+  MetricsBatch,
+  AIGatewayResponse as AgentMetricsAIGatewayResponse,
+} from './agent-metrics';
 export * from './sli-queries';
 
 // Distributed Tracing

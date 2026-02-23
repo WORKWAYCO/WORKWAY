@@ -340,7 +340,7 @@ describe('ProcoreClient', () => {
 
       expect(logs).toHaveLength(1);
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('filters[log_date][gte]=2024-01-01'),
+        expect.stringContaining('filters%5Blog_date%5D%5Bgte%5D=2024-01-01'),
         expect.any(Object)
       );
     });
@@ -360,7 +360,7 @@ describe('ProcoreClient', () => {
 
       expect(submittals).toHaveLength(1);
       expect(global.fetch).toHaveBeenCalledWith(
-        expect.stringContaining('filters[status]=pending'),
+        expect.stringContaining('filters%5Bstatus%5D=pending'),
         expect.any(Object)
       );
     });

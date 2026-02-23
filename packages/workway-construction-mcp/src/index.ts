@@ -13,7 +13,7 @@
  */
 
 import { Hono } from 'hono';
-import { createMCPServer, type MCPEnv } from '@workway/mcp-core';
+import { createMCPServer } from '@workway/mcp-core';
 import { allTools, toolCategories } from './tools';
 import { listResources, fetchResource } from './resources';
 import { judgmentPrompts } from './prompts';
@@ -60,7 +60,7 @@ const mcpServer = createMCPServer<Env>({
     resources: { subscribe: false, listChanged: true },
     prompts: { listChanged: false },
   },
-  tools: allTools,
+  tools: allTools as any,
   resources: {
     list: listResources,
     fetch: fetchResource,
@@ -386,12 +386,6 @@ app.post('/token', async (c) => {
   return c.json({ error: 'unsupported_grant_type' }, 400);
 });
 
-// Mount the MCP server
-app.route('/', mcpServer);
-
-// Mount observability dashboard API
-app.route('/observability', observability);
-
 // ============================================================================
 // Dashboard API (Construction-specific)
 // ============================================================================
@@ -458,6 +452,36 @@ app.get('/mcp/tools', (c) => {
   });
 });
 
+app.post('/mcp/tools/:name', async (c) => {
+  const toolName = c.req.param('name');
+  const body = await c.req.json().catch(() => ({})) as { arguments?: Record<string, unknown> };
+  const tool = Object.values(allTools).find((t: any) => t.name === toolName) as any;
+
+  if (!tool) {
+    return c.json({
+      error: { message: `Unknown tool: ${toolName}` },
+      isError: true,
+    }, 404);
+  }
+
+  try {
+    const parsed = tool.inputSchema.parse(body.arguments || {});
+    const result = await tool.execute(parsed, c.env);
+    return c.json({
+      content: [{
+        type: 'text',
+        text: JSON.stringify(result.data || result, null, 2),
+      }],
+      isError: !result.success,
+    }, result.success ? 200 : 400);
+  } catch (error) {
+    return c.json({
+      error: error instanceof Error ? error.message : 'Tool execution failed',
+      isError: true,
+    }, 400);
+  }
+});
+
 // ============================================================================
 // Webhook Endpoints (Construction-specific)
 // ============================================================================
@@ -468,10 +492,10 @@ app.post('/webhooks/:workflow_id', async (c) => {
 
   // Verify workflow exists and is active
   const workflow = await c.env.DB.prepare(`
-    SELECT * FROM workflows WHERE id = ? AND status = 'active'
+    SELECT * FROM workflows WHERE id = ?
   `).bind(workflowId).first<any>();
 
-  if (!workflow) {
+  if (!workflow || workflow.status !== 'active') {
     return c.json({ error: 'Workflow not found or not active' }, 404);
   }
 
@@ -511,7 +535,7 @@ app.get('/oauth/callback', async (c) => {
     });
     return c.json({ 
       error: 'oauth_error',
-      message: errorDescription || error,
+      message: `OAuth error: ${errorDescription || error}`,
       code: 'PROCORE_OAUTH_ERROR',
     }, 400);
   }
@@ -519,19 +543,33 @@ app.get('/oauth/callback', async (c) => {
   if (!code || !state) {
     return c.json({ 
       error: 'missing_params',
-      message: 'Missing authorization code or state parameter',
+      message: 'Missing code or state parameter',
       code: 'OAUTH_MISSING_PARAMS',
     }, 400);
   }
 
   // Verify state
-  const stateData = await c.env.KV.get(`oauth_state:${state}`, 'json') as {
+  const rawStateData = await c.env.KV.get(`oauth_state:${state}`, 'json') as {
     provider: string;
     companyId?: string;
     userId: string;
     environment?: ProcoreEnvironment;
     createdAt: string;
+  } | string | null;
+  let stateData = rawStateData as {
+    provider: string;
+    companyId?: string;
+    userId?: string;
+    environment?: ProcoreEnvironment;
+    createdAt: string;
   } | null;
+  if (typeof rawStateData === 'string') {
+    try {
+      stateData = JSON.parse(rawStateData);
+    } catch {
+      stateData = null;
+    }
+  }
   
   if (!stateData) {
     return c.json({ 
@@ -540,6 +578,7 @@ app.get('/oauth/callback', async (c) => {
       code: 'OAUTH_STATE_INVALID',
     }, 400);
   }
+  const connectionId = stateData.userId || 'default';
 
   // Verify state hasn't expired (10 minutes)
   const stateAge = Date.now() - new Date(stateData.createdAt).getTime();
@@ -579,11 +618,11 @@ app.get('/oauth/callback', async (c) => {
   });
 
   if (!tokenResponse.ok) {
-    const errorText = await tokenResponse.text();
-    console.error('Token exchange failed:', tokenResponse.status, errorText);
+    await tokenResponse.text();
+    console.error('Token exchange failed:', tokenResponse.status);
     return c.json({ 
       error: 'token_exchange_failed',
-      message: `Failed to exchange authorization code for token: ${errorText}`,
+      message: 'Token exchange failed while contacting Procore.',
       code: 'OAUTH_TOKEN_EXCHANGE_FAILED',
       status: tokenResponse.status,
       environment: procoreEnv,
@@ -621,7 +660,7 @@ app.get('/oauth/callback', async (c) => {
   // Delete existing token for this user/provider
   await c.env.DB.prepare(`
     DELETE FROM oauth_tokens WHERE provider = 'procore' AND user_id = ?
-  `).bind(stateData.userId).run();
+  `).bind(connectionId).run();
 
   // Store encrypted token
   const tokenId = crypto.randomUUID();
@@ -630,7 +669,7 @@ app.get('/oauth/callback', async (c) => {
     VALUES (?, 'procore', ?, ?, ?, ?, ?, ?, ?)
   `).bind(
     tokenId,
-    stateData.userId,
+    connectionId,
     encryptedAccessToken,
     encryptedRefreshToken,
     expiresAt,
@@ -640,7 +679,7 @@ app.get('/oauth/callback', async (c) => {
   ).run();
 
   // Invalidate KV token cache for this user (ensures fresh token is fetched)
-  await c.env.KV.delete(`procore_token:${stateData.userId}`);
+  await c.env.KV.delete(`procore_token:${connectionId}`);
   await c.env.KV.delete(`procore_token:default`);
 
   // Clean up state
@@ -648,12 +687,22 @@ app.get('/oauth/callback', async (c) => {
 
   // Log successful OAuth callback
   await logOAuthCallback(c.env, {
-    userId: stateData.userId,
+    userId: connectionId,
     success: true,
     provider: 'procore',
     environment: procoreEnv,
     request: c.req.raw,
   });
+
+  const acceptsHtml = (c.req.header('accept') || '').includes('text/html');
+  if (!acceptsHtml) {
+    return c.json({
+      success: true,
+      message: 'Procore connected successfully.',
+      connectionId,
+      environment: procoreEnv,
+    });
+  }
 
   // Return beautiful success page
   const successHtml = `<!DOCTYPE html>
@@ -759,7 +808,7 @@ app.get('/oauth/callback', async (c) => {
     <p class="subtitle">Your Procore account is now linked. You can close this window and return to Claude.</p>
     <div class="connection-id">
       <label>Your Connection ID</label>
-      <code>${stateData.userId}</code>
+      <code>${connectionId}</code>
     </div>
     <p class="note">Use this ID with WORKWAY tools in Claude to access your Procore data.</p>
     <span class="env-badge">${procoreEnv === 'sandbox' ? 'Sandbox' : 'Production'}</span>
@@ -769,6 +818,12 @@ app.get('/oauth/callback', async (c) => {
 
   return c.html(successHtml);
 });
+
+// Mount the MCP server (after custom /mcp compatibility routes)
+app.route('/', mcpServer);
+
+// Mount observability dashboard API
+app.route('/observability', observability);
 
 // ============================================================================
 // Durable Object for Workflow State

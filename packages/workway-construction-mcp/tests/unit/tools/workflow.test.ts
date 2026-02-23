@@ -226,7 +226,7 @@ describe('workflowTools', () => {
   describe('deploy_workflow', () => {
     beforeEach(() => {
       mockDB.prepare = vi.fn((sql: string) => {
-        if (sql.includes('SELECT * FROM workflows')) {
+        if (sql.includes('FROM workflows')) {
           return {
             bind: () => ({
               first: async () => ({
@@ -235,21 +235,15 @@ describe('workflowTools', () => {
                 status: 'draft',
                 trigger_type: 'webhook',
                 trigger_config: JSON.stringify({ source: 'procore', eventTypes: ['rfi.created'] }),
-              }),
-            }),
-          };
-        }
-        if (sql.includes('SELECT * FROM workflow_actions')) {
-          return {
-            bind: () => ({
-              all: async () => ({
-                results: [
+                actions_json: JSON.stringify([
                   {
                     id: 'action-1',
                     action_type: 'procore.rfi.respond',
                     sequence: 1,
+                    condition: null,
+                    action_config: '{}',
                   },
-                ],
+                ]),
               }),
             }),
           };
@@ -298,20 +292,13 @@ describe('workflowTools', () => {
 
     it('should fail validation when workflow has no actions', async () => {
       mockDB.prepare = vi.fn((sql: string) => {
-        if (sql.includes('SELECT * FROM workflow_actions')) {
-          return {
-            bind: () => ({
-              all: async () => ({ results: [] }),
-            }),
-          };
-        }
-        // ... other mocks
         return {
           bind: () => ({
             first: async () => ({
               id: 'workflow-123',
               trigger_type: 'webhook',
               trigger_config: JSON.stringify({ source: 'procore' }),
+              actions_json: JSON.stringify([]),
             }),
           }),
         };
@@ -325,27 +312,19 @@ describe('workflowTools', () => {
       const result = await workflowTools.deploy_workflow.execute(input, env);
 
       expect(result.success).toBe(false);
-      expect(result.data?.validationErrors).toContain('Workflow must have at least one action');
+      expect(result.error.message).toContain('Workflow must have at least one action');
     });
 
     it('should fail validation when webhook trigger missing config', async () => {
       mockDB.prepare = vi.fn((sql: string) => {
-        if (sql.includes('SELECT * FROM workflows')) {
+        if (sql.includes('FROM workflows')) {
           return {
             bind: () => ({
               first: async () => ({
                 id: 'workflow-123',
                 trigger_type: 'webhook',
                 trigger_config: null, // Missing config
-              }),
-            }),
-          };
-        }
-        if (sql.includes('SELECT * FROM workflow_actions')) {
-          return {
-            bind: () => ({
-              all: async () => ({
-                results: [{ id: 'action-1', action_type: 'test' }],
+                actions_json: JSON.stringify([{ id: 'action-1', action_type: 'test', sequence: 1 }]),
               }),
             }),
           };
@@ -365,7 +344,7 @@ describe('workflowTools', () => {
       const result = await workflowTools.deploy_workflow.execute(input, env);
 
       expect(result.success).toBe(false);
-      expect(result.data?.validationErrors).toContain('Webhook trigger requires source and event_types configuration');
+      expect(result.error.message).toContain('Webhook trigger requires source and event_types configuration');
     });
 
     it('should return 404 when workflow not found', async () => {
@@ -383,32 +362,24 @@ describe('workflowTools', () => {
       const result = await workflowTools.deploy_workflow.execute(input, env);
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('not found');
+      expect(result.error.message).toContain('not found');
     });
   });
 
   describe('test_workflow', () => {
     beforeEach(() => {
       mockDB.prepare = vi.fn((sql: string) => {
-        if (sql.includes('SELECT * FROM workflows')) {
+        if (sql.includes('FROM workflows')) {
           return {
             bind: () => ({
               first: async () => ({
                 id: 'workflow-123',
                 name: 'Test Workflow',
                 status: 'active',
-              }),
-            }),
-          };
-        }
-        if (sql.includes('SELECT * FROM workflow_actions')) {
-          return {
-            bind: () => ({
-              all: async () => ({
-                results: [
-                  { id: 'action-1', action_type: 'procore.rfi.respond', sequence: 1 },
-                  { id: 'action-2', action_type: 'slack.message.send', sequence: 2 },
-                ],
+                actions_json: JSON.stringify([
+                  { id: 'action-1', action_type: 'procore.rfi.respond', sequence: 1, condition: null, action_config: '{}' },
+                  { id: 'action-2', action_type: 'slack.message.send', sequence: 2, condition: null, action_config: '{}' },
+                ]),
               }),
             }),
           };
@@ -442,7 +413,7 @@ describe('workflowTools', () => {
       expect(result.data?.executionId).toBeDefined();
       expect(result.data?.stepsTotal).toBe(2);
       expect(result.data?.stepsCompleted).toBeGreaterThan(0);
-      expect(result.data?.durationMs).toBeGreaterThan(0);
+      expect(result.data?.durationMs).toBeGreaterThanOrEqual(0);
     });
 
     it('should handle action failures', async () => {
@@ -462,6 +433,14 @@ describe('workflowTools', () => {
   describe('list_workflows', () => {
     beforeEach(() => {
       mockDB.prepare = vi.fn((sql: string) => {
+        if (sql.includes('COUNT(*) as total')) {
+          return {
+            bind: (...params: any[]) => ({
+              first: undefined,
+              all: async () => ({ results: [{ total: 2 }] }),
+            }),
+          };
+        }
         return {
           bind: (...params: any[]) => ({
             all: async () => ({

@@ -79,7 +79,20 @@ export function createMockEnv(options: MockEnvOptions = {}): Env {
   const mockDO = {
     idFromName: (name: string) => ({ toString: () => name }),
     get: (id: any) => ({
-      fetch: async (request: Request) => {
+      fetch: async (request: Request | string, init?: RequestInit) => {
+        const url = typeof request === 'string' ? request : request.url;
+        const path = new URL(url).pathname;
+        if (path === '/consume' || path === '/check') {
+          return new Response(JSON.stringify({
+            allowed: true,
+            remaining: 3599,
+            retryAfter: 1,
+            limit: 3600,
+            resetAt: Date.now() + 60000,
+          }), {
+            headers: { 'Content-Type': 'application/json' },
+          });
+        }
         return new Response(JSON.stringify({ status: 'ok' }), {
           headers: { 'Content-Type': 'application/json' },
         });
@@ -91,6 +104,7 @@ export function createMockEnv(options: MockEnvOptions = {}): Env {
     DB: mockDB,
     KV: mockKV,
     WORKFLOW_STATE: mockDO,
+    PROCORE_RATE_LIMITER: mockDO,
     PROCORE_CLIENT_ID: options.procoreClientId || 'test-client-id',
     PROCORE_CLIENT_SECRET: options.procoreClientSecret || 'test-client-secret',
     COOKIE_ENCRYPTION_KEY: 'test-encryption-key',

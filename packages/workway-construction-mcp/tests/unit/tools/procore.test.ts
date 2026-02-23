@@ -65,7 +65,7 @@ describe('procoreTools', () => {
     it('should store state in KV with expiration', async () => {
       const input = {};
 
-      await procoreTools.connect_procore.execute(input, env);
+      const result = await procoreTools.connect_procore.execute(input, env);
 
       // Verify KV.put was called (would need to spy on mockKV)
       expect(result.success).toBe(true);
@@ -192,7 +192,7 @@ describe('procoreTools', () => {
 
       expect(result.success).toBe(true);
       expect(result.data?.projects).toHaveLength(2);
-      expect(result.data?.total).toBe(2);
+      expect(result.data?.pagination.total).toBe(2);
       expect(result.data?.projects[0]).toMatchObject({
         id: 1,
         name: 'Project Alpha',
@@ -293,7 +293,7 @@ describe('procoreTools', () => {
 
       expect(result.success).toBe(true);
       expect(result.data?.rfis).toHaveLength(2);
-      expect(result.data?.total).toBe(2);
+      expect(result.data?.pagination.total).toBe(2);
       expect(result.data?.stats.openCount).toBe(1);
     });
 
@@ -378,20 +378,31 @@ describe('procoreTools', () => {
     });
 
     it('should fetch daily logs', async () => {
-      const mockLogs = [
-        {
-          id: 1,
-          logDate: '2024-01-15',
-          status: 'submitted',
-          weatherConditions: 'Sunny',
-          temperatureHigh: 75,
-          temperatureLow: 55,
-          notes: 'Good progress',
-          manpowerLogs: [
-            { id: 1, companyName: 'ABC Construction', workerCount: 10, hoursWorked: 80 },
-          ],
-        },
-      ];
+      const mockLogs = {
+        weather_logs: [
+          {
+            id: 1,
+            log_date: '2024-01-15',
+            weather_conditions: 'Sunny',
+            temperature_high: 75,
+            temperature_low: 55,
+          },
+        ],
+        manpower_logs: [
+          {
+            id: 1,
+            company_name: 'ABC Construction',
+            worker_count: 10,
+            hours_worked: 80,
+          },
+        ],
+        notes_logs: [],
+        equipment_logs: [],
+        safety_violation_logs: [],
+        accident_logs: [],
+        work_logs: [],
+        delay_logs: [],
+      };
 
       global.fetch = vi.fn().mockResolvedValue({
         ok: true,
@@ -406,13 +417,14 @@ describe('procoreTools', () => {
       const result = await procoreTools.get_procore_daily_logs.execute(input, env);
 
       expect(result.success).toBe(true);
-      expect(result.data?.dailyLogs).toHaveLength(1);
-      expect(result.data?.dailyLogs[0]).toMatchObject({
-        logDate: '2024-01-15',
-        weatherConditions: 'Sunny',
-        temperatureHigh: 75,
-        manpowerCount: 10,
+      expect(result.data?.weatherLogs).toHaveLength(1);
+      expect(result.data?.weatherLogs[0]).toMatchObject({
+        log_date: '2024-01-15',
+        weather_conditions: 'Sunny',
+        temperature_high: 75,
       });
+      expect(result.data?.manpowerLogs).toHaveLength(1);
+      expect(result.data?.pagination.totalDaysInRange).toBeGreaterThan(0);
     });
 
     it('should filter by date range', async () => {
@@ -431,7 +443,7 @@ describe('procoreTools', () => {
 
       const fetchCall = (global.fetch as any).mock.calls[0][0];
       expect(fetchCall).toContain('filters[log_date][gte]=2024-01-01');
-      expect(fetchCall).toContain('filters[log_date][lte]=2024-01-31');
+      expect(fetchCall).toContain('filters[log_date][lte]=2024-01-30');
     });
   });
 

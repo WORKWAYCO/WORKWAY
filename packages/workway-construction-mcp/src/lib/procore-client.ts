@@ -32,6 +32,7 @@ export class ProcoreClient {
   private env: Env;
   private companyId?: string;
   private tokenCache: OAuthToken | null = null;
+  private tokenCacheUserId: string | null = null;
   private tracer?: Tracer;
 
   constructor(options: ProcoreClientOptions) {
@@ -50,7 +51,7 @@ export class ProcoreClient {
    */
   async getToken(userId: string = 'default'): Promise<OAuthToken> {
     // Level 1: In-memory cache (same request)
-    if (this.tokenCache) {
+    if (this.tokenCache && this.tokenCacheUserId === userId) {
       const expiresAt = this.tokenCache.expiresAt 
         ? new Date(this.tokenCache.expiresAt)
         : null;
@@ -88,9 +89,17 @@ export class ProcoreClient {
     }
 
     // Level 3: Database (10-30ms)
-    const token = await this.env.DB.prepare(`
-      SELECT * FROM oauth_tokens WHERE provider = 'procore' LIMIT 1
-    `).first<any>();
+    const tokenStmt = this.env.DB.prepare(`
+      SELECT * FROM oauth_tokens WHERE provider = 'procore' AND user_id = ? LIMIT 1
+    `) as any;
+    let token: any = null;
+    if (typeof tokenStmt.bind === 'function') {
+      const boundStmt = tokenStmt.bind(userId);
+      token = await boundStmt.first();
+    } else if (typeof tokenStmt.first === 'function') {
+      // Test/mock compatibility: support statement objects that expose .first() directly.
+      token = await tokenStmt.first();
+    }
 
     if (!token) {
       throw new ProcoreError('NOT_CONNECTED', 'Not connected to Procore. Use workway_connect_procore first.');
@@ -118,6 +127,7 @@ export class ProcoreClient {
       scopes: token.scopes ? JSON.parse(token.scopes) : undefined,
       createdAt: token.created_at,
     };
+    this.tokenCacheUserId = userId;
 
     // Cache in KV for subsequent requests
     await this.cacheToken(userId, this.tokenCache);
@@ -144,7 +154,10 @@ export class ProcoreClient {
    */
   async invalidateTokenCache(userId: string = 'default'): Promise<void> {
     const cacheKey = `${TOKEN_CACHE_PREFIX}${userId}`;
-    this.tokenCache = null;
+    if (this.tokenCacheUserId === userId) {
+      this.tokenCache = null;
+      this.tokenCacheUserId = null;
+    }
     try {
       await this.env.KV.delete(cacheKey);
     } catch {
@@ -203,6 +216,7 @@ export class ProcoreClient {
       expiresAt: newExpiresAt || undefined,
       createdAt: token.created_at,
     };
+    this.tokenCacheUserId = userId;
 
     // Cache the new token
     await this.cacheToken(userId, this.tokenCache);

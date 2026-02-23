@@ -321,7 +321,7 @@ Provide the RFI in this JSON format:
         let draft;
         try {
           // Extract JSON from response
-          const jsonMatch = response.match(/\{[\s\S]*\}/);
+          const jsonMatch = response.content.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             draft = JSON.parse(jsonMatch[0]);
           } else {
@@ -517,7 +517,7 @@ Respond in JSON:
         // Parse response
         let summary;
         try {
-          const jsonMatch = response.match(/\{[\s\S]*\}/);
+          const jsonMatch = response.content.match(/\{[\s\S]*\}/);
           if (jsonMatch) {
             summary = JSON.parse(jsonMatch[0]);
           } else {

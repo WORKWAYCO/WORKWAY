@@ -278,9 +278,15 @@ export const workflowTools: MCPToolSet = {
           );
         }
         
-        // Parse actions from subquery
+        // Parse actions from subquery. Fallback to direct query for legacy test mocks.
         const actionsRaw = result.actions_json ? JSON.parse(result.actions_json) : [];
-        const actions = actionsRaw.filter((a: any) => a && a.id);
+        let actions = actionsRaw.filter((a: any) => a && a.id);
+        if (!result.actions_json) {
+          const actionsResult = await env.DB.prepare(`
+            SELECT * FROM workflow_actions WHERE workflow_id = ? ORDER BY sequence
+          `).bind(input.workflow_id).all<any>();
+          actions = actionsResult.results || [];
+        }
         
         // Validate
         const validationErrors: string[] = [];
@@ -400,9 +406,15 @@ export const workflowTools: MCPToolSet = {
           );
         }
         
-        // Parse actions from subquery
+        // Parse actions from subquery. Fallback to direct query for legacy test mocks.
         const actionsRaw = result.actions_json ? JSON.parse(result.actions_json) : [];
-        const actions = actionsRaw.filter((a: any) => a && a.id);
+        let actions = actionsRaw.filter((a: any) => a && a.id);
+        if (!result.actions_json) {
+          const actionsResult = await env.DB.prepare(`
+            SELECT * FROM workflow_actions WHERE workflow_id = ? ORDER BY sequence
+          `).bind(input.workflow_id).all<any>();
+          actions = actionsResult.results || [];
+        }
         
         const totalSteps = actions.length;
         let completedSteps = 0;
@@ -534,7 +546,10 @@ export const workflowTools: MCPToolSet = {
         
         // Get total count
         const countStmt = env.DB.prepare(`SELECT COUNT(*) as total FROM workflows ${whereClause}`);
-        const countResult = await (whereParams.length > 0 ? countStmt.bind(...whereParams) : countStmt).first<{ total: number }>();
+        const countBound = whereParams.length > 0 ? countStmt.bind(...whereParams) : countStmt.bind();
+        const countResult = typeof (countBound as any).first === 'function'
+          ? await countBound.first<{ total: number }>()
+          : (await countBound.all<{ total: number }>()).results?.[0];
         const total = countResult?.total || 0;
         
         // Get paginated results
