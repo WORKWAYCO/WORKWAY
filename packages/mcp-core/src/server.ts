@@ -79,8 +79,7 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
     },
   ): void => {
     if (!telemetryEnabled) return;
-
-    void emitTelemetryInvocation({
+    const telemetryTask = emitTelemetryInvocation({
       db: c.env.DB,
       serverName: telemetryServerName,
       toolName: args.toolName,
@@ -91,7 +90,11 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
       success: args.success,
       error: args.error,
       braintrust: resolveBraintrustTelemetryOptions(c.env, config.telemetry?.braintrust),
+    }).catch((error: unknown) => {
+      console.warn(`[telemetry] scheduling failed for ${args.toolName}:`, error);
     });
+
+    c.executionCtx?.waitUntil?.(telemetryTask);
   };
   
   // ============================================================================

@@ -88,6 +88,12 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
 ): Promise<JsonRpcResponse> {
   const telemetryEnabled = config.telemetry?.enabled !== false;
   const telemetryServerName = config.telemetry?.serverName || config.serverInfo.name;
+  const scheduleTelemetry = (toolName: string, task: Promise<void>): void => {
+    const safeTask = task.catch((error: unknown) => {
+      console.warn(`[telemetry] scheduling failed for ${toolName}:`, error);
+    });
+    c.executionCtx?.waitUntil?.(safeTask);
+  };
 
   let result: unknown;
   
@@ -154,7 +160,7 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
         await incrementUsage(c);
 
         if (telemetryEnabled) {
-          void emitTelemetryInvocation({
+          scheduleTelemetry(toolName, emitTelemetryInvocation({
             db: c.env.DB,
             serverName: telemetryServerName,
             toolName,
@@ -164,7 +170,7 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
             durationMs: Date.now() - startedAt,
             success: true,
             braintrust: resolveBraintrustTelemetryOptions(c.env, config.telemetry?.braintrust),
-          });
+          }));
         }
         
         result = {
@@ -179,7 +185,7 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
       } catch (execError) {
         if (telemetryEnabled) {
           const errorMessage = execError instanceof Error ? execError.message : String(execError);
-          void emitTelemetryInvocation({
+          scheduleTelemetry(toolName, emitTelemetryInvocation({
             db: c.env.DB,
             serverName: telemetryServerName,
             toolName,
@@ -190,7 +196,7 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
             success: false,
             error: errorMessage,
             braintrust: resolveBraintrustTelemetryOptions(c.env, config.telemetry?.braintrust),
-          });
+          }));
         }
 
         result = {
