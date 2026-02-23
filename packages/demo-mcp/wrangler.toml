@@ -22,3 +22,12 @@ database_id = "cbf8cd61-4179-463b-a921-bbc58c2a1af6"
 # Workers AI – optional: used to generate agent message with gpt-oss-120b
 [ai]
 binding = "AI"
+
+[vars]
+# Optional Braintrust MCP tracing project name (default fallback: WORKWAY)
+BRAINTRUST_PROJECT_NAME = "WORKWAY"
+# Tracing is enabled when BRAINTRUST_API_KEY exists unless explicitly disabled
+BRAINTRUST_ENABLED = "true"
+
+# Secrets (set via wrangler secret put)
+# BRAINTRUST_API_KEY     # Optional: Braintrust API key for MCP tracing

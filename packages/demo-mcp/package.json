@@ -7,7 +7,9 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "migrate:local": "wrangler d1 migrations apply workway-demo-mcp --local",
+    "migrate:remote": "wrangler d1 migrations apply workway-demo-mcp --remote"
   },
   "dependencies": {
     "@workway/mcp-core": "workspace:*",

@@ -10,12 +10,14 @@
     "./transport": "./src/transport/index.ts",
     "./auth": "./src/auth/index.ts",
     "./metering": "./src/metering/index.ts",
-    "./protocol": "./src/protocol/index.ts"
+    "./protocol": "./src/protocol/index.ts",
+    "./telemetry": "./src/telemetry.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "braintrust": "^2.2.2",
     "hono": "^4.4.0",
     "zod-to-json-schema": "^3.25.1"
   },

@@ -452,36 +452,6 @@ app.get('/mcp/tools', (c) => {
   });
 });
 
-app.post('/mcp/tools/:name', async (c) => {
-  const toolName = c.req.param('name');
-  const body = await c.req.json().catch(() => ({})) as { arguments?: Record<string, unknown> };
-  const tool = Object.values(allTools).find((t: any) => t.name === toolName) as any;
-
-  if (!tool) {
-    return c.json({
-      error: { message: `Unknown tool: ${toolName}` },
-      isError: true,
-    }, 404);
-  }
-
-  try {
-    const parsed = tool.inputSchema.parse(body.arguments || {});
-    const result = await tool.execute(parsed, c.env);
-    return c.json({
-      content: [{
-        type: 'text',
-        text: JSON.stringify(result.data || result, null, 2),
-      }],
-      isError: !result.success,
-    }, result.success ? 200 : 400);
-  } catch (error) {
-    return c.json({
-      error: error instanceof Error ? error.message : 'Tool execution failed',
-      isError: true,
-    }, 400);
-  }
-});
-
 // ============================================================================
 // Webhook Endpoints (Construction-specific)
 // ============================================================================

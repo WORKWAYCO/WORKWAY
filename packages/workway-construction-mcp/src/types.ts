@@ -50,6 +50,12 @@ export interface Env extends BaseMCPEnv {
   COMPOSIO_BASE_URL?: string;
   /** R2 bucket for immutable decision/evidence artifacts */
   JUDGMENT_EVIDENCE?: R2Bucket;
+  /** Optional Braintrust API key for MCP invocation tracing */
+  BRAINTRUST_API_KEY?: string;
+  /** Optional Braintrust project name (default: WORKWAY) */
+  BRAINTRUST_PROJECT_NAME?: string;
+  /** Optional Braintrust toggle (true/false) */
+  BRAINTRUST_ENABLED?: string;
 }
 
 // ============================================================================

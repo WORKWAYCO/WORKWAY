@@ -7,16 +7,23 @@
 import type { Context } from 'hono';
 import type { 
   BaseMCPEnv, 
-  MCPServerConfig, 
   MCPTool, 
   MCPResource,
   MCPPrompt,
+  BraintrustTelemetryOptions,
   JsonRpcRequest,
   JsonRpcResponse,
-  JsonRpcError,
-  UsageResult,
 } from '../types';
 import { checkUsage, incrementUsage } from '../metering/usage';
+import {
+  emitTelemetryInvocation,
+  isTelemetryResourceUri,
+  mergeTelemetryResources,
+  readTelemetryResource,
+  resolveBraintrustTelemetryOptions,
+  resolveTelemetryAccountId,
+  resolveTelemetryAccountIdFromUsage,
+} from '../telemetry';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 
 export interface ProtocolHandlerConfig<TEnv extends BaseMCPEnv> {
@@ -37,6 +44,11 @@ export interface ProtocolHandlerConfig<TEnv extends BaseMCPEnv> {
   };
   prompts?: MCPPrompt[];
   tierLimits?: Record<string, number>;
+  telemetry?: {
+    enabled?: boolean;
+    serverName?: string;
+    braintrust?: BraintrustTelemetryOptions;
+  };
 }
 
 /**
@@ -74,6 +86,9 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
   message: JsonRpcRequest,
   config: ProtocolHandlerConfig<TEnv>
 ): Promise<JsonRpcResponse> {
+  const telemetryEnabled = config.telemetry?.enabled !== false;
+  const telemetryServerName = config.telemetry?.serverName || config.serverInfo.name;
+
   let result: unknown;
   
   switch (message.method) {
@@ -128,12 +143,29 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
       }
       
       // Execute tool
+      const startedAt = Date.now();
+      const accountId = resolveTelemetryAccountIdFromUsage(c, usage);
+
       try {
         const input = tool.inputSchema.parse(toolArgs);
         const toolResult = await tool.execute(input, c.env as TEnv);
         
         // Increment usage
         await incrementUsage(c);
+
+        if (telemetryEnabled) {
+          void emitTelemetryInvocation({
+            db: c.env.DB,
+            serverName: telemetryServerName,
+            toolName,
+            accountId,
+            input: toolArgs,
+            output: toolResult,
+            durationMs: Date.now() - startedAt,
+            success: true,
+            braintrust: resolveBraintrustTelemetryOptions(c.env, config.telemetry?.braintrust),
+          });
+        }
         
         result = {
           content: [
@@ -145,6 +177,22 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
           isError: !toolResult.success,
         };
       } catch (execError) {
+        if (telemetryEnabled) {
+          const errorMessage = execError instanceof Error ? execError.message : String(execError);
+          void emitTelemetryInvocation({
+            db: c.env.DB,
+            serverName: telemetryServerName,
+            toolName,
+            accountId,
+            input: toolArgs,
+            output: { error: errorMessage },
+            durationMs: Date.now() - startedAt,
+            success: false,
+            error: errorMessage,
+            braintrust: resolveBraintrustTelemetryOptions(c.env, config.telemetry?.braintrust),
+          });
+        }
+
         result = {
           content: [
             {
@@ -160,11 +208,46 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
       
     case 'resources/list':
       const resources = config.resources?.list() || [];
-      result = { resources };
+      const telemetryResources = telemetryEnabled
+        ? mergeTelemetryResources(resources, telemetryServerName)
+        : resources;
+      result = { resources: telemetryResources };
       break;
       
     case 'resources/read': {
       const resourceParams = message.params as { uri: string };
+      const resourceUri = resourceParams?.uri;
+
+      if (!resourceUri) {
+        return {
+          jsonrpc: '2.0',
+          id: message.id,
+          error: {
+            code: -32602,
+            message: 'Missing resource uri',
+          },
+        };
+      }
+
+      if (telemetryEnabled && isTelemetryResourceUri(resourceUri)) {
+        const accountId = await resolveTelemetryAccountId(c);
+        const telemetryContent = await readTelemetryResource(c.env.DB, telemetryServerName, resourceUri, accountId);
+        if (!telemetryContent) {
+          return {
+            jsonrpc: '2.0',
+            id: message.id,
+            error: {
+              code: -32602,
+              message: `Resource not found: ${resourceUri}`,
+            },
+          };
+        }
+        result = {
+          contents: [telemetryContent],
+        };
+        break;
+      }
+
       if (!config.resources) {
         return {
           jsonrpc: '2.0',
@@ -176,21 +259,21 @@ async function handleMessage<TEnv extends BaseMCPEnv>(
         };
       }
       
-      const content = await config.resources.fetch(resourceParams?.uri, c.env as TEnv);
+      const content = await config.resources.fetch(resourceUri, c.env as TEnv);
       if (content === null) {
         return {
           jsonrpc: '2.0',
           id: message.id,
           error: {
             code: -32602,
-            message: `Resource not found: ${resourceParams?.uri}`,
+            message: `Resource not found: ${resourceUri}`,
           },
         };
       }
       result = {
         contents: [
           {
-            uri: resourceParams?.uri,
+            uri: resourceUri,
             mimeType: 'application/json',
             text: JSON.stringify(content, null, 2),
           },

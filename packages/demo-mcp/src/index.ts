@@ -17,6 +17,9 @@ import { generateAgentMessage, selectToolWithLLM, streamAgentMessage, type Gener
 export interface DemoMCPEnv {
 	KV: KVNamespace;
 	DB: D1Database;
+	BRAINTRUST_API_KEY?: string;
+	BRAINTRUST_PROJECT_NAME?: string;
+	BRAINTRUST_ENABLED?: string;
 }
 
 const mcpServer = createMCPServer<DemoMCPEnv>({

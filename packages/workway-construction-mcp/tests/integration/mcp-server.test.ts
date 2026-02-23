@@ -92,6 +92,28 @@ describe('MCP Server Endpoints', () => {
       expect(data.isError).toBe(false);
     });
 
+    it('should execute a tool when Braintrust is not configured', async () => {
+      env.BRAINTRUST_API_KEY = undefined;
+      env.BRAINTRUST_ENABLED = 'true';
+
+      const req = new Request('http://localhost/mcp/tools/workway_create_workflow', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          arguments: {
+            name: 'No Braintrust Config',
+          },
+        }),
+      });
+
+      const res = await app.fetch(req, env);
+      expect(res.status).toBe(200);
+
+      const data = await res.json();
+      expect(data.isError).toBe(false);
+      expect(data.content).toBeInstanceOf(Array);
+    });
+
     it('should return 404 for unknown tool', async () => {
       const req = new Request('http://localhost/mcp/tools/unknown_tool', {
         method: 'POST',
@@ -159,6 +181,18 @@ describe('MCP Server Endpoints', () => {
       expect(resource).toHaveProperty('name');
       expect(resource).toHaveProperty('description');
     });
+
+    it('should include telemetry resources', async () => {
+      const req = new Request('http://localhost/mcp/resources');
+      const res = await app.fetch(req, env);
+      expect(res.status).toBe(200);
+
+      const data = await res.json();
+      const uris = (data.resources || []).map((resource: { uri: string }) => resource.uri);
+      expect(uris).toContain('telemetry://usage');
+      expect(uris).toContain('telemetry://health');
+      expect(uris).toContain('telemetry://activity');
+    });
   });
 
   describe('GET /mcp/resources/read', () => {
@@ -172,6 +206,17 @@ describe('MCP Server Endpoints', () => {
       expect(data.contents[0]).toHaveProperty('uri');
       expect(data.contents[0]).toHaveProperty('mimeType');
       expect(data.contents[0]).toHaveProperty('text');
+    });
+
+    it('should fetch telemetry usage resource', async () => {
+      const req = new Request('http://localhost/mcp/resources/read?uri=telemetry://usage');
+      const res = await app.fetch(req, env);
+      expect(res.status).toBe(200);
+
+      const data = await res.json();
+      expect(data.contents).toBeInstanceOf(Array);
+      expect(data.contents[0].uri).toBe('telemetry://usage');
+      expect(data.contents[0].mimeType).toBe('application/json');
     });
 
     it('should return 400 when uri parameter missing', async () => {

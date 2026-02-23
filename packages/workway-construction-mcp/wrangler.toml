@@ -59,6 +59,10 @@ AI_GATEWAY_ID = "workway-mcp"
 # Distributed Tracing Configuration
 # Sampling rate: 0.0 to 1.0 (default 0.1 = 10% of requests traced)
 TRACE_SAMPLING_RATE = "0.1"
+# Optional Braintrust MCP tracing project name (default fallback: WORKWAY)
+BRAINTRUST_PROJECT_NAME = "WORKWAY"
+# Tracing is enabled when BRAINTRUST_API_KEY exists unless explicitly disabled
+BRAINTRUST_ENABLED = "true"
 
 # Optional: OpenTelemetry export to external systems
 # Uncomment and set via wrangler secret put or [vars] for non-sensitive endpoints
@@ -74,3 +78,4 @@ TRACE_SAMPLING_RATE = "0.1"
 # CLOUDFLARE_ACCOUNT_ID  # Required for AI Gateway routing
 # LANGFUSE_PUBLIC_KEY    # Optional: Langfuse public key
 # LANGFUSE_SECRET_KEY    # Optional: Langfuse secret key
+# BRAINTRUST_API_KEY     # Optional: Braintrust API key for MCP tracing

@@ -21,15 +21,29 @@ Then open the MCP server at `http://localhost:8787`. The sandbox on the WORKWAY 
 
 ## Deploy (Worker)
 
-1. Create a [KV namespace](https://developers.cloudflare.com/kv/) and [D1 database](https://developers.cloudflare.com/d1/) (required by `@workway/mcp-core` for metering).
+1. Create a [KV namespace](https://developers.cloudflare.com/kv/) and [D1 database](https://developers.cloudflare.com/d1/) (required by `@workway/mcp-core` for metering + telemetry).
 2. In `wrangler.toml`, set `KV` and `DB` bindings to your ids. The `[ai]` binding is optional; when present, the sandbox uses **gpt-oss-120b** to generate agent messages from tool results (see [Workers AI pricing](https://developers.cloudflare.com/workers-ai/platform/pricing/)).
-3. Deploy:
+3. Apply D1 migrations (telemetry tables):
+
+   ```bash
+   pnpm migrate:local
+   pnpm migrate:remote
+   ```
+
+4. Optional Braintrust tracing:
+
+   ```bash
+   wrangler secret put BRAINTRUST_API_KEY
+   # BRAINTRUST_PROJECT_NAME defaults to WORKWAY
+   # BRAINTRUST_ENABLED defaults to true
+   ```
+5. Deploy:
 
    ```bash
    pnpm deploy
    ```
 
-4. Set the platform API env: `DEMO_MCP_URL=https://your-demo-mcp.workers.dev` (or your custom domain).
+6. Set the platform API env: `DEMO_MCP_URL=https://your-demo-mcp.workers.dev` (or your custom domain).
 
 ## Use in Cursor / Claude
 
@@ -72,6 +86,20 @@ If you run the server locally:
 ```
 
 Then ask Claude or Cursor to “list overdue RFIs on Main Street Tower” or “show me submittals pending review” — they will call the demo tools and get mock results.
+
+## Braintrust + Telemetry Verification
+
+After deploy:
+
+1. Call a tool (for example via `/mcp/tools/list_projects` or MCP JSON-RPC `tools/call`).
+2. Verify D1 telemetry rows in:
+   - `mcp_run_counts`
+   - `mcp_tool_invocations`
+3. Verify telemetry resources:
+   - `telemetry://usage`
+   - `telemetry://health`
+   - `telemetry://activity`
+4. If `BRAINTRUST_API_KEY` is set, verify traces appear in Braintrust project `WORKWAY`.
 
 ## Procore alignment
 

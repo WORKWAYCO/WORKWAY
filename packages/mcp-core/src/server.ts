@@ -10,14 +10,22 @@
  * - REST and JSON-RPC endpoints
  */
 
-import { Hono } from 'hono';
+import { Hono, type Context } from 'hono';
 import { cors } from 'hono/cors';
 import { zodToJsonSchema } from 'zod-to-json-schema';
-import type { BaseMCPEnv, MCPServerConfig, UserTier, User } from './types';
+import type { BaseMCPEnv, MCPServerConfig, UserTier, UsageResult } from './types';
 import { createSSEHandler, createMessageCORSHandler } from './transport/sse';
 import { createMessageHandler } from './protocol/handler';
-import { getUserFromToken, generateAPIKey, revokeAllAPIKeys, revokeAPIKey } from './auth';
+import { getUserFromToken, generateAPIKey, revokeAllAPIKeys, revokeAPIKey, generateFingerprint } from './auth';
 import { createMetering } from './metering/usage';
+import {
+  emitTelemetryInvocation,
+  isTelemetryResourceUri,
+  mergeTelemetryResources,
+  readTelemetryResource,
+  resolveBraintrustTelemetryOptions,
+  resolveTelemetryAccountId,
+} from './telemetry';
 
 // Default allowed origins
 const DEFAULT_ALLOWED_ORIGINS = [
@@ -50,6 +58,41 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
   const allowedOrigins = config.allowedOrigins || DEFAULT_ALLOWED_ORIGINS;
   const tierLimits = { ...DEFAULT_TIER_LIMITS, ...config.tierLimits };
   const metering = createMetering({ tierLimits });
+  const telemetryEnabled = config.telemetry?.enabled !== false;
+  const telemetryServerName = config.telemetry?.serverName || config.name;
+
+  const getAccountIdFromUsage = (c: Context<{ Bindings: TEnv }>, usage: UsageResult): string => {
+    if (usage.userId) return usage.userId;
+    return `anon:${generateFingerprint(c)}`;
+  };
+
+  const emitToolTelemetry = (
+    c: Context<{ Bindings: TEnv }>,
+    args: {
+      toolName: string;
+      accountId: string;
+      input: unknown;
+      output: unknown;
+      durationMs: number;
+      success: boolean;
+      error?: string;
+    },
+  ): void => {
+    if (!telemetryEnabled) return;
+
+    void emitTelemetryInvocation({
+      db: c.env.DB,
+      serverName: telemetryServerName,
+      toolName: args.toolName,
+      accountId: args.accountId,
+      input: args.input,
+      output: args.output,
+      durationMs: args.durationMs,
+      success: args.success,
+      error: args.error,
+      braintrust: resolveBraintrustTelemetryOptions(c.env, config.telemetry?.braintrust),
+    });
+  };
   
   // ============================================================================
   // CORS Middleware
@@ -114,6 +157,11 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
     resources: config.resources,
     prompts: config.prompts,
     tierLimits,
+    telemetry: {
+      enabled: telemetryEnabled,
+      serverName: telemetryServerName,
+      braintrust: config.telemetry?.braintrust,
+    },
   }));
   
   // Legacy /message endpoint (keep for backwards compatibility)
@@ -133,6 +181,11 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
     resources: config.resources,
     prompts: config.prompts,
     tierLimits,
+    telemetry: {
+      enabled: telemetryEnabled,
+      serverName: telemetryServerName,
+      braintrust: config.telemetry?.braintrust,
+    },
   }));
   
   // ============================================================================
@@ -209,11 +262,23 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
               },
             });
           }
-          
+
+          const startedAt = Date.now();
+          const accountId = getAccountIdFromUsage(c, usage);
+
           try {
             const input = tool.inputSchema.parse(toolArgs);
             const toolResult = await tool.execute(input, c.env);
             await metering.incrementUsage(c);
+
+            emitToolTelemetry(c, {
+              toolName,
+              accountId,
+              input: toolArgs,
+              output: toolResult,
+              durationMs: Date.now() - startedAt,
+              success: true,
+            });
             
             result = {
               content: [
@@ -225,11 +290,22 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
               isError: !toolResult.success,
             };
           } catch (execError) {
+            const errorMessage = execError instanceof Error ? execError.message : String(execError);
+            emitToolTelemetry(c, {
+              toolName,
+              accountId,
+              input: toolArgs,
+              output: { error: errorMessage },
+              durationMs: Date.now() - startedAt,
+              success: false,
+              error: errorMessage,
+            });
+
             result = {
               content: [
                 {
                   type: 'text',
-                  text: `Error: ${execError instanceof Error ? execError.message : 'Unknown error'}`,
+                  text: `Error: ${errorMessage}`,
                 },
               ],
               isError: true,
@@ -240,11 +316,44 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
           
         case 'resources/list':
           const resourcesList = config.resources?.list() || [];
-          result = { resources: resourcesList };
+          result = {
+            resources: telemetryEnabled
+              ? mergeTelemetryResources(resourcesList, telemetryServerName)
+              : resourcesList,
+          };
           break;
           
         case 'resources/read': {
           const resourceParams = message.params as { uri: string };
+          const resourceUri = resourceParams?.uri;
+
+          if (!resourceUri) {
+            return c.json({
+              jsonrpc: '2.0',
+              id: message.id,
+              error: { code: -32602, message: 'Missing resource uri' },
+            });
+          }
+
+          if (telemetryEnabled && isTelemetryResourceUri(resourceUri)) {
+            const accountId = await resolveTelemetryAccountId(c);
+            const telemetryContent = await readTelemetryResource(
+              c.env.DB,
+              telemetryServerName,
+              resourceUri,
+              accountId,
+            );
+            if (!telemetryContent) {
+              return c.json({
+                jsonrpc: '2.0',
+                id: message.id,
+                error: { code: -32602, message: `Resource not found: ${resourceUri}` },
+              });
+            }
+            result = { contents: [telemetryContent] };
+            break;
+          }
+
           if (!config.resources) {
             return c.json({
               jsonrpc: '2.0',
@@ -253,17 +362,17 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
             });
           }
           
-          const content = await config.resources.fetch(resourceParams?.uri, c.env);
+          const content = await config.resources.fetch(resourceUri, c.env);
           if (content === null) {
             return c.json({
               jsonrpc: '2.0',
               id: message.id,
-              error: { code: -32602, message: `Resource not found: ${resourceParams?.uri}` },
+              error: { code: -32602, message: `Resource not found: ${resourceUri}` },
             });
           }
           result = {
             contents: [{
-              uri: resourceParams?.uri,
+              uri: resourceUri,
               mimeType: 'application/json',
               text: JSON.stringify(content, null, 2),
             }],
@@ -405,23 +514,38 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
           : `You have exceeded your ${usage.tier} tier monthly limit of ${usage.limit} runs.`,
       }, 402);
     }
+
+    const accountId = getAccountIdFromUsage(c, usage);
     
     const toolName = c.req.param('name');
-    const tool = config.tools[toolName];
+    const tool = Object.values(config.tools).find((candidate: any) => candidate.name === toolName);
     
     if (!tool) {
       return c.json({
         error: { code: -32602, message: `Unknown tool: ${toolName}` },
       }, 404);
     }
-    
+
+    const startedAt = Date.now();
+    let payload: Record<string, unknown> = {};
+
     try {
       const body = await c.req.json();
+      payload = (body.arguments || body || {}) as Record<string, unknown>;
       const input = tool.inputSchema.parse(body.arguments || body);
       const result = await tool.execute(input, c.env);
       
       // Increment usage
       await metering.incrementUsage(c);
+
+      emitToolTelemetry(c, {
+        toolName,
+        accountId,
+        input: payload,
+        output: result,
+        durationMs: Date.now() - startedAt,
+        success: true,
+      });
       
       return c.json({
         content: [
@@ -439,6 +563,15 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown error';
+      emitToolTelemetry(c, {
+        toolName,
+        accountId,
+        input: payload,
+        output: { error: message },
+        durationMs: Date.now() - startedAt,
+        success: false,
+        error: message,
+      });
       return c.json({
         content: [{ type: 'text', text: JSON.stringify({ error: message }) }],
         isError: true,
@@ -450,31 +583,50 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
   // Resources
   // ============================================================================
   
-  if (config.resources) {
-    app.get('/mcp/resources', (c) => {
-      return c.json({ resources: config.resources!.list() });
+  app.get('/mcp/resources', (c) => {
+    const baseResources = config.resources?.list() || [];
+    return c.json({
+      resources: telemetryEnabled
+        ? mergeTelemetryResources(baseResources, telemetryServerName)
+        : baseResources,
     });
-    
-    app.get('/mcp/resources/read', async (c) => {
-      const uri = c.req.query('uri');
-      if (!uri) {
-        return c.json({ error: 'Missing uri parameter' }, 400);
-      }
-      
-      const content = await config.resources!.fetch(uri, c.env);
-      if (content === null) {
+  });
+
+  app.get('/mcp/resources/read', async (c) => {
+    const uri = c.req.query('uri');
+    if (!uri) {
+      return c.json({ error: 'Missing uri parameter' }, 400);
+    }
+
+    if (telemetryEnabled && isTelemetryResourceUri(uri)) {
+      const accountId = await resolveTelemetryAccountId(c);
+      const telemetryContent = await readTelemetryResource(c.env.DB, telemetryServerName, uri, accountId);
+      if (!telemetryContent) {
         return c.json({ error: `Resource not found: ${uri}` }, 404);
       }
-      
+
       return c.json({
-        contents: [{
-          uri,
-          mimeType: 'application/json',
-          text: JSON.stringify(content, null, 2),
-        }],
+        contents: [telemetryContent],
       });
+    }
+
+    if (!config.resources) {
+      return c.json({ error: 'Resources not supported' }, 404);
+    }
+
+    const content = await config.resources.fetch(uri, c.env);
+    if (content === null) {
+      return c.json({ error: `Resource not found: ${uri}` }, 404);
+    }
+
+    return c.json({
+      contents: [{
+        uri,
+        mimeType: 'application/json',
+        text: JSON.stringify(content, null, 2),
+      }],
     });
-  }
+  });
   
   // ============================================================================
   // Usage API

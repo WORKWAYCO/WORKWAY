@@ -70,6 +70,34 @@ export interface UsageResult {
 }
 
 // ============================================================================
+// Telemetry Types
+// ============================================================================
+
+export interface BraintrustTelemetryOptions {
+  apiKey?: string;
+  projectName?: string;
+  enabled?: boolean;
+}
+
+export interface MCPServerTelemetryConfig {
+  /**
+   * Enable telemetry writes/resources for this server.
+   * Defaults to true.
+   */
+  enabled?: boolean;
+  /**
+   * Optional override for server identifier stored in telemetry rows.
+   * Defaults to MCP server name.
+   */
+  serverName?: string;
+  /**
+   * Optional Braintrust configuration.
+   * apiKey can also come from env.BRAINTRUST_API_KEY.
+   */
+  braintrust?: BraintrustTelemetryOptions;
+}
+
+// ============================================================================
 // MCP Protocol Types
 // ============================================================================
 
@@ -180,6 +208,8 @@ export interface MCPServerConfig<TEnv extends BaseMCPEnv = MCPEnv> {
   allowedOrigins?: string[];
   /** Tier limits override */
   tierLimits?: Partial<Record<UserTier, number>>;
+  /** Telemetry + observability config */
+  telemetry?: MCPServerTelemetryConfig;
   /** Custom routes to add to the server */
   customRoutes?: (app: any, env: TEnv) => void;
 }

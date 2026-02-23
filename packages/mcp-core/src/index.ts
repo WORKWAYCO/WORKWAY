@@ -33,6 +33,8 @@ export type {
   MCPToolResult,
   MCPResource,
   MCPPrompt,
+  BraintrustTelemetryOptions,
+  MCPServerTelemetryConfig,
   MCPServerConfig,
   MCPContext,
   JsonRpcRequest,
@@ -73,3 +75,31 @@ export {
   createMessageHandler,
   type ProtocolHandlerConfig,
 } from './protocol';
+
+// Telemetry
+export {
+  emitTelemetryInvocation,
+  recordInvocation,
+  getUsage,
+  getHealth,
+  getActivity,
+  cleanupOldInvocations,
+  isTelemetryResourceUri,
+  getTelemetryResources,
+  mergeTelemetryResources,
+  readTelemetryResource,
+  resolveTelemetryAccountId,
+  resolveTelemetryAccountIdFromUsage,
+  resolveBraintrustTelemetryOptions,
+  TELEMETRY_MIGRATION,
+} from './telemetry';
+
+export type {
+  RunCountRow,
+  ToolInvocationRow,
+  TelemetryUsageResult,
+  HealthResult,
+  ActivityResult,
+  TelemetryInvocationArgs,
+  TelemetryResourceContent,
+} from './telemetry';

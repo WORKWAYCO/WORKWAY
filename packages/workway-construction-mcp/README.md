@@ -238,6 +238,11 @@ wrangler secret put CLOUDFLARE_ACCOUNT_ID  # Find at dash.cloudflare.com
 wrangler secret put COMPOSIO_API_KEY
 # Optional override (default: https://backend.composio.dev/api/v3)
 wrangler secret put COMPOSIO_BASE_URL
+
+# Optional: Braintrust MCP tracing
+wrangler secret put BRAINTRUST_API_KEY
+# BRAINTRUST_PROJECT_NAME defaults to WORKWAY (set in wrangler.toml)
+# BRAINTRUST_ENABLED defaults to true (set to "false" to disable)
 ```
 
 ### OAuth Setup
@@ -280,6 +285,10 @@ WORKWAY Construction MCP integrates with [Cloudflare AI Gateway](https://develop
    pnpm migrate:local   # For local development
    pnpm migrate:remote  # For production
    ```
+
+4. **Apply MCP telemetry migration** (mcp_run_counts + mcp_tool_invocations):
+   - Included as `migrations/0011_mcp_telemetry.sql`
+   - Uses the same `pnpm migrate:local` / `pnpm migrate:remote` commands above
 
 ### How It Works
 
@@ -337,6 +346,20 @@ GROUP BY tool_name, model;
 ### Skill Response Metadata
 
 Skills now include AI usage metrics in their responses:
+
+## Braintrust + Telemetry Verification
+
+After setting `BRAINTRUST_API_KEY` and deploying:
+
+1. Call any tool via MCP (`/mcp`, `/sse`, or `/mcp/tools/:name`).
+2. Verify D1 telemetry rows exist in:
+   - `mcp_run_counts`
+   - `mcp_tool_invocations`
+3. Verify telemetry resources:
+   - `telemetry://usage`
+   - `telemetry://health`
+   - `telemetry://activity`
+4. In Braintrust, confirm traces land in project `WORKWAY` (or your override).
 
 ```json
 {
