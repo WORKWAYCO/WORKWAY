@@ -94,7 +94,18 @@ export function createMCPServer<TEnv extends BaseMCPEnv>(
       console.warn(`[telemetry] scheduling failed for ${args.toolName}:`, error);
     });
 
-    c.executionCtx?.waitUntil?.(telemetryTask);
+    try {
+      const executionCtx = (c as unknown as { executionCtx?: { waitUntil?: (task: Promise<unknown>) => void } }).executionCtx;
+      if (executionCtx && typeof executionCtx.waitUntil === 'function') {
+        executionCtx.waitUntil(telemetryTask);
+        return;
+      }
+    } catch {
+      // In non-Workers test contexts, reading executionCtx can throw.
+    }
+
+    // Keep telemetry non-blocking when no execution context is available.
+    void telemetryTask;
   };
   
   // ============================================================================

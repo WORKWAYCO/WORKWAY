@@ -171,6 +171,7 @@ export const toolCategories = {
     'workway_get_dronedeploy_volume',
   ],
   hub: [
+    'workway_hub_apply_construction_pack',
     'workway_hub_list_toolkits',
     'workway_hub_connect_toolkit',
     'workway_hub_list_tools',

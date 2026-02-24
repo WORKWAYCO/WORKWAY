@@ -6,6 +6,9 @@
 
 This MCP (Model Context Protocol) server enables AI agents like Claude Code and OpenAI Codex to create and manage construction workflows that integrate with Procore.
 
+Canonical MCP endpoint: `https://mcp.workway.co/mcp`
+Legacy compatibility endpoint: `https://construction.mcp.workway.co/mcp`
+
 ## Quick Start
 
 ```bash
@@ -153,10 +156,15 @@ All tools follow the pattern: `workway_{action}_{provider}_{resource}`
 
 | Tool | Description |
 |------|-------------|
+| `workway_hub_apply_construction_pack` | Apply curated construction toolkit pack allow-rules |
 | `workway_hub_list_toolkits` | List tenant allowlisted toolkit packs |
 | `workway_hub_connect_toolkit` | Start toolkit OAuth connection flow |
 | `workway_hub_list_tools` | List allowlisted tools for a toolkit |
 | `workway_hub_execute_tool` | Policy-gated execution for first-party and Composio tools |
+
+Available construction packs:
+- `construction-core`: `notion`, `slack`, `gmail`, `google_drive`
+- `construction-pm`: `construction-core` + `jira`
 
 ### Judgment Axis (MCP-only Governance)
 
@@ -248,7 +256,7 @@ wrangler secret put BRAINTRUST_API_KEY
 ### OAuth Setup
 
 1. Create a Procore OAuth app at [developers.procore.com](https://developers.procore.com)
-2. Set callback URL to: `https://construction.mcp.workway.co/oauth/callback`
+2. Set callback URL to: `https://mcp.workway.co/oauth/callback` (legacy host remains compatible)
 3. Add client credentials as secrets
 
 ## AI Gateway Integration

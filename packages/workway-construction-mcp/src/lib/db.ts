@@ -579,6 +579,134 @@ export async function listToolAccessPacks(
   }
 }
 
+export async function ensureToolAccessPack(
+  env: Env,
+  input: {
+    tenantId: string;
+    slug: string;
+    name: string;
+    description?: string | null;
+    createdBy: string;
+  }
+): Promise<ToolAccessPack> {
+  const timestamp = now();
+  const existing = await queryOne<any>(
+    env,
+    `
+      SELECT *
+      FROM tool_access_packs
+      WHERE tenant_id = ? AND slug = ?
+      LIMIT 1
+    `,
+    [input.tenantId, input.slug]
+  );
+
+  if (existing) {
+    await execute(
+      env,
+      `
+        UPDATE tool_access_packs
+        SET name = ?, description = ?, status = 'active', updated_at = ?
+        WHERE id = ?
+      `,
+      [input.name, input.description || null, timestamp, existing.id]
+    );
+
+    return {
+      id: existing.id,
+      tenantId: existing.tenant_id,
+      slug: existing.slug,
+      name: input.name,
+      description: input.description || null,
+      status: 'active',
+      createdBy: existing.created_by,
+      createdAt: existing.created_at,
+      updatedAt: timestamp,
+    };
+  }
+
+  const id = generateId();
+  await execute(
+    env,
+    `
+      INSERT INTO tool_access_packs (
+        id, tenant_id, name, slug, description, status, created_by, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, 'active', ?, ?, ?)
+    `,
+    [
+      id,
+      input.tenantId,
+      input.name,
+      input.slug,
+      input.description || null,
+      input.createdBy,
+      timestamp,
+      timestamp,
+    ]
+  );
+
+  return {
+    id,
+    tenantId: input.tenantId,
+    slug: input.slug,
+    name: input.name,
+    description: input.description || null,
+    status: 'active',
+    createdBy: input.createdBy,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+}
+
+export async function replaceToolAccessRules(
+  env: Env,
+  input: {
+    tenantId: string;
+    packId: string;
+    rules: Array<{
+      toolkitSlug: string;
+      toolSlug?: string | null;
+      ruleType: 'allow' | 'deny';
+    }>;
+  }
+): Promise<number> {
+  await execute(
+    env,
+    `
+      DELETE FROM tool_access_rules
+      WHERE tenant_id = ? AND pack_id = ?
+    `,
+    [input.tenantId, input.packId]
+  );
+
+  if (input.rules.length === 0) {
+    return 0;
+  }
+
+  const createdAt = now();
+  await batch(
+    env,
+    input.rules.map((rule) => ({
+      sql: `
+        INSERT INTO tool_access_rules (
+          id, pack_id, tenant_id, toolkit_slug, tool_slug, rule_type, created_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      params: [
+        generateId(),
+        input.packId,
+        input.tenantId,
+        rule.toolkitSlug,
+        rule.toolSlug || null,
+        rule.ruleType,
+        createdAt,
+      ],
+    }))
+  );
+
+  return input.rules.length;
+}
+
 /**
  * Returns true if explicitly allowlisted and not denied.
  * If no rules exist, fail-closed (false).

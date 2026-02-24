@@ -7,20 +7,73 @@
 // ============================================================================
 
 /**
- * Base URL for the MCP server
- * Custom domain: construction.mcp.workway.co
+ * Canonical and legacy MCP hosts.
  */
-export const MCP_BASE_URL = 'https://construction.mcp.workway.co';
+export const CANONICAL_MCP_BASE_URL = 'https://mcp.workway.co';
+export const LEGACY_MCP_BASE_URL = 'https://construction.mcp.workway.co';
+
+type BaseUrlEnv = {
+  MCP_BASE_URL?: string | null;
+  MCP_USE_LEGACY_BASE_URL?: string | boolean | null;
+};
+
+function shouldUseLegacyBaseUrl(value: BaseUrlEnv['MCP_USE_LEGACY_BASE_URL']): boolean {
+  if (value === true) return true;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    return normalized === '1' || normalized === 'true' || normalized === 'yes';
+  }
+  return false;
+}
+
+function normalizeBaseUrl(value?: string | null): string | null {
+  if (!value) return null;
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  return withProtocol.replace(/\/+$/, '');
+}
+
+/**
+ * Resolve MCP base URL with env override.
+ * Default is canonical mcp.workway.co, with explicit legacy opt-in.
+ */
+export function getMcpBaseUrl(env?: BaseUrlEnv): string {
+  if (shouldUseLegacyBaseUrl(env?.MCP_USE_LEGACY_BASE_URL)) {
+    return LEGACY_MCP_BASE_URL;
+  }
+  return normalizeBaseUrl(env?.MCP_BASE_URL) || CANONICAL_MCP_BASE_URL;
+}
+
+/**
+ * Base URL for the MCP server.
+ * Defaults to canonical endpoint for docs and generated links.
+ */
+export const MCP_BASE_URL = getMcpBaseUrl();
 
 /**
  * OAuth callback URL (must match Procore app configuration)
  */
-export const OAUTH_CALLBACK_URL = `${MCP_BASE_URL}/oauth/callback`;
+export function getOAuthCallbackUrl(env?: BaseUrlEnv): string {
+  return `${getMcpBaseUrl(env)}/oauth/callback`;
+}
+
+/**
+ * OAuth callback URL (must match Procore app configuration)
+ */
+export const OAUTH_CALLBACK_URL = getOAuthCallbackUrl();
 
 /**
  * Webhook base URL for workflow triggers
  */
-export const WEBHOOK_BASE_URL = `${MCP_BASE_URL}/webhooks`;
+export function getWebhookBaseUrl(env?: BaseUrlEnv): string {
+  return `${getMcpBaseUrl(env)}/webhooks`;
+}
+
+/**
+ * Webhook base URL for workflow triggers
+ */
+export const WEBHOOK_BASE_URL = getWebhookBaseUrl();
 
 // ============================================================================
 // CORS Configuration

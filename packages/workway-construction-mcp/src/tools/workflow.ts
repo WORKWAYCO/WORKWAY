@@ -7,7 +7,7 @@
 import { z } from 'zod';
 import type { Env, Workflow, WorkflowAction, MCPToolSet } from '../types';
 import type { StandardResponse } from '../lib/errors';
-import { MCP_BASE_URL, WEBHOOK_BASE_URL } from '../lib/config';
+import { getWebhookBaseUrl } from '../lib/config';
 import {
   ErrorCode,
   WorkflowError,
@@ -52,6 +52,7 @@ export const workflowTools: MCPToolSet = {
     }),
     execute: async (input: z.infer<typeof workflowTools.create_workflow.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
+        const webhookBaseUrl = getWebhookBaseUrl(env);
         const id = crypto.randomUUID();
         const now = new Date().toISOString();
         
@@ -81,7 +82,7 @@ export const workflowTools: MCPToolSet = {
         ).run();
         
         const webhookUrl = input.trigger_type === 'webhook' 
-          ? `${WEBHOOK_BASE_URL}/${id}`
+          ? `${webhookBaseUrl}/${id}`
           : undefined;
         
         let nextStep = 'Call workway_configure_workflow_trigger to set up when the workflow runs';
@@ -135,6 +136,7 @@ export const workflowTools: MCPToolSet = {
     }),
     execute: async (input: z.infer<typeof workflowTools.configure_trigger.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
+        const webhookBaseUrl = getWebhookBaseUrl(env);
         const triggerConfig = {
           source: input.source,
           eventTypes: input.event_types,
@@ -166,11 +168,11 @@ export const workflowTools: MCPToolSet = {
             source: input.source,
             event_types: input.event_types,
             cron_schedule: input.cron_schedule,
-            webhook_url: input.source ? `${WEBHOOK_BASE_URL}/${input.workflow_id}` : undefined,
+            webhook_url: input.source ? `${webhookBaseUrl}/${input.workflow_id}` : undefined,
           },
           next_step: 'Call workway_add_workflow_action to add workflow steps',
           triggerConfig,
-          webhookUrl: input.source ? `${WEBHOOK_BASE_URL}/${input.workflow_id}` : undefined,
+          webhookUrl: input.source ? `${webhookBaseUrl}/${input.workflow_id}` : undefined,
           nextStep: 'Call workway_add_workflow_action to add workflow steps',
         };
 
@@ -255,6 +257,7 @@ export const workflowTools: MCPToolSet = {
     }),
     execute: async (input: z.infer<typeof workflowTools.deploy.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
+        const webhookBaseUrl = getWebhookBaseUrl(env);
         // Single query with subquery - reduces 2 sequential queries (60ms) to 1 (30ms)
         const result = await env.DB.prepare(`
           SELECT 
@@ -340,7 +343,7 @@ export const workflowTools: MCPToolSet = {
         `).bind('active', new Date().toISOString(), input.workflow_id).run();
 
         const webhookUrl = result.trigger_type === 'webhook'
-          ? `${WEBHOOK_BASE_URL}/${input.workflow_id}`
+          ? `${webhookBaseUrl}/${input.workflow_id}`
           : undefined;
         const output = {
           deployment_id: deploymentId,

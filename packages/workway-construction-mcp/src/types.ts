@@ -48,6 +48,10 @@ export interface Env extends BaseMCPEnv {
   COMPOSIO_API_KEY?: string;
   /** Optional Composio base URL override */
   COMPOSIO_BASE_URL?: string;
+  /** Optional MCP base URL override (defaults to https://mcp.workway.co) */
+  MCP_BASE_URL?: string;
+  /** Optional legacy base URL toggle (true/false) */
+  MCP_USE_LEGACY_BASE_URL?: string;
   /** R2 bucket for immutable decision/evidence artifacts */
   JUDGMENT_EVIDENCE?: R2Bucket;
   /** Optional Braintrust API key for MCP invocation tracing */
