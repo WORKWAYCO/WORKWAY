@@ -7,7 +7,7 @@
 
 import { z } from 'zod';
 import type { Env, ToolResult, MCPToolSet } from '../types';
-import { MCP_BASE_URL } from '../lib/config';
+import { getWebhookBaseUrl } from '../lib/config';
 
 // ============================================================================
 // Template Definitions
@@ -496,13 +496,15 @@ export const templateTools: MCPToolSet = {
         };
       }
 
+      const webhookBaseUrl = getWebhookBaseUrl(env);
+
       return {
         success: true,
         data: {
           template: {
             ...template,
             webhookUrl: template.triggerType === 'webhook' 
-              ? `${MCP_BASE_URL}/webhooks/{workflow_id}` 
+              ? `${webhookBaseUrl}/{workflow_id}` 
               : undefined,
           },
         },

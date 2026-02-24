@@ -20,8 +20,8 @@ import { judgmentPrompts } from './prompts';
 import { encrypt, decrypt } from './lib/crypto';
 import { 
   ALLOWED_ORIGINS, 
-  OAUTH_CALLBACK_URL, 
-  MCP_BASE_URL,
+  getMcpBaseUrl,
+  getOAuthCallbackUrl,
   getProcoreUrls,
   type ProcoreEnvironment,
 } from './lib/config';
@@ -53,7 +53,7 @@ const mcpServer = createMCPServer<Env>({
   version: '0.1.0',
   description: 'The Automation Layer - AI-native workflow automation for construction',
   icon: WORKWAY_ICON,
-  baseUrl: MCP_BASE_URL,
+  baseUrl: getMcpBaseUrl(),
   allowedOrigins: ALLOWED_ORIGINS,
   capabilities: {
     tools: { listChanged: true },
@@ -194,11 +194,12 @@ async function exportTracingData(env: Env, tracer: Tracer): Promise<void> {
  * Endpoints MUST be at root level per MCP spec
  */
 app.get('/.well-known/oauth-authorization-server', (c) => {
+  const baseUrl = getMcpBaseUrl(c.env);
   return c.json({
-    issuer: MCP_BASE_URL,
-    authorization_endpoint: `${MCP_BASE_URL}/authorize`,
-    token_endpoint: `${MCP_BASE_URL}/token`,
-    registration_endpoint: `${MCP_BASE_URL}/register`,
+    issuer: baseUrl,
+    authorization_endpoint: `${baseUrl}/authorize`,
+    token_endpoint: `${baseUrl}/token`,
+    registration_endpoint: `${baseUrl}/register`,
     response_types_supported: ['code'],
     response_modes_supported: ['query'],
     grant_types_supported: ['authorization_code', 'refresh_token'],
@@ -578,7 +579,7 @@ app.get('/oauth/callback', async (c) => {
     code,
     client_id: clientId,
     client_secret: clientSecret,
-    redirect_uri: OAUTH_CALLBACK_URL,
+    redirect_uri: getOAuthCallbackUrl(c.env),
   });
 
   const tokenResponse = await fetch(urls.tokenUrl, {

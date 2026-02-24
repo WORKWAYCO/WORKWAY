@@ -17,9 +17,9 @@ import type { Env, ProcoreProject, ProcoreRFI, ProcoreDailyLog, ProcoreSubmittal
 import type { StandardResponse } from '../lib/errors';
 import { decrypt, encrypt } from '../lib/crypto';
 import { 
-  OAUTH_CALLBACK_URL, 
   TOKEN_REFRESH_BUFFER_MS,
-  MCP_BASE_URL,
+  getOAuthCallbackUrl,
+  getWebhookBaseUrl,
   getProcoreUrls,
   type ProcoreEnvironment,
 } from '../lib/config';
@@ -342,7 +342,7 @@ export const procoreTools: MCPToolSet = {
       // Build authorization URL using environment-specific auth endpoint and client ID
       const authUrl = new URL(urls.authUrl);
       authUrl.searchParams.set('client_id', clientId);
-      authUrl.searchParams.set('redirect_uri', OAUTH_CALLBACK_URL);
+      authUrl.searchParams.set('redirect_uri', getOAuthCallbackUrl(env));
       authUrl.searchParams.set('response_type', 'code');
       authUrl.searchParams.set('state', state);
       
@@ -1495,7 +1495,7 @@ export const procoreTools: MCPToolSet = {
     }),
     execute: async (input: z.infer<typeof procoreTools.create_procore_webhook.inputSchema>, env: Env): Promise<StandardResponse<any>> => {
       try {
-        const callbackUrl = `${MCP_BASE_URL}/webhooks/${input.workflow_id}`;
+        const callbackUrl = `${getWebhookBaseUrl(env)}/${input.workflow_id}`;
         
         // Note: Procore webhook API varies - this is the general structure
         // Actual implementation may need adjustment based on Procore API version

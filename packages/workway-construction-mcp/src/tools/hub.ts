@@ -12,10 +12,12 @@ import { handleError } from '../middleware/error-handler';
 import {
   appendExecutionLedger,
   createDecision,
+  ensureToolAccessPack,
   getDecision,
   getProviderConnection,
   isToolAllowedForTenant,
   listToolAccessPacks,
+  replaceToolAccessRules,
   resolveTenantId,
   updateDecision,
   upsertProviderConnection,
@@ -57,6 +59,38 @@ const FIRST_PARTY_TOOLS = [
   skillTools,
   judgmentTools,
 ];
+
+const CONSTRUCTION_TOOLKIT_PACKS = {
+  'construction-core': {
+    name: 'Construction Core Toolkit Pack',
+    description: 'Foundational toolkit pack for construction operations.',
+    toolkits: ['notion', 'slack', 'gmail', 'google_drive'],
+  },
+  'construction-pm': {
+    name: 'Construction PM Toolkit Pack',
+    description: 'Project-management toolkit pack with construction-core plus Jira.',
+    includes: ['construction-core'],
+    toolkits: ['jira'],
+  },
+} as const;
+
+type ConstructionPackSlug = keyof typeof CONSTRUCTION_TOOLKIT_PACKS;
+
+function resolveConstructionPackToolkits(packSlug: ConstructionPackSlug): string[] {
+  const merged = new Set<string>();
+  const addPack = (slug: ConstructionPackSlug) => {
+    const pack = CONSTRUCTION_TOOLKIT_PACKS[slug];
+    for (const parentSlug of pack.includes || []) {
+      addPack(parentSlug as ConstructionPackSlug);
+    }
+    for (const toolkit of pack.toolkits) {
+      merged.add(toolkit);
+    }
+  };
+
+  addPack(packSlug);
+  return Array.from(merged);
+}
 
 async function ensureTenantScope(
   env: Env,
@@ -102,6 +136,66 @@ async function isToolkitAllowlisted(
 }
 
 export const hubTools: MCPToolSet = {
+  apply_construction_pack: {
+    name: 'workway_hub_apply_construction_pack',
+    description: 'Apply a curated construction toolkit pack by writing explicit allow rules for the tenant.',
+    inputSchema: z.object({
+      tenant_id: z.string().optional(),
+      user_id: z.string(),
+      pack_slug: z.enum(['construction-core', 'construction-pm']),
+    }),
+    outputSchema: z.object({
+      tenant_id: z.string(),
+      pack_slug: z.enum(['construction-core', 'construction-pm']),
+      toolkits: z.array(z.string()),
+      rules_applied: z.number(),
+      status: z.literal('applied'),
+    }),
+    execute: async (
+      input: z.infer<typeof hubTools.apply_construction_pack.inputSchema>,
+      env: Env
+    ): Promise<StandardResponse<any>> => {
+      try {
+        const tenantId = await ensureTenantScope(env, input.user_id, input.tenant_id);
+        const hubEnabled = await getTenantFeatureFlag(env, tenantId, 'hub_enabled', true);
+        if (!hubEnabled) {
+          throw new Error('Hub is disabled for this tenant.');
+        }
+
+        const packSlug = input.pack_slug as ConstructionPackSlug;
+        const pack = CONSTRUCTION_TOOLKIT_PACKS[packSlug];
+        const toolkits = resolveConstructionPackToolkits(packSlug);
+
+        const packRecord = await ensureToolAccessPack(env, {
+          tenantId,
+          slug: packSlug,
+          name: pack.name,
+          description: pack.description,
+          createdBy: input.user_id,
+        });
+
+        const rulesApplied = await replaceToolAccessRules(env, {
+          tenantId,
+          packId: packRecord.id,
+          rules: toolkits.map((toolkitSlug) => ({
+            toolkitSlug,
+            ruleType: 'allow' as const,
+          })),
+        });
+
+        return success({
+          tenant_id: tenantId,
+          pack_slug: packSlug,
+          toolkits,
+          rules_applied: rulesApplied,
+          status: 'applied' as const,
+        });
+      } catch (error) {
+        return handleError(error);
+      }
+    },
+  },
+
   list_toolkits: {
     name: 'workway_hub_list_toolkits',
     description: 'List curated allowlisted toolkits for the tenant and include Composio catalog metadata.',

@@ -53,6 +53,7 @@ dataset = "workway_agent_metrics"
 # Environment variables
 [vars]
 ENVIRONMENT = "development"
+MCP_BASE_URL = "https://mcp.workway.co"
 # AI Gateway ID for LLM observability (token tracking, cost monitoring, caching)
 AI_GATEWAY_ID = "workway-mcp"
 
