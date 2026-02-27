@@ -55,6 +55,17 @@ let cachedSchemaDatabaseId: string | null = null;
 let cachedTitleProperty: string | null = null;
 let cachedPropertyNames: Set<string> | null = null;
 
+type NormalizedMeeting = {
+	id: string;
+	sourceId: string;
+	topic: string;
+	start_time: string;
+	duration: number;
+	share_url?: string;
+	speakers?: string[];
+	row_index?: number;
+};
+
 // Track workflow execution for dashboard visibility
 // This POSTs to the same zoom-cookie-sync worker that stores the user's session
 async function trackExecution(
@@ -285,79 +296,79 @@ export default defineWorkflow({
 			: await fetchMeetings(userId, inputs.lookbackDays || 1);
 
 		if (meetings.success && meetings.data.length > 0) {
-				for (const meeting of meetings.data) {
-					let alreadyDocumented = false;
-					try {
-						alreadyDocumented = await checkExistingPage({
-							notion: integrations.notion,
-							databaseId: HALFDOZEN_INTERNAL_LLM_DATABASE,
-							sourceType: 'meeting',
-							sourceId: meeting.id,
-							sourceUrl: meeting.share_url,
-							topic: meeting.topic,
-							startTime: meeting.start_time,
-						});
-					} catch (error) {
-						console.error('[Workflow] Meeting deduplication check failed; skipping write.', {
-							meetingId: meeting.id,
-							topic: meeting.topic,
-							error: error instanceof Error ? error.message : String(error),
-						});
-						failedNotionWrites.push({
-							item: { id: meeting.id, title: meeting.topic, type: 'meeting' },
-							sourceUrl: meeting.share_url,
-						});
-						continue;
-					}
-
-					if (alreadyDocumented) {
-						continue;
-					}
-
-					// Get transcript
-					const transcript = await fetchTranscript(userId, meeting.id, meeting.share_url);
-
-					// AI Analysis (if enabled)
-					let analysis: any = null;
-					if (inputs.enableAI && transcript && transcript.length > 100) {
-						analysis = await analyzeMeeting(
-							transcript,
-							meeting.topic,
-							inputs.analysisDepth || 'standard',
-							integrations,
-							env
-						);
-					}
-
-					// Create Notion page
-					const notionPage = await createNotionMeetingPage({
+			for (const meeting of meetings.data) {
+				let alreadyDocumented = false;
+				try {
+					alreadyDocumented = await checkExistingPage({
+						notion: integrations.notion,
 						databaseId: HALFDOZEN_INTERNAL_LLM_DATABASE,
+						sourceType: 'meeting',
+						sourceId: meeting.sourceId,
+						sourceUrl: meeting.share_url,
 						topic: meeting.topic,
 						startTime: meeting.start_time,
-						transcript,
-						speakers: meeting.speakers || [],
-						analysis,
-						sourceId: meeting.id,
-						sourceType: 'meeting',
+					});
+				} catch (error) {
+					console.error('[Workflow] Meeting deduplication check failed; skipping write.', {
+						meetingId: meeting.id,
+						topic: meeting.topic,
+						error: error instanceof Error ? error.message : String(error),
+					});
+					failedNotionWrites.push({
+						item: { id: meeting.id, title: meeting.topic, type: 'meeting' },
 						sourceUrl: meeting.share_url,
-						integrations,
 					});
-
-					if (!notionPage?.url) {
-						failedNotionWrites.push({
-							item: { id: meeting.id, title: meeting.topic, type: 'meeting' },
-							sourceUrl: meeting.share_url,
-						});
-						continue;
-					}
-
-					meetingResults.push({
-						item: { id: meeting.id, title: meeting.topic, date: meeting.start_time, type: 'meeting' },
-						notionPageUrl: notionPage.url,
-						actionItemCount: analysis?.actionItems?.length || 0,
-					});
+					continue;
 				}
+
+				if (alreadyDocumented) {
+					continue;
+				}
+
+				// Get transcript
+				const transcript = await fetchTranscript(userId, meeting);
+
+				// AI Analysis (if enabled)
+				let analysis: any = null;
+				if (inputs.enableAI && transcript && transcript.length > 100) {
+					analysis = await analyzeMeeting(
+						transcript,
+						meeting.topic,
+						inputs.analysisDepth || 'standard',
+						integrations,
+						env
+					);
+				}
+
+				// Create Notion page
+				const notionPage = await createNotionMeetingPage({
+					databaseId: HALFDOZEN_INTERNAL_LLM_DATABASE,
+					topic: meeting.topic,
+					startTime: meeting.start_time,
+					transcript,
+					speakers: meeting.speakers || [],
+					analysis,
+					sourceId: meeting.sourceId,
+					sourceType: 'meeting',
+					sourceUrl: meeting.share_url,
+					integrations,
+				});
+
+				if (!notionPage?.url) {
+					failedNotionWrites.push({
+						item: { id: meeting.id, title: meeting.topic, type: 'meeting' },
+						sourceUrl: meeting.share_url,
+					});
+					continue;
+				}
+
+				meetingResults.push({
+					item: { id: meeting.sourceId, title: meeting.topic, date: meeting.start_time, type: 'meeting' },
+					notionPageUrl: notionPage.url,
+					actionItemCount: analysis?.actionItems?.length || 0,
+				});
 			}
+		}
 
 		// ========================================================================
 		// PROCESS CLIPS
@@ -541,14 +552,7 @@ async function fetchMeetings(
 	days: number
 ): Promise<{
 	success: boolean;
-	data: Array<{
-		id: string;
-		topic: string;
-		start_time: string;
-		duration: number;
-		share_url?: string;
-		speakers?: string[];
-	}>;
+	data: NormalizedMeeting[];
 }> {
 	try {
 		const response = await fetch(
@@ -558,7 +562,13 @@ async function fetchMeetings(
 			return { success: false, data: [] };
 		}
 		const data = (await response.json()) as { meetings?: Array<any> };
-		return { success: true, data: data.meetings || [] };
+		const meetings = (data.meetings || []).map((meeting, index) =>
+			normalizeMeeting(meeting, index)
+		);
+		return {
+			success: true,
+			data: meetings.filter((meeting): meeting is NormalizedMeeting => meeting !== null),
+		};
 	} catch {
 		return { success: false, data: [] };
 	}
@@ -566,14 +576,29 @@ async function fetchMeetings(
 
 async function fetchTranscript(
 	userId: string,
-	meetingId: string,
-	shareUrl?: string
+	meeting: NormalizedMeeting
 ): Promise<string | null> {
 	try {
+		if (typeof meeting.row_index === 'number') {
+			const response = await fetch(
+				`${ZOOM_CONNECTION_URL}/meeting-transcript/${userId}?index=${meeting.row_index}`
+			);
+			if (response.ok) {
+				const data = (await response.json()) as { transcript?: string };
+				if (data.transcript) {
+					return data.transcript;
+				}
+			}
+		}
+
+		if (!meeting.share_url) {
+			return null;
+		}
+
 		const response = await fetch(`${ZOOM_CONNECTION_URL}/transcript/${userId}`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ meetingId, shareUrl }),
+			body: JSON.stringify({ url: meeting.share_url, shareUrl: meeting.share_url }),
 		});
 		if (!response.ok) {
 			return null;
@@ -623,10 +648,14 @@ async function fetchClipTranscript(
 	shareUrl?: string
 ): Promise<string | null> {
 	try {
-		const response = await fetch(`${ZOOM_CONNECTION_URL}/clip-transcript/${userId}`, {
+		if (!shareUrl) {
+			return null;
+		}
+
+		const response = await fetch(`${ZOOM_CONNECTION_URL}/transcript/${userId}`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ clipId, shareUrl }),
+			body: JSON.stringify({ clipUrl: shareUrl, shareUrl, clipId }),
 		});
 		if (!response.ok) {
 			return null;
@@ -636,6 +665,59 @@ async function fetchClipTranscript(
 	} catch {
 		return null;
 	}
+}
+
+function normalizeMeeting(meeting: any, index: number): NormalizedMeeting | null {
+	const topic = meeting.topic || 'Zoom Meeting';
+	const id = meeting.id || meeting.meetingId || meeting.meeting_id;
+
+	if (!id) {
+		return null;
+	}
+
+	const rowIndex =
+		typeof meeting.rowIndex === 'number'
+			? meeting.rowIndex
+			: typeof meeting.row_index === 'number'
+				? meeting.row_index
+				: undefined;
+
+	const rawStartTime = meeting.start_time || meeting.startTime || meeting.dateTime;
+	const parsedStartTime = normalizeMeetingStartTime(rawStartTime);
+	const startTime = parsedStartTime || new Date().toISOString();
+	const sourceId = `${id}::${startTime}`;
+
+	return {
+		id,
+		sourceId,
+		topic,
+		start_time: startTime,
+		duration: meeting.duration || 0,
+		share_url: meeting.share_url || meeting.shareUrl || meeting.url,
+		speakers: meeting.speakers || [],
+		row_index: rowIndex ?? index,
+	};
+}
+
+function normalizeMeetingStartTime(rawStartTime: unknown): string | null {
+	if (!rawStartTime || typeof rawStartTime !== 'string') {
+		return null;
+	}
+
+	const trimmed = rawStartTime.trim();
+	if (!trimmed) {
+		return null;
+	}
+
+	// Handle already-ISO timestamps directly.
+	if (trimmed.includes('T')) {
+		const iso = new Date(trimmed);
+		return Number.isNaN(iso.getTime()) ? null : iso.toISOString();
+	}
+
+	// Handle strings like "Feb 26, 2026 04:20 PM".
+	const parsed = new Date(trimmed);
+	return Number.isNaN(parsed.getTime()) ? null : parsed.toISOString();
 }
 
 function extractQueryResults(data: any): any[] {
