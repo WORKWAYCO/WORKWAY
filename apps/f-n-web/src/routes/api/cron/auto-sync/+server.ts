@@ -83,8 +83,8 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 				// Create sync job
 				const jobId = crypto.randomUUID();
 				await DB.prepare(
-					`INSERT INTO sync_jobs (id, user_id, status, database_id, total_transcripts, selected_transcript_ids)
-					 VALUES (?, ?, 'pending', ?, ?, ?)`
+					`INSERT INTO sync_jobs (id, user_id, status, trigger_type, database_id, total_transcripts, selected_transcript_ids)
+					 VALUES (?, ?, 'pending', 'schedule', ?, ?, ?)`
 				)
 					.bind(jobId, user.user_id, user.database_id, unsyncedIds.length, JSON.stringify(unsyncedIds))
 					.run();
@@ -104,12 +104,14 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 					db: DB
 				});
 
-				// Update last_auto_sync_at
-				await DB.prepare(
-					'UPDATE property_mappings SET last_auto_sync_at = datetime("now") WHERE user_id = ? AND database_id = ?'
-				)
-					.bind(user.user_id, user.database_id)
-					.run();
+				// Update last_auto_sync_at only after successful completion
+				if (result.status === 'completed') {
+					await DB.prepare(
+						'UPDATE property_mappings SET last_auto_sync_at = datetime("now") WHERE user_id = ? AND database_id = ?'
+					)
+						.bind(user.user_id, user.database_id)
+						.run();
+				}
 
 				results.push({
 					userId: user.user_id,

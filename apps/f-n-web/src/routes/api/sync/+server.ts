@@ -159,9 +159,15 @@ async function processSync(params: {
 			.run();
 
 		// Get database schema to find the title property name
-		const database = await notion.getDatabase(databaseId);
+		let database: Awaited<ReturnType<typeof notion.getDatabase>>;
+		try {
+			database = await notion.getDatabase(databaseId);
+		} catch (error) {
+			const errMsg = error instanceof Error ? error.message : String(error);
+			throw new Error(`Notion database access failed (${databaseId}): ${errMsg}`);
+		}
 		if (!database) {
-			throw new Error('Could not access Notion database');
+			throw new Error(`Notion database access failed (${databaseId}): Notion returned no database payload`);
 		}
 
 		// Find the title property (every Notion database has exactly one)

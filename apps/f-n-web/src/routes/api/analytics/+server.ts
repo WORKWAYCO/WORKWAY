@@ -23,6 +23,35 @@ interface SyncJob {
 	completed_at: string | null;
 }
 
+interface BlockedState {
+	blockedReason: string | null;
+	blockedSince: string | null;
+}
+
+function deriveBlockedState(executions: SyncJob[]): BlockedState {
+	if (!executions.length) {
+		return { blockedReason: null, blockedSince: null };
+	}
+
+	const latest = executions[0];
+	if (latest.status !== 'failed' || !latest.error_message) {
+		return { blockedReason: null, blockedSince: null };
+	}
+
+	const blockedReason = latest.error_message;
+	let blockedSince = latest.created_at;
+
+	for (const execution of executions) {
+		if (execution.status === 'failed' && execution.error_message === blockedReason) {
+			blockedSince = execution.created_at;
+			continue;
+		}
+		break;
+	}
+
+	return { blockedReason, blockedSince };
+}
+
 interface AnalyticsResponse {
 	workflow: {
 		id: string;
@@ -34,6 +63,8 @@ interface AnalyticsResponse {
 		autoSyncEnabled: boolean;
 		lastAutoSyncAt: string | null;
 		totalSynced: number;
+		blockedReason?: string | null;
+		blockedSince?: string | null;
 	};
 	executions: Array<{
 		id: string;
@@ -109,6 +140,7 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
 		`).bind(user.id).all<SyncJob>();
 
 		const executions = jobs.results || [];
+		const blockedState = deriveBlockedState(executions);
 
 		// Calculate stats
 		const successfulRuns = executions.filter(j => j.status === 'completed').length;
@@ -136,6 +168,8 @@ export const GET: RequestHandler = async ({ url, locals, platform }) => {
 				autoSyncEnabled: config?.auto_sync_enabled === 1,
 				lastAutoSyncAt: config?.last_auto_sync_at || null,
 				totalSynced: syncedCount?.count || 0,
+				blockedReason: blockedState.blockedReason,
+				blockedSince: blockedState.blockedSince,
 			},
 			executions: executions.map(j => ({
 				id: j.id,

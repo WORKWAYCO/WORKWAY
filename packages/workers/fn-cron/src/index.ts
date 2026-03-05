@@ -158,6 +158,17 @@ interface AdminConfig {
 	managedUsers: string[];
 }
 
+interface SyncExecutionSummary {
+	status: string;
+	error_message: string | null;
+	created_at: string;
+}
+
+interface BlockedState {
+	blockedReason: string | null;
+	blockedSince: string | null;
+}
+
 /**
  * Admin users who can view team analytics
  * Pattern: Admin sees aggregated metrics for all users they manage
@@ -175,6 +186,30 @@ function getAdminConfig(email: string): AdminConfig | null {
 	return ADMIN_CONFIGS.find(c => c.email.toLowerCase() === email.toLowerCase()) || null;
 }
 
+function deriveBlockedState(executions: SyncExecutionSummary[]): BlockedState {
+	if (!executions.length) {
+		return { blockedReason: null, blockedSince: null };
+	}
+
+	const latest = executions[0];
+	if (latest.status !== 'failed' || !latest.error_message) {
+		return { blockedReason: null, blockedSince: null };
+	}
+
+	const blockedReason = latest.error_message;
+	let blockedSince = latest.created_at;
+
+	for (const execution of executions) {
+		if (execution.status === 'failed' && execution.error_message === blockedReason) {
+			blockedSince = execution.created_at;
+			continue;
+		}
+		break;
+	}
+
+	return { blockedReason, blockedSince };
+}
+
 /**
  * Get aggregated analytics for admin users
  * Shows team-wide metrics plus individual user breakdowns
@@ -186,6 +221,8 @@ async function getAdminAnalytics(adminEmail: string, config: AdminConfig, env: E
 			autoSyncEnabled: boolean;
 			lastAutoSyncAt: string | null;
 			totalSynced: number;
+			blockedReason?: string | null;
+			blockedSince?: string | null;
 			stats: {
 				totalRuns: number;
 				successfulRuns: number;
@@ -229,7 +266,7 @@ async function getAdminAnalytics(adminEmail: string, config: AdminConfig, env: E
 
 			// Get sync jobs
 			const jobs = await env.DB.prepare(`
-				SELECT status, progress, started_at, completed_at, created_at
+				SELECT status, progress, started_at, completed_at, created_at, error_message
 				FROM sync_jobs
 				WHERE user_id = ?
 				ORDER BY created_at DESC
@@ -240,9 +277,11 @@ async function getAdminAnalytics(adminEmail: string, config: AdminConfig, env: E
 				started_at: string | null;
 				completed_at: string | null;
 				created_at: string;
+				error_message: string | null;
 			}>();
 
 			const executions = jobs.results || [];
+			const blockedState = deriveBlockedState(executions);
 			const successfulRuns = executions.filter(j => j.status === 'completed').length;
 			const failedRuns = executions.filter(j => j.status === 'failed').length;
 			const totalRuns = executions.length;
@@ -267,6 +306,8 @@ async function getAdminAnalytics(adminEmail: string, config: AdminConfig, env: E
 				autoSyncEnabled: userConfig?.auto_sync_enabled === 1,
 				lastAutoSyncAt: userConfig?.last_auto_sync_at || null,
 				totalSynced: syncedCount?.count || 0,
+				blockedReason: blockedState.blockedReason,
+				blockedSince: blockedState.blockedSince,
 				stats: {
 					totalRuns,
 					successfulRuns,
@@ -379,6 +420,7 @@ async function getAnalytics(email: string, env: Env): Promise<Response> {
 		}>();
 
 		const executions = jobs.results || [];
+		const blockedState = deriveBlockedState(executions);
 
 		// Calculate stats
 		const successfulRuns = executions.filter(j => j.status === 'completed').length;
@@ -405,6 +447,8 @@ async function getAnalytics(email: string, env: Env): Promise<Response> {
 				autoSyncEnabled: config?.auto_sync_enabled === 1,
 				lastAutoSyncAt: config?.last_auto_sync_at || null,
 				totalSynced: syncedCount?.count || 0,
+				blockedReason: blockedState.blockedReason,
+				blockedSince: blockedState.blockedSince,
 			},
 			executions: executions.map(j => ({
 				id: j.id,
@@ -671,6 +715,17 @@ async function fetchFirefliesTranscript(apiKey: string, id: string): Promise<Fir
 
 // === Notion API ===
 
+interface NotionErrorResponse {
+	message?: string;
+	code?: string;
+	status?: number;
+}
+
+function formatNotionError(prefix: string, status: number, error: NotionErrorResponse): string {
+	const baseMessage = error.message || `${prefix}: HTTP ${status}`;
+	return error.code ? `${baseMessage} (code: ${error.code})` : baseMessage;
+}
+
 async function fetchNotionDatabase(token: string, databaseId: string): Promise<Record<string, unknown>> {
 	const response = await fetch(`https://api.notion.com/v1/databases/${databaseId}`, {
 		headers: {
@@ -678,6 +733,12 @@ async function fetchNotionDatabase(token: string, databaseId: string): Promise<R
 			'Notion-Version': '2022-06-28',
 		},
 	});
+
+	if (!response.ok) {
+		const error = await response.json().catch(() => ({})) as NotionErrorResponse;
+		throw new Error(formatNotionError(`Notion database lookup failed for ${databaseId}`, response.status, error));
+	}
+
 	return await response.json() as Record<string, unknown>;
 }
 
@@ -712,15 +773,15 @@ async function createNotionPage(
 	});
 
 	if (!response.ok) {
-		const error = await response.json() as { message?: string };
-		throw new Error(error.message || `Notion API error: ${response.status}`);
+		const error = await response.json().catch(() => ({})) as NotionErrorResponse;
+		throw new Error(formatNotionError(`Notion page creation failed for database ${databaseId}`, response.status, error));
 	}
 
 	return await response.json() as { id: string };
 }
 
 async function appendNotionBlocks(token: string, pageId: string, blocks: unknown[]): Promise<void> {
-	await fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+	const response = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
 		method: 'PATCH',
 		headers: {
 			'Authorization': `Bearer ${token}`,
@@ -729,6 +790,11 @@ async function appendNotionBlocks(token: string, pageId: string, blocks: unknown
 		},
 		body: JSON.stringify({ children: blocks }),
 	});
+
+	if (!response.ok) {
+		const error = await response.json().catch(() => ({})) as NotionErrorResponse;
+		throw new Error(formatNotionError(`Notion block append failed for page ${pageId}`, response.status, error));
+	}
 }
 
 // === Property & Block Building ===

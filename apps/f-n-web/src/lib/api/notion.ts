@@ -10,6 +10,24 @@
 const NOTION_API_URL = 'https://api.notion.com/v1';
 const NOTION_VERSION = '2025-09-03';
 
+interface NotionErrorResponse {
+	message?: string;
+	code?: string;
+	status?: number;
+}
+
+export class NotionApiError extends Error {
+	readonly status: number;
+	readonly code?: string;
+
+	constructor(message: string, status: number, code?: string) {
+		super(message);
+		this.name = 'NotionApiError';
+		this.status = status;
+		this.code = code;
+	}
+}
+
 export interface NotionDatabase {
 	id: string;
 	title: Array<{ plain_text: string }>;
@@ -82,8 +100,10 @@ export function createNotionClient(accessToken: string): NotionClient {
 		}
 
 		if (!response.ok) {
-			const error = await response.json().catch(() => ({})) as { message?: string };
-			throw new Error(error.message || `Notion API error: ${response.status}`);
+			const error = await response.json().catch(() => ({})) as NotionErrorResponse;
+			const baseMessage = error.message || `Notion API error: ${response.status}`;
+			const message = error.code ? `${baseMessage} (code: ${error.code})` : baseMessage;
+			throw new NotionApiError(message, response.status, error.code);
 		}
 
 		return response.json();
@@ -127,22 +147,14 @@ export function createNotionClient(accessToken: string): NotionClient {
 		 * Get a database by ID (returns data_sources list)
 		 */
 		async getDatabase(id: string): Promise<NotionDatabase | null> {
-			try {
-				return await request<NotionDatabase>(`/databases/${id}`);
-			} catch {
-				return null;
-			}
+			return await request<NotionDatabase>(`/databases/${id}`);
 		},
 
 		/**
 		 * Get a data source by ID (contains the actual schema/properties)
 		 */
 		async getDataSource(dataSourceId: string): Promise<NotionDataSource | null> {
-			try {
-				return await request<NotionDataSource>(`/data_sources/${dataSourceId}`);
-			} catch {
-				return null;
-			}
+			return await request<NotionDataSource>(`/data_sources/${dataSourceId}`);
 		},
 
 		/**
