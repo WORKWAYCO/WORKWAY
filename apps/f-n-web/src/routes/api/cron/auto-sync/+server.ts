@@ -62,6 +62,16 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 
 		// Process each user
 		for (const user of autoSyncUsers.results) {
+			const jobId = crypto.randomUUID();
+
+			// Create a schedule job record for every attempted run so analytics reflects current state.
+			await DB.prepare(
+				`INSERT INTO sync_jobs (id, user_id, status, trigger_type, database_id, total_transcripts, selected_transcript_ids)
+				 VALUES (?, ?, 'pending', 'schedule', ?, 0, '[]')`
+			)
+				.bind(jobId, user.user_id, user.database_id)
+				.run();
+
 			try {
 				// Get unsynced transcripts (limit to 10 per run to stay within rate limits)
 				const unsyncedIds = await getUnsyncedTranscriptIds(
@@ -72,6 +82,25 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 				);
 
 				if (unsyncedIds.length === 0) {
+					await DB.prepare(
+						`UPDATE sync_jobs
+						 SET status = 'completed',
+						     progress = 0,
+						     total_transcripts = 0,
+						     selected_transcript_ids = '[]',
+						     started_at = datetime("now"),
+						     completed_at = datetime("now")
+						 WHERE id = ?`
+					)
+						.bind(jobId)
+						.run();
+
+					await DB.prepare(
+						'UPDATE property_mappings SET last_auto_sync_at = datetime("now") WHERE user_id = ? AND database_id = ?'
+					)
+						.bind(user.user_id, user.database_id)
+						.run();
+
 					results.push({ 
 						userId: user.user_id, 
 						databaseId: user.database_id, 
@@ -80,13 +109,13 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 					continue;
 				}
 
-				// Create sync job
-				const jobId = crypto.randomUUID();
 				await DB.prepare(
-					`INSERT INTO sync_jobs (id, user_id, status, trigger_type, database_id, total_transcripts, selected_transcript_ids)
-					 VALUES (?, ?, 'pending', 'schedule', ?, ?, ?)`
+					`UPDATE sync_jobs
+					 SET total_transcripts = ?,
+					     selected_transcript_ids = ?
+					 WHERE id = ?`
 				)
-					.bind(jobId, user.user_id, user.database_id, unsyncedIds.length, JSON.stringify(unsyncedIds))
+					.bind(unsyncedIds.length, JSON.stringify(unsyncedIds), jobId)
 					.run();
 
 				const propertyMapping: PropertyMapping = JSON.parse(user.mappings);
@@ -122,6 +151,17 @@ export const POST: RequestHandler = async ({ request, platform }) => {
 
 			} catch (error) {
 				const errMsg = error instanceof Error ? error.message : String(error);
+				await DB.prepare(
+					`UPDATE sync_jobs
+					 SET status = 'failed',
+					     error_message = ?,
+					     started_at = COALESCE(started_at, datetime("now")),
+					     completed_at = datetime("now")
+					 WHERE id = ?`
+				)
+					.bind(errMsg, jobId)
+					.run();
+
 				results.push({
 					userId: user.user_id,
 					databaseId: user.database_id,

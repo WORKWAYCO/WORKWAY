@@ -184,7 +184,7 @@ export async function processSync(params: SyncParams): Promise<SyncResult> {
 		}
 		
 		await db.prepare(
-			'UPDATE sync_jobs SET status = ?, error_message = ? WHERE id = ?'
+			'UPDATE sync_jobs SET status = ?, error_message = ?, completed_at = datetime("now") WHERE id = ?'
 		)
 			.bind('failed', errMsg, jobId)
 			.run();
