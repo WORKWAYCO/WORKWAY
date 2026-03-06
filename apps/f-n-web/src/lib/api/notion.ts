@@ -144,10 +144,28 @@ export function createNotionClient(accessToken: string): NotionClient {
 		},
 
 		/**
-		 * Get a database by ID (returns data_sources list)
+		 * Get a database by ID.
+		 * In 2025-09-03, /databases can return `properties: null`, so hydrate
+		 * schema from the primary data source to keep title/property resolution stable.
 		 */
 		async getDatabase(id: string): Promise<NotionDatabase | null> {
-			return await request<NotionDatabase>(`/databases/${id}`);
+			const db = await request<NotionDatabase>(`/databases/${id}`);
+			const dataSourceId = db.data_sources?.[0]?.id;
+
+			if (dataSourceId) {
+				dataSourceCache.set(id, dataSourceId);
+			}
+
+			// Notion 2025 API: database properties can be null; fetch schema from data source.
+			if ((!db.properties || Object.keys(db.properties).length === 0) && dataSourceId) {
+				const ds = await request<NotionDataSource>(`/data_sources/${dataSourceId}`);
+				return {
+					...db,
+					properties: ds.properties
+				};
+			}
+
+			return db;
 		},
 
 		/**

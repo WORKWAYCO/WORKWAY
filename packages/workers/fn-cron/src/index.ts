@@ -781,19 +781,27 @@ async function createNotionPage(
 }
 
 async function appendNotionBlocks(token: string, pageId: string, blocks: unknown[]): Promise<void> {
-	const response = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
-		method: 'PATCH',
-		headers: {
-			'Authorization': `Bearer ${token}`,
-			'Notion-Version': '2022-06-28',
-			'Content-Type': 'application/json',
-		},
-		body: JSON.stringify({ children: blocks }),
-	});
+	for (let i = 0; i < blocks.length; i += 100) {
+		const batch = blocks.slice(i, i + 100);
+		const response = await fetch(`https://api.notion.com/v1/blocks/${pageId}/children`, {
+			method: 'PATCH',
+			headers: {
+				'Authorization': `Bearer ${token}`,
+				'Notion-Version': '2022-06-28',
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify({ children: batch }),
+		});
 
-	if (!response.ok) {
-		const error = await response.json().catch(() => ({})) as NotionErrorResponse;
-		throw new Error(formatNotionError(`Notion block append failed for page ${pageId}`, response.status, error));
+		if (!response.ok) {
+			const error = await response.json().catch(() => ({})) as NotionErrorResponse;
+			throw new Error(formatNotionError(`Notion block append failed for page ${pageId}`, response.status, error));
+		}
+
+		// Stay under Notion burst limits when appending many batches.
+		if (i + 100 < blocks.length) {
+			await new Promise((resolve) => setTimeout(resolve, 350));
+		}
 	}
 }
 
